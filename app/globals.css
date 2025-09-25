@@ -6,7 +6,7 @@
 :root {
   --bg: #0a0b12;
   --glass: rgba(255,255,255,0.08);
-  --panel: rgba(255,255,255,0.85);
+  --panel: rgba(255,255,255,0.9);
   --ink: #0e0f18;
   --ink-sub: #34384a;
   --accent: #79ffe1;
@@ -28,6 +28,9 @@ html, body {
   color: #f6f7fb;
 }
 
+/* Container helpers */
+.maxw { @apply mx-auto max-w-6xl px-4; }
+
 /* Cel-glass hybrid cards/buttons */
 .cel-card {
   @apply rounded-3xl border-2 border-black;
@@ -47,12 +50,31 @@ html, body {
 .cel-btn--good { background: var(--success); }
 .cel-btn--warn { background: var(--warn); }
 .cel-btn--danger { background: var(--danger); }
+.btn-loading { opacity: .7; filter: grayscale(.2) saturate(.8); pointer-events: none; }
 
 .cel-input {
   @apply rounded-2xl border-2 w-full px-3 py-2;
   border-color: #000;
   background: white;
   box-shadow: 0 6px 0 #000;
+}
+
+/* Pills and chips */
+.pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .2rem .55rem; border: 2px solid #000; border-radius: 9999px;
+  background: #fff; color: #111; box-shadow: 0 4px 0 #000;
+}
+
+/* Section header */
+.section-title {
+  font-weight: 900; font-size: 1.35rem; color: #111;
+  text-shadow: 0 2px 0 rgba(0,0,0,.12);
+}
+
+/* Divider */
+.divider {
+  height: 2px; background: #000; opacity: .1; margin: .75rem 0;
 }
 
 /* Burn badge */
@@ -72,25 +94,60 @@ html, body {
   filter: drop-shadow(0 2px 0 rgba(0,0,0,.4));
   font-size: 1.15rem;
 }
-.burn-text {
-  display: flex; flex-direction: column; line-height: 1;
+.burn-text { display: flex; flex-direction: column; line-height: 1; }
+.burn-label { font-size: .7rem; font-weight: 700; opacity: .8; letter-spacing: .02em; }
+.burn-amount { font-size: .95rem; font-weight: 800; }
+
+/* Hero */
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 24px;
+  border: 2px solid #000;
+  border-radius: 28px;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+  box-shadow: var(--shadow-strong), var(--shadow-soft);
+  overflow: hidden;
 }
-.burn-label {
-  font-size: .7rem; font-weight: 700; opacity: .8; letter-spacing: .02em;
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
 }
-.burn-amount {
-  font-size: .95rem; font-weight: 800;
+.hero-copy { display: grid; gap: 12px; align-content: center; }
+.hero-title {
+  font-size: clamp(28px, 4.6vw, 44px);
+  font-weight: 900; line-height: 1.04;
+  color: #fff;
+  text-shadow: 0 4px 0 rgba(0,0,0,.25);
+}
+.hero-sub { color: #f1f2f8; opacity: .9; }
+
+/* Floating blobs */
+.blob {
+  position: absolute; border-radius: 9999px; filter: blur(28px); opacity: .35; z-index: 0;
+  animation: blobFloat 14s ease-in-out infinite;
+}
+.blob-1 { width: 480px; height: 320px; right: -120px; top: -60px; background: radial-gradient(closest-side, #8b5cf6, transparent); }
+.blob-2 { width: 520px; height: 340px; left: -120px; bottom: -80px; background: radial-gradient(closest-side, #22d3ee, transparent); animation-delay: -7s; }
+@keyframes blobFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) }
+  50% { transform: translate3d(10px, -8px, 0) scale(1.02) }
 }
 
-/* Tag pills */
-.pill {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .2rem .55rem; border: 2px solid #000; border-radius: 9999px;
-  background: #fff; color: #111; box-shadow: 0 4px 0 #000;
+/* Toasts */
+.toast-viewport {
+  position: fixed; right: 16px; top: 16px; z-index: 50;
+  display: flex; flex-direction: column; gap: 10px;
 }
-
-/* Section header */
-.section-title {
-  font-weight: 900; font-size: 1.35rem; color: #111;
-  text-shadow: 0 2px 0 rgba(0,0,0,.12);
+.toast {
+  min-width: 260px; max-width: 360px;
+  border: 2px solid #000; border-radius: 16px;
+  padding: 10px 12px; box-shadow: 0 8px 0 #000;
+  background: #fff; color: #111; animation: toastIn .12s ease-out;
 }
+.toast.success { background: #7ef9a0; }
+.toast.error   { background: #ff6b6b; }
+.toast-title { font-weight: 800; font-size: 0.95rem; line-height: 1.1; }
+.toast-desc  { font-size: 0.85rem; opacity: .9; }
+@keyframes toastIn { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
