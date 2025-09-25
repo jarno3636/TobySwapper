@@ -8,11 +8,11 @@ import { TOKENS } from "@/lib/addresses"
 type SymbolKey = "USDC" | "WETH" | "TOBY" | "PATIENCE" | "TABOSHI"
 
 const SYMBOL_TO_META: Record<SymbolKey, { symbol: SymbolKey; address: Address; decimals: number; icon: string }> = {
-  USDC:     { ...TOKENS.USDC,     icon: "/tokens/usdc.png"     } as any,
-  WETH:     { ...TOKENS.WETH,     icon: "/tokens/weth.png"     } as any,
-  TOBY:     { ...TOKENS.TOBY,     icon: "/tokens/toby.png"     } as any,
-  PATIENCE: { ...TOKENS.PATIENCE, icon: "/tokens/patience.png" } as any,
-  TABOSHI:  { ...TOKENS.TABOSHI,  icon: "/tokens/taboshi.png"  } as any,
+  USDC:     { ...TOKENS.USDC,     icon: "/tokens/usdc.PNG"     } as any,
+  WETH:     { ...TOKENS.WETH,     icon: "/tokens/weth.PNG"     } as any,
+  TOBY:     { ...TOKENS.TOBY,     icon: "/tokens/toby.PNG"     } as any,
+  PATIENCE: { ...TOKENS.PATIENCE, icon: "/tokens/patience.PNG" } as any,
+  TABOSHI:  { ...TOKENS.TABOSHI,  icon: "/tokens/taboshi.PNG"  } as any,
 }
 
 function symbolFromAddress(addr: Address): SymbolKey | null {
