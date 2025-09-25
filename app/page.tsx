@@ -2,10 +2,15 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useState } from "react"
 import BurnCounter from "@/components/BurnCounter"
 import SwapWidget from "@/components/SwapWidget"
+import ThemeToggle from "@/components/ThemeToggle"
+import MobileNav from "@/components/MobileNav"
 
 export default function Home() {
+  const [showArt, setShowArt] = useState(true)
+
   return (
     <main className="min-h-screen">
       {/* Header */}
@@ -15,13 +20,15 @@ export default function Home() {
           <div className="text-3xl font-extrabold tracking-tight">Toby Swapper</div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           <BurnCounter />
           <nav className="hidden md:flex gap-3">
             <Link className="pill" href="https://toadgod.xyz" target="_blank" rel="noreferrer">Site</Link>
             <Link className="pill" href="https://x.com/toadgod1017" target="_blank" rel="noreferrer">X</Link>
             <Link className="pill" href="https://t.me/toadgang/212753" target="_blank" rel="noreferrer">Telegram</Link>
           </nav>
+          <MobileNav />
         </div>
       </header>
 
@@ -41,10 +48,25 @@ export default function Home() {
               <a className="pill" href="https://basescan.org/token/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" target="_blank" rel="noreferrer">USDC on Base</a>
             </div>
           </div>
+
           <div className="hero-art">
-            {/* Optional: place a fun PNG here (e.g. /toby-hero.png) */}
-            <Image src="/toby-hero.png" alt="Toby art" width={420} height={320} className="drop-shadow-xl rounded-2xl" />
+            {showArt ? (
+              <Image
+                src="/toby-hero.png"
+                alt="Toby art"
+                width={420}
+                height={320}
+                className="drop-shadow-xl rounded-2xl"
+                onError={() => setShowArt(false)}
+                priority
+              />
+            ) : (
+              <div className="hero-fallback">
+                <div className="hero-fallback-inner">TOBY</div>
+              </div>
+            )}
           </div>
+
           <div className="blob blob-1" />
           <div className="blob blob-2" />
         </div>
@@ -58,9 +80,8 @@ export default function Home() {
 
         <aside className="cel-card p-6 md:p-8 space-y-4">
           <div className="section-title">Ecosystem</div>
-          <p className="text-sm text-black/80">
-            Official links and contracts for the TobyWorld ecosystem.
-          </p>
+          <p className="text-sm text-black/80">Official links and contracts for the TobyWorld ecosystem.</p>
+
           <ul className="space-y-2 text-sm text-black/85">
             <li><a className="pill" href="https://toadgod.xyz" target="_blank" rel="noreferrer">Creator Website</a></li>
             <li><a className="pill" href="https://x.com/toadgod1017" target="_blank" rel="noreferrer">Creator on X</a></li>
