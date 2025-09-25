@@ -17,17 +17,17 @@ export default function Home() {
             <h1 className="hero-title">Bright, bouncy swaps on Base</h1>
             <p className="hero-sub">
               Swap <b>USDC/ETH</b> ↔ <b>TOBY, PATIENCE, TABOSHI</b>. A built-in 1% fee auto-buys
-              TOBY and burns it to <code className="pill">0x…dEaD</code>.
+              TOBY and sends it to <code className="pill">0x…dEaD</code>.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link className="pill" href="/links">All ecosystem & contract links →</Link>
+              <Link className="pill" href="/lore">All ecosystem & contract lore →</Link>
             </div>
           </div>
 
           <div className="hero-art">
             {showArt ? (
               <Image
-                src="/toby-hero.png"
+                src="/toby-hero.PNG"
                 alt="Toby art"
                 width={420}
                 height={320}
