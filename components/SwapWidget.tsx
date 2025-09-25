@@ -8,7 +8,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi"
-import { parseUnits } from "viem"
+import { parseUnits, type Address } from "viem"
 import { ADDR, TOKENS, ALLOWED_BASES, ALLOWED_COMMODITIES } from "@/lib/addresses"
 import TokenSelect from "./TokenSelect"
 import NumberInput from "./NumberInput"
@@ -107,8 +107,8 @@ type Direction = "USDC->TOKEN" | "ETH->TOKEN" | "TOKEN->USDC" | "TOKEN->ETH"
 export default function SwapWidget() {
   const { address } = useAccount()
 
-  const [fromAddr, setFromAddr] = useState<string>(TOKENS.USDC.address)
-  const [toAddr, setToAddr] = useState<string>(TOKENS.TOBY.address)
+  const [fromAddr, setFromAddr] = useState<Address>(TOKENS.USDC.address)
+  const [toAddr, setToAddr] = useState<Address>(TOKENS.TOBY.address)
   const [amountIn, setAmountIn] = useState<string>("")
   const [slippagePct, setSlippagePct] = useState<string>("1") // % (e.g., "1" = 1%)
 
@@ -125,29 +125,29 @@ export default function SwapWidget() {
   }, [fromAddr, toAddr])
 
   /** --------- Paths --------- */
-  function buildMainPath(from: string, to: string): `0x${string}`[] {
+  function buildMainPath(from: Address, to: Address): Address[] {
     // Favor WETH routing for better liquidity depth
     if (from === TOKENS.USDC.address && ALLOWED_COMMODITIES.has(to)) {
-      return [TOKENS.USDC.address, ADDR.WETH, to] as `0x${string}`[]
+      return [TOKENS.USDC.address, ADDR.WETH, to]
     }
     if (from === TOKENS.WETH.address && ALLOWED_COMMODITIES.has(to)) {
-      return [ADDR.WETH, to] as `0x${string}`[]
+      return [ADDR.WETH, to]
     }
     if (ALLOWED_COMMODITIES.has(from) && to === TOKENS.USDC.address) {
-      return [from as `0x${string}`, ADDR.WETH as `0x${string}`, TOKENS.USDC.address as `0x${string}`]
+      return [from, ADDR.WETH, TOKENS.USDC.address]
     }
     if (ALLOWED_COMMODITIES.has(from) && to === TOKENS.WETH.address) {
-      return [from as `0x${string}`, ADDR.WETH as `0x${string}`]
+      return [from, ADDR.WETH]
     }
     // fallback (shouldn’t normally hit)
-    return [from as `0x${string}`, to as `0x${string}`]
+    return [from, to]
   }
 
-  function buildFeePath(from: string): `0x${string}`[] {
+  function buildFeePath(from: Address): Address[] {
     // Always route fee to TOBY via WETH if needed
-    if (from === TOKENS.WETH.address) return [ADDR.WETH, TOKENS.TOBY.address] as `0x${string}`[]
-    if (from === TOKENS.USDC.address) return [TOKENS.USDC.address, ADDR.WETH, TOKENS.TOBY.address] as `0x${string}`[]
-    return [from as `0x${string}`, ADDR.WETH as `0x${string}`, TOKENS.TOBY.address as `0x${string}`]
+    if (from === TOKENS.WETH.address) return [ADDR.WETH, TOKENS.TOBY.address]
+    if (from === TOKENS.USDC.address) return [TOKENS.USDC.address, ADDR.WETH, TOKENS.TOBY.address]
+    return [from, ADDR.WETH, TOKENS.TOBY.address]
   }
 
   /** --------- Amounts & Slippage --------- */
@@ -184,9 +184,9 @@ export default function SwapWidget() {
 
   const { data: allowance } = useReadContract({
     abi: ABI_ERC20,
-    address: needsApproval ? (fromAddr as `0x${string}`) : undefined,
+    address: needsApproval ? fromAddr : undefined,
     functionName: "allowance",
-    args: address && needsApproval ? [address, ADDR.SWAPPER] : undefined,
+    args: address && needsApproval ? [address as Address, ADDR.SWAPPER] : undefined,
   }) as { data: bigint | undefined }
 
   const hasAllowance = needsApproval ? ((allowance ?? 0n) >= amountInWei) : true
@@ -198,7 +198,7 @@ export default function SwapWidget() {
     if (!needsApproval || !amountInWei) return
     writeApprove({
       abi: ABI_ERC20,
-      address: fromAddr as `0x${string}`,
+      address: fromAddr,
       functionName: "approve",
       args: [ADDR.SWAPPER, amountInWei],
     })
