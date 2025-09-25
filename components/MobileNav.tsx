@@ -1,82 +1,86 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
+import { useAccount } from "wagmi"
+import { useAccountModal, useConnectModal } from "@rainbow-me/rainbowkit"
+
+/** Utility: 0x1234…abcd */
+function short(addr?: string) {
+  if (!addr) return ""
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`
+}
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false)
+  const { address, isConnected } = useAccount()
+  const { openConnectModal } = useConnectModal()
+  const { openAccountModal } = useAccountModal()
+
+  // Close drawer on ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
+  function onConnectClick() {
+    if (isConnected && openAccountModal) {
+      openAccountModal()
+    } else if (openConnectModal) {
+      openConnectModal()
+    }
+  }
 
   return (
     <>
-      {/* Trigger (mobile only) */}
+      {/* Right-side trigger */}
       <button
         className="nav-trigger md:hidden"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
         title="Menu"
       >
-        <span className="i">☰</span>
-        <span>Menu</span>
+        <span aria-hidden>☰</span>
       </button>
 
       {/* Drawer */}
-      {open && (
-        <div className="nav-drawer" role="dialog" aria-modal="true">
-          <div className="nav-panel">
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Image
-                  src="/toby.PNG"    // <- PNG (uppercase) per your request
-                  alt="Toby"
-                  width={26}
-                  height={26}
-                  className="rounded-md ring-2 ring-black"
-                />
-                <div className="text-xl font-extrabold tracking-tight">TobySwapper</div>
-              </div>
-              <button
-                className="nav-pill"
-                onClick={() => setOpen(false)}
-                aria-label="Close menu"
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
+      <div className={`nav-sheet ${open ? "open" : ""}`} aria-hidden={!open}>
+        {/* panel */}
+        <div className="nav-sheet__panel" role="dialog" aria-modal="true">
+          <nav className="grid gap-3">
+            <button
+              className="nav-pill w-full justify-center py-3 text-base"
+              onClick={onConnectClick}
+            >
+              {isConnected ? short(address) : "Connect"}
+            </button>
 
-            {/* Connect (inside drawer) */}
-            <div className="mb-4">
-              <div className="nav-pill w-full justify-center py-3 text-base">
-                <ConnectButton />
-              </div>
-            </div>
+            <Link
+              href="/"
+              className="nav-pill w-full justify-center py-3 text-base no-underline"
+              onClick={() => setOpen(false)}
+            >
+              🏠 Home
+            </Link>
 
-            {/* Links */}
-            <nav className="grid gap-3">
-              <Link
-                href="/"
-                className="nav-pill w-full justify-center py-3 text-base no-underline"
-                onClick={() => setOpen(false)}
-              >
-                🏠 Home
-              </Link>
-              <Link
-                href="/lore"
-                className="nav-pill w-full justify-center py-3 text-base no-underline"
-                onClick={() => setOpen(false)}
-              >
-                📜 Lore
-              </Link>
-            </nav>
-          </div>
-
-          {/* Scrim */}
-          <div className="nav-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
+            <Link
+              href="/lore"
+              className="nav-pill w-full justify-center py-3 text-base no-underline"
+              onClick={() => setOpen(false)}
+            >
+              📜 Lore
+            </Link>
+          </nav>
         </div>
-      )}
+
+        {/* scrim — click to close */}
+        <button
+          className="nav-sheet__scrim"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        />
+      </div>
     </>
   )
 }
