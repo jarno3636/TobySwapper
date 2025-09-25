@@ -240,3 +240,30 @@ html, body {
 
 /* Ensure any <a> with .nav-pill never underlines */
 a.nav-pill { text-decoration: none; }
+/* Sticky, tidy header bar */
+.site-header{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.75rem;
+}
+
+/* Right slide-in sheet (mobile) */
+.nav-sheet { position:fixed; inset:0; z-index:50; pointer-events:none; }
+.nav-sheet.open { pointer-events:auto; }
+.nav-sheet__scrim {
+  position:absolute; inset:0; background:rgba(0,0,0,.5);
+  opacity:0; transition:opacity .18s ease;
+}
+.nav-sheet.open .nav-sheet__scrim { opacity:1; }
+.nav-sheet__panel{
+  position:absolute; top:0; right:0; height:100%;
+  width:min(88vw,380px);
+  border-left:2px solid #000;
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+  box-shadow:-10px 0 0 #000, -20px 50px 60px rgba(0,0,0,.45);
+  backdrop-filter:blur(10px);
+  padding:14px;
+  transform:translateX(100%);
+  transition:transform .18s ease;
+  color:#f6f7fb;
+}
+.nav-sheet.open .nav-sheet__panel{ transform:translateX(0); }
