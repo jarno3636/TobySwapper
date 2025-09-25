@@ -2,8 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { background: #0b0b12; }
+/* === Theme tokens (tune freely) === */
+:root {
+  --bg: #0a0b12;
+  --glass: rgba(255,255,255,0.08);
+  --panel: rgba(255,255,255,0.85);
+  --ink: #0e0f18;
+  --ink-sub: #34384a;
+  --accent: #79ffe1;
+  --accent-2: #ffd1dc;
+  --accent-3: #c4b5fd;
+  --success: #7ef9a0;
+  --warn: #ffd166;
+  --danger: #ff6b6b;
 
-.cel-card { @apply rounded-2xl bg-white shadow-[0_6px_0_#000] border-2 border-black; }
-.cel-btn  { @apply rounded-xl border-2 border-black shadow-[0_6px_0_#000] px-4 py-2 font-semibold active:translate-y-[2px] active:shadow-none transition-transform; }
-.cel-input{ @apply rounded-xl border-2 border-black shadow-[0_6px_0_#000] px-3 py-2 w-full; }
+  --shadow-strong: 0 10px 0 #0b0b0b;
+  --shadow-soft: 0 10px 30px rgba(0,0,0,.35);
+}
+
+html, body {
+  background:
+    radial-gradient(1200px 700px at 10% 0%, rgba(124, 58, 237, .25), transparent 60%),
+    radial-gradient(1000px 600px at 90% 20%, rgba(14, 165, 233, .25), transparent 60%),
+    linear-gradient(180deg, #0a0b12, #0a0b12);
+  color: #f6f7fb;
+}
+
+/* Cel-glass hybrid cards/buttons */
+.cel-card {
+  @apply rounded-3xl border-2 border-black;
+  background: var(--panel);
+  box-shadow: var(--shadow-strong), var(--shadow-soft);
+  backdrop-filter: blur(6px);
+}
+
+.cel-btn {
+  @apply rounded-2xl border-2 border-black px-4 py-2 font-semibold;
+  background: white;
+  box-shadow: 0 6px 0 #000;
+  transition: transform .08s ease, box-shadow .08s ease, filter .12s ease;
+}
+.cel-btn:active { transform: translateY(2px); box-shadow: 0 3px 0 #000; }
+.cel-btn--primary { background: var(--accent); }
+.cel-btn--good { background: var(--success); }
+.cel-btn--warn { background: var(--warn); }
+.cel-btn--danger { background: var(--danger); }
+
+.cel-input {
+  @apply rounded-2xl border-2 w-full px-3 py-2;
+  border-color: #000;
+  background: white;
+  box-shadow: 0 6px 0 #000;
+}
+
+/* Burn badge */
+.burn-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .6rem .9rem;
+  border: 2px solid #000;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent-3));
+  color: #111;
+  box-shadow: 0 8px 0 #000, var(--shadow-soft);
+}
+.burn-emoji {
+  filter: drop-shadow(0 2px 0 rgba(0,0,0,.4));
+  font-size: 1.15rem;
+}
+.burn-text {
+  display: flex; flex-direction: column; line-height: 1;
+}
+.burn-label {
+  font-size: .7rem; font-weight: 700; opacity: .8; letter-spacing: .02em;
+}
+.burn-amount {
+  font-size: .95rem; font-weight: 800;
+}
+
+/* Tag pills */
+.pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .2rem .55rem; border: 2px solid #000; border-radius: 9999px;
+  background: #fff; color: #111; box-shadow: 0 4px 0 #000;
+}
+
+/* Section header */
+.section-title {
+  font-weight: 900; font-size: 1.35rem; color: #111;
+  text-shadow: 0 2px 0 rgba(0,0,0,.12);
+}
