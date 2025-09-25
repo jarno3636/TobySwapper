@@ -11,15 +11,13 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.ico" },
   openGraph: {
     title: "Toby Swapper",
-    description:
-      "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
+    description: "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
     images: ["/og.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Toby Swapper",
-    description:
-      "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
+    description: "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
     images: ["/og.png"],
   },
 }
