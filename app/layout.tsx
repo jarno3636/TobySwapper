@@ -17,13 +17,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Toby Swapper",
     description: "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
-    images: ["/og.png"],
+    images: ["/og.PNG"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Toby Swapper",
     description: "Swap USDC/ETH ↔ TOBY/PATIENCE/TABOSHI on Base. 1% auto-buys TOBY and burns.",
-    images: ["/og.png"],
+    images: ["/og.PNG"],
   },
 }
 
@@ -33,7 +33,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <Providers>
           <ToastProvider>
-            {/* Site-wide Header */}
             <header className="mx-auto max-w-6xl px-4 py-6 flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3">
                 <Image src="/toby-logo.svg" alt="TOBY" width={52} height={52} />
@@ -44,10 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <ThemeToggle />
                 <BurnCounter />
                 <nav className="hidden md:flex gap-3">
-                  <Link className="pill" href="/links">Links</Link>
-                  <a className="pill" href="https://toadgod.xyz" target="_blank" rel="noreferrer">Site</a>
-                  <a className="pill" href="https://x.com/toadgod1017" target="_blank" rel="noreferrer">X</a>
-                  <a className="pill" href="https://t.me/toadgang/212753" target="_blank" rel="noreferrer">Telegram</a>
+                  <Link className="pill" href="/lore">Lore</Link>
                 </nav>
                 <MobileNav />
               </div>
@@ -55,7 +51,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
             {children}
 
-            {/* Footer */}
             <footer className="mx-auto max-w-6xl px-4 pb-10 flex flex-col sm:flex-row items-center gap-3 justify-between text-sm text-white/70">
               <div>Built for the <b>TobyWorld</b> community. ✨</div>
               <div className="flex flex-wrap gap-3">
