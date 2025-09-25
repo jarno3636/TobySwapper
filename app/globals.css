@@ -151,3 +151,49 @@ html, body {
 .toast-title { font-weight: 800; font-size: 0.95rem; line-height: 1.1; }
 .toast-desc  { font-size: 0.85rem; opacity: .9; }
 @keyframes toastIn { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+/* === Deeper gradient + richer glass === */
+html, body {
+  background:
+    radial-gradient(1300px 760px at 8% -4%, rgba(124, 58, 237, .36), transparent 60%),
+    radial-gradient(1100px 640px at 92% 18%, rgba(14, 165, 233, .34), transparent 60%),
+    linear-gradient(180deg, #0a0b12 0%, #090a12 40%, #0a0b12 100%);
+}
+
+/* Bump blur & subtle saturation so cards pop a bit more */
+.cel-card {
+  backdrop-filter: blur(10px) saturate(1.06);
+}
+
+/* === Swap success pulse (attach class: .celebrate) === */
+@keyframes pulsePop {
+  0%   { transform: scale(.98); box-shadow: 0 10px 0 #000, 0 0 0 0 rgba(121,255,225,.0); }
+  40%  { transform: scale(1.012); box-shadow: 0 16px 0 #000, 0 0 0 10px rgba(121,255,225,.35); }
+  100% { transform: scale(1); box-shadow: 0 10px 0 #000, 0 0 0 0 rgba(121,255,225,.0); }
+}
+@keyframes confettiGlow {
+  0%   { opacity: 0; transform: translateY(6px) scale(.98); }
+  30%  { opacity: 1; transform: translateY(0)    scale(1.02); }
+  100% { opacity: 0; transform: translateY(-6px) scale(1); }
+}
+
+/* Pulse the swap card when a swap confirms */
+.cel-card.celebrate {
+  animation: pulsePop .6s ease-out;
+  position: relative;
+}
+.cel-card.celebrate::after {
+  content: "";
+  position: absolute; inset: -2px;
+  border-radius: 28px;
+  pointer-events: none;
+  background: radial-gradient(120px 60px at 20% 10%, rgba(121,255,225,.35), transparent 60%),
+              radial-gradient(120px 60px at 80% 90%, rgba(196,181,253,.35), transparent 60%);
+  animation: confettiGlow .7s ease-out;
+}
+
+/* Optional: make the metrics card pop a bit more after swap */
+.metrics-card.success {
+  box-shadow: 0 8px 0 #000;
+  outline: 3px solid rgba(121,255,225,.55);
+  transition: outline .2s ease;
+}
