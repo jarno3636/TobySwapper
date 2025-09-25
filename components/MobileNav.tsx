@@ -1,8 +1,8 @@
-// components/MobileNav.tsx
 "use client"
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 
 export default function MobileNav() {
@@ -10,25 +10,35 @@ export default function MobileNav() {
 
   return (
     <>
-      {/* Trigger */}
+      {/* Trigger (mobile only) */}
       <button
-        className="pill md:hidden"
+        className="nav-trigger md:hidden"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
         title="Menu"
       >
-        ☰ Menu
+        <span className="i">☰</span>
+        <span>Menu</span>
       </button>
 
       {/* Drawer */}
       {open && (
         <div className="nav-drawer" role="dialog" aria-modal="true">
           <div className="nav-panel">
-            {/* Header row */}
+            {/* Drawer Header */}
             <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-extrabold tracking-tight">Toby Swapper</div>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/toby.PNG"    // <- PNG (uppercase) per your request
+                  alt="Toby"
+                  width={26}
+                  height={26}
+                  className="rounded-md ring-2 ring-black"
+                />
+                <div className="text-xl font-extrabold tracking-tight">TobySwapper</div>
+              </div>
               <button
-                className="pill"
+                className="nav-pill"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
                 title="Close"
@@ -39,23 +49,23 @@ export default function MobileNav() {
 
             {/* Connect (inside drawer) */}
             <div className="mb-4">
-              <div className="pill w-full justify-center py-3 font-bold text-lg bg-gradient-to-r from-pink-200 to-purple-200 hover:scale-[1.02] transition">
+              <div className="nav-pill w-full justify-center py-3 text-base">
                 <ConnectButton />
               </div>
             </div>
 
-            {/* Nav links */}
+            {/* Links */}
             <nav className="grid gap-3">
               <Link
-                className="pill w-full justify-center py-3 font-semibold text-lg hover:bg-gray-100 transition"
                 href="/"
+                className="nav-pill w-full justify-center py-3 text-base no-underline"
                 onClick={() => setOpen(false)}
               >
                 🏠 Home
               </Link>
               <Link
-                className="pill w-full justify-center py-3 font-semibold text-lg hover:bg-gray-100 transition"
                 href="/lore"
+                className="nav-pill w-full justify-center py-3 text-base no-underline"
                 onClick={() => setOpen(false)}
               >
                 📜 Lore
@@ -64,11 +74,7 @@ export default function MobileNav() {
           </div>
 
           {/* Scrim */}
-          <div
-            className="nav-scrim"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="nav-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
         </div>
       )}
     </>
