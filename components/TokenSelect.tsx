@@ -1,5 +1,6 @@
 "use client"
 
+import type { Address } from "viem"
 import { TOKENS } from "../lib/addresses"
 
 type Opt = keyof typeof TOKENS
@@ -10,8 +11,8 @@ export default function TokenSelect({
   options,
   label,
 }: {
-  value: string
-  onChange: (addr: string) => void
+  value: Address
+  onChange: (addr: Address) => void
   options: Opt[]
   label: string
 }) {
@@ -21,7 +22,7 @@ export default function TokenSelect({
       <select
         className="cel-input mt-1"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value as Address)}
       >
         {options.map((k) => (
           <option key={k} value={TOKENS[k].address}>
