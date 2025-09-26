@@ -199,6 +199,7 @@ export default function SwapWidget() {
     useWaitForTransactionReceipt({ hash: txSwap })
 
   // Toast side-effects + celebrate pulse
+  const toast = useToast()
   const didApproveOk = useRef(false)
   const didApproveErr = useRef(false)
   const didSwapOk = useRef(false)
@@ -280,123 +281,146 @@ export default function SwapWidget() {
   const outFeeHuman = estOutFee ? formatUnits(estOutFee, TOKENS.TOBY.decimals) : "-"
 
   return (
-    <div className={`swap-root grid gap-6 ${celebrate ? "celebrate" : ""}`}>
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="section-title">Swap</div>
-        <StatusBadge />
-      </div>
+    <div
+      className={[
+        "rounded-3xl border-2 border-black p-4 md:p-6",
+        "bg-[radial-gradient(60%_140%_at_20%_0%,rgba(124,58,237,.28),transparent),radial-gradient(60%_120%_at_85%_0%,rgba(14,165,233,.25),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
+        "shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)] transition-[box-shadow,filter,transform] duration-150",
+        "hover:shadow-[0_12px_0_#000,0_0_0_2px_rgba(255,255,255,.12)_inset,0_36px_80px_rgba(0,0,0,.55)]",
+        celebrate ? "celebrate" : "",
+      ].join(" ")}
+    >
+      <div className="cel-card cel-card--content rounded-2xl p-5 md:p-7">
+        {/* Header row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2
+            className="text-2xl md:text-3xl font-black tracking-tight leading-none"
+            style={{
+              background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+              textShadow: "0 2px 0 rgba(0,0,0,.18)",
+            }}
+          >
+            Swap
+          </h2>
+          <StatusBadge />
+        </div>
 
-      {/* Selectors */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <TokenSelect
-          label="From"
-          value={fromAddr}
-          onChange={(v) => {
-            setFromAddr(v)
-            const isBase = ALLOWED_BASES.has(v)
-            if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
-            if (!isBase && !ALLOWED_BASES.has(toAddr)) setToAddr(TOKENS.USDC.address)
+        {/* Selectors */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <TokenSelect
+            label="From"
+            value={fromAddr}
+            onChange={(v) => {
+              setFromAddr(v)
+              const isBase = ALLOWED_BASES.has(v)
+              if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
+              if (!isBase && !ALLOWED_BASES.has(toAddr)) setToAddr(TOKENS.USDC.address)
+            }}
+            options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+          />
+          <TokenSelect
+            label="To"
+            value={toAddr}
+            onChange={setToAddr}
+            options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+          />
+        </div>
+
+        {/* Inputs */}
+        <div className="mt-4 grid gap-4">
+          <NumberInput
+            label="Amount In"
+            value={amountIn}
+            onChange={setAmountIn}
+            placeholder="0.0"
+            unit={fromToken.symbol}
+            balance={fromBalanceHuman}
+            decimals={fromToken.decimals}
+            max={fromBalanceHuman}
+            step={fromToken.decimals === 6 ? "0.01" : "0.001"}
+            help="Use the ± nudges to fine tune."
+          />
+          <NumberInput
+            label="Slippage"
+            value={slippagePct}
+            onChange={setSlippagePct}
+            placeholder="1"
+            unit="%"
+            decimals={2}
+            step="0.1"
+            showPercentChips={false}
+            help="Most swaps work with 1–2% slippage. Increase cautiously if liquidity is thin."
+          />
+        </div>
+
+        {/* Warning for unsupported pairs */}
+        {direction === null && (
+          <div className="mt-2 text-sm text-red-500 font-semibold">
+            Pair not supported. Use USDC/ETH ↔ TOBY/PATIENCE/TABOSHI.
+          </div>
+        )}
+
+        {/* Metrics */}
+        <div
+          className="mt-6 rounded-2xl border-2 border-black p-4 text-sm"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(248,250,252,1), rgba(241,245,249,1))", // light, crisp
+            boxShadow: "0 6px 0 #000",
           }}
-          options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
-        />
-        <TokenSelect
-          label="To"
-          value={toAddr}
-          onChange={setToAddr}
-          options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
-        />
-      </div>
-
-      {/* Inputs */}
-      <NumberInput
-        label="Amount In"
-        value={amountIn}
-        onChange={setAmountIn}
-        placeholder="0.0"
-        unit={fromToken.symbol}
-        balance={fromBalanceHuman}
-        decimals={fromToken.decimals}
-        max={fromBalanceHuman}
-        step={fromToken.decimals === 6 ? "0.01" : "0.001"}
-        help="Use the % chips or the +/- nudges to fine tune."
-      />
-      <NumberInput
-        label="Slippage"
-        value={slippagePct}
-        onChange={setSlippagePct}
-        placeholder="1"
-        unit="%"
-        decimals={2}
-        step="0.1"
-        showPercentChips={false}
-        help="Most swaps work with 1–2% slippage. Increase cautiously if liquidity is thin."
-      />
-
-      {direction === null && (
-        <div className="text-sm text-red-400 font-semibold">
-          Pair not supported. Use USDC/ETH ↔ TOBY/PATIENCE/TABOSHI.
-        </div>
-      )}
-
-      {/* Metrics — DARK GLASS for contrast */}
-      <div
-        className={[
-          "metrics-card grid gap-4 rounded-2xl border-2 border-black p-4 shadow-[0_6px_0_#000] text-sm",
-          "bg-[linear-gradient(135deg,rgba(15,23,42,.92),rgba(17,24,39,.88))] text-sky-50",
-        ].join(" ")}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <b>Route:</b>
-          <span className="nav-pill">{routeLabels(mainPath)}</span>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div><b>Est. out (main):</b> {outMainHuman}</div>
-          <div><b>Min out (main):</b> {minOutMain ? formatUnits(minOutMain, toToken.decimals) : "-"}</div>
-
-          <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
-            <b>Fee path (→ TOBY):</b> <span className="nav-pill">{routeLabels(feePath)}</span>
-          </div>
-
-          <div><b>Est. out (fee→TOBY):</b> {outFeeHuman}</div>
-
-          <div className="flex items-center gap-2">
-            <b>Price impact:</b>
-            <span
-              className={[
-                "nav-pill",
-                priceImpactPct && priceImpactPct > 5 ? "!bg-[#ff6b6b] !text-[#0a0b12]" : "",
-              ].join(" ")}
-            >
-              {priceImpactPct === null ? "—" : `${priceImpactPct.toFixed(2)}%`}
-            </span>
-          </div>
-        </div>
-
-        <div className="text-xs opacity-90 pt-1">
-          1% fee is taken by the Swapper, auto-buys TOBY and sends to <b>0x…dEaD</b>.
-        </div>
-      </div>
-
-      {/* Actions */}
-      {!hasAllowance && (
-        <button
-          className={`cel-btn cel-btn--warn ${approving ? "btn-loading" : ""}`}
-          onClick={onApprove}
-          disabled={approving || !amountInWei}
         >
-          {approving ? "Approving..." : `Approve ${fromToken.symbol}`}
-        </button>
-      )}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <b>Route:</b>
+            <span className="chip">{routeLabels(mainPath)}</span>
+          </div>
 
-      <button
-        className={`cel-btn cel-btn--good ${swapping ? "btn-loading" : ""}`}
-        onClick={doSwap}
-        disabled={!direction || swapping || (!isEthIn && !hasAllowance) || !amountInWei}
-      >
-        {swapping ? "Swapping..." : "Swap"}
-      </button>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div><b>Est. out (main):</b> {outMainHuman}</div>
+            <div><b>Min out (main):</b> {minOutMain ? formatUnits(minOutMain, toToken.decimals) : "-"}</div>
+
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+              <b>Fee path (→ TOBY):</b> <span className="chip">{routeLabels(feePath)}</span>
+            </div>
+
+            <div><b>Est. out (fee→TOBY):</b> {outFeeHuman}</div>
+
+            <div className="flex items-center gap-2">
+              <b>Price impact:</b>
+              <span className="chip">
+                {priceImpactPct === null ? "—" : `${priceImpactPct.toFixed(2)}%`}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-xs opacity-90 pt-2">
+            1% fee is taken by the Swapper, auto-buys TOBY and sends to <b>0x…dEaD</b>.
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {!hasAllowance && (
+            <button
+              className={`cel-btn cel-btn--warn ${approving ? "btn-loading" : ""}`}
+              onClick={onApprove}
+              disabled={approving || !amountInWei}
+            >
+              {approving ? "Approving..." : `Approve ${fromToken.symbol}`}
+            </button>
+          )}
+
+          <button
+            className={`cel-btn cel-btn--good ${swapping ? "btn-loading" : ""} ${hasAllowance ? "sm:col-span-2" : ""}`}
+            onClick={doSwap}
+            disabled={!direction || swapping || (!isEthIn && !hasAllowance) || !amountInWei}
+          >
+            {swapping ? "Swapping..." : "Swap"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
