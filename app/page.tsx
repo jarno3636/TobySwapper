@@ -10,7 +10,7 @@ import Portfolio from "@/components/Portfolio"
 const BURN_ADDR = "0x000000000000000000000000000000000000dEaD"
 const BURN_LINK = `https://basescan.org/address/${BURN_ADDR}`
 
-/** Reusable wrapper gradient card for each section */
+/** Reusable wrapper gradient card for each section (only card we keep) */
 function SectionCard({
   children,
   className = "",
@@ -32,18 +32,6 @@ function SectionCard({
   )
 }
 
-/** White content card that sits INSIDE the colorful wrapper */
-function ContentCard({
-  children,
-  className = "",
-}: React.PropsWithChildren<{ className?: string }>) {
-  return (
-    <div className={"cel-card cel-card--content rounded-2xl p-5 md:p-7 " + className}>
-      {children}
-    </div>
-  )
-}
-
 export default function Home() {
   return (
     <main className="min-h-screen">
@@ -55,7 +43,7 @@ export default function Home() {
               "radial-gradient(90% 160% at 0% 0%, rgba(124,58,237,.35), transparent 60%), radial-gradient(120% 180% at 100% 0%, rgba(14,165,233,.30), transparent 60%), linear-gradient(180deg,#0b1020,#0a0f1c)",
           }}
         >
-          {/* Centered mascot card */}
+          {/* Centered mascot */}
           <div className="flex justify-center">
             <MiniFrog width={360} height={260} className="mx-auto" />
           </div>
@@ -95,7 +83,7 @@ export default function Home() {
                 <BurnCounter />
               </div>
 
-              {/* One full-address line (linked) + flavor lines */}
+              {/* Copy line + flavor lines */}
               <span className="pill pill--muted">
                 1% burn sent to{" "}
                 <a
@@ -112,34 +100,33 @@ export default function Home() {
               <span className="pill pill--muted">Patience must persevere.</span>
             </div>
           </div>
-        </SectionCard>
 
-        {/* Hide any “updated … ago” line inside the compact BurnCounter */}
-        <style jsx global>{`
-          .burn-compact .burn-updated,
-          .burn-compact .updated,
-          .burn-compact .last-updated,
-          .burn-compact small,
-          .burn-compact time,
-          .burn-compact [data-updated],
-          .burn-compact .muted,
-          .burn-compact .caption {
-            display: none !important;
-          }
-        `}</style>
+          {/* Hide any “updated … ago” line inside the compact BurnCounter */}
+          <style jsx global>{`
+            .burn-compact .burn-updated,
+            .burn-compact .updated,
+            .burn-compact .last-updated,
+            .burn-compact small,
+            .burn-compact time,
+            .burn-compact [data-updated],
+            .burn-compact .muted,
+            .burn-compact .caption {
+              display: none !important;
+            }
+          `}</style>
+        </SectionCard>
       </section>
 
       {/* ============================= SWAP ============================= */}
       <section className="maxw py-16 md:py-20">
         <SectionCard
+          className="swap-panel"
           style={{
             background:
               "radial-gradient(60% 140% at 20% 0%, rgba(124,58,237,.28), transparent), radial-gradient(60% 120% at 85% 0%, rgba(14,165,233,.25), transparent), linear-gradient(180deg,#0b1220,#0f172a)",
           }}
         >
-          <ContentCard>
-            <SwapWidget />
-          </ContentCard>
+          <SwapWidget />
         </SectionCard>
       </section>
 
@@ -157,9 +144,7 @@ export default function Home() {
           >
             Your Wallet
           </div>
-          <ContentCard>
-            <Portfolio />
-          </ContentCard>
+          <Portfolio />
         </SectionCard>
       </section>
 
@@ -171,15 +156,15 @@ export default function Home() {
               "radial-gradient(70% 140% at 10% 0%, rgba(255,209,220,.28), transparent), radial-gradient(70% 140% at 90% 0%, rgba(196,181,253,.28), transparent), linear-gradient(180deg,#0f1426,#0c1221)",
           }}
         >
-          <ContentCard className="text-black/85">
-            <div className="font-extrabold text-black text-lg mb-1">Rite of Flame</div>
+          <div className="text-white/90">
+            <div className="font-extrabold text-lg mb-1">Rite of Flame</div>
             <ul className="list-disc pl-5 space-y-1">
               <li>Each swap pays a <b>1% tithe</b> into the Swapper.</li>
               <li>The tithe buys <b>$TOBY</b> via Base’s router.</li>
               <li>Purchased tokens are sent to the burn wallet.</li>
               <li>Irreversible: <b>supply down, signal up</b>.</li>
             </ul>
-          </ContentCard>
+          </div>
         </SectionCard>
       </section>
 
@@ -197,9 +182,7 @@ export default function Home() {
           >
             Live Prices (via router)
           </div>
-          <ContentCard>
-            <LivePrices />
-          </ContentCard>
+          <LivePrices />
         </SectionCard>
       </section>
     </main>
