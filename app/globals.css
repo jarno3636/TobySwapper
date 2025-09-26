@@ -78,7 +78,7 @@ html,body{
 
 .maxw{ @apply mx-auto max-w-6xl px-4; }
 
-/* **Section spacing helpers (use on each page section)** */
+/* Section spacing helpers */
 .section{ padding-block: 28px; }
 .section + .section{ padding-top: 0; }
 .stack-lg{ display:grid; gap: 24px; }
@@ -92,7 +92,7 @@ html,body{
 }
 
 /* =========================================================
-   CARDS & BUTTONS (cel-*)
+   OUTER CARDS ONLY (used on every section)
    ========================================================= */
 .cel-card{
   @apply rounded-3xl border-2 border-black;
@@ -128,17 +128,17 @@ html,body{
   color:#e3fff5;
 }
 
-/* High-contrast content card for tables/metrics (kept light) */
-.cel-card--content{
-  background:#ffffff;
-  color:#0f172a;
-}
+/* (Kept for compatibility; not used now) */
+.cel-card--content{ background:#ffffff; color:#0f172a; }
 
 /* Section card grid with generous spacing */
 .card-grid{ display:grid; gap:20px; }
 @media (min-width:640px){ .card-grid{ grid-template-columns: repeat(2,minmax(0,1fr)); gap:24px; } }
 @media (min-width:1024px){ .card-grid{ grid-template-columns: repeat(3,minmax(0,1fr)); gap:28px; } }
 
+/* =========================================================
+   BUTTONS & INPUTS
+   ========================================================= */
 .cel-btn{
   @apply rounded-2xl border-2 border-black px-4 py-2 font-semibold;
   background:linear-gradient(135deg,#0f172a,#111827);
@@ -236,7 +236,7 @@ html,body{
 .burn-amount{ font-size:.95rem; font-weight:800; }
 
 /* =========================================================
-   HERO (keep dark)
+   HERO
    ========================================================= */
 .hero{
   position:relative; display:grid; grid-template-columns:1.1fr .9fr; gap:28px;
@@ -310,9 +310,7 @@ html,body{
 /* =========================================================
    HEADER & NAVIGATION
    ========================================================= */
-.site-header{
-  display:flex; align-items:center; justify-content:space-between; gap:1rem;
-}
+.site-header{ display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 
 .brand-title{
   font-weight:1000;
@@ -412,16 +410,65 @@ a.nav-pill{ text-decoration:none; }
 .status-badge:active{ transform: translateY(2px); box-shadow:0 3px 0 #000; }
 
 /* =========================================================
-   SWAP / METRICS READABILITY
+   SWAP: DARK THEME + SETTINGS MODAL
    ========================================================= */
-.swap-root{ color:#0f172a; } /* slate-900 */
-.swap-root .section-title { color:#0f172a; }
+.swap-root{ color:#ecf3ff; }          /* light text */
+.swap-root .section-title{
+  color:transparent;
+  background:linear-gradient(90deg,#a78bfa,#79ffe1,#93c5fd);
+  -webkit-background-clip:text; background-clip:text;
+  text-shadow:0 2px 0 rgba(0,0,0,.25);
+}
 
+/* dark metrics card */
 .metrics-card{
   @apply rounded-2xl border-2 border-black p-4 shadow-[0_6px_0_#000];
-  background:#ffffff; color:#0f172a;
+  background:linear-gradient(135deg, rgba(15,23,42,.95), rgba(2,6,23,.94));
+  color:#e6f4ff;
 }
-.metrics-card .pill{ background:linear-gradient(135deg,#eef2f7,#e6ecf4); color:#0f172a; }
+.metrics-card .pill{ background:linear-gradient(135deg,#0c1220,#0f172a); color:#dfe9ff; }
+
+/* outer swap card (the SectionCard where SwapWidget lives) */
+.swap-panel{
+  position:relative;
+  border-radius:24px;
+  box-shadow:var(--shadow-strong), var(--shadow-soft);
+}
+
+/* icon button (settings) */
+.icon-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:12px; border:2px solid #000;
+  background:linear-gradient(135deg,#0b1220,#0f172a);
+  color:#e6faff; box-shadow:0 6px 0 #000;
+  transition:transform .08s ease, box-shadow .08s ease, filter .12s ease;
+}
+.icon-btn:active{ transform:translateY(2px); box-shadow:0 3px 0 #000; }
+
+/* modal backdrop + sheet */
+.modal-backdrop{
+  position:fixed; inset:0; z-index:50; display:grid; place-items:center;
+  background:rgba(0,0,0,.5);
+}
+.swap-settings{
+  width:min(92vw,440px);
+  border:2px solid #000; border-radius:18px;
+  background:linear-gradient(180deg, rgba(17,24,39,.96), rgba(2,6,23,.96));
+  color:#e8f1ff;
+  box-shadow:0 12px 0 #000, 0 28px 60px rgba(0,0,0,.55);
+  padding:16px;
+}
+.swap-settings h3{
+  font-weight:1000; font-size:1.05rem;
+  background:linear-gradient(90deg,#a78bfa,#79ffe1);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+/* price impact chip when risky */
+.price-impact--bad{
+  background:#ff6b6b !important;
+  color:#201111 !important;
+}
 
 /* =========================================================
    RAINBOWKIT TIDY
@@ -443,11 +490,8 @@ a.nav-pill{ text-decoration:none; }
 .hide-on-mobile{ display:none; }
 @media (min-width:768px){ .hide-on-mobile{ display:initial; } }
 
-/* --- Mascot micro-animations --- */
-@keyframes float-soft {
-  0%,100% { transform: translateY(0) }
-  50%     { transform: translateY(-2px) }
-}
+/* Mascot micro-animations */
+@keyframes float-soft { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2px) } }
 .animate-float-soft { animation: float-soft 3.2s ease-in-out infinite; }
 
 /* pronounced bounce using translate + scale for “squash & stretch” */
@@ -462,8 +506,5 @@ a.nav-pill{ text-decoration:none; }
 .animate-bounce-strong { animation: bounce-strong .6s cubic-bezier(.2,.6,.2,1); }
 
 /* secret spin */
-@keyframes spin-secret {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(540deg); } /* 1.5 spins feels nice */
-}
+@keyframes spin-secret { from{ transform: rotate(0deg); } to{ transform: rotate(540deg); } }
 .animate-spin-secret { animation: spin-secret 1.4s ease-in-out; }
