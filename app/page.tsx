@@ -1,7 +1,6 @@
 // app/page.tsx
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
 import SwapWidget from "@/components/SwapWidget"
 import BurnCounter from "@/components/BurnCounter"
@@ -10,6 +9,7 @@ import LivePrices from "@/components/LivePrices"
 import Portfolio from "@/components/Portfolio"
 
 const BURN_ADDR = "0x000000000000000000000000000000000000dEaD"
+const BURN_LINK = `https://basescan.org/address/${BURN_ADDR}`
 
 export default function Home() {
   const [artOn, setArtOn] = useState(true)
@@ -53,7 +53,7 @@ export default function Home() {
                   Every trade feeds the flame and strengthens the signal.
                 </p>
 
-                {/* Single Cast button + lore pills */}
+                {/* Cast + Burn + Lore one-liners */}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <a
                     className="nav-pill"
@@ -65,19 +65,34 @@ export default function Home() {
                     ✨ Cast on Farcaster
                   </a>
 
-                  {/* The one and only full-address pill (no truncation) */}
+                  {/* BurnCounter inline beside the cast button */}
+                  <div className="hidden sm:block">
+                    <BurnCounter />
+                  </div>
+
+                  {/* Single copy-friendly burn line, with linked “Dead wallet” */}
                   <span className="pill pill--muted">
-                    1% burns sent to {BURN_ADDR}
+                    1% burn sent to{" "}
+                    <a
+                      href={BURN_LINK}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2"
+                      title="View burn wallet on BaseScan"
+                    >
+                      Dead wallet
+                    </a>
                   </span>
 
                   <span className="pill pill--muted">Endless summers are near.</span>
                   <span className="pill pill--muted">Patience must persevere.</span>
                 </div>
-              </div>
-            </div>
 
-            <div className="hidden md:block">
-              <BurnCounter />
+                {/* BurnCounter visible on very small screens (stacked) */}
+                <div className="sm:hidden mt-2">
+                  <BurnCounter />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -96,11 +111,7 @@ export default function Home() {
           <div className="cel-card cel-card--content p-6 md:p-8">
             <SwapWidget />
           </div>
-
-          {/* keep a single non-cast helper link if you want; otherwise remove */}
-          <div className="mt-5">
-            <Link className="nav-pill" href="/lore">📚 Lore & Contracts</Link>
-          </div>
+          {/* (Removed the mid-page Lore & Contracts button per request) */}
         </div>
       </section>
 
@@ -123,7 +134,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* BURN — concise explainer, no more address pills here */}
+      {/* BURN — compact explainer */}
       <section className="maxw pb-20">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
