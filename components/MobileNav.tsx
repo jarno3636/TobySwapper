@@ -35,40 +35,38 @@ export default function MobileNav() {
     <>
       {/* HEADER BAR */}
       <div className="site-header w-full">
-        {/* LEFT: brand (big, bold, gradient) */}
+        {/* LEFT: brand (bigger, bold, gradient) */}
         <Link href="/" className="flex items-center gap-2 min-w-0">
           <Image
-            src="/toby.PNG"  /* NOTE: .PNG */
+            src="/toby.PNG" /* NOTE: .PNG */
             alt="Toby"
-            width={30}
-            height={30}
+            width={34}
+            height={34}
             className="rounded-lg border-2 border-black shadow-[0_4px_0_#000]"
             priority
           />
-          <span className="brand-title truncate">TobySwapper</span>
+          <span className="brand-title brand-title--lg truncate">TobySwapper</span>
         </Link>
 
-        {/* RIGHT: connect + hamburger (NO other pills outside the drawer) */}
-        <div className="flex items-center gap-8">
-          <button className="nav-pill" onClick={onConnectClick}>
-            {isConnected ? short(address) : "Connect"}
-          </button>
-
-          <button
-            className="nav-trigger"
-            onClick={() => setOpen(true)}
-            aria-label="Open menu"
-            title="Menu"
-          >
-            <span className="i">☰</span> Menu
-          </button>
-        </div>
+        {/* RIGHT: only the hamburger trigger */}
+        <button
+          className="nav-trigger"
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          title="Menu"
+        >
+          <span className="i">☰</span> Menu
+        </button>
       </div>
 
-      {/* RIGHT SHEET (mobile & desktop — keeps header ultra-clean) */}
+      {/* RIGHT SHEET */}
       <div className={`nav-sheet ${open ? "open" : ""}`} aria-hidden={!open}>
         {/* scrim — tap to close */}
-        <button className="nav-sheet__scrim" aria-label="Close menu" onClick={() => setOpen(false)} />
+        <button
+          className="nav-sheet__scrim"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        />
 
         {/* panel */}
         <aside className="nav-sheet__panel" role="dialog" aria-modal="true">
@@ -76,10 +74,15 @@ export default function MobileNav() {
             <div className="font-extrabold text-lg">Menu</div>
             <button className="nav-pill" onClick={() => setOpen(false)} aria-label="Close">✕</button>
           </div>
+
           <nav className="grid gap-3">
-            <button className="nav-pill nav-pill--lg w-full justify-center" onClick={onConnectClick}>
+            <button
+              className="nav-pill nav-pill--lg w-full justify-center"
+              onClick={onConnectClick}
+            >
               {isConnected ? short(address) : "Connect"}
             </button>
+
             <Link
               href="/"
               className="nav-pill nav-pill--lg w-full justify-center no-underline"
@@ -87,6 +90,7 @@ export default function MobileNav() {
             >
               🏠 Home
             </Link>
+
             <Link
               href="/lore"
               className="nav-pill nav-pill--lg w-full justify-center no-underline"
