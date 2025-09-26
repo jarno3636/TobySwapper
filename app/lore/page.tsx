@@ -49,25 +49,25 @@ const CONTRACTS = [
   },
 ]
 
-/** Lore one-liners (glass chips) */
+/** Short lore one-liners */
 const LORE_PILLS = [
-  "🐸 Toby is the current of the swamp—liquidity with a grin.",
-  "🔥 Every rite (swap) tithes 1% to buy & burn $TOBY.",
-  "🌀 Fees spiral through WETH where needed—clean routes, steady quotes.",
-  "📜 Patience and Taboshi: companions in the Toadgod saga.",
-  "🛕 The Shrine guards the myths; the chain holds the truth.",
-  "💠 Base L2 terrain—low fees, high ritual frequency.",
-  "🌫️ Supply down, vibes up—smoke from the altar.",
-  "🧭 Verify paths, confirm contracts, walk the causeway wisely.",
+  "🐸 Toby moves the swamp—liquidity with a grin.",
+  "🔥 Every swap tithes 1% to buy & burn $TOBY.",
+  "🌀 Routes go clean: token → WETH → USDC (when needed).",
+  "📜 Patience & Taboshi: companions in the saga.",
+  "🛕 The Shrine holds story; the chain holds truth.",
+  "💠 Base L2: low fees, high ritual frequency.",
+  "🌫️ Supply down, vibes up.",
+  "🧭 Verify contracts; walk wisely.",
 ]
 
-/** Gentle “tenets” to sprinkle the flavor */
+/** Tiny tenets (ultra concise) */
 const TENETS = [
-  { k: "Tithe", v: "1% of every swap feeds the flame." },
-  { k: "Route", v: "Token → WETH → USDC (or direct on WETH when cleaner)." },
-  { k: "Burn", v: "Purchased $TOBY is sent to 0x…dEaD—no return." },
-  { k: "Terrain", v: "We dwell on Base. Switch when the beacon calls." },
-  { k: "Witness", v: "All proof on BaseScan. Lore speaks; chain confirms." },
+  { k: "Tithe", v: "1% fuels the flame." },
+  { k: "Route", v: "Token → WETH → USDC (or direct)." },
+  { k: "Burn", v: "$TOBY to 0x…dEaD." },
+  { k: "Terrain", v: "We dwell on Base." },
+  { k: "Witness", v: "Lore speaks; chain confirms." },
 ]
 
 function short(addr: string) {
@@ -77,193 +77,158 @@ function short(addr: string) {
 export default function LorePage() {
   return (
     <main className="maxw py-10">
-      {/* Title / Intro */}
-      <section
-        className="mb-8 rounded-3xl border-2 border-black p-6 md:p-8 shadow-[0_10px_0_#000]
-                   bg-[radial-gradient(80%_140%_at_10%_0%,rgba(124,58,237,.28),transparent),radial-gradient(80%_140%_at_90%_0%,rgba(14,165,233,.24),transparent),linear-gradient(180deg,#0b1220,#0f172a)]"
-      >
-        <h1
-          className="mb-2 font-black tracking-tight text-2xl sm:text-3xl md:text-4xl leading-tight"
-          style={{
-            background:
-              "linear-gradient(90deg,#c4b5fd 0%,#79ffe1 50%,#93c5fd 100%)",
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
-            color: "transparent",
-            textShadow: "0 2px 0 rgba(0,0,0,.28)",
-          }}
-        >
-          The TobyWorld Codex
-        </h1>
-        <p className="text-white/85 text-sm md:text-base max-w-3xl">
-          Notes from the swamp: official paths, sacred contracts, and the rites that turn trades
-          into embers. Read the scrolls, verify the chain, and mind the current.
-        </p>
-
-        {/* Lore glass chips */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {LORE_PILLS.map((t) => (
-            <span key={t} className="glass-chip">{t}</span>
-          ))}
+      {/* INTRO — dark premium card */}
+      <section className="section">
+        <div className="cel-card cel-card--plum p-6 md:p-8">
+          <h1 className="section-title mb-2">The TobyWorld Codex</h1>
+          <p className="text-sm md:text-base text-white/85">
+            Official paths. Sacred contracts. Rites that turn trades into embers.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {LORE_PILLS.map((t) => (
+              <span key={t} className="pill pill--glass">{t}</span>
+            ))}
+          </div>
         </div>
       </section>
 
-      <div className="grid gap-8">
-        {/* Official */}
-        <section
-          className="rounded-3xl border-2 border-black p-6 md:p-8 shadow-[0_10px_0_#000]
-                     bg-[radial-gradient(70%_130%_at_12%_0%,rgba(34,211,238,.25),transparent),radial-gradient(70%_130%_at_88%_0%,rgba(196,181,253,.25),transparent),linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,255,255,.88))] text-black"
-        >
-          <h2 className="section-title mb-2">Official Waystones</h2>
-          <p className="text-black/70 mb-4 text-sm">
-            Follow the beacon. Announcements, lore drops, and gathering spots for the guild.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {OFFICIAL.map((x) => (
+      <div className="stack-lg">
+        {/* OFFICIAL */}
+        <section className="section">
+          <div className="cel-card cel-card--teal p-6 md:p-8">
+            <div className="section-title mb-2">Waystones</div>
+            <div className="flex flex-wrap gap-2">
+              {OFFICIAL.map((x) => (
+                <a
+                  key={x.label}
+                  className="nav-pill"
+                  href={x.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {x.icon} {x.label} →
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* TENETS */}
+        <section className="section">
+          <div className="cel-card cel-card--sunset p-6 md:p-8">
+            <div className="section-title mb-3">Swamp Tenets</div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {TENETS.map((t) => (
+                <div
+                  key={t.k}
+                  className="rounded-2xl border-2 border-black p-3 shadow-[0_6px_0_#000]
+                             bg-[linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.04))]"
+                >
+                  <div className="text-xs font-bold text-white/70 mb-1">{t.k}</div>
+                  <div className="font-extrabold">{t.v}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link className="pill pill--glass-accent" href="/">Open the Swapper</Link>
               <a
-                key={x.label}
-                className="nav-pill"
-                href={x.href}
+                className="pill pill--glass"
+                href="https://warpcast.com/~/compose?text=In%20the%20swamp%2C%20every%20trade%20feeds%20the%20flame.%20%F0%9F%94%A5%20%23TobyWorld"
                 target="_blank"
                 rel="noreferrer"
               >
-                {x.icon} {x.label} →
+                ✨ Cast to Farcaster
               </a>
-            ))}
+            </div>
           </div>
         </section>
 
-        {/* Tenets */}
-        <section
-          className="rounded-3xl border-2 border-black p-6 md:p-8 shadow-[0_10px_0_#000]
-                     bg-[radial-gradient(70%_120%_at_10%_0%,rgba(121,255,225,.30),transparent),linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.90))] text-black"
-        >
-          <h2 className="section-title mb-2">Swamp Tenets</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {TENETS.map((t) => (
-              <div
-                key={t.k}
-                className="rounded-2xl border-2 border-black p-3 shadow-[0_6px_0_#000]
-                           bg-[linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,255,255,.92))]"
-              >
-                <div className="text-xs font-bold text-black/60 mb-1">{t.k}</div>
-                <div className="text-black font-extrabold">{t.v}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link className="glass-chip" href="/">Open the Swapper</Link>
-            <a
-              className="glass-chip"
-              href="https://warpcast.com/~/compose?text=In%20the%20swamp%2C%20every%20trade%20feeds%20the%20flame.%20%F0%9F%94%A5%20%23TobyWorld"
-              target="_blank"
-              rel="noreferrer"
-            >
-              ✨ Cast to Farcaster
-            </a>
-          </div>
-        </section>
-
-        {/* Contracts (with token badges) */}
-        <section
-          className="rounded-3xl border-2 border-black p-6 md:p-8 shadow-[0_10px_0_#000]
-                     bg-[radial-gradient(70%_130%_at_85%_0%,rgba(196,181,253,.28),transparent),linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.9))] text-black"
-        >
-          <h2 className="section-title mb-2">Contracts (Base)</h2>
-          <p className="text-black/70 mb-4 text-sm">
-            These are the verified waypoints. Confirm on BaseScan before you grant approvals or
-            sign rites.
-          </p>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {CONTRACTS.map((c) => (
-              <div
-                key={c.label}
-                className="rounded-2xl border-2 border-black p-3 shadow-[0_6px_0_#000]
-                           bg-[linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,255,255,.92))]"
-              >
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={c.icon}
-                    alt={`${c.label} icon`}
-                    width={32}
-                    height={32}
-                    className="rounded-md border-2 border-black bg-white"
-                    priority={c.label === "$TOBY"}
-                  />
-                  <div className="min-w-0">
-                    <div className="font-extrabold leading-tight text-black">{c.label}</div>
-                    <div className="text-[11px] text-black/60 break-all">{short(c.addr)}</div>
+        {/* CONTRACTS */}
+        <section className="section">
+          <div className="cel-card cel-card--mint p-6 md:p-8">
+            <div className="section-title mb-2">Contracts (Base)</div>
+            <div className="card-grid">
+              {CONTRACTS.map((c) => (
+                <div
+                  key={c.label}
+                  className="rounded-2xl border-2 border-black p-3 shadow-[0_6px_0_#000]
+                             bg-[linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,255,255,.06))]"
+                >
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={c.icon}
+                      alt={`${c.label} icon`}
+                      width={32}
+                      height={32}
+                      className="rounded-md border-2 border-black bg-white"
+                      priority={c.label === "$TOBY"}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-extrabold leading-tight">{c.label}</div>
+                      <div className="text-[11px] text-white/70 break-all">{short(c.addr)}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 grid gap-2">
-                  <a
-                    href={c.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="nav-pill w-full justify-center no-underline"
-                    title={`Open ${c.label} on BaseScan`}
-                  >
-                    View on BaseScan
-                  </a>
-                  {c.label === "$TOBY" && (
+                  <div className="mt-3 grid gap-2">
                     <a
-                      href="https://warpcast.com/~/compose?text=Reading%20the%20%24TOBY%20scrolls%20on%20Base%20%F0%9F%90%B8"
+                      href={c.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="glass-chip w-full justify-center text-center"
+                      className="nav-pill w-full justify-center no-underline"
+                      title={`Open ${c.label} on BaseScan`}
                     >
-                      📜 Share the scroll
+                      View on BaseScan
                     </a>
-                  )}
+                    {c.label === "$TOBY" && (
+                      <a
+                        href="https://warpcast.com/~/compose?text=Reading%20the%20%24TOBY%20scrolls%20on%20Base%20%F0%9F%90%B8"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="pill pill--glass w-full justify-center text-center"
+                      >
+                        📜 Share the scroll
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 text-xs text-black/60">
-            Tip: Save trusted addresses to your wallet UI; avoid mirrors and mimic contracts.
-          </div>
-        </section>
-
-        {/* Burn Explainer */}
-        <section
-          className="rounded-3xl border-2 border-black p-6 md:p-8 shadow-[0_10px_0_#000]
-                     bg-[radial-gradient(90%_120%_at_15%_0%,rgba(121,255,225,.30),transparent),linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.92))] text-black"
-        >
-          <h2 className="section-title mb-2">Rite of Flame (Burn Mechanics)</h2>
-          <div className="grid md:grid-cols-[auto,1fr] gap-5 items-start">
-            <div className="rounded-2xl border-2 border-black bg-white px-3 py-2 shadow-[0_6px_0_#000] text-xs font-bold text-black/70">
-              🔥 Burn Flow
+              ))}
             </div>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-black/80">
-              <li>Each swap contributes a <b>1% tithe</b> inside the Swapper.</li>
-              <li>The tithe is routed via Base’s router to <b>acquire $TOBY</b>.</li>
-              <li>Acquired $TOBY is consigned to the burn wallet <code className="pill">0x…dEaD</code>.</li>
-              <li>The rite is irreversible: <b>supply lowers, signal rises</b>.</li>
-            </ul>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link className="nav-pill" href="/">Open Swapper</Link>
-            <a
-              className="nav-pill"
-              href="https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Swapper on BaseScan →
-            </a>
+            <div className="mt-4 text-xs text-white/80">
+              Tip: Save trusted addresses; dodge mirror contracts.
+            </div>
           </div>
         </section>
 
-        {/* Safety note */}
-        <section
-          className="rounded-3xl border-2 border-black p-4 md:p-6 shadow-[0_8px_0_#000]
-                     bg-[radial-gradient(60%_140%_at_80%_0%,rgba(248,113,113,.25),transparent),linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.88))] text-black"
-        >
-          <div className="text-xs text-black/70">
-            <b>Heads up:</b> Verify contracts and routers before approvals. Never share seed phrases.
-            If a path looks odd, pause and re-check the address on BaseScan.
+        {/* BURN EXPLAINER */}
+        <section className="section">
+          <div className="cel-card cel-card--plum p-6 md:p-8">
+            <div className="section-title mb-2">Rite of Flame</div>
+            <ul className="list-disc pl-5 space-y-1 text-sm text-white/85">
+              <li>Each swap pays a <b>1% tithe</b>.</li>
+              <li>Tithe routes to buy <b>$TOBY</b>.</li>
+              <li>$TOBY is consigned to <code className="pill pill--muted">0x…dEaD</code>.</li>
+              <li>Irreversible. <b>Supply down, signal up.</b></li>
+            </ul>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link className="nav-pill" href="/">Open Swapper</Link>
+              <a
+                className="nav-pill"
+                href="https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Swapper on BaseScan →
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* SAFETY */}
+        <section className="section">
+          <div className="cel-card p-4 md:p-6">
+            <div className="text-xs text-white/80">
+              <b>Heads up:</b> Verify contracts and routers before approvals. Never share seed phrases.
+              If a route looks odd, pause and confirm on BaseScan.
+            </div>
           </div>
         </section>
       </div>
