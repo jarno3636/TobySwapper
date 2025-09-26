@@ -1,3 +1,4 @@
+// components/BurnCounter.tsx
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -24,11 +25,9 @@ const ABI_ERC20 = [
 type Props = {
   /** Auto-refresh cadence (ms). Default: 12s */
   refreshMs?: number
-  /** Show a tiny “Updated Xs ago” line under the badge */
-  showTimestamp?: boolean
 }
 
-export default function BurnCounter({ refreshMs = 12_000, showTimestamp = true }: Props) {
+export default function BurnCounter({ refreshMs = 12_000 }: Props) {
   // On-chain reads
   const {
     data: burnedRaw,
@@ -55,59 +54,80 @@ export default function BurnCounter({ refreshMs = 12_000, showTimestamp = true }
 
   const decimals = tobyDecimals ?? TOKENS.TOBY.decimals
 
-  // Smooth tween
-  const [display, setDisplay] = useState(0)
-  const animRef = useRef<number | null>(null)
-  const lastTarget = useRef(0)
-
+  // Target value (human units)
   const target = useMemo(() => {
     if (!burnedRaw) return 0
-    const human = Number(formatUnits(burnedRaw, decimals))
-    return Number.isFinite(human) ? human : 0
+    // formatUnits returns a string; convert safely within JS number range
+    const num = Number(formatUnits(burnedRaw, decimals))
+    return Number.isFinite(num) ? num : 0
   }, [burnedRaw, decimals])
+
+  // Smooth tween of the number to reduce jumpiness
+  const [display, setDisplay] = useState(0)
+  const animRef = useRef<number | null>(null)
+  const lastTargetRef = useRef(0)
 
   useEffect(() => {
     const duration = 700 // ms
     const start = performance.now()
-    const from = lastTarget.current
+    const from = lastTargetRef.current
     const to = target
-    lastTarget.current = to
+    lastTargetRef.current = to
 
     const step = (t: number) => {
       const p = Math.min(1, (t - start) / duration)
-      const x = 1 - Math.pow(1 - p, 3) // easeOutCubic
-      setDisplay(from + (to - from) * x)
+      const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic
+      setDisplay(from + (to - from) * eased)
       if (p < 1) animRef.current = requestAnimationFrame(step)
     }
 
     if (animRef.current) cancelAnimationFrame(animRef.current)
     animRef.current = requestAnimationFrame(step)
-    return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current)
-    }
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
   }, [target])
 
-  // Auto-refresh + stamp
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  // Auto-refresh
   useEffect(() => {
-    const tick = async () => {
-      await refetchBurned()
-      setLastUpdated(new Date())
-    }
+    const tick = () => refetchBurned()
     const id = setInterval(tick, refreshMs)
-    if (!lastUpdated) setLastUpdated(new Date())
+    // first fetch quickly
+    tick()
     return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchBurned, refreshMs])
 
-  const pretty = new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(display)
+  // Rendering helpers
+  const symbol = tobySymbol || TOKENS.TOBY.symbol
+
+  // Compact UI value that won't overflow; full value in title tooltip
+  const compact = new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 2,
+  }).format(display)
+
+  const full = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 6,
+  }).format(display)
+
   const label = burnedError ? "Burned (error)" : "Toby Burned"
   const showSkeleton = fetchingBurned && display === 0
 
   return (
     <div className="inline-flex flex-col items-start">
-      <div className="burn-badge" title="Total TOBY burned to 0x…dEaD" aria-live="polite">
+      <div
+        className="burn-badge"
+        title={`${full} ${symbol}`}
+        aria-live="polite"
+        // richer, on-brand glass background (overrides class if present)
+        style={{
+          background:
+            "radial-gradient(120% 200% at 15% 0%, rgba(255,209,220,.40), transparent 60%)," +
+            "radial-gradient(120% 200% at 85% 100%, rgba(196,181,253,.40), transparent 60%)," +
+            "linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.08))",
+        }}
+      >
         <span className="burn-emoji" aria-hidden>🔥</span>
+
         {showSkeleton ? (
           <div className="burn-text">
             <span className="burn-label">{label}</span>
@@ -118,35 +138,19 @@ export default function BurnCounter({ refreshMs = 12_000, showTimestamp = true }
         ) : (
           <div className="burn-text">
             <span className="burn-label">{label}</span>
-            <span className="burn-amount">
-              {pretty} {fallbackSymbol(tobySymbol)}
+            <span
+              className="burn-amount"
+              style={{
+                // keep the number tidy even when it grows
+                fontVariantNumeric: "tabular-nums",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {compact} {symbol}
             </span>
           </div>
         )}
       </div>
-
-      {showTimestamp && (
-        <div className="mt-1 text-[11px] leading-none text-white/70">
-          {burnedError ? (
-            <span className="rounded-md bg-black/30 px-2 py-[2px]">RPC error — showing last known value</span>
-          ) : (
-            <span className="opacity-80">Updated {lastUpdated ? timeAgo(lastUpdated) : "just now"}</span>
-          )}
-        </div>
-      )}
     </div>
   )
-}
-
-function fallbackSymbol(s?: string) {
-  return s || TOKENS.TOBY.symbol
-}
-
-function timeAgo(d: Date) {
-  const s = Math.floor((Date.now() - d.getTime()) / 1000)
-  if (s < 60) return `${s}s ago`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  return `${h}h ago`
 }
