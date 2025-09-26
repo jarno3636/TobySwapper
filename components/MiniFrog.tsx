@@ -8,7 +8,7 @@ type MiniFrogProps = {
   /** CSS px (logical) — component takes care of DPR scaling */
   width?: number
   height?: number
-  /** Multiplier for bounce/animation speed */
+  /** Multiplier for base bounce/animation speed */
   speed?: number
   /** Extra classNames for outer wrapper */
   className?: string
@@ -17,12 +17,10 @@ type MiniFrogProps = {
 }
 
 /**
- * Premium mini canvas mascot:
- * - DPR-safe rendering (crisp on retina)
- * - Respects `prefers-reduced-motion`
- * - Pauses when tab hidden; resumes when visible
- * - Wink on hover/click
- * - Subtle shadow + glass card styling to match your theme
+ * Premium mini canvas mascot — Toby Frog
+ * - Dark, on-brand gradient background
+ * - Tap/Click = wink; Double-tap/Double-click = jump (bigger bounce)
+ * - DPR crisp, respects prefers-reduced-motion, pauses when hidden
  */
 export default function MiniFrog({
   width = 340,
@@ -33,8 +31,12 @@ export default function MiniFrog({
 }: MiniFrogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const rafRef = useRef<number | null>(null)
-  const winkRef = useRef(0) // frames of wink left
   const startRef = useRef<number | null>(null)
+
+  // interaction state
+  const winkFramesRef = useRef(0)
+  const jumpBoostRef = useRef(0)       // extra bounce during jump
+  const lastTapRef = useRef<number>(0) // for double-tap detection
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -45,7 +47,6 @@ export default function MiniFrog({
       window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-    // Get 2D context
     let ctx: CanvasRenderingContext2D | null = null
     try {
       ctx = canvas.getContext("2d", { alpha: true })
@@ -55,20 +56,16 @@ export default function MiniFrog({
       return
     }
 
-    // DPR-safe sizing helper
+    // DPR-safe sizing
     const resize = () => {
       const dpr = Math.max(1, window.devicePixelRatio || 1)
-      // set internal buffer size
       canvas.width = Math.round(width * dpr)
       canvas.height = Math.round(height * dpr)
-      // set CSS size
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
-      // reset transform before scaling to avoid compounding
       ctx!.setTransform(1, 0, 0, 1, 0, 0)
       ctx!.scale(dpr, dpr)
     }
-
     resize()
     const onResize = () => resize()
     window.addEventListener("resize", onResize)
@@ -85,84 +82,174 @@ export default function MiniFrog({
     }
     document.addEventListener("visibilitychange", onVis)
 
-    // Interactivity: wink on hover/click
-    const onWink = () => {
-      winkRef.current = 22 // ~ short wink
+    // Interactions
+    const wink = () => { winkFramesRef.current = 20 }
+    const jump = () => { jumpBoostRef.current = 1 } // decay in loop
+
+    // Double-tap (touch or mouse)
+    const onPointerDown = () => {
+      const now = performance.now()
+      if (now - lastTapRef.current < 300) {
+        jump()
+      } else {
+        wink()
+      }
+      lastTapRef.current = now
     }
-    canvas.addEventListener("pointerenter", onWink)
-    canvas.addEventListener("click", onWink)
+    // Desktop dblclick as well
+    const onDblClick = () => jump()
+    // Friendly hover wink
+    const onPointerEnter = () => wink()
+
+    canvas.addEventListener("pointerdown", onPointerDown)
+    canvas.addEventListener("dblclick", onDblClick)
+    canvas.addEventListener("pointerenter", onPointerEnter)
 
     // ---- Drawing ----
-    const drawFrog = (time: number) => {
+    const draw = (t: number) => {
       const w = width
       const h = height
-      const bounce = Math.sin(time * 1.8 * speed) * (reduceMotion ? 1 : 4)
-      const y = h * 0.45 + bounce
+      ctx!.clearRect(0, 0, w, h)
 
-      // BG gradient
-      const g = ctx!.createLinearGradient(0, 0, 0, h)
-      g.addColorStop(0, "rgba(255,255,255,0.85)")
-      g.addColorStop(1, "rgba(245,240,255,0.92)")
-      ctx!.fillStyle = g
+      /* Background: night cyan/violet gradients to match app */
+      const bg = ctx!.createLinearGradient(0, 0, 0, h)
+      bg.addColorStop(0, "#0b1020")
+      bg.addColorStop(1, "#0a0f1c")
+      ctx!.fillStyle = bg
       ctx!.fillRect(0, 0, w, h)
 
+      const r1 = ctx!.createRadialGradient(w * 0.08, h * -0.1, 20, w * 0.08, h * -0.1, h * 0.9)
+      r1.addColorStop(0, "rgba(124,58,237,0.36)")
+      r1.addColorStop(1, "rgba(124,58,237,0)")
+      ctx!.fillStyle = r1
+      ctx!.fillRect(0, 0, w, h)
+
+      const r2 = ctx!.createRadialGradient(w * 0.92, h * 0.1, 20, w * 0.92, h * 0.1, h * 0.9)
+      r2.addColorStop(0, "rgba(14,165,233,0.34)")
+      r2.addColorStop(1, "rgba(14,165,233,0)")
+      ctx!.fillStyle = r2
+      ctx!.fillRect(0, 0, w, h)
+
+      // Bounce
+      const baseAmp = reduceMotion ? 1.5 : 4
+      const jumpAmp = jumpBoostRef.current * 18
+      const amp = baseAmp + jumpAmp
+      const y = h * 0.5 + Math.sin(t * (1.9 * speed)) * amp
+
       // shadow
-      ctx!.fillStyle = "rgba(0,0,0,.22)"
+      ctx!.fillStyle = "rgba(0,0,0,0.24)"
       ctx!.beginPath()
-      ctx!.ellipse(w / 2, h * 0.78, 60, 14, 0, 0, Math.PI * 2)
+      ctx!.ellipse(w / 2, h * 0.83, 62, 12 + (jumpAmp > 0 ? 5 : 0), 0, 0, Math.PI * 2)
       ctx!.fill()
 
-      // body
-      ctx!.fillStyle = "#1f6aa3" // blue frog
-      ctx!.strokeStyle = "#0a0a0a"
+      // FROG BODY (friendly green with cream belly)
+      const outline = "#0a0a0a"
       ctx!.lineWidth = 4
+      ctx!.strokeStyle = outline
+
+      // body
+      const bodyGrad = ctx!.createLinearGradient(0, y - 60, 0, y + 60)
+      bodyGrad.addColorStop(0, "#2dd4bf") // teal top
+      bodyGrad.addColorStop(1, "#16a34a") // green bottom
+      ctx!.fillStyle = bodyGrad
       ctx!.beginPath()
-      ctx!.ellipse(w / 2, y, 75, 55, 0, 0, Math.PI * 2)
+      ctx!.ellipse(w / 2, y + 10, 80, 58, 0, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.stroke()
+
+      // head (slightly smaller, on top)
+      const headGrad = ctx!.createLinearGradient(0, y - 60, 0, y + 20)
+      headGrad.addColorStop(0, "#34d399")
+      headGrad.addColorStop(1, "#10b981")
+      ctx!.fillStyle = headGrad
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2, y - 22, 70, 48, 0, 0, Math.PI * 2)
       ctx!.fill()
       ctx!.stroke()
 
       // belly
-      ctx!.fillStyle = "#f5efe3"
+      ctx!.fillStyle = "#f4efe6"
       ctx!.beginPath()
-      ctx!.ellipse(w / 2, y + 5, 46, 34, 0, 0, Math.PI * 2)
+      ctx!.ellipse(w / 2, y + 18, 45, 34, 0, 0, Math.PI * 2)
       ctx!.fill()
       ctx!.stroke()
 
-      // eyes (wink logic)
-      const winking = winkRef.current > 0
-      const eyeR = 8
-      ctx!.fillStyle = "#0a0a0a"
+      // simple arms (little ovals) + feet
+      ctx!.fillStyle = "#0ea766"
+      // left arm
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 - 58, y + 10, 14, 8, 0.5, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.stroke()
+      // right arm
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 + 58, y + 10, 14, 8, -0.5, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.stroke()
+      // feet
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 - 35, y + 56, 18, 8, 0.1, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.stroke()
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 + 35, y + 56, 18, 8, -0.1, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.stroke()
+
+      // cheeks
+      ctx!.fillStyle = "rgba(244,114,182,0.35)" // pink
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 - 32, y - 16, 10, 7, 0, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.beginPath()
+      ctx!.ellipse(w / 2 + 32, y - 16, 10, 7, 0, 0, Math.PI * 2)
+      ctx!.fill()
+
+      // eyes (with wink)
+      const winking = winkFramesRef.current > 0
+      const eyeY = y - 32
+      ctx!.fillStyle = outline
       if (winking) {
-        // left eye closed
         ctx!.lineWidth = 3
         ctx!.beginPath()
-        ctx!.moveTo(w / 2 - 38, y - 40)
-        ctx!.lineTo(w / 2 - 22, y - 40)
+        ctx!.moveTo(w / 2 - 28 - 7, eyeY)
+        ctx!.lineTo(w / 2 - 28 + 7, eyeY)
         ctx!.stroke()
       } else {
         ctx!.beginPath()
-        ctx!.arc(w / 2 - 30, y - 40, eyeR, 0, Math.PI * 2)
+        ctx!.arc(w / 2 - 28, eyeY, 7, 0, Math.PI * 2)
         ctx!.fill()
       }
-      // right eye (always open)
       ctx!.beginPath()
-      ctx!.arc(w / 2 + 30, y - 40, eyeR, 0, Math.PI * 2)
+      ctx!.arc(w / 2 + 28, eyeY, 7, 0, Math.PI * 2)
+      ctx!.fill()
+
+      // tiny pupils (gives friendliness)
+      ctx!.fillStyle = "#ffffff"
+      if (!winking) {
+        ctx!.beginPath()
+        ctx!.arc(w / 2 - 31, eyeY - 2, 2, 0, Math.PI * 2)
+        ctx!.fill()
+      }
+      ctx!.beginPath()
+      ctx!.arc(w / 2 + 25, eyeY - 2, 2, 0, Math.PI * 2)
       ctx!.fill()
 
       // smile
+      ctx!.strokeStyle = outline
       ctx!.lineWidth = 3
       ctx!.beginPath()
-      ctx!.arc(w / 2, y - 18, 18, 0.15 * Math.PI, 0.85 * Math.PI)
+      ctx!.arc(w / 2, y - 10, 16, 0.15 * Math.PI, 0.85 * Math.PI)
       ctx!.stroke()
 
-      // subtle sparkles
+      // subtle sparkle particles
       if (!reduceMotion) {
         ctx!.fillStyle = "rgba(124,58,237,.28)"
-        for (let i = 0; i < 6; i++) {
-          const px = (i * 57 + time * 28) % (w + 40) - 20
-          const py = 30 + ((i * 33) % (h * 0.35))
+        for (let i = 0; i < 8; i++) {
+          const px = (i * 63 + t * 26) % (w + 40) - 20
+          const py = 20 + ((i * 34) % (h * 0.38))
           ctx!.beginPath()
-          ctx!.arc(px, py, 1.7, 0, Math.PI * 2)
+          ctx!.arc(px, py, 1.5, 0, Math.PI * 2)
           ctx!.fill()
         }
       }
@@ -170,23 +257,20 @@ export default function MiniFrog({
 
     const loop = (ts: number) => {
       if (startRef.current == null) startRef.current = ts
-      const elapsed = (ts - startRef.current) / 1000 // seconds
+      const elapsed = (ts - startRef.current) / 1000
 
-      // Clear per frame
-      ctx!.clearRect(0, 0, width, height)
-      drawFrog(elapsed)
+      // decay interactions
+      if (winkFramesRef.current > 0) winkFramesRef.current -= 1
+      if (jumpBoostRef.current > 0) jumpBoostRef.current = Math.max(0, jumpBoostRef.current - 0.045)
 
-      // decay wink
-      if (winkRef.current > 0) winkRef.current -= 1
-
+      draw(elapsed)
       if (!reduceMotion && !document.hidden) {
         rafRef.current = requestAnimationFrame(loop)
       }
     }
 
     if (reduceMotion) {
-      // draw a single static frame
-      drawFrog(0)
+      draw(0)
     } else {
       rafRef.current = requestAnimationFrame(loop)
     }
@@ -196,31 +280,25 @@ export default function MiniFrog({
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       window.removeEventListener("resize", onResize)
       document.removeEventListener("visibilitychange", onVis)
-      canvas.removeEventListener("pointerenter", onWink)
-      canvas.removeEventListener("click", onWink)
+      canvas.removeEventListener("pointerdown", onPointerDown)
+      canvas.removeEventListener("dblclick", onDblClick)
+      canvas.removeEventListener("pointerenter", onPointerEnter)
     }
   }, [width, height, speed, onError])
 
   return (
     <div
       className={clsx(
-        // matches your “cel-card” vibe but lighter; override easily
         "rounded-2xl border-2 border-black shadow-[0_8px_0_#000] overflow-hidden",
-        "bg-white",
+        // card frame with on-brand night gradient/glass vibe
+        "bg-[radial-gradient(60%_140%_at_12%_-10%,rgba(124,58,237,.22),transparent),radial-gradient(60%_140%_at_88%_-10%,rgba(14,165,233,.20),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
         className
       )}
-      style={{
-        width,
-        height,
-      }}
+      style={{ width, height }}
       role="img"
-      aria-label="Animated Toby frog mascot bouncing happily"
+      aria-label="Animated Toby frog mascot bouncing"
     >
-      <canvas
-        ref={canvasRef}
-        // keep a neutral background so it blends in even if not drawn yet
-        className="block w-full h-full"
-      />
+      <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   )
 }
