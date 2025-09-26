@@ -550,3 +550,69 @@ a.nav-pill{ text-decoration:none; }
   transition:transform .08s ease, box-shadow .08s ease, filter .12s ease;
 }
 .swap-arrow:active{ transform: translateY(2px); box-shadow:0 3px 0 #000; }
+/* ===== Swapper polish (dark, TW-style) ===== */
+.swap-title{
+  font-weight:1000;
+  font-size:clamp(28px, 5.2vw, 40px);
+  letter-spacing:.2px;
+}
+
+.swap-rows{
+  display:grid;
+  gap:14px;
+}
+@media (min-width:768px){
+  .swap-rows{
+    grid-template-columns: 1fr auto 1fr;
+    align-items:end;
+    gap:16px;
+  }
+}
+
+.swap-row{
+  border:2px solid #000;
+  border-radius:20px;
+  padding:12px;
+  background:linear-gradient(180deg,rgba(8,14,26,.75),rgba(6,11,20,.75));
+  box-shadow:0 6px 0 #000, 0 20px 40px rgba(0,0,0,.35);
+}
+
+/* center flip button column */
+.swap-flip-wrap{
+  display:flex; align-items:center; justify-content:center;
+}
+.swap-flip{
+  width:48px; height:48px; border-radius:9999px; border:2px solid #000;
+  background:
+    radial-gradient(120% 200% at 85% 0%, rgba(14,165,233,.22), transparent 60%),
+    linear-gradient(135deg,#0d1b2a,#0b1220);
+  box-shadow:0 6px 0 #000;
+  font-weight:900; font-size:20px; color:#e6f3ff;
+  transition:transform .08s ease, box-shadow .08s ease, filter .12s ease;
+}
+.swap-flip:active{ transform:translateY(2px); box-shadow:0 3px 0 #000; }
+
+/* gear with tiny slippage badge */
+.swap-gear{
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.45rem .6rem; border:2px solid #000; border-radius:9999px;
+  background:
+    radial-gradient(60% 140% at 20% 0%, rgba(124,58,237,.28), transparent),
+    linear-gradient(135deg,#0b1220,#0f172a);
+  color:#e6faff; font-weight:900;
+  box-shadow:0 6px 0 #000, 0 10px 26px rgba(0,0,0,.35);
+}
+.swap-gear .val{
+  font-size:.8rem; padding:.1rem .4rem; border:2px solid #000; border-radius:9999px;
+  background:linear-gradient(135deg,#0f172a,#111827); color:#c9f6ff;
+  box-shadow:0 3px 0 #000;
+}
+
+/* Inputs inside the dark card */
+.swap-card .cel-input{
+  background:linear-gradient(180deg,#0b1220,#0f172a);
+  color:#eaf6ff;
+}
+
+/* Settings modal panel already styled in component; ensure top overlay stacks high */
+.swap-panel{ z-index:60; }
