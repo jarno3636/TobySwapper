@@ -1,3 +1,4 @@
+// components/TokenSelect.tsx
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -55,10 +56,7 @@ export default function TokenSelect({
     () => (symbolFromAddress(value) as SymbolKey | null) ?? options[0],
     [value, options]
   )
-  const items = useMemo(
-    () => options.map((s) => SYMBOL_TO_META[s]),
-    [options]
-  )
+  const items = useMemo(() => options.map((s) => SYMBOL_TO_META[s]), [options])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items
@@ -104,7 +102,7 @@ export default function TokenSelect({
     setOpen(true)
     setQuery("")
     setActiveIdx(0)
-    // Slight delay so DOM paints then we can focus search on open
+    // focus search input after mount
     setTimeout(() => {
       const input = listRef.current?.querySelector<HTMLInputElement>("input[data-role='search']")
       input?.focus()
@@ -208,7 +206,8 @@ export default function TokenSelect({
               return (
                 <button
                   key={it.symbol}
-                  ref={(el) => (itemRefs.current[i] = el)}
+                  // ✅ Return void from the ref callback (fixes TS error)
+                  ref={(el) => { itemRefs.current[i] = el }}
                   role="option"
                   aria-selected={selected}
                   onMouseEnter={() => setActiveIdx(i)}
