@@ -53,7 +53,7 @@ export default function Home() {
                   Every trade feeds the flame and strengthens the signal.
                 </p>
 
-                {/* Cast + Burn + Lore one-liners */}
+                {/* Cast + Burn + Lore one-liners (single BurnCounter lives here) */}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <a
                     className="nav-pill"
@@ -65,8 +65,8 @@ export default function Home() {
                     ✨ Cast on Farcaster
                   </a>
 
-                  {/* BurnCounter inline beside the cast button */}
-                  <div className="hidden sm:block">
+                  {/* BurnCounter inline beside the cast button; hide its “updated” line if present */}
+                  <div className="burn-compact">
                     <BurnCounter />
                   </div>
 
@@ -87,19 +87,28 @@ export default function Home() {
                   <span className="pill pill--muted">Endless summers are near.</span>
                   <span className="pill pill--muted">Patience must persevere.</span>
                 </div>
-
-                {/* BurnCounter visible on very small screens (stacked) */}
-                <div className="sm:hidden mt-2">
-                  <BurnCounter />
-                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Tiny global style to suppress BurnCounter's time updater if it exists */}
+        <style jsx global>{`
+          /* If BurnCounter renders a small “updated … ago” element, hide it in this compact spot */
+          .burn-compact .burn-updated,
+          .burn-compact .updated,
+          .burn-compact .last-updated {
+            display: none !important;
+          }
+          /* Fallback: if that line uses a generic tiny text block after the card */
+          .burn-compact .text-xs {
+            display: none !important;
+          }
+        `}</style>
       </section>
 
       {/* SWAP — dark shell with crisp content card */}
-      <section className="maxw pb-20">
+      <section className="maxw pb-24">
         <div
           className="rounded-3xl border-2 border-black p-4 md:p-5 relative overflow-hidden"
           style={{
@@ -111,12 +120,11 @@ export default function Home() {
           <div className="cel-card cel-card--content p-6 md:p-8">
             <SwapWidget />
           </div>
-          {/* (Removed the mid-page Lore & Contracts button per request) */}
         </div>
       </section>
 
       {/* WALLET — directly after the swapper */}
-      <section className="maxw pb-20">
+      <section className="maxw pb-24">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
@@ -134,8 +142,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* BURN — compact explainer */}
-      <section className="maxw pb-20">
+      {/* BURN — compact explainer (no BurnCounter here anymore) */}
+      <section className="maxw pb-24">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
@@ -144,26 +152,20 @@ export default function Home() {
             boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="grid md:grid-cols-[auto,1fr] gap-6 items-center">
-            <div className="cel-card cel-card--content p-4">
-              <BurnCounter />
-            </div>
-
-            <div className="cel-card cel-card--content p-5 text-black/85">
-              <div className="font-extrabold text-black text-lg mb-1">Rite of Flame</div>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Each swap pays a <b>1% tithe</b> into the Swapper.</li>
-                <li>The tithe buys <b>$TOBY</b> via Base’s router.</li>
-                <li>Purchased tokens are sent to the burn wallet.</li>
-                <li>Irreversible: <b>supply down, signal up</b>.</li>
-              </ul>
-            </div>
+          <div className="cel-card cel-card--content p-5 text-black/85">
+            <div className="font-extrabold text-black text-lg mb-1">Rite of Flame</div>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Each swap pays a <b>1% tithe</b> into the Swapper.</li>
+              <li>The tithe buys <b>$TOBY</b> via Base’s router.</li>
+              <li>Purchased tokens are sent to the burn wallet.</li>
+              <li>Irreversible: <b>supply down, signal up</b>.</li>
+            </ul>
           </div>
         </div>
       </section>
 
       {/* LIVE PRICES */}
-      <section className="maxw pb-24">
+      <section className="maxw pb-28">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
