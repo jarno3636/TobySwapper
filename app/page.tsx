@@ -16,101 +16,94 @@ export default function Home() {
 
   return (
     <main className="min-h-screen">
-      {/* MAST — moody, compact hero */}
-      <section className="maxw pt-6 pb-16">
+      {/* ============================= MAST (Hero) ============================= */}
+      <section className="maxw py-16 md:py-20">
         <div
-          className="rounded-3xl border-2 border-black p-5 md:p-7 relative overflow-hidden"
+          className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
             background:
-              "radial-gradient(90% 160% at 0% 0%, rgba(124,58,237,.35), transparent 60%), radial-gradient(120% 180% at 100% 0%, rgba(14,165,233,.30), transparent 60%), linear-gradient(180deg, #0b1020, #0a0f1c)",
+              "radial-gradient(90% 160% at 0% 0%, rgba(124,58,237,.35), transparent 60%), radial-gradient(120% 180% at 100% 0%, rgba(14,165,233,.30), transparent 60%), linear-gradient(180deg,#0b1020,#0a0f1c)",
             boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-5">
-              {artOn ? (
-                <div className="shrink-0">
-                  <MiniFrog onError={() => setArtOn(false)} />
-                </div>
-              ) : (
-                <div className="shrink-0 w-[340px] h-[220px] rounded-2xl border-2 border-black bg-black/20" />
-              )}
+          {/* Centered mascot card */}
+          <div className="flex justify-center">
+            {artOn ? (
+              <MiniFrog className="mx-auto" width={360} height={260} onError={() => setArtOn(false)} />
+            ) : (
+              <div className="mx-auto w-[360px] h-[260px] rounded-3xl border-2 border-black bg-black/20" />
+            )}
+          </div>
 
-              <div className="grid gap-2">
-                <h1
-                  className="font-black tracking-tight text-2xl sm:text-3xl md:text-4xl leading-tight"
-                  style={{
-                    background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
-                    WebkitBackgroundClip: "text",
-                    backgroundClip: "text",
-                    color: "transparent",
-                    textShadow: "0 2px 0 rgba(0,0,0,.25)",
-                  }}
-                >
-                  Swap. Burn. Spread the lore.
-                </h1>
-                <p className="text-white/85 text-sm md:text-base">
-                  Every trade feeds the flame and strengthens the signal.
-                </p>
+          {/* Title + pills */}
+          <div className="mt-6 md:mt-8 grid gap-2 text-center">
+            <h1
+              className="font-black tracking-tight text-3xl md:text-4xl leading-tight mx-auto"
+              style={{
+                background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                textShadow: "0 2px 0 rgba(0,0,0,.25)",
+              }}
+            >
+              Swap. Burn. Spread the lore.
+            </h1>
+            <p className="text-white/85 text-sm md:text-base">
+              Every trade feeds the flame and strengthens the signal.
+            </p>
 
-                {/* Cast + Burn + Lore one-liners (single BurnCounter lives here) */}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <a
-                    className="nav-pill"
-                    href="https://warpcast.com/~/compose?text=Swap.%20Burn.%20Spread%20the%20lore.%20%F0%9F%90%B8%20On%20Base%3A%201%25%20of%20each%20swap%20buys%20%24TOBY%20then%20burns.&embeds[]=https://toadgod.xyz"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Cast on Farcaster"
-                  >
-                    ✨ Cast on Farcaster
-                  </a>
+            {/* Cast + BurnCounter + one-liners */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <a
+                className="nav-pill"
+                href="https://warpcast.com/~/compose?text=Swap.%20Burn.%20Spread%20the%20lore.%20%F0%9F%90%B8%20On%20Base%3A%201%25%20of%20each%20swap%20buys%20%24TOBY%20then%20burns.&embeds[]=https://toadgod.xyz"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Cast on Farcaster"
+              >
+                ✨ Cast on Farcaster
+              </a>
 
-                  {/* BurnCounter inline beside the cast button; hide its “updated” line if present */}
-                  <div className="burn-compact">
-                    <BurnCounter />
-                  </div>
-
-                  {/* Single copy-friendly burn line, with linked “Dead wallet” */}
-                  <span className="pill pill--muted">
-                    1% burn sent to{" "}
-                    <a
-                      href={BURN_LINK}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline underline-offset-2"
-                      title="View burn wallet on BaseScan"
-                    >
-                      Dead wallet
-                    </a>
-                  </span>
-
-                  <span className="pill pill--muted">Endless summers are near.</span>
-                  <span className="pill pill--muted">Patience must persevere.</span>
-                </div>
+              {/* Compact BurnCounter beside cast button (time text hidden via styles below) */}
+              <div className="burn-compact">
+                <BurnCounter />
               </div>
+
+              {/* Single full-address line (linked) + flavor lines */}
+              <span className="pill pill--muted">
+                1% burn sent to{" "}
+                <a
+                  href={BURN_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2"
+                  title="View burn wallet on BaseScan"
+                >
+                  Dead wallet
+                </a>
+              </span>
+              <span className="pill pill--muted">Endless summers are near.</span>
+              <span className="pill pill--muted">Patience must persevere.</span>
             </div>
           </div>
         </div>
 
-        {/* Tiny global style to suppress BurnCounter's time updater if it exists */}
+        {/* Hide any tiny “updated … ago” line inside the compact BurnCounter */}
         <style jsx global>{`
-          /* If BurnCounter renders a small “updated … ago” element, hide it in this compact spot */
           .burn-compact .burn-updated,
           .burn-compact .updated,
-          .burn-compact .last-updated {
-            display: none !important;
-          }
-          /* Fallback: if that line uses a generic tiny text block after the card */
+          .burn-compact .last-updated,
           .burn-compact .text-xs {
             display: none !important;
           }
         `}</style>
       </section>
 
-      {/* SWAP — dark shell with crisp content card */}
-      <section className="maxw pb-24">
+      {/* ============================= SWAP ============================= */}
+      <section className="maxw py-16 md:py-20">
         <div
-          className="rounded-3xl border-2 border-black p-4 md:p-5 relative overflow-hidden"
+          className="rounded-3xl border-2 border-black p-4 md:p-6 relative overflow-hidden"
           style={{
             background:
               "radial-gradient(60% 140% at 20% 0%, rgba(124,58,237,.28), transparent), radial-gradient(60% 120% at 85% 0%, rgba(14,165,233,.25), transparent), linear-gradient(180deg,#0b1220,#0f172a)",
@@ -123,8 +116,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* WALLET — directly after the swapper */}
-      <section className="maxw pb-24">
+      {/* ============================= WALLET ============================= */}
+      <section className="maxw py-16 md:py-20">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
@@ -133,7 +126,10 @@ export default function Home() {
             boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="section-title mb-5" style={{ color: "#f6f7fb", textShadow: "0 2px 0 rgba(0,0,0,.3)" }}>
+          <div
+            className="section-title mb-5 text-center"
+            style={{ color: "#f6f7fb", textShadow: "0 2px 0 rgba(0,0,0,.3)" }}
+          >
             Your Wallet
           </div>
           <div className="cel-card cel-card--content p-5">
@@ -142,8 +138,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* BURN — compact explainer (no BurnCounter here anymore) */}
-      <section className="maxw pb-24">
+      {/* ============================= BURN EXPLAINER ============================= */}
+      <section className="maxw py-16 md:py-20">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
@@ -164,8 +160,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* LIVE PRICES */}
-      <section className="maxw pb-28">
+      {/* ============================= LIVE PRICES ============================= */}
+      <section className="maxw py-16 md:py-24">
         <div
           className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
           style={{
@@ -174,7 +170,10 @@ export default function Home() {
             boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="section-title mb-5" style={{ color: "#f6f7fb", textShadow: "0 2px 0 rgba(0,0,0,.3)" }}>
+          <div
+            className="section-title mb-5 text-center"
+            style={{ color: "#f6f7fb", textShadow: "0 2px 0 rgba(0,0,0,.3)" }}
+          >
             Live Prices (via router)
           </div>
           <div className="cel-card cel-card--content p-5">
