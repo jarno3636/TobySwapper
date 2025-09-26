@@ -199,7 +199,6 @@ export default function SwapWidget() {
     useWaitForTransactionReceipt({ hash: txSwap })
 
   // Toast side-effects + celebrate pulse
-  const toast = useToast()
   const didApproveOk = useRef(false)
   const didApproveErr = useRef(false)
   const didSwapOk = useRef(false)
