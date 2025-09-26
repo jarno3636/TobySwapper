@@ -16,7 +16,7 @@ import { useTokenBalance } from "@/hooks/useTokenBalance"
 import StatusBadge from "@/components/StatusBadge"
 import SwapSettings from "./SwapSettings"
 
-/** ===== ABIs (same as before) ===== */
+/** ===== ABIs (unchanged from your file) ===== */
 const ABI_TOBY_SWAPPER = [
   {
     type: "function",
@@ -64,14 +64,16 @@ const ABI_TOBY_SWAPPER = [
     outputs: [],
   },
 ] as const
+
 const ABI_ERC20 = [
   { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "approve",   stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "approve",  stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount",  type: "uint256" }], outputs: [{ type: "bool" }] },
 ] as const
+
 const ABI_ROUTER_V2 = [
   { type: "function", name: "getAmountsOut", stateMutability: "view", inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }], outputs: [{ name: "amounts", type: "uint256[]" }] },
 ] as const
-/** ================================= */
+/** ========================================== */
 
 type Direction = "USDC->TOKEN" | "ETH->TOKEN" | "TOKEN->USDC" | "TOKEN->ETH"
 
@@ -79,19 +81,19 @@ export default function SwapWidget() {
   const toast = useToast()
   const { address } = useAccount()
 
-  // selections
+  // Selections
   const [fromAddr, setFromAddr] = useState<Address>(TOKENS.USDC.address)
   const [toAddr, setToAddr] = useState<Address>(TOKENS.TOBY.address)
   const [amountIn, setAmountIn] = useState<string>("")
 
-  // settings
+  // Settings (modal)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [slippagePct, setSlippagePct] = useState<string>("1")
 
-  // visual pulse
+  // Visual celebrate pulse
   const [celebrate, setCelebrate] = useState(false)
 
-  // meta + balance
+  // Token meta + balance
   const fromToken = useMemo(
     () => Object.values(TOKENS).find((t) => t.address === fromAddr)!,
     [fromAddr],
@@ -102,10 +104,10 @@ export default function SwapWidget() {
   )
   const { human: fromBalanceHuman } = useTokenBalance(fromAddr, fromToken.decimals)
 
-  // direction
+  // Direction
   const direction: Direction | null = useMemo(() => {
     const isOut = ALLOWED_COMMODITIES.has(toAddr)
-    const isIn = ALLOWED_COMMODITIES.has(fromAddr)
+    const isIn  = ALLOWED_COMMODITIES.has(fromAddr)
     if (fromAddr === TOKENS.USDC.address && isOut) return "USDC->TOKEN"
     if (fromAddr === TOKENS.WETH.address && isOut) return "ETH->TOKEN"
     if (isIn && toAddr === TOKENS.USDC.address) return "TOKEN->USDC"
@@ -113,7 +115,7 @@ export default function SwapWidget() {
     return null
   }, [fromAddr, toAddr])
 
-  // paths
+  /** Paths */
   const buildMainPath = (from: Address, to: Address): Address[] => {
     if (from === TOKENS.USDC.address && ALLOWED_COMMODITIES.has(to)) return [TOKENS.USDC.address, ADDR.WETH, to]
     if (from === TOKENS.WETH.address && ALLOWED_COMMODITIES.has(to)) return [ADDR.WETH, to]
@@ -126,11 +128,12 @@ export default function SwapWidget() {
     if (from === TOKENS.USDC.address) return [TOKENS.USDC.address, ADDR.WETH, TOKENS.TOBY.address]
     return [from, ADDR.WETH, TOKENS.TOBY.address]
   }
-
   const mainPath = useMemo(() => buildMainPath(fromAddr, toAddr), [fromAddr, toAddr])
   const feePath  = useMemo(() => buildFeePath(fromAddr), [fromAddr])
+  const routeLabels = (path: Address[]) =>
+    path.map((a) => Object.values(TOKENS).find((t) => t.address === a)?.symbol || "???").join(" → ")
 
-  // quotes
+  /** Quotes */
   const amountInWei = amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
 
   const { data: amountsMain } = useReadContract({
@@ -143,14 +146,14 @@ export default function SwapWidget() {
     args: amountIn && direction ? [amountInWei, feePath] : undefined,
   }) as { data: bigint[] | undefined }
 
-  // baseline for impact
+  // Baseline price for 1 unit (rough price impact)
   const unitInWei = 1n * (10n ** BigInt(fromToken.decimals))
   const { data: amountsUnit } = useReadContract({
     abi: ABI_ROUTER_V2, address: ADDR.ROUTER, functionName: "getAmountsOut",
     args: direction ? [unitInWei, mainPath] : undefined,
   }) as { data: bigint[] | undefined }
 
-  // slippage
+  // Slippage
   const slippageNum = Number(slippagePct || "1")
   const safeSlip = Number.isFinite(slippageNum) && slippageNum >= 0 ? slippageNum : 1
   const slippageBps = BigInt(Math.round(safeSlip * 100))
@@ -159,6 +162,7 @@ export default function SwapWidget() {
   const estOutMain = amountsMain?.[amountsMain.length - 1] ?? 0n
   const estOutFee  = amountsFee?.[amountsFee.length - 1] ?? 0n
   const minOutMain = estOutMain ? minOutWithSlippage(estOutMain) : 0n
+  const minOutFee  = estOutFee  ? minOutWithSlippage(estOutFee)   : 0n
 
   let priceImpactPct: number | null = null
   if (amountInWei > 0n && estOutMain > 0n && amountsUnit && amountsUnit.length > 0) {
@@ -169,7 +173,7 @@ export default function SwapWidget() {
     }
   }
 
-  // approvals
+  /** Approvals */
   const isEthIn = fromAddr === TOKENS.WETH.address
   const needsApproval = !isEthIn && direction !== null
 
@@ -185,12 +189,12 @@ export default function SwapWidget() {
   const { writeContract: writeApprove, data: txApprove } = useWriteContract()
   const { writeContract: writeSwap,    data: txSwap    } = useWriteContract()
 
-  const { isLoading: approving, isSuccess: approved, isError: approveError } =
+  const { isLoading: approving, isSuccess: approved,  isError: approveError } =
     useWaitForTransactionReceipt({ hash: txApprove })
-  const { isLoading: swapping,  isSuccess: swapped,  isError: swapError    } =
-    useWaitForTransactionReceipt({ hash: txSwap    })
+  const { isLoading: swapping,  isSuccess: swapped,   isError: swapError } =
+    useWaitForTransactionReceipt({ hash: txSwap })
 
-  // toasts
+  // Toasts + celebrate
   const didApproveOk  = useRef(false)
   const didApproveErr = useRef(false)
   const didSwapOk     = useRef(false)
@@ -227,15 +231,9 @@ export default function SwapWidget() {
     }
   }, [swapError, toast])
 
-  // actions
   function onApprove() {
     if (!needsApproval || !amountInWei) return
-    writeApprove({
-      abi: ABI_ERC20,
-      address: fromAddr,
-      functionName: "approve",
-      args: [ADDR.SWAPPER, amountInWei],
-    })
+    writeApprove({ abi: ABI_ERC20, address: fromAddr, functionName: "approve", args: [ADDR.SWAPPER, amountInWei] })
     toast.notify({ title: "Approval submitted", desc: `Approving ${fromToken.symbol}…` })
   }
 
@@ -248,7 +246,7 @@ export default function SwapWidget() {
         abi: ABI_TOBY_SWAPPER as any,
         address: ADDR.SWAPPER,
         functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
-        args: [toAddr, minOutMain, mainPath, feePath, minOutWithSlippage(estOutFee), deadline],
+        args: [toAddr, minOutMain, mainPath, feePath, minOutFee, deadline],
         value: amountInWei,
       })
     } else if (direction === "USDC->TOKEN" || direction === "TOKEN->USDC") {
@@ -256,23 +254,32 @@ export default function SwapWidget() {
         abi: ABI_TOBY_SWAPPER as any,
         address: ADDR.SWAPPER,
         functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
-        args: [fromAddr, toAddr, amountInWei, minOutMain, mainPath, feePath, minOutWithSlippage(estOutFee), deadline],
+        args: [fromAddr, toAddr, amountInWei, minOutMain, mainPath, feePath, minOutFee, deadline],
       })
     } else if (direction === "TOKEN->ETH") {
       writeSwap({
         abi: ABI_TOBY_SWAPPER as any,
         address: ADDR.SWAPPER,
         functionName: "swapTokensForETHSupportingFeeOnTransferTokens",
-        args: [fromAddr, amountInWei, minOutMain, mainPath, feePath, minOutWithSlippage(estOutFee), deadline],
+        args: [fromAddr, amountInWei, minOutMain, mainPath, feePath, minOutFee, deadline],
       })
     }
     toast.notify({ title: "Swap submitted", desc: "Waiting for confirmation…" })
   }
 
-  // helper for the side-by-side swap
-  const flipSides = () => {
+  function flipTokens() {
     setFromAddr(toAddr)
     setToAddr(fromAddr)
+    // small guard: if pair becomes invalid, snap to USDC ↔ TOBY
+    setTimeout(() => {
+      const ok =
+        (ALLOWED_BASES.has(fromAddr) && ALLOWED_COMMODITIES.has(toAddr)) ||
+        (ALLOWED_COMMODITIES.has(fromAddr) && ALLOWED_BASES.has(toAddr))
+      if (!ok) {
+        setFromAddr(TOKENS.USDC.address)
+        setToAddr(TOKENS.TOBY.address)
+      }
+    }, 0)
   }
 
   const outMainHuman = estOutMain ? formatUnits(estOutMain, toToken.decimals) : "-"
@@ -280,19 +287,18 @@ export default function SwapWidget() {
 
   return (
     <>
-      {/* Dark premium shell */}
       <div
         className={[
-          "swap-card relative rounded-3xl border-2 border-black p-6 md:p-7",
+          "swap-card rounded-3xl border-2 border-black p-5 md:p-7",
           "bg-[radial-gradient(120%_160%_at_15%_-20%,rgba(124,58,237,.22),transparent),radial-gradient(120%_160%_at_85%_-10%,rgba(14,165,233,.18),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
           "text-slate-50 shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)]",
           celebrate ? "celebrate" : "",
         ].join(" ")}
       >
-        {/* title + controls */}
-        <div className="mb-5 pr-12">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
           <h2
-            className="swap-title text-4xl md:text-5xl font-black tracking-tight leading-none"
+            className="swap-title leading-none"
             style={{
               background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
               WebkitBackgroundClip: "text",
@@ -303,24 +309,24 @@ export default function SwapWidget() {
           >
             Swap
           </h2>
-          <div className="mt-2">
+
+          <div className="flex items-center gap-2">
             <StatusBadge />
+            <button
+              className="swap-gear"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Open swap settings"
+              title="Settings"
+            >
+              <span className="i">⚙️</span>
+              <span className="val">{Number(slippagePct || "1")}%</span>
+            </button>
           </div>
         </div>
 
-        {/* gear pinned top-right */}
-        <button
-          className="icon-btn absolute right-3 top-3"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Open swap settings"
-          title="Settings"
-        >
-          ⚙️
-        </button>
-
-        {/* side-by-side From / To with center swap arrow */}
-        <div className="swap-grid">
-          <div className="space-y-3">
+        {/* From / flip / To */}
+        <div className="swap-rows">
+          <div className="swap-row">
             <TokenSelect
               label="From"
               value={fromAddr}
@@ -332,8 +338,9 @@ export default function SwapWidget() {
               }}
               options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
             />
+
             <NumberInput
-              label="Amount In"
+              label="Amount"
               value={amountIn}
               onChange={setAmountIn}
               placeholder="0.0"
@@ -341,31 +348,29 @@ export default function SwapWidget() {
               balance={fromBalanceHuman}
               decimals={fromToken.decimals}
               max={fromBalanceHuman}
-              step={fromToken.decimals === 6 ? "0.01" : "0.001"}    
+              step={fromToken.decimals === 6 ? "0.01" : "0.001"}
+              showPercentChips
             />
           </div>
 
-          {/* center arrow */}
-          <div className="swap-arrow-wrap">
-            <button className="swap-arrow" onClick={flipSides} aria-label="Swap direction">
-              ↔︎
+          <div className="swap-flip-wrap">
+            <button className="swap-flip" onClick={flipTokens} aria-label="Flip tokens">
+              ⇅
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="swap-row">
             <TokenSelect
               label="To"
               value={toAddr}
               onChange={setToAddr}
               options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
             />
-            {/* spacer to align with amount input height */}
-            <div aria-hidden className="h-[42px]"></div>
           </div>
         </div>
 
-        {/* slim metrics */}
-        <div className="mt-6 grid gap-2 text-sm/6 text-slate-200">
+        {/* Slim metrics line */}
+        <div className="mt-5 grid gap-1 text-sm/6 text-slate-200">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="opacity-70">Est. out:</span>
             <span className="font-semibold">{outMainHuman}</span>
@@ -387,14 +392,14 @@ export default function SwapWidget() {
           <details className="opacity-80">
             <summary className="cursor-pointer select-none">Details</summary>
             <div className="mt-1 text-xs text-slate-300/90">
-              <div>Route: <code className="font-mono">{mainPath.map(a => Object.values(TOKENS).find(t => t.address===a)?.symbol ?? "?" ).join(" → ")}</code></div>
-              <div>Fee path: <code className="font-mono">{feePath.map(a => Object.values(TOKENS).find(t => t.address===a)?.symbol ?? "?" ).join(" → ")}</code></div>
+              <div>Route: <code className="font-mono">{routeLabels(mainPath)}</code></div>
+              <div>Fee path: <code className="font-mono">{routeLabels(feePath)}</code></div>
               <div className="opacity-80 mt-1">1% fee auto-buys TOBY and sends to burn.</div>
             </div>
           </details>
         </div>
 
-        {/* actions */}
+        {/* Actions */}
         <div className="mt-6 grid gap-3">
           {!hasAllowance && (
             <button
@@ -405,6 +410,7 @@ export default function SwapWidget() {
               {approving ? "Approving..." : `Approve ${fromToken.symbol}`}
             </button>
           )}
+
           <button
             className={`cel-btn cel-btn--good ${swapping ? "btn-loading" : ""}`}
             onClick={doSwap}
@@ -415,7 +421,7 @@ export default function SwapWidget() {
         </div>
       </div>
 
-      {/* modal */}
+      {/* Settings modal (true overlay) */}
       <SwapSettings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
