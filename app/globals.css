@@ -442,3 +442,28 @@ a.nav-pill{ text-decoration:none; }
    ========================================================= */
 .hide-on-mobile{ display:none; }
 @media (min-width:768px){ .hide-on-mobile{ display:initial; } }
+
+/* --- Mascot micro-animations --- */
+@keyframes float-soft {
+  0%,100% { transform: translateY(0) }
+  50%     { transform: translateY(-2px) }
+}
+.animate-float-soft { animation: float-soft 3.2s ease-in-out infinite; }
+
+/* pronounced bounce using translate + scale for “squash & stretch” */
+@keyframes bounce-strong {
+  0%   { transform: translateY(0) scaleY(1); }
+  18%  { transform: translateY(calc(-14px * var(--jump-strength))) scaleY(1.04); }
+  32%  { transform: translateY(0) scaleY(0.94); }
+  46%  { transform: translateY(calc(-6px * var(--jump-strength))) scaleY(1.02); }
+  60%  { transform: translateY(0) scaleY(0.98); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.animate-bounce-strong { animation: bounce-strong .6s cubic-bezier(.2,.6,.2,1); }
+
+/* secret spin */
+@keyframes spin-secret {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(540deg); } /* 1.5 spins feels nice */
+}
+.animate-spin-secret { animation: spin-secret 1.4s ease-in-out; }
