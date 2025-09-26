@@ -2,7 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* === Theme tokens (tune freely) === */
+/* =========================================================
+   THEME TOKENS
+   ========================================================= */
 :root{
   --bg:#0a0b12;
   --glass:rgba(255,255,255,.08);
@@ -25,9 +27,47 @@
   --pill-px:16px;
   --pill-fs:14.5px;
   --pill-fw:800;
+
+  /* card gradient defaults (night) */
+  --card-plum-1:#3a1d5d;
+  --card-plum-2:#6d28d9;
+  --card-teal-1:#0b2a33;
+  --card-teal-2:#0ea5a5;
+  --card-sunset-1:#422006;
+  --card-sunset-2:#f59e0b;
+  --card-mint-1:#103522;
+  --card-mint-2:#34d399;
 }
 
-/* === Background & base text === */
+/* Neon theme */
+[data-theme="neon"]{
+  --accent:#60f0ff;
+  --accent-2:#ffd1d1;
+  --accent-3:#c7b7ff;
+  --panel:rgba(255,255,255,.92);
+
+  --card-plum-1:#2a1550;  --card-plum-2:#8b5cf6;
+  --card-teal-1:#07272f;  --card-teal-2:#22d3ee;
+  --card-sunset-1:#3a0a0a;--card-sunset-2:#fb7185;
+  --card-mint-1:#0a2d1d;  --card-mint-2:#22c55e;
+}
+
+/* Pastel theme */
+[data-theme="pastel"]{
+  --accent:#9af8ee;
+  --accent-2:#ffe4ec;
+  --accent-3:#e4dcff;
+  --panel:rgba(255,255,255,.95);
+
+  --card-plum-1:#4b3b62;  --card-plum-2:#d6bcfa;
+  --card-teal-1:#2f4858;  --card-teal-2:#a7f3d0;
+  --card-sunset-1:#6b4f2e;--card-sunset-2:#fde68a;
+  --card-mint-1:#2a4d3b;  --card-mint-2:#bbf7d0;
+}
+
+/* =========================================================
+   BASE & LAYOUT
+   ========================================================= */
 html,body{
   background:
     radial-gradient(1300px 760px at 8% -4%, rgba(124,58,237,.36), transparent 60%),
@@ -36,16 +76,61 @@ html,body{
   color:#f6f7fb;
 }
 
-/* Container helper */
 .maxw{ @apply mx-auto max-w-6xl px-4; }
 
-/* === Cel-glass hybrid cards/buttons === */
+:focus-visible{
+  outline:3px solid rgba(121,255,225,.9);
+  outline-offset:2px;
+  border-radius:12px;
+}
+
+/* =========================================================
+   CARDS & BUTTONS (cel-*)
+   ========================================================= */
 .cel-card{
   @apply rounded-3xl border-2 border-black;
   background:var(--panel);
   box-shadow:var(--shadow-strong),var(--shadow-soft);
   backdrop-filter:blur(10px) saturate(1.06);
 }
+
+/* Colorful, readable variants */
+.cel-card--plum{
+  background:
+    radial-gradient(60% 100% at 20% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(160deg, var(--card-plum-1), var(--card-plum-2));
+  color:#fff;
+}
+.cel-card--teal{
+  background:
+    radial-gradient(60% 100% at 15% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(160deg, var(--card-teal-1), var(--card-teal-2));
+  color:#ecfeff;
+}
+.cel-card--sunset{
+  background:
+    radial-gradient(60% 100% at 85% 10%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(160deg, var(--card-sunset-1), var(--card-sunset-2));
+  color:#fffceb;
+}
+.cel-card--mint{
+  background:
+    radial-gradient(50% 90% at 20% 80%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(160deg, var(--card-mint-1), var(--card-mint-2));
+  color:#062b1a;
+}
+
+/* High-contrast “content” card (for tables/metrics) */
+.cel-card--content{
+  background:#ffffff;
+  color:#0f172a;
+}
+
+/* Section card spacing helper */
+.card-grid{ @apply grid gap-4; }
+@media (min-width:640px){ .card-grid{ grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (min-width:1024px){ .card-grid{ grid-template-columns: repeat(3,minmax(0,1fr)); } }
+
 .cel-btn{
   @apply rounded-2xl border-2 border-black px-4 py-2 font-semibold;
   background:#fff;
@@ -64,23 +149,33 @@ html,body{
   border-color:#000; background:#fff; box-shadow:0 6px 0 #000;
 }
 
-/* Generic pills */
+/* =========================================================
+   PILLS & CHIPS
+   ========================================================= */
 .pill{
-  display:inline-flex; align-items:center; gap:.35rem;
-  padding:.2rem .55rem; border:2px solid #000; border-radius:9999px;
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.28rem .7rem; border:2px solid #000; border-radius:9999px;
   background:#fff; color:#111; box-shadow:0 4px 0 #000;
+  font-weight:800;
 }
+.pill--muted{ background:#f1f5f9; color:#0f172a; }
 
-/* Section header */
+/* =========================================================
+   SECTION TITLES
+   ========================================================= */
 .section-title{
   font-weight:900; font-size:1.35rem; color:#111;
   text-shadow:0 2px 0 rgba(0,0,0,.12);
 }
 
-/* Divider */
+/* =========================================================
+   DIVIDERS
+   ========================================================= */
 .divider{ height:2px; background:#000; opacity:.1; margin:.75rem 0; }
 
-/* Burn badge */
+/* =========================================================
+   BURN BADGE
+   ========================================================= */
 .burn-badge{
   position:relative; display:inline-flex; align-items:center; gap:.65rem;
   padding:.6rem .9rem; border:2px solid #000; border-radius:9999px;
@@ -92,7 +187,9 @@ html,body{
 .burn-label{ font-size:.7rem; font-weight:700; opacity:.8; letter-spacing:.02em; }
 .burn-amount{ font-size:.95rem; font-weight:800; }
 
-/* === Hero === */
+/* =========================================================
+   HERO
+   ========================================================= */
 .hero{
   position:relative; display:grid; grid-template-columns:1.1fr .9fr; gap:24px;
   border:2px solid #000; border-radius:28px; padding:24px;
@@ -107,7 +204,7 @@ html,body{
 }
 .hero-sub{ color:#f1f2f8; opacity:.9; }
 
-/* Floating blobs */
+/* Blobs */
 .blob{
   position:absolute; border-radius:9999px; filter:blur(28px); opacity:.35; z-index:0;
   animation:blobFloat 14s ease-in-out infinite;
@@ -118,7 +215,9 @@ html,body{
   background:radial-gradient(closest-side,#22d3ee,transparent); animation-delay:-7s; }
 @keyframes blobFloat{ 0%,100%{ transform:translate3d(0,0,0)} 50%{ transform:translate3d(10px,-8px,0) scale(1.02)} }
 
-/* === Toasts === */
+/* =========================================================
+   TOASTS
+   ========================================================= */
 .toast-viewport{
   position:fixed; right:16px; top:16px; z-index:50;
   display:flex; flex-direction:column; gap:10px;
@@ -134,7 +233,9 @@ html,body{
 .toast-desc{ font-size:.85rem; opacity:.9; }
 @keyframes toastIn{ from{ transform:translateY(-6px); opacity:0 } to{ transform:translateY(0); opacity:1 } }
 
-/* === Swap success pulse === */
+/* =========================================================
+   SWAP SUCCESS PULSE
+   ========================================================= */
 @keyframes pulsePop{
   0%{ transform:scale(.98); box-shadow:0 10px 0 #000, 0 0 0 0 rgba(121,255,225,0) }
   40%{ transform:scale(1.012); box-shadow:0 16px 0 #000, 0 0 0 10px rgba(121,255,225,.35) }
@@ -155,17 +256,16 @@ html,body{
 }
 .metrics-card.success{ box-shadow:0 8px 0 #000; outline:3px solid rgba(121,255,225,.55); transition:outline .2s ease; }
 
-/* === Header & Navigation === */
-
-/* Sticky, tidy header bar */
+/* =========================================================
+   HEADER & NAVIGATION
+   ========================================================= */
 .site-header{
   display:flex; align-items:center; justify-content:space-between; gap:.75rem;
 }
 
-/* Brand title: big, bold, gradient */
 .brand-title{
   font-weight:1000;
-  font-size:clamp(24px,3.8vw,34px);
+  font-size:clamp(26px,4vw,36px);
   letter-spacing:.2px;
   background:linear-gradient(90deg,#c4b5fd 0%,#79ffe1 50%,#a5b4fc 100%);
   -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -194,7 +294,7 @@ html,body{
 }
 .nav-sheet.open .nav-sheet__panel{ transform:translateX(0); }
 
-/* Menu trigger (right, outside drawer) */
+/* Menu trigger (right) */
 .nav-trigger{
   display:inline-flex; align-items:center; gap:.5rem;
   height:var(--pill-h); padding:0 var(--pill-px);
@@ -208,7 +308,7 @@ html,body{
 .nav-trigger:active{ transform:translateY(2px); box-shadow:0 3px 0 #000; }
 .nav-trigger:hover{ filter:brightness(1.05); }
 
-/* Nav pills (edgy + readable) — uniform sizes */
+/* Pills for nav (uniform sizes) */
 .nav-pill{
   display:inline-flex; align-items:center; gap:.5rem;
   height:var(--pill-h); padding:0 var(--pill-px);
@@ -221,11 +321,16 @@ html,body{
   box-shadow:0 6px 0 #000, 0 12px 26px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
   transition:transform .08s ease, box-shadow .08s ease, filter .12s ease, background .2s ease;
 }
-/* Readable swap card text, regardless of site theme */
-.swap-root { color: #0f172a; }             /* slate-900 */
-.swap-root .section-title { color: #0f172a; }
+.nav-pill:hover{ filter:brightness(1.08) saturate(1.05); }
+.nav-pill:active{ transform:translateY(2px); box-shadow:0 3px 0 #000; }
+.nav-pill--lg{ height:var(--pill-h-lg); font-size:15px; }
 
-/* Status badge */
+/* Never underline nav pills */
+a.nav-pill{ text-decoration:none; }
+
+/* =========================================================
+   STATUS BADGE
+   ========================================================= */
 .status-badge{
   display:inline-flex; align-items:center; gap:.5rem;
   padding:.45rem .7rem; border:2px solid #000; border-radius:9999px;
@@ -253,9 +358,37 @@ html,body{
 }
 .status-badge.off .dot{ background:#64748b; }
 .status-badge:active{ transform: translateY(2px); box-shadow:0 3px 0 #000; }
-.nav-pill:hover{ filter:brightness(1.08) saturate(1.05); }
-.nav-pill:active{ transform:translateY(2px); box-shadow:0 3px 0 #000; }
-.nav-pill--lg{ height:var(--pill-h-lg); font-size:15px; }
 
-/* No underline ever */
-a.nav-pill{ text-decoration:none; }
+/* =========================================================
+   SWAP / METRICS READABILITY
+   ========================================================= */
+.swap-root{ color:#0f172a; } /* slate-900 */
+.swap-root .section-title { color:#0f172a; }
+
+.metrics-card{
+  @apply rounded-2xl border-2 border-black p-4 shadow-[0_6px_0_#000];
+  background:#ffffff; color:#0f172a;
+}
+
+/* Route pills readable on light */
+.metrics-card .pill{ background:#f8fafc; color:#0f172a; }
+
+/* =========================================================
+   RAINBOWKIT TIDY (if shown anywhere)
+   ========================================================= */
+.rk-accordion-content, .rk-dialog { color: #0f172a; }
+.rk-button { border-radius: 9999px !important; font-weight: 800 !important; }
+
+/* =========================================================
+   MINI FROG CANVAS
+   ========================================================= */
+.mini-frog{
+  border:2px solid #000; border-radius:16px;
+  background:#ffffffdd; box-shadow:0 8px 0 #000;
+}
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+.hide-on-mobile{ display:none; }
+@media (min-width:768px){ .hide-on-mobile{ display:initial; } }
