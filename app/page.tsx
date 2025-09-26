@@ -1,7 +1,6 @@
 // app/page.tsx
 "use client"
 
-import { useState } from "react"
 import SwapWidget from "@/components/SwapWidget"
 import BurnCounter from "@/components/BurnCounter"
 import MiniFrog from "@/components/MiniFrog"
@@ -46,8 +45,6 @@ function ContentCard({
 }
 
 export default function Home() {
-  const [artOn, setArtOn] = useState(true)
-
   return (
     <main className="min-h-screen">
       {/* ============================= MAST (Hero) ============================= */}
@@ -58,18 +55,9 @@ export default function Home() {
               "radial-gradient(90% 160% at 0% 0%, rgba(124,58,237,.35), transparent 60%), radial-gradient(120% 180% at 100% 0%, rgba(14,165,233,.30), transparent 60%), linear-gradient(180deg,#0b1020,#0a0f1c)",
           }}
         >
-          {/* Centered mascot in its own hoverable card */}
+          {/* Centered mascot card */}
           <div className="flex justify-center">
-            {artOn ? (
-              <MiniFrog
-                width={360}
-                height={260}
-                className="mx-auto"
-                onError={() => setArtOn(false)}
-              />
-            ) : (
-              <div className="mx-auto w-[360px] h-[260px] rounded-3xl border-2 border-black bg-black/20" />
-            )}
+            <MiniFrog width={360} height={260} className="mx-auto" />
           </div>
 
           {/* Title + pills */}
