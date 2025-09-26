@@ -264,7 +264,6 @@ export default function SwapWidget() {
         {/* Selectors */}
         <div className="grid sm:grid-cols-2 gap-4">
           <TokenSelect
-            dark
             label="From"
             value={fromAddr}
             onChange={(v) => {
@@ -276,7 +275,6 @@ export default function SwapWidget() {
             options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
           />
           <TokenSelect
-            dark
             label="To"
             value={toAddr}
             onChange={setToAddr}
@@ -287,7 +285,6 @@ export default function SwapWidget() {
         {/* Inputs */}
         <div className="mt-4 grid gap-4">
           <NumberInput
-            dark
             label="Amount In"
             value={amountIn}
             onChange={setAmountIn}
