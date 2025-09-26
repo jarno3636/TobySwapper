@@ -11,6 +11,40 @@ import Portfolio from "@/components/Portfolio"
 const BURN_ADDR = "0x000000000000000000000000000000000000dEaD"
 const BURN_LINK = `https://basescan.org/address/${BURN_ADDR}`
 
+/** Reusable wrapper gradient card for each section */
+function SectionCard({
+  children,
+  className = "",
+  style,
+}: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) {
+  return (
+    <div
+      className={
+        "rounded-3xl border-2 border-black relative overflow-hidden p-5 md:p-7 " +
+        className
+      }
+      style={{
+        boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** White content card that sits INSIDE the colorful wrapper */
+function ContentCard({
+  children,
+  className = "",
+}: React.PropsWithChildren<{ className?: string }>) {
+  return (
+    <div className={"cel-card cel-card--content rounded-2xl p-5 md:p-7 " + className}>
+      {children}
+    </div>
+  )
+}
+
 export default function Home() {
   const [artOn, setArtOn] = useState(true)
 
@@ -18,18 +52,21 @@ export default function Home() {
     <main className="min-h-screen">
       {/* ============================= MAST (Hero) ============================= */}
       <section className="maxw py-16 md:py-20">
-        <div
-          className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
+        <SectionCard
           style={{
             background:
               "radial-gradient(90% 160% at 0% 0%, rgba(124,58,237,.35), transparent 60%), radial-gradient(120% 180% at 100% 0%, rgba(14,165,233,.30), transparent 60%), linear-gradient(180deg,#0b1020,#0a0f1c)",
-            boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          {/* Centered mascot card */}
+          {/* Centered mascot in its own hoverable card */}
           <div className="flex justify-center">
             {artOn ? (
-              <MiniFrog className="mx-auto" width={360} height={260} onError={() => setArtOn(false)} />
+              <MiniFrog
+                width={360}
+                height={260}
+                className="mx-auto"
+                onError={() => setArtOn(false)}
+              />
             ) : (
               <div className="mx-auto w-[360px] h-[260px] rounded-3xl border-2 border-black bg-black/20" />
             )}
@@ -65,12 +102,12 @@ export default function Home() {
                 ✨ Cast on Farcaster
               </a>
 
-              {/* Compact BurnCounter beside cast button (time text hidden via styles below) */}
+              {/* Compact BurnCounter beside the cast button */}
               <div className="burn-compact">
                 <BurnCounter />
               </div>
 
-              {/* Single full-address line (linked) + flavor lines */}
+              {/* One full-address line (linked) + flavor lines */}
               <span className="pill pill--muted">
                 1% burn sent to{" "}
                 <a
@@ -87,14 +124,18 @@ export default function Home() {
               <span className="pill pill--muted">Patience must persevere.</span>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Hide any tiny “updated … ago” line inside the compact BurnCounter */}
+        {/* Hide any “updated … ago” line inside the compact BurnCounter */}
         <style jsx global>{`
           .burn-compact .burn-updated,
           .burn-compact .updated,
           .burn-compact .last-updated,
-          .burn-compact .text-xs {
+          .burn-compact small,
+          .burn-compact time,
+          .burn-compact [data-updated],
+          .burn-compact .muted,
+          .burn-compact .caption {
             display: none !important;
           }
         `}</style>
@@ -102,28 +143,24 @@ export default function Home() {
 
       {/* ============================= SWAP ============================= */}
       <section className="maxw py-16 md:py-20">
-        <div
-          className="rounded-3xl border-2 border-black p-4 md:p-6 relative overflow-hidden"
+        <SectionCard
           style={{
             background:
               "radial-gradient(60% 140% at 20% 0%, rgba(124,58,237,.28), transparent), radial-gradient(60% 120% at 85% 0%, rgba(14,165,233,.25), transparent), linear-gradient(180deg,#0b1220,#0f172a)",
-            boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="cel-card cel-card--content p-6 md:p-8">
+          <ContentCard>
             <SwapWidget />
-          </div>
-        </div>
+          </ContentCard>
+        </SectionCard>
       </section>
 
       {/* ============================= WALLET ============================= */}
       <section className="maxw py-16 md:py-20">
-        <div
-          className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
+        <SectionCard
           style={{
             background:
               "radial-gradient(70% 140% at 10% 0%, rgba(34,211,238,.28), transparent), radial-gradient(70% 140% at 90% 0%, rgba(125,211,252,.24), transparent), linear-gradient(180deg,#08131c,#0a1620)",
-            boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
           <div
@@ -132,23 +169,21 @@ export default function Home() {
           >
             Your Wallet
           </div>
-          <div className="cel-card cel-card--content p-5">
+          <ContentCard>
             <Portfolio />
-          </div>
-        </div>
+          </ContentCard>
+        </SectionCard>
       </section>
 
       {/* ============================= BURN EXPLAINER ============================= */}
       <section className="maxw py-16 md:py-20">
-        <div
-          className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
+        <SectionCard
           style={{
             background:
               "radial-gradient(70% 140% at 10% 0%, rgba(255,209,220,.28), transparent), radial-gradient(70% 140% at 90% 0%, rgba(196,181,253,.28), transparent), linear-gradient(180deg,#0f1426,#0c1221)",
-            boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
-          <div className="cel-card cel-card--content p-5 text-black/85">
+          <ContentCard className="text-black/85">
             <div className="font-extrabold text-black text-lg mb-1">Rite of Flame</div>
             <ul className="list-disc pl-5 space-y-1">
               <li>Each swap pays a <b>1% tithe</b> into the Swapper.</li>
@@ -156,18 +191,16 @@ export default function Home() {
               <li>Purchased tokens are sent to the burn wallet.</li>
               <li>Irreversible: <b>supply down, signal up</b>.</li>
             </ul>
-          </div>
-        </div>
+          </ContentCard>
+        </SectionCard>
       </section>
 
       {/* ============================= LIVE PRICES ============================= */}
       <section className="maxw py-16 md:py-24">
-        <div
-          className="rounded-3xl border-2 border-black p-6 md:p-8 relative overflow-hidden"
+        <SectionCard
           style={{
             background:
               "radial-gradient(60% 140% at 85% 0%, rgba(196,181,253,.30), transparent), radial-gradient(60% 140% at 20% 0%, rgba(14,165,233,.28), transparent), linear-gradient(180deg,#0a1323,#0b1220)",
-            boxShadow: "0 12px 0 #000, 0 26px 56px rgba(0,0,0,.48)",
           }}
         >
           <div
@@ -176,10 +209,10 @@ export default function Home() {
           >
             Live Prices (via router)
           </div>
-          <div className="cel-card cel-card--content p-5">
+          <ContentCard>
             <LivePrices />
-          </div>
-        </div>
+          </ContentCard>
+        </SectionCard>
       </section>
     </main>
   )
