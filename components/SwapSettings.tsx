@@ -44,7 +44,6 @@ export default function SwapSettings({ open, onClose, slippagePct, setSlippagePc
           step="0.1"
           showPercentChips={false}
           help="Most swaps work with 1–2% slippage."
-          dark
         />
       </div>
     </div>
