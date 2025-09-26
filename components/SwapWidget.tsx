@@ -2,7 +2,12 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi"
 import { formatUnits, parseUnits, type Address } from "viem"
 import { ADDR, TOKENS, ALLOWED_BASES, ALLOWED_COMMODITIES } from "@/lib/addresses"
 import TokenSelect from "./TokenSelect"
@@ -61,39 +66,12 @@ const ABI_TOBY_SWAPPER = [
 ] as const
 
 const ABI_ERC20 = [
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
+  { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }] },
 ] as const
 
 const ABI_ROUTER_V2 = [
-  {
-    type: "function",
-    name: "getAmountsOut",
-    stateMutability: "view",
-    inputs: [
-      { name: "amountIn", type: "uint256" },
-      { name: "path", type: "address[]" },
-    ],
-    outputs: [{ name: "amounts", type: "uint256[]" }],
-  },
+  { type: "function", name: "getAmountsOut", stateMutability: "view", inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }], outputs: [{ name: "amounts", type: "uint256[]" }] },
 ] as const
 /** ========= End ABIs ========= **/
 
@@ -109,14 +87,17 @@ export default function SwapWidget() {
   const [amountIn, setAmountIn] = useState<string>("")
   const [slippagePct, setSlippagePct] = useState<string>("1")
 
+  // Visual celebrate pulse on success
+  const [celebrate, setCelebrate] = useState(false)
+
   // Token meta + balance
   const fromToken = useMemo(
-    () => Object.values(TOKENS).find(t => t.address === fromAddr)!,
-    [fromAddr]
+    () => Object.values(TOKENS).find((t) => t.address === fromAddr)!,
+    [fromAddr],
   )
   const toToken = useMemo(
-    () => Object.values(TOKENS).find(t => t.address === toAddr)!,
-    [toAddr]
+    () => Object.values(TOKENS).find((t) => t.address === toAddr)!,
+    [toAddr],
   )
   const { human: fromBalanceHuman } = useTokenBalance(fromAddr, fromToken.decimals)
 
@@ -132,22 +113,24 @@ export default function SwapWidget() {
   }, [fromAddr, toAddr])
 
   /** Paths */
-  function buildMainPath(from: Address, to: Address): Address[] {
+  const buildMainPath = (from: Address, to: Address): Address[] => {
     if (from === TOKENS.USDC.address && ALLOWED_COMMODITIES.has(to)) return [TOKENS.USDC.address, ADDR.WETH, to]
     if (from === TOKENS.WETH.address && ALLOWED_COMMODITIES.has(to)) return [ADDR.WETH, to]
     if (ALLOWED_COMMODITIES.has(from) && to === TOKENS.USDC.address) return [from, ADDR.WETH, TOKENS.USDC.address]
     if (ALLOWED_COMMODITIES.has(from) && to === TOKENS.WETH.address) return [from, ADDR.WETH]
     return [from, to]
   }
-  function buildFeePath(from: Address): Address[] {
+  const buildFeePath = (from: Address): Address[] => {
     if (from === TOKENS.WETH.address) return [ADDR.WETH, TOKENS.TOBY.address]
     if (from === TOKENS.USDC.address) return [TOKENS.USDC.address, ADDR.WETH, TOKENS.TOBY.address]
     return [from, ADDR.WETH, TOKENS.TOBY.address]
   }
+
   const mainPath = useMemo(() => buildMainPath(fromAddr, toAddr), [fromAddr, toAddr])
   const feePath = useMemo(() => buildFeePath(fromAddr), [fromAddr])
+
   const routeLabels = (path: Address[]) =>
-    path.map(a => Object.values(TOKENS).find(t => t.address === a)?.symbol || "???").join(" → ")
+    path.map((a) => Object.values(TOKENS).find((t) => t.address === a)?.symbol || "???").join(" → ")
 
   /** Quotes */
   const amountInWei = amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
@@ -175,7 +158,9 @@ export default function SwapWidget() {
     args: direction ? [unitInWei, mainPath] : undefined,
   }) as { data: bigint[] | undefined }
 
-  const slippageBps = BigInt(Math.round(parseFloat(slippagePct || "1") * 100))
+  const slippageNum = Number(slippagePct || "1")
+  const safeSlip = Number.isFinite(slippageNum) && slippageNum >= 0 ? slippageNum : 1
+  const slippageBps = BigInt(Math.round(safeSlip * 100))
   const minOutWithSlippage = (out: bigint) => (out * (10000n - slippageBps)) / 10000n
 
   const estOutMain = amountsMain?.[amountsMain.length - 1] ?? 0n
@@ -213,7 +198,7 @@ export default function SwapWidget() {
   const { isLoading: swapping, isSuccess: swapped, isError: swapError } =
     useWaitForTransactionReceipt({ hash: txSwap })
 
-  // Toast side-effects
+  // Toast side-effects + celebrate pulse
   const didApproveOk = useRef(false)
   const didApproveErr = useRef(false)
   const didSwapOk = useRef(false)
@@ -236,7 +221,10 @@ export default function SwapWidget() {
   useEffect(() => {
     if (swapped && !didSwapOk.current) {
       toast.success({ title: "Swap confirmed", desc: "Tokens are on the way." })
+      setCelebrate(true)
+      const t = setTimeout(() => setCelebrate(false), 800)
       didSwapOk.current = true
+      return () => clearTimeout(t)
     }
   }, [swapped, toast])
 
@@ -292,7 +280,7 @@ export default function SwapWidget() {
   const outFeeHuman = estOutFee ? formatUnits(estOutFee, TOKENS.TOBY.decimals) : "-"
 
   return (
-    <div className="swap-root grid gap-6">
+    <div className={`swap-root grid gap-6 ${celebrate ? "celebrate" : ""}`}>
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="section-title">Swap</div>
@@ -346,30 +334,48 @@ export default function SwapWidget() {
       />
 
       {direction === null && (
-        <div className="text-sm text-red-600">
+        <div className="text-sm text-red-400 font-semibold">
           Pair not supported. Use USDC/ETH ↔ TOBY/PATIENCE/TABOSHI.
         </div>
       )}
 
-      {/* Metrics (forced readable contrast) */}
-      <div className="metrics-card grid gap-4 rounded-2xl border-2 border-black bg-white p-4 shadow-[0_6px_0_#000] text-sm text-black/85">
+      {/* Metrics — DARK GLASS for contrast */}
+      <div
+        className={[
+          "metrics-card grid gap-4 rounded-2xl border-2 border-black p-4 shadow-[0_6px_0_#000] text-sm",
+          "bg-[linear-gradient(135deg,rgba(15,23,42,.92),rgba(17,24,39,.88))] text-sky-50",
+        ].join(" ")}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <b>Route:</b>
-          <span className="pill">{routeLabels(mainPath)}</span>
+          <span className="nav-pill">{routeLabels(mainPath)}</span>
         </div>
+
         <div className="grid sm:grid-cols-2 gap-3">
           <div><b>Est. out (main):</b> {outMainHuman}</div>
           <div><b>Min out (main):</b> {minOutMain ? formatUnits(minOutMain, toToken.decimals) : "-"}</div>
+
           <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
-            <b>Fee path (→ TOBY):</b> <span className="pill">{routeLabels(feePath)}</span>
+            <b>Fee path (→ TOBY):</b> <span className="nav-pill">{routeLabels(feePath)}</span>
           </div>
+
           <div><b>Est. out (fee→TOBY):</b> {outFeeHuman}</div>
+
           <div className="flex items-center gap-2">
             <b>Price impact:</b>
-            <span className={`pill ${priceImpactPct && priceImpactPct > 5 ? "bg-[#ff6b6b]" : ""}`}>
+            <span
+              className={[
+                "nav-pill",
+                priceImpactPct && priceImpactPct > 5 ? "!bg-[#ff6b6b] !text-[#0a0b12]" : "",
+              ].join(" ")}
+            >
               {priceImpactPct === null ? "—" : `${priceImpactPct.toFixed(2)}%`}
             </span>
           </div>
+        </div>
+
+        <div className="text-xs opacity-90 pt-1">
+          1% fee is taken by the Swapper, auto-buys TOBY and sends to <b>0x…dEaD</b>.
         </div>
       </div>
 
@@ -383,6 +389,7 @@ export default function SwapWidget() {
           {approving ? "Approving..." : `Approve ${fromToken.symbol}`}
         </button>
       )}
+
       <button
         className={`cel-btn cel-btn--good ${swapping ? "btn-loading" : ""}`}
         onClick={doSwap}
@@ -390,10 +397,6 @@ export default function SwapWidget() {
       >
         {swapping ? "Swapping..." : "Swap"}
       </button>
-
-      <div className="text-xs text-black/60">
-        1% fee is taken by the Swapper contract, auto-buys TOBY and sends it to <b>0x…dEaD</b>.
-      </div>
     </div>
   )
 }
