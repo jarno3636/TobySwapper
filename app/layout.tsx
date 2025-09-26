@@ -54,12 +54,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
             </header>
 
-            <main id="main">{children}</main>
+            {/* Extra bottom padding so the footer never feels crowded */}
+            <main id="main" className="pb-24 md:pb-32">
+              {children}
+            </main>
 
-            {/* Footer — subtle, glassy pills; generous spacing */}
+            {/* Footer — subtle, glassy; generous spacing from content above */}
             <footer
               className="
-                mt-16
+                mt-24
                 border-t-2 border-black
                 bg-[radial-gradient(120%_160%_at_0%_140%,rgba(196,181,253,.25),transparent),radial-gradient(120%_160%_at_100%_120%,rgba(34,211,238,.22),transparent),linear-gradient(180deg,#0b1220,#0a0b12)]
               "
@@ -88,15 +91,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   >
                     Router →
                   </a>
-                  <a
-                    className="glass-chip no-underline"
-                    href="https://warpcast.com/~/compose?text=In%20the%20swamp%2C%20every%20trade%20feeds%20the%20flame.%20%F0%9F%94%A5%20%23TobyWorld"
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Cast to Farcaster"
-                  >
-                    ✨ Cast about Toby
-                  </a>
+                  {/* Removed the Farcaster link per request */}
                 </div>
               </div>
             </footer>
