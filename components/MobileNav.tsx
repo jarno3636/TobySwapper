@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAccount } from "wagmi"
 import { useAccountModal, useConnectModal } from "@rainbow-me/rainbowkit"
 
@@ -13,6 +13,7 @@ function short(addr?: string) {
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false)
+  const panelRef = useRef<HTMLDivElement | null>(null)
 
   // Wallet
   const { address, isConnected } = useAccount()
@@ -48,7 +49,7 @@ export default function MobileNav() {
           <span className="brand-title brand-title--lg truncate">TobySwapper</span>
         </Link>
 
-        {/* RIGHT: only the hamburger trigger */}
+        {/* RIGHT: hamburger trigger */}
         <button
           className="nav-trigger"
           onClick={() => setOpen(true)}
@@ -59,9 +60,12 @@ export default function MobileNav() {
         </button>
       </div>
 
-      {/* RIGHT SHEET */}
-      <div className={`nav-sheet ${open ? "open" : ""}`} aria-hidden={!open}>
-        {/* scrim — tap to close */}
+      {/* TOP DROPDOWN (¼ screen height) */}
+      <div
+        className={`nav-sheet nav-sheet--dropdown ${open ? "open" : ""}`}
+        aria-hidden={!open}
+      >
+        {/* scrim — click to close */}
         <button
           className="nav-sheet__scrim"
           aria-label="Close menu"
@@ -69,10 +73,21 @@ export default function MobileNav() {
         />
 
         {/* panel */}
-        <aside className="nav-sheet__panel" role="dialog" aria-modal="true">
+        <div
+          ref={panelRef}
+          className="nav-sheet__panel"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="font-extrabold text-lg">Menu</div>
-            <button className="nav-pill" onClick={() => setOpen(false)} aria-label="Close">✕</button>
+            <button
+              className="nav-pill"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+            >
+              ✕
+            </button>
           </div>
 
           <nav className="grid gap-3">
@@ -99,7 +114,7 @@ export default function MobileNav() {
               📜 Lore
             </Link>
           </nav>
-        </aside>
+        </div>
       </div>
     </>
   )
