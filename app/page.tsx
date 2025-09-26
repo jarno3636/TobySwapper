@@ -29,7 +29,13 @@ export default function Home() {
           </div>
 
           <div className="hero-art flex items-center justify-center">
-            {artOn ? <MiniFrog onError={() => setArtOn(false)} /> : <div className="hero-fallback"><div className="hero-fallback-inner">TOBY</div></div>}
+            {artOn ? (
+              <MiniFrog onError={() => setArtOn(false)} />
+            ) : (
+              <div className="hero-fallback">
+                <div className="hero-fallback-inner">TOBY</div>
+              </div>
+            )}
           </div>
 
           <div className="blob blob-1" />
@@ -37,16 +43,30 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SWAP */}
+      {/* SWAP (light, readable for dark text inside SwapWidget) */}
       <section className="maxw pb-10">
-        <div className="cel-card p-6 md:p-8" data-swap-card>
+        <div
+          className="cel-card p-6 md:p-8"
+          data-swap-card
+          style={{
+            // gentle aqua/lilac glass so the swap card (dark text) stays readable
+            background:
+              "radial-gradient(70% 120% at 10% 0%, rgba(34,211,238,.28), transparent 60%), radial-gradient(70% 120% at 90% 0%, rgba(196,181,253,.28), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9))",
+          }}
+        >
           <SwapWidget />
         </div>
       </section>
 
-      {/* BURN EXPLAINER */}
+      {/* BURN EXPLAINER (warm gradient) */}
       <section className="maxw pb-10">
-        <div className="cel-card p-6 md:p-8 grid md:grid-cols-[auto,1fr] gap-5 items-center">
+        <div
+          className="cel-card p-6 md:p-8 grid md:grid-cols-[auto,1fr] gap-5 items-center text-black"
+          style={{
+            background:
+              "radial-gradient(70% 120% at 12% 0%, rgba(255,209,220,.38), transparent 60%), radial-gradient(70% 120% at 88% 10%, rgba(196,181,253,.34), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.88))",
+          }}
+        >
           <div><BurnCounter /></div>
           <div className="text-black/80 text-sm leading-relaxed">
             <div className="font-extrabold text-black text-lg mb-1">What happens under the hood?</div>
@@ -60,17 +80,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* YOUR WALLET */}
+      {/* YOUR WALLET (minty gradient) */}
       <section className="maxw pb-10">
-        <div className="cel-card p-6 md:p-8">
+        <div
+          className="cel-card p-6 md:p-8 text-black"
+          style={{
+            background:
+              "radial-gradient(70% 120% at 10% 0%, rgba(121,255,225,.35), transparent 60%), radial-gradient(60% 110% at 90% 10%, rgba(125,211,252,.28), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9))",
+          }}
+        >
           <div className="section-title mb-3">Your Wallet</div>
           <Portfolio />
         </div>
       </section>
 
-      {/* LIVE PRICES */}
+      {/* LIVE PRICES (cool lilac/blue gradient) */}
       <section className="maxw pb-16">
-        <div className="cel-card p-6 md:p-8">
+        <div
+          className="cel-card p-6 md:p-8 text-black"
+          style={{
+            background:
+              "radial-gradient(70% 120% at 85% 0%, rgba(196,181,253,.32), transparent 60%), radial-gradient(60% 120% at 20% 0%, rgba(14,165,233,.28), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9))",
+          }}
+        >
           <div className="section-title mb-3">Live Prices (via router)</div>
           <LivePrices />
         </div>
