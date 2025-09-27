@@ -28,6 +28,10 @@ type Props = {
   disabled?: boolean
   /** Show the 25/50/75/Max quick chips (default true). */
   showPercentChips?: boolean
+
+  /** Optional visual tone. Defaults to "dark". `dark` kept for backward-compat. */
+  tone?: "dark" | "light"
+  dark?: boolean
 }
 
 const clampDecimals = (v: string, decimals: number) => {
@@ -77,8 +81,11 @@ export default function NumberInput({
   help,
   disabled,
   showPercentChips = true,
+  tone,
+  dark,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
+  const toneFinal: "dark" | "light" = dark ? "dark" : tone ?? "dark"
 
   const setPercent = (pct: number) => {
     if (!balance) return
@@ -119,24 +126,58 @@ export default function NumberInput({
     }
   }
 
+  const isDark = toneFinal === "dark"
+  const baseWrap =
+    "flex items-stretch gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000] focus-within:outline-none"
+  const darkWrap =
+    "border-black bg-[linear-gradient(180deg,#0b1220,#0f172a)] text-slate-100 focus-within:ring-2 focus-within:ring-[#79ffe1]"
+  const lightWrap =
+    "border-black bg-white text-black focus-within:ring-2 focus-within:ring-[#79ffe1]"
+  const errorWrap = isDark
+    ? "border-[#ff8b8b] bg-[linear-gradient(180deg,#2a0f12,#240b0d)]"
+    : "border-[#ff6b6b] bg-[#fff1f1]"
+
+  const minusPlusBtn =
+    "select-none rounded-xl border-2 border-black px-2 text-sm font-black shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
+  const minusPlusDark = "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100"
+  const minusPlusLight = "bg-gray-100 text-black"
+
+  const unitPill =
+    "self-center rounded-xl border-2 border-black px-2 py-1 text-xs font-extrabold shadow-[0_3px_0_#000]"
+  const unitDark = "bg-[linear-gradient(180deg,#0f172a,#111827)] text-slate-100"
+  const unitLight = "bg-gray-100 text-black"
+
+  const labelCls = isDark ? "text-sm font-semibold text-slate-200" : "text-sm font-semibold"
+  const metaCls = isDark ? "text-xs text-slate-300" : "text-xs text-black/70"
+
+  const chipCls =
+    "chip cursor-pointer select-none active:translate-y-[1px] !px-2 !py-1 text-[11px]"
+  const maxMiniBtn =
+    "chip !px-2 !py-[3px] text-[11px] ml-2 select-none active:translate-y-[1px]"
+
+  const inputCls = [
+    "min-w-0 flex-1 bg-transparent outline-none",
+    isDark ? "text-slate-100 placeholder:text-slate-400" : "text-black placeholder:text-black/40",
+  ].join(" ")
+
+  const wrapCls = [
+    baseWrap,
+    disabled ? "opacity-60" : "",
+    error ? errorWrap : isDark ? darkWrap : lightWrap,
+  ].join(" ")
+
   const hasTopMeta = Boolean(label || balance || max)
 
   return (
     <label className="block">
       {/* Top row (label + balance/max) */}
       {hasTopMeta && (
-        <div className="mb-1 flex items-center justify-between">
-          {label ? (
-            <span className="text-sm font-semibold">{label}</span>
-          ) : <span />}
+        <div className="mb-1.5 flex items-center justify-between">
+          {label ? <span className={labelCls}>{label}</span> : <span />}
           {(balance || max) && (
-            <div className="text-xs text-black/70">
+            <div className={metaCls}>
               Balance: <span className="font-semibold">{balance ?? max}</span>
-              <button
-                type="button"
-                onClick={useMax}
-                className="ml-2 rounded-lg border-2 border-black bg-white px-2 py-0.5 font-semibold shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
-              >
+              <button type="button" onClick={useMax} className={maxMiniBtn}>
                 Max
               </button>
             </div>
@@ -145,20 +186,13 @@ export default function NumberInput({
       )}
 
       {/* Input group */}
-      <div
-        className={[
-          "flex items-stretch gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000]",
-          disabled ? "opacity-60" : "",
-          error ? "border-[#ff6b6b] bg-[#fff1f1]" : "border-black bg-white",
-          "focus-within:ring-2 focus-within:ring-[#79ffe1]",
-        ].join(" ")}
-      >
+      <div className={wrapCls}>
         {/* Left nudge */}
         <button
           type="button"
           onClick={() => nudge(-1)}
           disabled={disabled}
-          className="select-none rounded-xl border-2 border-black bg-gray-100 px-2 text-sm font-bold shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
+          className={[minusPlusBtn, isDark ? minusPlusDark : minusPlusLight].join(" ")}
           aria-label="Decrease"
           title={`- ${step}`}
         >
@@ -172,7 +206,7 @@ export default function NumberInput({
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={error ? "numinput-error" : help ? "numinput-help" : undefined}
           pattern="[0-9]*[.]?[0-9]*"
-          className="min-w-0 flex-1 bg-transparent text-black outline-none placeholder:text-black/40"
+          className={inputCls}
           type="text"
           value={value}
           placeholder={placeholder}
@@ -196,10 +230,7 @@ export default function NumberInput({
 
         {/* Unit suffix */}
         {unit && (
-          <span
-            className="self-center rounded-lg border-2 border-black bg-gray-100 px-2 py-1 text-xs font-extrabold text-black shadow-[0_3px_0_#000]"
-            aria-hidden
-          >
+          <span className={[unitPill, isDark ? unitDark : unitLight].join(" ")} aria-hidden>
             {unit}
           </span>
         )}
@@ -209,7 +240,7 @@ export default function NumberInput({
           type="button"
           onClick={() => nudge(1)}
           disabled={disabled}
-          className="select-none rounded-xl border-2 border-black bg-gray-100 px-2 text-sm font-bold shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
+          className={[minusPlusBtn, isDark ? minusPlusDark : minusPlusLight].join(" ")}
           aria-label="Increase"
           title={`+ ${step}`}
         >
@@ -225,7 +256,8 @@ export default function NumberInput({
               key={p}
               type="button"
               onClick={() => setPercent(p)}
-              className="rounded-xl border-2 border-black bg-white px-2 py-1 text-xs font-semibold shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
+              className={chipCls}
+              title={p === 100 ? "Use max" : `Use ${p}%`}
             >
               {p === 100 ? "Max" : `${p}%`}
             </button>
@@ -236,9 +268,14 @@ export default function NumberInput({
       {/* Help / error */}
       <div className="mt-1 text-xs">
         {error ? (
-          <span id="numinput-error" className="text-red-600">{error}</span>
+          <span id="numinput-error" className="text-red-400">{error}</span>
         ) : help ? (
-          <span id="numinput-help" className="text-black/60">{help}</span>
+          <span
+            id="numinput-help"
+            className={isDark ? "text-slate-300/80" : "text-black/60"}
+          >
+            {help}
+          </span>
         ) : null}
       </div>
     </label>
