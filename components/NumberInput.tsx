@@ -1,4 +1,3 @@
-// components/NumberInput.tsx
 "use client"
 
 import { useRef } from "react"
@@ -9,29 +8,16 @@ type Props = {
   onChange: (v: string) => void
   label?: string
   placeholder?: string
-  /** Token symbol for suffix, e.g. "USDC" or "WETH" */
   unit?: string
-  /** User balance as a string (human format, e.g. "123.45"). Enables % chips + Max. */
   balance?: string
-  /** Token decimals; used for clamping and % math. Default 18. */
   decimals?: number
-  /** Min/Max (human strings). Min defaults to "0". */
   min?: string
   max?: string
-  /** Step used by arrow keys; default "0.1" (human). */
   step?: string
-  /** Optional error text (turns border red). */
   error?: string
-  /** Optional help text (shown if no error). */
   help?: string
-  /** Disable input entirely. */
   disabled?: boolean
-  /** Show the 25/50/75/Max quick chips (default true). */
   showPercentChips?: boolean
-
-  /** Optional visual tone. Defaults to "dark". `dark` kept for backward-compat. */
-  tone?: "dark" | "light"
-  dark?: boolean
 }
 
 const clampDecimals = (v: string, decimals: number) => {
@@ -41,17 +27,14 @@ const clampDecimals = (v: string, decimals: number) => {
 }
 
 const sanitize = (raw: string, decimals: number) => {
-  // allow only digits and a single dot
   let v = (raw ?? "").replace(/[^\d.]/g, "")
   const firstDot = v.indexOf(".")
   if (firstDot !== -1) {
     v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "")
   }
-  // normalize leading zeros (keep "0" and "0.x")
   if (v && v[0] === "0" && v.length > 1 && v[1] !== ".") {
     v = String(Number(v))
   }
-  // clamp fractional precision to token decimals
   v = clampDecimals(v, decimals)
   return v
 }
@@ -81,11 +64,8 @@ export default function NumberInput({
   help,
   disabled,
   showPercentChips = true,
-  tone,
-  dark,
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
-  const toneFinal: "dark" | "light" = dark ? "dark" : tone ?? "dark"
 
   const setPercent = (pct: number) => {
     if (!balance) return
@@ -94,9 +74,7 @@ export default function NumberInput({
       const outWei = (balWei * BigInt(pct)) / 100n
       const human = formatUnits(outWei, decimals)
       onChange(clampDecimals(human, decimals))
-    } catch {
-      // ignore parse issues gracefully
-    }
+    } catch {}
   }
 
   const useMax = () => {
@@ -126,58 +104,28 @@ export default function NumberInput({
     }
   }
 
-  const isDark = toneFinal === "dark"
-  const baseWrap =
-    "flex items-stretch gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000] focus-within:outline-none"
-  const darkWrap =
-    "border-black bg-[linear-gradient(180deg,#0b1220,#0f172a)] text-slate-100 focus-within:ring-2 focus-within:ring-[#79ffe1]"
-  const lightWrap =
-    "border-black bg-white text-black focus-within:ring-2 focus-within:ring-[#79ffe1]"
-  const errorWrap = isDark
-    ? "border-[#ff8b8b] bg-[linear-gradient(180deg,#2a0f12,#240b0d)]"
-    : "border-[#ff6b6b] bg-[#fff1f1]"
-
-  const minusPlusBtn =
-    "select-none rounded-xl border-2 border-black px-2 text-sm font-black shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
-  const minusPlusDark = "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100"
-  const minusPlusLight = "bg-gray-100 text-black"
-
-  const unitPill =
-    "self-center rounded-xl border-2 border-black px-2 py-1 text-xs font-extrabold shadow-[0_3px_0_#000]"
-  const unitDark = "bg-[linear-gradient(180deg,#0f172a,#111827)] text-slate-100"
-  const unitLight = "bg-gray-100 text-black"
-
-  const labelCls = isDark ? "text-sm font-semibold text-slate-200" : "text-sm font-semibold"
-  const metaCls = isDark ? "text-xs text-slate-300" : "text-xs text-black/70"
-
-  const chipCls =
-    "chip cursor-pointer select-none active:translate-y-[1px] !px-2 !py-1 text-[11px]"
-  const maxMiniBtn =
-    "chip !px-2 !py-[3px] text-[11px] ml-2 select-none active:translate-y-[1px]"
-
-  const inputCls = [
-    "min-w-0 flex-1 bg-transparent outline-none",
-    isDark ? "text-slate-100 placeholder:text-slate-400" : "text-black placeholder:text-black/40",
-  ].join(" ")
-
-  const wrapCls = [
-    baseWrap,
-    disabled ? "opacity-60" : "",
-    error ? errorWrap : isDark ? darkWrap : lightWrap,
-  ].join(" ")
-
   const hasTopMeta = Boolean(label || balance || max)
 
   return (
     <label className="block">
-      {/* Top row (label + balance/max) */}
+      {/* Top row */}
       {hasTopMeta && (
-        <div className="mb-1.5 flex items-center justify-between">
-          {label ? <span className={labelCls}>{label}</span> : <span />}
+        <div className="mb-1 flex items-center justify-between">
+          {label ? (
+            <span className="text-sm font-semibold text-slate-200">{label}</span>
+          ) : <span />}
           {(balance || max) && (
-            <div className={metaCls}>
+            <div className="text-xs text-slate-300">
               Balance: <span className="font-semibold">{balance ?? max}</span>
-              <button type="button" onClick={useMax} className={maxMiniBtn}>
+              <button
+                type="button"
+                onClick={useMax}
+                className={[
+                  "ml-2 rounded-full border-2 border-black px-2 py-0.5 font-extrabold",
+                  "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100",
+                  "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+                ].join(" ")}
+              >
                 Max
               </button>
             </div>
@@ -185,14 +133,27 @@ export default function NumberInput({
         </div>
       )}
 
-      {/* Input group */}
-      <div className={wrapCls}>
+      {/* Input group – dark gradient */}
+      <div
+        className={[
+          "flex items-stretch gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000]",
+          disabled ? "opacity-60" : "",
+          error
+            ? "border-[#ff6b6b] bg-[linear-gradient(180deg,#2a0f12,#3a0f12)]"
+            : "border-black bg-[linear-gradient(180deg,#0b1220,#0f172a)]",
+          "focus-within:ring-2 focus-within:ring-[#79ffe1]",
+        ].join(" ")}
+      >
         {/* Left nudge */}
         <button
           type="button"
           onClick={() => nudge(-1)}
           disabled={disabled}
-          className={[minusPlusBtn, isDark ? minusPlusDark : minusPlusLight].join(" ")}
+          className={[
+            "select-none rounded-xl border-2 border-black px-2 text-sm font-black",
+            "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
+            "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+          ].join(" ")}
           aria-label="Decrease"
           title={`- ${step}`}
         >
@@ -206,31 +167,30 @@ export default function NumberInput({
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={error ? "numinput-error" : help ? "numinput-help" : undefined}
           pattern="[0-9]*[.]?[0-9]*"
-          className={inputCls}
+          className="min-w-0 flex-1 bg-transparent text-slate-50 outline-none placeholder:text-slate-400/60"
           type="text"
           value={value}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
-          onWheel={(e) => {
-            // avoid accidental value changes on trackpads
-            (e.target as HTMLInputElement).blur()
-          }}
+          onWheel={(e) => { (e.target as HTMLInputElement).blur() }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowUp") {
-              e.preventDefault()
-              nudge(1)
-            } else if (e.key === "ArrowDown") {
-              e.preventDefault()
-              nudge(-1)
-            }
+            if (e.key === "ArrowUp") { e.preventDefault(); nudge(1) }
+            else if (e.key === "ArrowDown") { e.preventDefault(); nudge(-1) }
           }}
           disabled={disabled}
         />
 
-        {/* Unit suffix */}
+        {/* Unit chip */}
         {unit && (
-          <span className={[unitPill, isDark ? unitDark : unitLight].join(" ")} aria-hidden>
+          <span
+            className={[
+              "self-center rounded-lg border-2 border-black px-2 py-1 text-xs font-extrabold",
+              "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
+              "shadow-[0_3px_0_#000]",
+            ].join(" ")}
+            aria-hidden
+          >
             {unit}
           </span>
         )}
@@ -240,7 +200,11 @@ export default function NumberInput({
           type="button"
           onClick={() => nudge(1)}
           disabled={disabled}
-          className={[minusPlusBtn, isDark ? minusPlusDark : minusPlusLight].join(" ")}
+          className={[
+            "select-none rounded-xl border-2 border-black px-2 text-sm font-black",
+            "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
+            "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+          ].join(" ")}
           aria-label="Increase"
           title={`+ ${step}`}
         >
@@ -256,8 +220,11 @@ export default function NumberInput({
               key={p}
               type="button"
               onClick={() => setPercent(p)}
-              className={chipCls}
-              title={p === 100 ? "Use max" : `Use ${p}%`}
+              className={[
+                "rounded-full border-2 border-black px-2 py-1 text-xs font-extrabold",
+                "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100",
+                "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+              ].join(" ")}
             >
               {p === 100 ? "Max" : `${p}%`}
             </button>
@@ -268,14 +235,9 @@ export default function NumberInput({
       {/* Help / error */}
       <div className="mt-1 text-xs">
         {error ? (
-          <span id="numinput-error" className="text-red-400">{error}</span>
+          <span id="numinput-error" className="text-rose-300">{error}</span>
         ) : help ? (
-          <span
-            id="numinput-help"
-            className={isDark ? "text-slate-300/80" : "text-black/60"}
-          >
-            {help}
-          </span>
+          <span id="numinput-help" className="text-slate-300/80">{help}</span>
         ) : null}
       </div>
     </label>
