@@ -1,3 +1,4 @@
+// components/SwapWidget.tsx
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -16,7 +17,7 @@ import { useTokenBalance } from "@/hooks/useTokenBalance"
 import StatusBadge from "@/components/StatusBadge"
 import SwapSettings from "./SwapSettings"
 
-/** ===== ABIs (unchanged from your file) ===== */
+/** ===== ABIs (unchanged) ===== */
 const ABI_TOBY_SWAPPER = [
   {
     type: "function",
@@ -153,7 +154,7 @@ export default function SwapWidget() {
     args: direction ? [unitInWei, mainPath] : undefined,
   }) as { data: bigint[] | undefined }
 
-  // Slippage
+  // Slippage math
   const slippageNum = Number(slippagePct || "1")
   const safeSlip = Number.isFinite(slippageNum) && slippageNum >= 0 ? slippageNum : 1
   const slippageBps = BigInt(Math.round(safeSlip * 100))
@@ -287,18 +288,19 @@ export default function SwapWidget() {
 
   return (
     <>
+      {/* Card shell */}
       <div
         className={[
-          "swap-card rounded-3xl border-2 border-black p-5 md:p-7",
+          "rounded-3xl border-2 border-black p-6 md:p-8",
           "bg-[radial-gradient(120%_160%_at_15%_-20%,rgba(124,58,237,.22),transparent),radial-gradient(120%_160%_at_85%_-10%,rgba(14,165,233,.18),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
           "text-slate-50 shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)]",
           celebrate ? "celebrate" : "",
         ].join(" ")}
       >
         {/* Header */}
-        <div className="flex items-start justify-between mb-5">
+        <div className="mb-6 flex items-start justify-between">
           <h2
-            className="swap-title leading-none"
+            className="text-[28px] md:text-[34px] font-black tracking-tight leading-none"
             style={{
               background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
               WebkitBackgroundClip: "text",
@@ -313,20 +315,26 @@ export default function SwapWidget() {
           <div className="flex items-center gap-2">
             <StatusBadge />
             <button
-              className="swap-gear"
+              className={[
+                "inline-flex items-center gap-1 rounded-full border-2 border-black",
+                "px-3 py-1 text-xs font-black",
+                "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100",
+                "shadow-[0_4px_0_#000]",
+                "ml-1 mr-1 md:mr-0", // a little breathing room from the edge
+              ].join(" ")}
               onClick={() => setSettingsOpen(true)}
               aria-label="Open swap settings"
               title="Settings"
             >
-              <span className="i">⚙️</span>
-              <span className="val">{Number(slippagePct || "1")}%</span>
+              <span aria-hidden>⚙️</span>
+              <span>{Number(slippagePct || "1")}%</span>
             </button>
           </div>
         </div>
 
-        {/* From / flip / To */}
-        <div className="swap-rows">
-          <div className="swap-row">
+        {/* FROM / TO section with center flip */}
+        <div className="relative mb-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TokenSelect
               label="From"
               value={fromAddr}
@@ -339,27 +347,6 @@ export default function SwapWidget() {
               options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
             />
 
-            <NumberInput
-              label="Amount"
-              value={amountIn}
-              onChange={setAmountIn}
-              placeholder="0.0"
-              unit={fromToken.symbol}
-              balance={fromBalanceHuman}
-              decimals={fromToken.decimals}
-              max={fromBalanceHuman}
-              step={fromToken.decimals === 6 ? "0.01" : "0.001"}
-              showPercentChips
-            />
-          </div>
-
-          <div className="swap-flip-wrap">
-            <button className="swap-flip" onClick={flipTokens} aria-label="Flip tokens">
-              ⇅
-            </button>
-          </div>
-
-          <div className="swap-row">
             <TokenSelect
               label="To"
               value={toAddr}
@@ -367,10 +354,43 @@ export default function SwapWidget() {
               options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
             />
           </div>
+
+          {/* centered flip button (overlay between the two on larger screens) */}
+          <button
+            className={[
+              "absolute left-1/2 -translate-x-1/2",
+              "top-full -mt-5 sm:top-1/2 sm:-translate-y-1/2 sm:mt-0",
+              "h-10 w-10 rounded-full border-2 border-black",
+              "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
+              "shadow-[0_6px_0_#000] active:translate-y-[2px] active:shadow-[0_3px_0_#000]",
+              "grid place-items-center text-lg font-black",
+            ].join(" ")}
+            onClick={flipTokens}
+            aria-label="Flip tokens"
+            title="Flip"
+          >
+            ⇅
+          </button>
+        </div>
+
+        {/* AMOUNT (its own row) */}
+        <div className="mt-6">
+          <NumberInput
+            label="Amount"
+            value={amountIn}
+            onChange={setAmountIn}
+            placeholder="0.0"
+            unit={fromToken.symbol}
+            balance={fromBalanceHuman}
+            decimals={fromToken.decimals}
+            max={fromBalanceHuman}
+            step={fromToken.decimals === 6 ? "0.01" : "0.001"}
+            showPercentChips
+          />
         </div>
 
         {/* Slim metrics line */}
-        <div className="mt-5 grid gap-1 text-sm/6 text-slate-200">
+        <div className="mt-6 grid gap-1 text-sm/6 text-slate-200">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="opacity-70">Est. out:</span>
             <span className="font-semibold">{outMainHuman}</span>
