@@ -12,7 +12,7 @@ import { useTokenBalance } from "@/hooks/useTokenBalance"
 import StatusBadge from "@/components/StatusBadge"
 import SwapSettings from "./SwapSettings"
 
-// keep real ABIs in your project; placeholders here
+// keep real ABIs in your project
 const ABI_TOBY_SWAPPER = [/* unchanged */] as const
 const ABI_ERC20        = [/* unchanged */] as const
 const ABI_ROUTER_V2    = [/* unchanged */] as const
@@ -31,9 +31,6 @@ export default function SwapWidget() {
   // settings modal
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [slippagePct,  setSlippagePct]  = useState<string>("1")
-
-  // celebratory pulse
-  const [celebrate, setCelebrate] = useState(false)
 
   // meta + balances
   const fromToken = useMemo(() => Object.values(TOKENS).find(t => t.address === fromAddr)!, [fromAddr])
@@ -98,7 +95,7 @@ export default function SwapWidget() {
   const minOutMain = estOutMain ? withSlippage(estOutMain) : 0n
   const minOutFee  = estOutFee  ? withSlippage(estOutFee)  : 0n
 
-  // rough impact %
+  // rough impact
   let priceImpactPct: number | null = null
   if (amountInWei > 0n && estOutMain > 0n && amountsUnit?.length) {
     const unitOut    = Number(amountsUnit.at(-1))
@@ -131,15 +128,8 @@ export default function SwapWidget() {
 
   useEffect(() => { if (approved)    toast.success({ title:"Approved", desc:`${fromToken.symbol} is now approved.` }) }, [approved, toast, fromToken.symbol])
   useEffect(() => { if (approveError) toast.error({ title:"Approval failed", desc:"Try again or increase gas." }) }, [approveError, toast])
-  useEffect(() => {
-    if (swapped) {
-      toast.success({ title:"Swap confirmed", desc:"Tokens are on the way." })
-      setCelebrate(true)
-      const t = setTimeout(() => setCelebrate(false), 800)
-      return () => clearTimeout(t)
-    }
-  }, [swapped, toast])
-  useEffect(() => { if (swapError)   toast.error({ title:"Swap failed", desc:"Check slippage or liquidity." }) }, [swapError, toast])
+  useEffect(() => { if (swapped)      toast.success({ title:"Swap confirmed", desc:"Tokens are on the way." }) }, [swapped, toast])
+  useEffect(() => { if (swapError)    toast.error({ title:"Swap failed", desc:"Check slippage or liquidity." }) }, [swapError, toast])
 
   function onApprove() {
     if (!needsApproval || !amountInWei) return
@@ -200,13 +190,12 @@ export default function SwapWidget() {
           "swap-card rounded-3xl border-2 border-black p-8 md:p-10",
           "bg-[radial-gradient(120%_160%_at_15%_-20%,rgba(124,58,237,.22),transparent),radial-gradient(120%_160%_at_85%_-10%,rgba(14,165,233,.18),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
           "text-slate-50 shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)]",
-          celebrate ? "celebrate" : "",
         ].join(" ")}
       >
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between pr-2">
+        <div className="mb-6 flex items-center justify-between">
           <h2
-            className="text-[40px] md:text-[48px] font-black tracking-tight leading-none"
+            className="text-[40px] md:text-[48px] font-black tracking-tight leading-none pl-1"
             style={{
               background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
               WebkitBackgroundClip: "text",
@@ -231,7 +220,7 @@ export default function SwapWidget() {
           </div>
         </div>
 
-        {/* From / To with centered flip and little ⓘ copy buttons */}
+        {/* Selectors + centered flip */}
         <div className="relative">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="token-select-row relative">
@@ -244,7 +233,8 @@ export default function SwapWidget() {
                   if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
                   if (!isBase && !ALLOWED_BASES.has(toAddr))        setToAddr(TOKENS.USDC.address)
                 }}
-                options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+                options={["USDC","WETH","TOBY","PATIENCE","TABOSHI"]}
+                compact
               />
               <button
                 className="info-chip"
@@ -262,7 +252,8 @@ export default function SwapWidget() {
                 label="To"
                 value={toAddr}
                 onChange={setToAddr}
-                options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+                options={["USDC","WETH","TOBY","PATIENCE","TABOSHI"]}
+                compact
               />
               <button
                 className="info-chip"
@@ -276,7 +267,7 @@ export default function SwapWidget() {
             </div>
           </div>
 
-          {/* Flip button (between selectors) */}
+          {/* Center flip (between) */}
           <button
             className={[
               "absolute left-1/2 -translate-x-1/2",
@@ -295,7 +286,7 @@ export default function SwapWidget() {
         </div>
 
         {/* Amount – dark glass; +/- hidden via CSS below */}
-        <div className="mt-8 num-glass">
+        <div className="mt-7 num-glass">
           <NumberInput
             label="Amount"
             value={amountIn}
@@ -310,7 +301,7 @@ export default function SwapWidget() {
           />
         </div>
 
-        {/* Metrics */}
+        {/* Minimal metrics (kept compact) */}
         <div className="mt-6 grid gap-1 text-sm/6 text-slate-200">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="opacity-70">Est. out:</span><span className="font-semibold">{outMainHuman}</span>
@@ -358,7 +349,7 @@ export default function SwapWidget() {
         </div>
       </div>
 
-      {/* Full-screen settings modal (your component already uses fixed + inset-0) */}
+      {/* Full-screen settings modal */}
       <SwapSettings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -366,9 +357,9 @@ export default function SwapWidget() {
         setSlippagePct={setSlippagePct}
       />
 
-      {/* ===== Styles to force dark-glass look on NumberInput & TokenSelect without editing them ===== */}
+      {/* ===== Force dark-glass look & minimalism without changing child components ===== */}
       <style jsx global>{`
-        /* TokenSelect trigger -> dark glass */
+        /* TokenSelect trigger -> dark glass pill */
         .token-select-row button[aria-haspopup="listbox"] {
           background: linear-gradient(180deg,#0f172a,#121826) !important;
           color: #e5e7eb !important;
@@ -380,16 +371,11 @@ export default function SwapWidget() {
           color: #e5e7eb !important;
         }
 
-        /* Hide token address lines inside dropdown options (keep symbol only) */
-        .token-select-row [role="option"] .min-w-0 > span:last-child {
-          display: none !important;
-        }
-
-        /* Tiny ⓘ chip beside selectors */
+        /* Compact ⓘ chip (copy address) */
         .token-select-row .info-chip {
           position: absolute;
           right: 8px;
-          top: 26px;       /* sits on the same row as trigger */
+          top: 26px;
           width: 28px;
           height: 28px;
           display: grid;
@@ -401,25 +387,23 @@ export default function SwapWidget() {
           box-shadow: 0 4px 0 #000;
         }
 
-        /* NumberInput: make the main input group dark glass & hide +/- */
+        /* NumberInput wrapper -> dark glass. Hide +/- but keep unit chip */
         .num-glass label > div[class*="shadow-[0_6px_0_#000]"] {
           background: linear-gradient(180deg,#0b1220,#0f172a) !important;
           border-color: #000 !important;
         }
-        .num-glass input[type="text"] {
-          color: #e5e7eb !important;
-        }
+        .num-glass input[type="text"] { color: #e5e7eb !important; }
         .num-glass label > div[class*="shadow-[0_6px_0_#000]"] > button[aria-label="Decrease"],
         .num-glass label > div[class*="shadow-[0_6px_0_#000]"] > button[aria-label="Increase"] {
           display: none !important;
         }
-        .num-glass span[aria-hidden] {  /* the unit chip */
+        .num-glass span[aria-hidden] {
           background: linear-gradient(180deg,#0f172a,#121826) !important;
           color: #e5e7eb !important;
         }
 
-        /* Percent chips and Max button -> dark glass */
-        .num-glass button { 
+        /* Percent chips & Max -> dark glass pills */
+        .num-glass button {
           background: linear-gradient(135deg,#0f172a,#111827) !important;
           color: #e5e7eb !important;
         }
