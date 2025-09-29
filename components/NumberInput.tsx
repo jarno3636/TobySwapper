@@ -8,15 +8,24 @@ type Props = {
   onChange: (v: string) => void
   label?: string
   placeholder?: string
+  /** Token symbol for suffix, e.g. "USDC" or "WETH" */
   unit?: string
+  /** User balance (human string) enables % chips + Max. */
   balance?: string
+  /** Token decimals; default 18. */
   decimals?: number
+  /** Min/Max (human strings). Min defaults to "0". */
   min?: string
   max?: string
+  /** Step for arrow keys only (no visible ±); default "0.1". */
   step?: string
+  /** Optional error text (turns border red). */
   error?: string
+  /** Optional help text (shown if no error). */
   help?: string
+  /** Disable input entirely. */
   disabled?: boolean
+  /** Show the 25/50/75/Max quick chips (default true). */
   showPercentChips?: boolean
 }
 
@@ -35,8 +44,7 @@ const sanitize = (raw: string, decimals: number) => {
   if (v && v[0] === "0" && v.length > 1 && v[1] !== ".") {
     v = String(Number(v))
   }
-  v = clampDecimals(v, decimals)
-  return v
+  return clampDecimals(v, decimals)
 }
 
 const clampToRange = (v: string, min?: string, max?: string) => {
@@ -78,7 +86,7 @@ export default function NumberInput({
   }
 
   const useMax = () => {
-    const src = (max ?? balance)
+    const src = max ?? balance
     if (!src) return
     onChange(clampDecimals(src, decimals))
   }
@@ -89,7 +97,8 @@ export default function NumberInput({
     onChange(v2)
   }
 
-  const nudge = (dir: 1 | -1) => {
+  // Arrow keys still work for nudging (no visible ± buttons)
+  const keyNudge = (dir: 1 | -1) => {
     const cur = value || "0"
     try {
       const curWei = parseUnits(cur, decimals)
@@ -113,7 +122,9 @@ export default function NumberInput({
         <div className="mb-1 flex items-center justify-between">
           {label ? (
             <span className="text-sm font-semibold text-slate-200">{label}</span>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           {(balance || max) && (
             <div className="text-xs text-slate-300">
               Balance: <span className="font-semibold">{balance ?? max}</span>
@@ -133,32 +144,20 @@ export default function NumberInput({
         </div>
       )}
 
-      {/* Input group – dark gradient */}
+      {/* Input group – dark glass */}
       <div
         className={[
-          "flex items-stretch gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000]",
+          "flex items-center gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000]",
           disabled ? "opacity-60" : "",
           error
-            ? "border-[#ff6b6b] bg-[linear-gradient(180deg,#2a0f12,#3a0f12)]"
-            : "border-black bg-[linear-gradient(180deg,#0b1220,#0f172a)]",
+            ? "border-rose-500 bg-[linear-gradient(180deg,#2a0f12,#3a0f12)]"
+            : "border-black bg-[linear-gradient(180deg,rgba(11,18,32,.96),rgba(15,23,42,.96))]",
           "focus-within:ring-2 focus-within:ring-[#79ffe1]",
+          "relative overflow-hidden",
         ].join(" ")}
       >
-        {/* Left nudge */}
-        <button
-          type="button"
-          onClick={() => nudge(-1)}
-          disabled={disabled}
-          className={[
-            "select-none rounded-xl border-2 border-black px-2 text-sm font-black",
-            "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
-            "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
-          ].join(" ")}
-          aria-label="Decrease"
-          title={`- ${step}`}
-        >
-          −
-        </button>
+        {/* subtle inner highlight */}
+        <span className="pointer-events-none absolute inset-0 rounded-2xl opacity-[.18] bg-[radial-gradient(120%_150%_at_50%_-20%,#fff,transparent_60%)]" />
 
         {/* Text input */}
         <input
@@ -167,16 +166,16 @@ export default function NumberInput({
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={error ? "numinput-error" : help ? "numinput-help" : undefined}
           pattern="[0-9]*[.]?[0-9]*"
-          className="min-w-0 flex-1 bg-transparent text-slate-50 outline-none placeholder:text-slate-400/60"
+          className="relative z-[1] min-w-0 flex-1 bg-transparent text-slate-50 outline-none placeholder:text-slate-400/60"
           type="text"
           value={value}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
-          onWheel={(e) => { (e.target as HTMLInputElement).blur() }}
+          onWheel={(e) => (e.target as HTMLInputElement).blur()}
           onKeyDown={(e) => {
-            if (e.key === "ArrowUp") { e.preventDefault(); nudge(1) }
-            else if (e.key === "ArrowDown") { e.preventDefault(); nudge(-1) }
+            if (e.key === "ArrowUp") { e.preventDefault(); keyNudge(1) }
+            else if (e.key === "ArrowDown") { e.preventDefault(); keyNudge(-1) }
           }}
           disabled={disabled}
         />
@@ -185,7 +184,7 @@ export default function NumberInput({
         {unit && (
           <span
             className={[
-              "self-center rounded-lg border-2 border-black px-2 py-1 text-xs font-extrabold",
+              "relative z-[1] self-center rounded-lg border-2 border-black px-2 py-1 text-xs font-extrabold",
               "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
               "shadow-[0_3px_0_#000]",
             ].join(" ")}
@@ -194,22 +193,6 @@ export default function NumberInput({
             {unit}
           </span>
         )}
-
-        {/* Right nudge */}
-        <button
-          type="button"
-          onClick={() => nudge(1)}
-          disabled={disabled}
-          className={[
-            "select-none rounded-xl border-2 border-black px-2 text-sm font-black",
-            "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
-            "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
-          ].join(" ")}
-          aria-label="Increase"
-          title={`+ ${step}`}
-        >
-          +
-        </button>
       </div>
 
       {/* Quick chips */}
