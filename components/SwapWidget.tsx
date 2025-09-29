@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
 import { formatUnits, parseUnits, type Address } from "viem"
 import { ADDR, TOKENS, ALLOWED_BASES, ALLOWED_COMMODITIES } from "@/lib/addresses"
@@ -11,9 +11,10 @@ import { useTokenBalance } from "@/hooks/useTokenBalance"
 import StatusBadge from "@/components/StatusBadge"
 import SwapSettings from "./SwapSettings"
 
+// Keep your real ABIs – shortened for brevity here
 const ABI_TOBY_SWAPPER = [/* unchanged from your file */] as const
-const ABI_ERC20 = [/* unchanged */] as const
-const ABI_ROUTER_V2 = [/* unchanged */] as const
+const ABI_ERC20        = [/* unchanged */] as const
+const ABI_ROUTER_V2    = [/* unchanged */] as const
 
 type Direction = "USDC->TOKEN" | "ETH->TOKEN" | "TOKEN->USDC" | "TOKEN->ETH"
 
@@ -21,29 +22,35 @@ export default function SwapWidget() {
   const toast = useToast()
   const { address } = useAccount()
 
+  // selections & amount
   const [fromAddr, setFromAddr] = useState<Address>(TOKENS.USDC.address)
-  const [toAddr, setToAddr] = useState<Address>(TOKENS.TOBY.address)
+  const [toAddr,   setToAddr]   = useState<Address>(TOKENS.TOBY.address)
   const [amountIn, setAmountIn] = useState<string>("")
 
+  // settings modal
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [slippagePct, setSlippagePct] = useState<string>("1")
+  const [slippagePct,  setSlippagePct]  = useState<string>("1")
 
+  // little pulse on success (optional hook for CSS)
   const [celebrate, setCelebrate] = useState(false)
 
+  // token meta + balance
   const fromToken = useMemo(() => Object.values(TOKENS).find(t => t.address === fromAddr)!, [fromAddr])
-  const toToken   = useMemo(() => Object.values(TOKENS).find(t => t.address === toAddr)!, [toAddr])
+  const toToken   = useMemo(() => Object.values(TOKENS).find(t => t.address === toAddr)!,   [toAddr])
   const { human: fromBalanceHuman } = useTokenBalance(fromAddr, fromToken.decimals)
 
+  // direction
   const direction: Direction | null = useMemo(() => {
     const isOut = ALLOWED_COMMODITIES.has(toAddr)
     const isIn  = ALLOWED_COMMODITIES.has(fromAddr)
     if (fromAddr === TOKENS.USDC.address && isOut) return "USDC->TOKEN"
     if (fromAddr === TOKENS.WETH.address && isOut) return "ETH->TOKEN"
-    if (isIn && toAddr === TOKENS.USDC.address) return "TOKEN->USDC"
-    if (isIn && toAddr === TOKENS.WETH.address) return "TOKEN->ETH"
+    if (isIn && toAddr === TOKENS.USDC.address)     return "TOKEN->USDC"
+    if (isIn && toAddr === TOKENS.WETH.address)     return "TOKEN->ETH"
     return null
   }, [fromAddr, toAddr])
 
+  // paths
   const buildMainPath = (from: Address, to: Address): Address[] => {
     if (from === TOKENS.USDC.address && ALLOWED_COMMODITIES.has(to)) return [TOKENS.USDC.address, ADDR.WETH, to]
     if (from === TOKENS.WETH.address && ALLOWED_COMMODITIES.has(to)) return [ADDR.WETH, to]
@@ -60,7 +67,9 @@ export default function SwapWidget() {
   const mainPath = useMemo(() => buildMainPath(fromAddr, toAddr), [fromAddr, toAddr])
   const feePath  = useMemo(() => buildFeePath(fromAddr), [fromAddr])
 
-  const amountInWei = amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
+  // quotes
+  const amountInWei =
+    amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
 
   const { data: amountsMain } = useReadContract({
     abi: ABI_ROUTER_V2, address: ADDR.ROUTER, functionName: "getAmountsOut",
@@ -72,32 +81,34 @@ export default function SwapWidget() {
     args: amountIn && direction ? [amountInWei, feePath] : undefined,
   }) as { data: bigint[] | undefined }
 
+  // baseline for impact
   const unitInWei = 1n * (10n ** BigInt(fromToken.decimals))
   const { data: amountsUnit } = useReadContract({
     abi: ABI_ROUTER_V2, address: ADDR.ROUTER, functionName: "getAmountsOut",
     args: direction ? [unitInWei, mainPath] : undefined,
   }) as { data: bigint[] | undefined }
 
-  const slippageNum = Number(slippagePct || "1")
-  const safeSlip = Number.isFinite(slippageNum) && slippageNum >= 0 ? slippageNum : 1
-  const slippageBps = BigInt(Math.round(safeSlip * 100))
-  const minOutWithSlippage = (out: bigint) => (out * (10000n - slippageBps)) / 10000n
+  // slippage
+  const slipNum = Number(slippagePct || "1")
+  const slipBps = BigInt(Math.max(0, Math.round((Number.isFinite(slipNum) ? slipNum : 1) * 100)))
+  const withSlippage = (out: bigint) => (out * (10000n - slipBps)) / 10000n
 
-  const estOutMain = amountsMain?.[amountsMain.length - 1] ?? 0n
-  const estOutFee  = amountsFee?.[amountsFee.length - 1] ?? 0n
-  const minOutMain = estOutMain ? minOutWithSlippage(estOutMain) : 0n
-  const minOutFee  = estOutFee  ? minOutWithSlippage(estOutFee)   : 0n
+  const estOutMain = amountsMain?.at(-1) ?? 0n
+  const estOutFee  = amountsFee?.at(-1)  ?? 0n
+  const minOutMain = estOutMain ? withSlippage(estOutMain) : 0n
+  const minOutFee  = estOutFee  ? withSlippage(estOutFee)  : 0n
 
   let priceImpactPct: number | null = null
-  if (amountInWei > 0n && estOutMain > 0n && amountsUnit && amountsUnit.length > 0) {
-    const unitOut = Number(amountsUnit[amountsUnit.length - 1])
+  if (amountInWei > 0n && estOutMain > 0n && amountsUnit?.length) {
+    const unitOut    = Number(amountsUnit.at(-1))
     const perUnitOut = (Number(estOutMain) / Number(amountInWei)) * Number(10n ** BigInt(fromToken.decimals))
     if (isFinite(unitOut) && unitOut > 0 && isFinite(perUnitOut)) {
       priceImpactPct = Math.max(0, (1 - perUnitOut / unitOut) * 100)
     }
   }
 
-  const isEthIn = fromAddr === TOKENS.WETH.address
+  // approvals
+  const isEthIn       = fromAddr === TOKENS.WETH.address
   const needsApproval = !isEthIn && direction !== null
 
   const { data: allowance } = useReadContract({
@@ -117,28 +128,17 @@ export default function SwapWidget() {
   const { isLoading: swapping,  isSuccess: swapped,   isError: swapError } =
     useWaitForTransactionReceipt({ hash: txSwap })
 
-  useEffect(() => {
-    if (approved) {
-      toast.success({ title: "Approved", desc: `${fromToken.symbol} is now approved.` })
-    }
-  }, [approved, toast, fromToken.symbol])
-
-  useEffect(() => {
-    if (approveError) toast.error({ title: "Approval failed", desc: "Try again or increase gas." })
-  }, [approveError, toast])
-
+  useEffect(() => { if (approved)    toast.success({ title:"Approved", desc:`${fromToken.symbol} is now approved.` }) }, [approved, toast, fromToken.symbol])
+  useEffect(() => { if (approveError) toast.error({ title:"Approval failed", desc:"Try again or increase gas." }) }, [approveError, toast])
   useEffect(() => {
     if (swapped) {
-      toast.success({ title: "Swap confirmed", desc: "Tokens are on the way." })
+      toast.success({ title:"Swap confirmed", desc:"Tokens are on the way." })
       setCelebrate(true)
       const t = setTimeout(() => setCelebrate(false), 800)
       return () => clearTimeout(t)
     }
   }, [swapped, toast])
-
-  useEffect(() => {
-    if (swapError) toast.error({ title: "Swap failed", desc: "Check slippage or liquidity." })
-  }, [swapError, toast])
+  useEffect(() => { if (swapError)   toast.error({ title:"Swap failed", desc:"Check slippage or liquidity." }) }, [swapError, toast])
 
   function onApprove() {
     if (!needsApproval || !amountInWei) return
@@ -149,6 +149,7 @@ export default function SwapWidget() {
   function doSwap() {
     if (!direction || !amountInWei) return
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60)
+
     if (direction === "ETH->TOKEN") {
       writeSwap({
         abi: ABI_TOBY_SWAPPER as any, address: ADDR.SWAPPER,
@@ -163,10 +164,11 @@ export default function SwapWidget() {
         args: [fromAddr, toAddr, amountInWei, minOutMain, mainPath, feePath, minOutFee, deadline],
       })
     } else if (direction === "TOKEN->ETH") {
+      // ✅ add minOutFee which was missing before
       writeSwap({
         abi: ABI_TOBY_SWAPPER as any, address: ADDR.SWAPPER,
         functionName: "swapTokensForETHSupportingFeeOnTransferTokens",
-        args: [fromAddr, amountInWei, minOutMain, mainPath, feePath, deadline],
+        args: [fromAddr, amountInWei, minOutMain, mainPath, feePath, minOutFee, deadline],
       })
     }
     toast.notify({ title: "Swap submitted", desc: "Waiting for confirmation…" })
@@ -174,7 +176,7 @@ export default function SwapWidget() {
 
   function flipTokens() {
     const prevFrom = fromAddr
-    const prevTo = toAddr
+    const prevTo   = toAddr
     setFromAddr(prevTo)
     setToAddr(prevFrom)
     setTimeout(() => {
@@ -195,16 +197,16 @@ export default function SwapWidget() {
     <>
       <div
         className={[
-          "rounded-3xl border-2 border-black p-7 md:p-9",
+          "rounded-3xl border-2 border-black p-8 md:p-10",
           "bg-[radial-gradient(120%_160%_at_15%_-20%,rgba(124,58,237,.22),transparent),radial-gradient(120%_160%_at_85%_-10%,rgba(14,165,233,.18),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
           "text-slate-50 shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)]",
           celebrate ? "celebrate" : "",
         ].join(" ")}
       >
         {/* Header */}
-        <div className="mb-7 flex items-start justify-between">
+        <div className="mb-8 flex items-start justify-between pr-2">
           <h2
-            className="text-[32px] md:text-[40px] font-black tracking-tight leading-none"
+            className="text-[36px] md:text-[44px] font-black tracking-tight leading-none"
             style={{
               background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
               WebkitBackgroundClip: "text",
@@ -216,15 +218,10 @@ export default function SwapWidget() {
             Swap
           </h2>
 
-          <div className="flex items-center gap-2 pr-1">
+          <div className="flex items-center gap-3">
             <StatusBadge />
             <button
-              className={[
-                "inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-black",
-                "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
-                "shadow-[0_4px_0_#000] active:translate-y-[2px] active:shadow-[0_2px_0_#000]",
-                "ml-1 mr-1 md:mr-0",
-              ].join(" ")}
+              className="inline-grid place-items-center h-9 w-9 rounded-full border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100 shadow-[0_4px_0_#000] active:translate-y-[2px] active:shadow-[0_2px_0_#000]"
               onClick={() => setSettingsOpen(true)}
               aria-label="Open swap settings"
               title={`Slippage: ${Number(slippagePct || "1")}%`}
@@ -234,7 +231,7 @@ export default function SwapWidget() {
           </div>
         </div>
 
-        {/* FROM / TO with center flip */}
+        {/* From / To with centered flip */}
         <div className="relative">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TokenSelect
@@ -244,7 +241,7 @@ export default function SwapWidget() {
                 setFromAddr(v)
                 const isBase = ALLOWED_BASES.has(v)
                 if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
-                if (!isBase && !ALLOWED_BASES.has(toAddr)) setToAddr(TOKENS.USDC.address)
+                if (!isBase && !ALLOWED_BASES.has(toAddr))        setToAddr(TOKENS.USDC.address)
               }}
               options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
             />
@@ -256,7 +253,7 @@ export default function SwapWidget() {
             />
           </div>
 
-          {/* Flip button */}
+          {/* Desktop: dead-center between columns. Mobile: between rows. */}
           <button
             className={[
               "absolute left-1/2 -translate-x-1/2",
@@ -274,7 +271,7 @@ export default function SwapWidget() {
           </button>
         </div>
 
-        {/* AMOUNT row */}
+        {/* Amount */}
         <div className="mt-8">
           <NumberInput
             label="Amount"
@@ -290,19 +287,15 @@ export default function SwapWidget() {
           />
         </div>
 
-        {/* Slim metrics */}
+        {/* Metrics */}
         <div className="mt-6 grid gap-1 text-sm/6 text-slate-200">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="opacity-70">Est. out:</span>
-            <span className="font-semibold">{outMainHuman}</span>
+            <span className="opacity-70">Est. out:</span><span className="font-semibold">{outMainHuman}</span>
             <span className="opacity-40">•</span>
             <span className="opacity-70">Min out:</span>
-            <span className="font-semibold">
-              {minOutMain ? formatUnits(minOutMain, toToken.decimals) : "-"}
-            </span>
+            <span className="font-semibold">{minOutMain ? formatUnits(minOutMain, toToken.decimals) : "-"}</span>
             <span className="opacity-40">•</span>
-            <span className="opacity-70">Fee→TOBY:</span>
-            <span className="font-semibold">{outFeeHuman}</span>
+            <span className="opacity-70">Fee→TOBY:</span><span className="font-semibold">{outFeeHuman}</span>
             <span className="opacity-40">•</span>
             <span className="opacity-70">Impact:</span>
             <span className={`font-semibold ${priceImpactPct && priceImpactPct > 5 ? "text-rose-300" : ""}`}>
@@ -336,12 +329,17 @@ export default function SwapWidget() {
             </button>
           )}
 
+          {/* 💚 Glassy green Swap */}
           <button
             className={[
-              "rounded-full border-2 border-black px-6 py-4 font-black text-lg",
-              "bg-[linear-gradient(135deg,#10b981,#34d399)] text-[#031611]",
+              "relative overflow-hidden rounded-full border-2 border-black px-6 py-4 text-lg font-black",
+              "text-[#031611]",
               "shadow-[0_8px_0_#000] active:translate-y-[2px] active:shadow-[0_4px_0_#000]",
-              swapping ? "btn-loading" : "",
+              // dark glassy green gradient + subtle inner highlight
+              "bg-[linear-gradient(135deg,rgba(16,185,129,.95),rgba(52,211,153,.92))]",
+              "before:absolute before:inset-0 before:pointer-events-none before:rounded-full before:opacity-[.22]",
+              "before:bg-[radial-gradient(120%_150%_at_50%_-20%,#fff,transparent_60%)]",
+              (!direction || swapping || (!isEthIn && !hasAllowance) || !amountInWei) ? "opacity-60" : "",
             ].join(" ")}
             onClick={doSwap}
             disabled={!direction || swapping || (!isEthIn && !hasAllowance) || !amountInWei}
