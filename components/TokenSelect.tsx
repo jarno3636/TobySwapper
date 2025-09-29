@@ -1,4 +1,3 @@
-// components/TokenSelect.tsx
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -25,17 +24,15 @@ function symbolFromAddress(addr: Address): SymbolKey | null {
   )
   return (entry?.[0] as SymbolKey) ?? null
 }
-function addressFromSymbol(sym: SymbolKey): Address {
-  return SYMBOL_TO_META[sym].address
-}
+const addressFromSymbol = (sym: SymbolKey) => SYMBOL_TO_META[sym].address
 
 export default function TokenSelect({
   label,
   value,
   onChange,
-  options,           // e.g. ["USDC","WETH","TOBY","PATIENCE","TABOSHI"]
+  options,
   placeholder = "Search tokens…",
-  compact = false,   // smaller trigger if needed
+  compact = false,
 }: {
   label: string
   value: Address
@@ -48,7 +45,7 @@ export default function TokenSelect({
   const [query, setQuery] = useState("")
   const [activeIdx, setActiveIdx] = useState(0)
 
-  const btnRef = useRef<HTMLButtonElement | null>(null)
+  const btnRef  = useRef<HTMLButtonElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -66,7 +63,6 @@ export default function TokenSelect({
     )
   }, [items, query])
 
-  /** Close on outside click / ESC */
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       if (!open) return
@@ -78,20 +74,13 @@ export default function TokenSelect({
       }
     }
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false)
-        btnRef.current?.focus()
-      }
+      if (e.key === "Escape") { setOpen(false); btnRef.current?.focus() }
     }
     document.addEventListener("mousedown", onDoc)
     document.addEventListener("keydown", onEsc)
-    return () => {
-      document.removeEventListener("mousedown", onDoc)
-      document.removeEventListener("keydown", onEsc)
-    }
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc) }
   }, [open])
 
-  /** Ensure active item is scrolled into view */
   useEffect(() => {
     if (!open) return
     const el = itemRefs.current[activeIdx]
@@ -102,7 +91,6 @@ export default function TokenSelect({
     setOpen(true)
     setQuery("")
     setActiveIdx(0)
-    // focus search input after mount
     setTimeout(() => {
       const input = listRef.current?.querySelector<HTMLInputElement>("input[data-role='search']")
       input?.focus()
@@ -122,35 +110,27 @@ export default function TokenSelect({
     btnRef.current?.focus()
   }
 
-  /** Keyboard in list: arrows & enter */
   function onListKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (!filtered.length) return
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setActiveIdx((i) => Math.min(filtered.length - 1, i + 1))
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setActiveIdx((i) => Math.max(0, i - 1))
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      const sym = filtered[activeIdx]?.symbol
-      if (sym) choose(sym)
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(filtered.length-1, i+1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(0, i-1)) }
+    else if (e.key === "Enter")   { e.preventDefault(); const sym = filtered[activeIdx]?.symbol; if (sym) choose(sym) }
   }
 
   const triggerClasses = [
-    "w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-black px-3 shadow-[0_6px_0_#000] active:translate-y-[2px] active:shadow-[0_3px_0_#000] transition",
-    compact ? "py-1.5 bg-white" : "py-2 bg-white",
+    "w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-black px-3",
+    "shadow-[0_6px_0_#000] active:translate-y-[2px] active:shadow-[0_3px_0_#000] transition",
+    compact ? "py-1.5" : "py-2",
+    "text-slate-100",
+    "bg-[linear-gradient(180deg,#0f172a,#121826)]",
   ].join(" ")
 
   return (
     <div className="w-full">
-      <label className="block mb-1 text-sm font-semibold text-black/80">
-        {label}
-      </label>
+      <label className="mb-1 block text-sm font-semibold text-slate-200">{label}</label>
 
       <div className="relative">
-        {/* Trigger */}
+        {/* Trigger (dark glass) */}
         <button
           ref={btnRef}
           type="button"
@@ -160,14 +140,14 @@ export default function TokenSelect({
           onKeyDown={onTriggerKeyDown}
           className={triggerClasses}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="min-w-0 flex items-center gap-3">
             <TokenIcon symbol={currentSym} />
-            <span className="font-extrabold text-black truncate">{currentSym}</span>
+            <span className="truncate font-extrabold">{currentSym}</span>
           </div>
-          <span className="text-black/70">▾</span>
+          <span className="opacity-80">▾</span>
         </button>
 
-        {/* Sheet / List */}
+        {/* Dark glass list */}
         {open && (
           <div
             ref={listRef}
@@ -175,38 +155,34 @@ export default function TokenSelect({
             aria-label={`${label} options`}
             tabIndex={-1}
             onKeyDown={onListKeyDown}
-            className="absolute z-30 mt-2 w-full rounded-2xl border-2 border-black p-2 shadow-[0_10px_0_#000] max-h-[360px] overflow-auto
-                       text-black
-                       bg-[radial-gradient(60%_120%_at_10%_0%,rgba(124,58,237,.18),transparent),linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.92))]"
+            className="absolute z-40 mt-2 w-full max-h-[360px] overflow-auto rounded-2xl border-2 border-black p-2 shadow-[0_10px_0_#000]
+                       text-slate-100
+                       bg-[radial-gradient(70%_140%_at_10%_0%,rgba(124,58,237,.16),transparent),linear-gradient(180deg,#0b1220,#0f172a)]"
           >
-            {/* Search (auto-hides when not needed) */}
+            {/* Search */}
             {items.length > 5 && (
-              <div className="sticky top-0 z-10 mb-2 rounded-xl border-2 border-black bg-white px-2 py-1.5 shadow-[0_4px_0_#000]">
+              <div className="sticky top-0 z-10 mb-2 rounded-xl border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)] px-2 py-1.5 shadow-[0_4px_0_#000]">
                 <input
                   data-role="search"
                   value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value)
-                    setActiveIdx(0)
-                  }}
+                  onChange={(e) => { setQuery(e.target.value); setActiveIdx(0) }}
                   placeholder={placeholder}
-                  className="w-full bg-transparent outline-none text-sm"
+                  className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-400/70 outline-none"
                   aria-label="Search tokens"
                 />
               </div>
             )}
 
             {filtered.length === 0 && (
-              <div className="px-3 py-6 text-sm text-black/60">No matches.</div>
+              <div className="px-3 py-6 text-sm text-slate-300/80">No matches.</div>
             )}
 
             {filtered.map((it, i) => {
               const selected = currentSym === it.symbol
-              const active = i === activeIdx
+              const active   = i === activeIdx
               return (
                 <button
                   key={it.symbol}
-                  // ✅ Return void from the ref callback (fixes TS error)
                   ref={(el) => { itemRefs.current[i] = el }}
                   role="option"
                   aria-selected={selected}
@@ -214,17 +190,15 @@ export default function TokenSelect({
                   onClick={() => choose(it.symbol)}
                   className={[
                     "w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition",
-                    active ? "ring-2 ring-black bg-black/5" : "hover:bg-black/5",
+                    active ? "ring-2 ring-black/70 bg-white/5" : "hover:bg-white/5",
                   ].join(" ")}
                 >
                   <TokenIcon symbol={it.symbol} />
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-extrabold text-black">{it.symbol}</span>
-                    <span className="text-[11px] text-black/60 truncate">{it.address}</span>
+                  <div className="min-w-0 flex flex-col">
+                    <span className="font-extrabold">{it.symbol}</span>
+                    <span className="truncate text-[11px] opacity-70">{it.address}</span>
                   </div>
-                  {selected && (
-                    <span className="ml-auto text-xs font-extrabold text-black/70">Selected</span>
-                  )}
+                  {selected && <span className="ml-auto text-xs font-extrabold opacity-80">Selected</span>}
                 </button>
               )
             })}
@@ -245,7 +219,7 @@ function TokenIcon({ symbol }: { symbol: SymbolKey }) {
     symbol === "PATIENCE" ? "△" : "🌱"
 
   return err ? (
-    <div className="grid place-items-center w-8 h-8 rounded-xl border-2 border-black bg-white text-base">
+    <div className="grid h-8 w-8 place-items-center rounded-xl border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)] text-sm">
       {fallback}
     </div>
   ) : (
