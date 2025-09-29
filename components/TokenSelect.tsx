@@ -7,26 +7,16 @@ import { TOKENS } from "@/lib/addresses"
 
 type SymbolKey = "USDC" | "WETH" | "TOBY" | "PATIENCE" | "TABOSHI"
 
-const SYMBOL_TO_META: Record<
-  SymbolKey,
-  { symbol: SymbolKey; address: Address; decimals: number; icon: string }
-> = {
+const MAP: Record<SymbolKey, { symbol: SymbolKey; address: Address; decimals: number; icon: string }> = {
   USDC:     { ...TOKENS.USDC,     icon: "/tokens/usdc.PNG"     } as any,
   WETH:     { ...TOKENS.WETH,     icon: "/tokens/weth.PNG"     } as any,
   TOBY:     { ...TOKENS.TOBY,     icon: "/tokens/toby.PNG"     } as any,
   PATIENCE: { ...TOKENS.PATIENCE, icon: "/tokens/patience.PNG" } as any,
   TABOSHI:  { ...TOKENS.TABOSHI,  icon: "/tokens/taboshi.PNG"  } as any,
 }
-
-function symbolFromAddress(addr: Address): SymbolKey | null {
-  const entry = Object.entries(SYMBOL_TO_META).find(
-    ([, v]) => v.address.toLowerCase() === addr.toLowerCase(),
-  )
-  return (entry?.[0] as SymbolKey) ?? null
-}
-function addressFromSymbol(sym: SymbolKey): Address {
-  return SYMBOL_TO_META[sym].address
-}
+const symFromAddress = (addr: Address): SymbolKey | null =>
+  (Object.entries(MAP).find(([, v]) => v.address.toLowerCase() === addr.toLowerCase())?.[0] as SymbolKey) ?? null
+const addrFromSym = (s: SymbolKey) => MAP[s].address
 
 export default function TokenSelect({
   label,
@@ -34,28 +24,28 @@ export default function TokenSelect({
   onChange,
   options,
   placeholder = "Search tokens…",
+  compact = true,
 }: {
   label: string
   value: Address
   onChange: (v: Address) => void
   options: SymbolKey[]
   placeholder?: string
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const [infoOpen, setInfoOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [activeIdx, setActiveIdx] = useState(0)
 
-  const btnRef  = useRef<HTMLButtonElement | null>(null)
+  const btnRef = useRef<HTMLButtonElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
-  const infoRef = useRef<HTMLDivElement | null>(null)
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const currentSym = useMemo(
-    () => (symbolFromAddress(value) as SymbolKey | null) ?? options[0],
+    () => (symFromAddress(value) as SymbolKey | null) ?? options[0],
     [value, options],
   )
-  const items = useMemo(() => options.map((s) => SYMBOL_TO_META[s]), [options])
+  const items = useMemo(() => options.map((s) => MAP[s]), [options])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items
@@ -63,18 +53,18 @@ export default function TokenSelect({
     return items.filter((t) => t.symbol.toLowerCase().includes(q))
   }, [items, query])
 
+  // outside/esc
   useEffect(() => {
     function onDoc(e: MouseEvent) {
+      if (!open) return
+      if (!listRef.current || !btnRef.current) return
       const t = e.target as Node
-      if (open && listRef.current && btnRef.current) {
-        if (!listRef.current.contains(t) && !btnRef.current.contains(t)) setOpen(false)
-      }
-      if (infoOpen && infoRef.current && btnRef.current) {
-        if (!infoRef.current.contains(t) && !btnRef.current.contains(t)) setInfoOpen(false)
+      if (!listRef.current.contains(t) && !btnRef.current.contains(t)) {
+        setOpen(false); btnRef.current?.focus()
       }
     }
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") { setOpen(false); setInfoOpen(false) }
+      if (e.key === "Escape") { setOpen(false); btnRef.current?.focus() }
     }
     document.addEventListener("mousedown", onDoc)
     document.addEventListener("keydown", onEsc)
@@ -82,7 +72,7 @@ export default function TokenSelect({
       document.removeEventListener("mousedown", onDoc)
       document.removeEventListener("keydown", onEsc)
     }
-  }, [open, infoOpen])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -90,29 +80,38 @@ export default function TokenSelect({
   }, [activeIdx, open])
 
   function openList() {
-    setOpen(true)
-    setQuery("")
-    setActiveIdx(0)
+    setOpen(true); setQuery(""); setActiveIdx(0)
     setTimeout(() => {
-      const input = listRef.current?.querySelector<HTMLInputElement>("input[data-role='search']")
-      input?.focus()
+      listRef.current?.querySelector<HTMLInputElement>("input[data-role='search']")?.focus()
     }, 10)
   }
 
-  const triggerClasses = [
-    "w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-black px-3 py-2",
-    "shadow-[0_6px_0_#000] active:translate-y-[2px] active:shadow-[0_3px_0_#000] transition",
-    // dark glass
-    "bg-[linear-gradient(180deg,rgba(11,18,32,.96),rgba(15,23,42,.96))] text-slate-100",
+  function onTriggerKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+    if (e.key === " " || e.key === "Enter" || e.key === "ArrowDown") {
+      e.preventDefault(); open ? setOpen(false) : openList()
+    }
+  }
+  function choose(sym: SymbolKey) {
+    onChange(addrFromSym(sym)); setOpen(false); btnRef.current?.focus()
+  }
+  function onListKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!filtered.length) return
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((i) => Math.min(filtered.length - 1, i + 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((i) => Math.max(0, i - 1)) }
+    else if (e.key === "Enter") { e.preventDefault(); const sym = filtered[activeIdx]?.symbol; if (sym) choose(sym) }
+  }
+
+  const trigger = [
+    "w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-black px-3 shadow-[0_6px_0_#000] transition",
+    compact ? "py-2" : "py-3",
+    "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
   ].join(" ")
 
   return (
     <div className="w-full">
-      <label className="block mb-1 text-sm font-semibold text-slate-200">
-        {label}
-      </label>
+      <label className="block mb-1 text-sm font-semibold text-slate-200">{label}</label>
 
-      <div className="relative flex items-center gap-2">
+      <div className="relative">
         {/* Trigger */}
         <button
           ref={btnRef}
@@ -120,69 +119,35 @@ export default function TokenSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           onClick={() => (open ? setOpen(false) : openList())}
-          className={triggerClasses}
+          onKeyDown={onTriggerKeyDown}
+          className={trigger}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <TokenIcon symbol={currentSym || options[0]} />
+            <TokenIcon symbol={currentSym} />
             <span className="font-extrabold truncate">{currentSym}</span>
           </div>
           <span className="opacity-80">▾</span>
         </button>
 
-        {/* Info button (address popover) */}
-        <button
-          type="button"
-          title="Show token address"
-          aria-label="Show token address"
-          onClick={() => setInfoOpen((v) => !v)}
-          className="inline-grid place-items-center h-9 w-9 rounded-xl border-2 border-black shadow-[0_4px_0_#000] active:translate-y-[2px] active:shadow-[0_2px_0_#000] bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100"
-        >
-          ⓘ
-        </button>
-
-        {/* Address popover */}
-        {infoOpen && currentSym && (
-          <div
-            ref={infoRef}
-            className="absolute right-0 top-[calc(100%+6px)] z-30 w-[min(92vw,360px)] rounded-2xl border-2 border-black p-3 shadow-[0_10px_0_#000] text-slate-100 bg-[linear-gradient(180deg,rgba(11,18,32,.98),rgba(15,23,42,.98))]"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <TokenIcon symbol={currentSym} />
-              <div className="font-extrabold">{currentSym}</div>
-            </div>
-            <code className="block break-all rounded-xl bg-black/30 px-2 py-1.5 text-xs">
-              {SYMBOL_TO_META[currentSym].address}
-            </code>
-            <div className="mt-2 flex justify-end">
-              <button
-                className="rounded-lg border-2 border-black bg-white/90 px-2 py-1 text-xs font-extrabold text-black shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none"
-                onClick={() => navigator.clipboard?.writeText(SYMBOL_TO_META[currentSym].address)}
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* List sheet */}
+        {/* Sheet / List */}
         {open && (
           <div
             ref={listRef}
             role="listbox"
             aria-label={`${label} options`}
             tabIndex={-1}
+            onKeyDown={onListKeyDown}
             className="absolute z-30 mt-2 w-full rounded-2xl border-2 border-black p-2 shadow-[0_10px_0_#000] max-h-[360px] overflow-auto
-                       text-slate-100
-                       bg-[radial-gradient(60%_120%_at_10%_0%,rgba(124,58,237,.18),transparent),linear-gradient(180deg,rgba(11,18,32,.98),rgba(15,23,42,.98))]"
+                       text-slate-100 bg-[radial-gradient(60%_120%_at_10%_0%,rgba(124,58,237,.15),transparent),linear-gradient(180deg,#0b1220,#0f172a)]"
           >
             {items.length > 5 && (
-              <div className="sticky top-0 z-10 mb-2 rounded-xl border-2 border-black bg-black/30 px-2 py-1.5 shadow-[0_4px_0_#000]">
+              <div className="sticky top-0 z-10 mb-2 rounded-xl border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)] px-2 py-1.5 shadow-[0_4px_0_#000]">
                 <input
                   data-role="search"
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setActiveIdx(0) }}
                   placeholder={placeholder}
-                  className="w-full bg-transparent outline-none text-sm placeholder:text-slate-400/60"
+                  className="w-full bg-transparent outline-none text-sm placeholder:text-slate-400/70"
                   aria-label="Search tokens"
                 />
               </div>
@@ -202,7 +167,7 @@ export default function TokenSelect({
                   role="option"
                   aria-selected={selected}
                   onMouseEnter={() => setActiveIdx(i)}
-                  onClick={() => { onChange(addressFromSymbol(it.symbol)); setOpen(false) }}
+                  onClick={() => choose(it.symbol)}
                   className={[
                     "w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition",
                     active ? "ring-2 ring-black bg-white/5" : "hover:bg-white/5",
@@ -210,7 +175,7 @@ export default function TokenSelect({
                 >
                   <TokenIcon symbol={it.symbol} />
                   <span className="font-extrabold">{it.symbol}</span>
-                  {selected && <span className="ml-auto text-xs opacity-80">Selected</span>}
+                  {selected && <span className="ml-auto text-xs opacity-70">Selected</span>}
                 </button>
               )
             })}
@@ -222,7 +187,7 @@ export default function TokenSelect({
 }
 
 function TokenIcon({ symbol }: { symbol: SymbolKey }) {
-  const src = SYMBOL_TO_META[symbol].icon
+  const src = MAP[symbol].icon
   const [err, setErr] = useState(false)
   const fallback =
     symbol === "USDC" ? "U" :
@@ -231,7 +196,7 @@ function TokenIcon({ symbol }: { symbol: SymbolKey }) {
     symbol === "PATIENCE" ? "△" : "🌱"
 
   return err ? (
-    <div className="grid place-items-center w-8 h-8 rounded-xl border-2 border-black bg-white text-base">
+    <div className="grid place-items-center w-8 h-8 rounded-xl border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)]">
       {fallback}
     </div>
   ) : (
@@ -240,7 +205,7 @@ function TokenIcon({ symbol }: { symbol: SymbolKey }) {
       alt={`${symbol} logo`}
       width={28}
       height={28}
-      className="rounded-md border-2 border-black bg-white"
+      className="rounded-md border-2 border-black bg-[linear-gradient(180deg,#0f172a,#121826)]"
       onError={() => setErr(true)}
       priority={symbol === "TOBY"}
     />
