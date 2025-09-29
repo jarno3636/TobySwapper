@@ -8,25 +8,18 @@ type Props = {
   onChange: (v: string) => void
   label?: string
   placeholder?: string
-  /** Token symbol for suffix, e.g. "USDC" or "WETH" */
   unit?: string
-  /** User balance (human string) enables % chips + Max. */
   balance?: string
-  /** Token decimals; default 18. */
   decimals?: number
-  /** Min/Max (human strings). Min defaults to "0". */
   min?: string
   max?: string
-  /** Step for arrow keys only (no visible ±); default "0.1". */
   step?: string
-  /** Optional error text (turns border red). */
   error?: string
-  /** Optional help text (shown if no error). */
   help?: string
-  /** Disable input entirely. */
   disabled?: boolean
-  /** Show the 25/50/75/Max quick chips (default true). */
   showPercentChips?: boolean
+  /** 'glass' forces the dark-glass styling */
+  variant?: "glass" | "light"
 }
 
 const clampDecimals = (v: string, decimals: number) => {
@@ -34,19 +27,13 @@ const clampDecimals = (v: string, decimals: number) => {
   const [i, f] = v.split(".")
   return `${i}.${f.slice(0, decimals)}`
 }
-
 const sanitize = (raw: string, decimals: number) => {
   let v = (raw ?? "").replace(/[^\d.]/g, "")
   const firstDot = v.indexOf(".")
-  if (firstDot !== -1) {
-    v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "")
-  }
-  if (v && v[0] === "0" && v.length > 1 && v[1] !== ".") {
-    v = String(Number(v))
-  }
+  if (firstDot !== -1) v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "")
+  if (v && v[0] === "0" && v.length > 1 && v[1] !== ".") v = String(Number(v))
   return clampDecimals(v, decimals)
 }
-
 const clampToRange = (v: string, min?: string, max?: string) => {
   if (!v) return v
   const n = Number(v)
@@ -72,6 +59,7 @@ export default function NumberInput({
   help,
   disabled,
   showPercentChips = true,
+  variant = "glass",
 }: Props) {
   const ref = useRef<HTMLInputElement>(null)
 
@@ -84,47 +72,27 @@ export default function NumberInput({
       onChange(clampDecimals(human, decimals))
     } catch {}
   }
-
   const useMax = () => {
-    const src = max ?? balance
+    const src = (max ?? balance)
     if (!src) return
     onChange(clampDecimals(src, decimals))
   }
-
   const handleChange = (raw: string) => {
     const v1 = sanitize(raw, decimals)
     const v2 = clampToRange(v1, min, max)
     onChange(v2)
   }
 
-  // Arrow keys still work for nudging (no visible ± buttons)
-  const keyNudge = (dir: 1 | -1) => {
-    const cur = value || "0"
-    try {
-      const curWei = parseUnits(cur, decimals)
-      const stepWei = parseUnits(step, decimals)
-      const nextWei = dir === 1 ? curWei + stepWei : curWei - stepWei
-      const boundedWei = nextWei < 0n ? 0n : nextWei
-      const human = formatUnits(boundedWei, decimals)
-      onChange(clampToRange(clampDecimals(human, decimals), min, max))
-    } catch {
-      const num = Math.max(0, (parseFloat(cur) || 0) + dir * (parseFloat(step) || 0.1))
-      onChange(clampToRange(clampDecimals(String(num), decimals), min, max))
-    }
-  }
-
-  const hasTopMeta = Boolean(label || balance || max)
+  const glass = variant === "glass"
 
   return (
     <label className="block">
       {/* Top row */}
-      {hasTopMeta && (
+      {(label || balance || max) && (
         <div className="mb-1 flex items-center justify-between">
           {label ? (
             <span className="text-sm font-semibold text-slate-200">{label}</span>
-          ) : (
-            <span />
-          )}
+          ) : <span />}
           {(balance || max) && (
             <div className="text-xs text-slate-300">
               Balance: <span className="font-semibold">{balance ?? max}</span>
@@ -132,9 +100,11 @@ export default function NumberInput({
                 type="button"
                 onClick={useMax}
                 className={[
-                  "ml-2 rounded-full border-2 border-black px-2 py-0.5 font-extrabold",
-                  "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100",
-                  "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+                  "ml-2 rounded-full border-2 border-black px-2 py-0.5 text-[11px] font-extrabold",
+                  glass
+                    ? "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100 shadow-[0_3px_0_#000]"
+                    : "bg-white text-black shadow-[0_3px_0_#000]",
+                  "active:translate-y-[1px] active:shadow-none",
                 ].join(" ")}
               >
                 Max
@@ -150,33 +120,29 @@ export default function NumberInput({
           "flex items-center gap-2 rounded-2xl border-2 px-3 py-2 shadow-[0_6px_0_#000]",
           disabled ? "opacity-60" : "",
           error
-            ? "border-rose-500 bg-[linear-gradient(180deg,#2a0f12,#3a0f12)]"
-            : "border-black bg-[linear-gradient(180deg,rgba(11,18,32,.96),rgba(15,23,42,.96))]",
+            ? "border-rose-400 bg-[linear-gradient(180deg,#2a0f12,#3a0f12)]"
+            : glass
+            ? "border-black bg-[linear-gradient(180deg,#0b1220,#0f172a)]"
+            : "border-black bg-white",
           "focus-within:ring-2 focus-within:ring-[#79ffe1]",
-          "relative overflow-hidden",
         ].join(" ")}
       >
-        {/* subtle inner highlight */}
-        <span className="pointer-events-none absolute inset-0 rounded-2xl opacity-[.18] bg-[radial-gradient(120%_150%_at_50%_-20%,#fff,transparent_60%)]" />
-
-        {/* Text input */}
         <input
           ref={ref}
           inputMode="decimal"
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={error ? "numinput-error" : help ? "numinput-help" : undefined}
           pattern="[0-9]*[.]?[0-9]*"
-          className="relative z-[1] min-w-0 flex-1 bg-transparent text-slate-50 outline-none placeholder:text-slate-400/60"
+          className={[
+            "min-w-0 flex-1 bg-transparent outline-none",
+            glass ? "text-slate-50 placeholder:text-slate-400/60" : "text-black placeholder:text-black/40",
+          ].join(" ")}
           type="text"
           value={value}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
-          onWheel={(e) => (e.target as HTMLInputElement).blur()}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowUp") { e.preventDefault(); keyNudge(1) }
-            else if (e.key === "ArrowDown") { e.preventDefault(); keyNudge(-1) }
-          }}
+          onWheel={(e) => { (e.target as HTMLInputElement).blur() }}
           disabled={disabled}
         />
 
@@ -184,9 +150,10 @@ export default function NumberInput({
         {unit && (
           <span
             className={[
-              "relative z-[1] self-center rounded-lg border-2 border-black px-2 py-1 text-xs font-extrabold",
-              "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100",
-              "shadow-[0_3px_0_#000]",
+              "self-center rounded-full border-2 border-black px-2 py-1 text-[11px] font-extrabold",
+              glass
+                ? "bg-[linear-gradient(180deg,#0f172a,#121826)] text-slate-100 shadow-[0_3px_0_#000]"
+                : "bg-gray-100 text-black shadow-[0_3px_0_#000]",
             ].join(" ")}
             aria-hidden
           >
@@ -204,9 +171,11 @@ export default function NumberInput({
               type="button"
               onClick={() => setPercent(p)}
               className={[
-                "rounded-full border-2 border-black px-2 py-1 text-xs font-extrabold",
-                "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100",
-                "shadow-[0_3px_0_#000] active:translate-y-[1px] active:shadow-none",
+                "rounded-full border-2 border-black px-2 py-1 text-[11px] font-extrabold",
+                glass
+                  ? "bg-[linear-gradient(135deg,#0f172a,#111827)] text-slate-100 shadow-[0_3px_0_#000]"
+                  : "bg-white text-black shadow-[0_3px_0_#000]",
+                "active:translate-y-[1px] active:shadow-none",
               ].join(" ")}
             >
               {p === 100 ? "Max" : `${p}%`}
@@ -220,7 +189,7 @@ export default function NumberInput({
         {error ? (
           <span id="numinput-error" className="text-rose-300">{error}</span>
         ) : help ? (
-          <span id="numinput-help" className="text-slate-300/80">{help}</span>
+          <span id="numinput-help" className={glass ? "text-slate-300/80" : "text-black/60"}>{help}</span>
         ) : null}
       </div>
     </label>
