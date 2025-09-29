@@ -1,3 +1,4 @@
+// components/SwapWidget.tsx
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -11,8 +12,8 @@ import { useTokenBalance } from "@/hooks/useTokenBalance"
 import StatusBadge from "@/components/StatusBadge"
 import SwapSettings from "./SwapSettings"
 
-// Keep your real ABIs – shortened for brevity here
-const ABI_TOBY_SWAPPER = [/* unchanged from your file */] as const
+// keep real ABIs in your project; placeholders here
+const ABI_TOBY_SWAPPER = [/* unchanged */] as const
 const ABI_ERC20        = [/* unchanged */] as const
 const ABI_ROUTER_V2    = [/* unchanged */] as const
 
@@ -22,7 +23,7 @@ export default function SwapWidget() {
   const toast = useToast()
   const { address } = useAccount()
 
-  // selections & amount
+  // selections
   const [fromAddr, setFromAddr] = useState<Address>(TOKENS.USDC.address)
   const [toAddr,   setToAddr]   = useState<Address>(TOKENS.TOBY.address)
   const [amountIn, setAmountIn] = useState<string>("")
@@ -31,10 +32,10 @@ export default function SwapWidget() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [slippagePct,  setSlippagePct]  = useState<string>("1")
 
-  // little pulse on success (optional hook for CSS)
+  // celebratory pulse
   const [celebrate, setCelebrate] = useState(false)
 
-  // token meta + balance
+  // meta + balances
   const fromToken = useMemo(() => Object.values(TOKENS).find(t => t.address === fromAddr)!, [fromAddr])
   const toToken   = useMemo(() => Object.values(TOKENS).find(t => t.address === toAddr)!,   [toAddr])
   const { human: fromBalanceHuman } = useTokenBalance(fromAddr, fromToken.decimals)
@@ -68,8 +69,7 @@ export default function SwapWidget() {
   const feePath  = useMemo(() => buildFeePath(fromAddr), [fromAddr])
 
   // quotes
-  const amountInWei =
-    amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
+  const amountInWei = amountIn && Number(amountIn) > 0 ? parseUnits(amountIn, fromToken.decimals) : 0n
 
   const { data: amountsMain } = useReadContract({
     abi: ABI_ROUTER_V2, address: ADDR.ROUTER, functionName: "getAmountsOut",
@@ -98,6 +98,7 @@ export default function SwapWidget() {
   const minOutMain = estOutMain ? withSlippage(estOutMain) : 0n
   const minOutFee  = estOutFee  ? withSlippage(estOutFee)  : 0n
 
+  // rough impact %
   let priceImpactPct: number | null = null
   if (amountInWei > 0n && estOutMain > 0n && amountsUnit?.length) {
     const unitOut    = Number(amountsUnit.at(-1))
@@ -164,7 +165,6 @@ export default function SwapWidget() {
         args: [fromAddr, toAddr, amountInWei, minOutMain, mainPath, feePath, minOutFee, deadline],
       })
     } else if (direction === "TOKEN->ETH") {
-      // ✅ add minOutFee which was missing before
       writeSwap({
         abi: ABI_TOBY_SWAPPER as any, address: ADDR.SWAPPER,
         functionName: "swapTokensForETHSupportingFeeOnTransferTokens",
@@ -197,7 +197,7 @@ export default function SwapWidget() {
     <>
       <div
         className={[
-          "rounded-3xl border-2 border-black p-8 md:p-10",
+          "swap-card rounded-3xl border-2 border-black p-8 md:p-10",
           "bg-[radial-gradient(120%_160%_at_15%_-20%,rgba(124,58,237,.22),transparent),radial-gradient(120%_160%_at_85%_-10%,rgba(14,165,233,.18),transparent),linear-gradient(180deg,#0b1220,#0f172a)]",
           "text-slate-50 shadow-[0_12px_0_#000,0_26px_56px_rgba(0,0,0,.48)]",
           celebrate ? "celebrate" : "",
@@ -206,7 +206,7 @@ export default function SwapWidget() {
         {/* Header */}
         <div className="mb-8 flex items-start justify-between pr-2">
           <h2
-            className="text-[36px] md:text-[44px] font-black tracking-tight leading-none"
+            className="text-[40px] md:text-[48px] font-black tracking-tight leading-none"
             style={{
               background: "linear-gradient(90deg,#a78bfa 0%,#79ffe1 50%,#93c5fd 100%)",
               WebkitBackgroundClip: "text",
@@ -231,29 +231,52 @@ export default function SwapWidget() {
           </div>
         </div>
 
-        {/* From / To with centered flip */}
+        {/* From / To with centered flip and little ⓘ copy buttons */}
         <div className="relative">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TokenSelect
-              label="From"
-              value={fromAddr}
-              onChange={(v) => {
-                setFromAddr(v)
-                const isBase = ALLOWED_BASES.has(v)
-                if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
-                if (!isBase && !ALLOWED_BASES.has(toAddr))        setToAddr(TOKENS.USDC.address)
-              }}
-              options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
-            />
-            <TokenSelect
-              label="To"
-              value={toAddr}
-              onChange={setToAddr}
-              options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
-            />
+            <div className="token-select-row relative">
+              <TokenSelect
+                label="From"
+                value={fromAddr}
+                onChange={(v) => {
+                  setFromAddr(v)
+                  const isBase = ALLOWED_BASES.has(v)
+                  if (isBase && !ALLOWED_COMMODITIES.has(toAddr)) setToAddr(TOKENS.TOBY.address)
+                  if (!isBase && !ALLOWED_BASES.has(toAddr))        setToAddr(TOKENS.USDC.address)
+                }}
+                options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+              />
+              <button
+                className="info-chip"
+                title="Copy token address"
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(fromAddr); toast.success({ title: "Copied", desc: "From token address copied." }) } catch {}
+                }}
+              >
+                ⓘ
+              </button>
+            </div>
+
+            <div className="token-select-row relative">
+              <TokenSelect
+                label="To"
+                value={toAddr}
+                onChange={setToAddr}
+                options={["USDC", "WETH", "TOBY", "PATIENCE", "TABOSHI"]}
+              />
+              <button
+                className="info-chip"
+                title="Copy token address"
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(toAddr); toast.success({ title: "Copied", desc: "To token address copied." }) } catch {}
+                }}
+              >
+                ⓘ
+              </button>
+            </div>
           </div>
 
-          {/* Desktop: dead-center between columns. Mobile: between rows. */}
+          {/* Flip button (between selectors) */}
           <button
             className={[
               "absolute left-1/2 -translate-x-1/2",
@@ -271,8 +294,8 @@ export default function SwapWidget() {
           </button>
         </div>
 
-        {/* Amount */}
-        <div className="mt-8">
+        {/* Amount – dark glass; +/- hidden via CSS below */}
+        <div className="mt-8 num-glass">
           <NumberInput
             label="Amount"
             value={amountIn}
@@ -302,19 +325,6 @@ export default function SwapWidget() {
               {priceImpactPct === null ? "—" : `${priceImpactPct.toFixed(2)}%`}
             </span>
           </div>
-
-          <details className="opacity-80">
-            <summary className="cursor-pointer select-none">Details</summary>
-            <div className="mt-1 text-xs text-slate-300/90">
-              <div>Route: <code className="font-mono">
-                {mainPath.map(a => Object.values(TOKENS).find(t => t.address === a)?.symbol || "???").join(" → ")}
-              </code></div>
-              <div>Fee path: <code className="font-mono">
-                {feePath.map(a => Object.values(TOKENS).find(t => t.address === a)?.symbol || "???").join(" → ")}
-              </code></div>
-              <div className="opacity-80 mt-1">1% fee auto-buys TOBY and sends to burn.</div>
-            </div>
-          </details>
         </div>
 
         {/* Actions */}
@@ -329,14 +339,13 @@ export default function SwapWidget() {
             </button>
           )}
 
-          {/* 💚 Glassy green Swap */}
+          {/* Glassy green Swap */}
           <button
             className={[
               "relative overflow-hidden rounded-full border-2 border-black px-6 py-4 text-lg font-black",
               "text-[#031611]",
               "shadow-[0_8px_0_#000] active:translate-y-[2px] active:shadow-[0_4px_0_#000]",
-              // dark glassy green gradient + subtle inner highlight
-              "bg-[linear-gradient(135deg,rgba(16,185,129,.95),rgba(52,211,153,.92))]",
+              "bg-[linear-gradient(135deg,rgba(16,185,129,.96),rgba(52,211,153,.94))]",
               "before:absolute before:inset-0 before:pointer-events-none before:rounded-full before:opacity-[.22]",
               "before:bg-[radial-gradient(120%_150%_at_50%_-20%,#fff,transparent_60%)]",
               (!direction || swapping || (!isEthIn && !hasAllowance) || !amountInWei) ? "opacity-60" : "",
@@ -349,13 +358,72 @@ export default function SwapWidget() {
         </div>
       </div>
 
-      {/* Full-screen settings modal */}
+      {/* Full-screen settings modal (your component already uses fixed + inset-0) */}
       <SwapSettings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         slippagePct={slippagePct}
         setSlippagePct={setSlippagePct}
       />
+
+      {/* ===== Styles to force dark-glass look on NumberInput & TokenSelect without editing them ===== */}
+      <style jsx global>{`
+        /* TokenSelect trigger -> dark glass */
+        .token-select-row button[aria-haspopup="listbox"] {
+          background: linear-gradient(180deg,#0f172a,#121826) !important;
+          color: #e5e7eb !important;
+          border-color: #000 !important;
+          box-shadow: 0 6px 0 #000 !important;
+        }
+        .token-select-row button[aria-haspopup="listbox"] .text-black,
+        .token-select-row button[aria-haspopup="listbox"] .text-black\\/70 {
+          color: #e5e7eb !important;
+        }
+
+        /* Hide token address lines inside dropdown options (keep symbol only) */
+        .token-select-row [role="option"] .min-w-0 > span:last-child {
+          display: none !important;
+        }
+
+        /* Tiny ⓘ chip beside selectors */
+        .token-select-row .info-chip {
+          position: absolute;
+          right: 8px;
+          top: 26px;       /* sits on the same row as trigger */
+          width: 28px;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          border-radius: 9999px;
+          border: 2px solid #000;
+          background: linear-gradient(180deg,#0f172a,#121826);
+          color: #e5e7eb;
+          box-shadow: 0 4px 0 #000;
+        }
+
+        /* NumberInput: make the main input group dark glass & hide +/- */
+        .num-glass label > div[class*="shadow-[0_6px_0_#000]"] {
+          background: linear-gradient(180deg,#0b1220,#0f172a) !important;
+          border-color: #000 !important;
+        }
+        .num-glass input[type="text"] {
+          color: #e5e7eb !important;
+        }
+        .num-glass label > div[class*="shadow-[0_6px_0_#000]"] > button[aria-label="Decrease"],
+        .num-glass label > div[class*="shadow-[0_6px_0_#000]"] > button[aria-label="Increase"] {
+          display: none !important;
+        }
+        .num-glass span[aria-hidden] {  /* the unit chip */
+          background: linear-gradient(180deg,#0f172a,#121826) !important;
+          color: #e5e7eb !important;
+        }
+
+        /* Percent chips and Max button -> dark glass */
+        .num-glass button { 
+          background: linear-gradient(135deg,#0f172a,#111827) !important;
+          color: #e5e7eb !important;
+        }
+      `}</style>
     </>
   )
 }
