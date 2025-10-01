@@ -1,3 +1,4 @@
+// app/page.tsx
 import Image from "next/image";
 import SwapForm from "@/components/SwapForm";
 
@@ -12,10 +13,7 @@ export default function Page() {
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
-            onError={(e) => {
-              // fallback at runtime if toby-hero.PNG is missing
-              (e.target as HTMLImageElement).setAttribute("src", "/toby.PNG");
-            }}
+            /* removed onError (server components can't take event handlers) */
           />
         </div>
 
