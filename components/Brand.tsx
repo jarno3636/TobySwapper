@@ -13,7 +13,7 @@ export default function Brand() {
         {/* Left: Toby avatar + big TobySwap */}
         <Link href="/" className="flex items-center gap-3 group">
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full glass overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
-            <Image src="/toby.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
+            <Image src="/tobyswapper.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
           </span>
           <span className="flex flex-col leading-none">
             <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
