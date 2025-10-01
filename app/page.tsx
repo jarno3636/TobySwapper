@@ -1,46 +1,100 @@
 // app/page.tsx
 import Image from "next/image";
 import SwapForm from "@/components/SwapForm";
+import Footer from "@/components/Footer";
 
 export default function Page() {
   return (
-    <div className="grid md:grid-cols-2 gap-8 items-start">
-      <div>
-        <div className="glass rounded-3xl overflow-hidden mb-6 relative aspect-[16/10]">
-          <Image
-            src="/toby-hero.PNG"
-            alt="Toby hero"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-            /* removed onError (server components can't take event handlers) */
-          />
+    <>
+      <div className="grid md:grid-cols-2 gap-8 items-start">
+        {/* LEFT SIDE */}
+        <div>
+          {/* Hero image - smaller so it doesn’t crop */}
+          <div className="glass rounded-3xl overflow-hidden mb-6 relative aspect-[4/3]">
+            <Image
+              src="/toby-hero.PNG"
+              alt="Toby hero"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-contain" // <-- contain instead of cover
+            />
+          </div>
+
+          {/* Header + Pills */}
+          <h1 className="text-3xl font-bold mb-4">Swap. Burn. Spread the Lore.</h1>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <span className="pill bg-[var(--glass)] text-sm">1% auto-burn to $TOBY 🔥</span>
+            <span className="pill bg-[var(--glass)] text-sm">Swap USDC, WETH, Patience, Taboshi</span>
+            <span className="pill bg-[var(--glass)] text-sm">Fuel the meme · Join the lore 🐸</span>
+          </div>
+
+          <SwapForm />
         </div>
 
-        <h1 className="text-3xl font-bold mb-3">Swap with Toby Magic 🐸✨</h1>
-        <p className="text-inkSub mb-6">
-          Dark glass. Color pips. 1% of every swap buys $TOBY and burns it.
-        </p>
-        <SwapForm />
-      </div>
+        {/* RIGHT SIDE - Contracts */}
+        <div className="glass rounded-3xl p-6 shadow-soft">
+          <h3 className="font-semibold mb-6">Contracts</h3>
 
-      <div className="glass rounded-3xl p-6 shadow-soft">
-        <h3 className="font-semibold mb-3">Quick Links</h3>
-        <ul className="space-y-2 text-sm">
-          <li><a className="underline" href="https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c#code" target="_blank">Swapper Contract (BaseScan)</a></li>
-          <li><a className="underline" href="https://toadgod.xyz" target="_blank">toadgod.xyz</a></li>
-          <li><a className="underline" href="https://x.com/toadgod1017" target="_blank">@toadgod1017 on X</a></li>
-          <li><a className="underline" href="https://t.me/toadgang/212753" target="_blank">Toby Telegram</a></li>
-        </ul>
-
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          {["/tokens/toby.PNG","/tokens/patience.PNG","/tokens/taboshi.PNG","/tokens/usdc.PNG","/tokens/weth.PNG","/toby.PNG"].map((src, i) => (
-            <div key={src+i} className="aspect-square glass rounded-2xl overflow-hidden relative">
-              <Image src={src} alt="token art" fill sizes="160px" className="object-cover" />
-            </div>
-          ))}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              {
+                src: "/tokens/toby.PNG",
+                title: "TOBY",
+                href: "https://basescan.org/address/0xb8D98a102b0079B69FFbc760C8d857A31653e56e",
+              },
+              {
+                src: "/tokens/patience.PNG",
+                title: "PATIENCE",
+                href: "https://basescan.org/address/0x6D96f18F00B815B2109A3766E79F6A7aD7785624",
+              },
+              {
+                src: "/tokens/taboshi.PNG",
+                title: "TABOSHI",
+                href: "https://basescan.org/address/0xbcad0a417b299f611f386e9ab38a049e06494c0c",
+              },
+              {
+                src: "/tokens/usdc.PNG",
+                title: "USDC",
+                href: "https://basescan.org/address/0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913",
+              },
+              {
+                src: "/tokens/weth.PNG",
+                title: "WETH",
+                href: "https://basescan.org/address/0x4200000000000000000000000000000000000006",
+              },
+              {
+                src: "/toby.PNG",
+                title: "Swapper",
+                href: "https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c#code",
+              },
+            ].map((token, i) => (
+              <a
+                key={i}
+                href={token.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center group"
+              >
+                <div className="aspect-square glass rounded-2xl overflow-hidden relative mb-2 transition-transform group-hover:scale-105">
+                  <Image
+                    src={token.src}
+                    alt={token.title}
+                    fill
+                    sizes="160px"
+                    className="object-cover"
+                  />
+                </div>
+                <p className="text-xs font-semibold text-ink group-hover:text-accent">
+                  {token.title}
+                </p>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <Footer />
+    </>
   );
 }
