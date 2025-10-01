@@ -50,7 +50,7 @@ export default function Page() {
               {
                 src: "/tokens/taboshi.PNG",
                 title: "TABOSHI",
-                href: "https://basescan.org/address/0xbcad0a417b299f611f386e9ab38a049e06494c0c",
+                href: "https://basescan.org/address/0x3a1a33cf4553db61f0db2c1e1721cd480b02789f",
               },
               {
                 src: "/tokens/usdc.PNG",
@@ -63,7 +63,7 @@ export default function Page() {
                 href: "https://basescan.org/address/0x4200000000000000000000000000000000000006",
               },
               {
-                src: "/toby.PNG",
+                src: "/tobyswapper.PNG",
                 title: "Swapper",
                 href: "https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c#code",
               },
