@@ -5,10 +5,18 @@ import { WalletProvider } from "@/components/Wallet";
 export const metadata = {
   title: "Toby Swapper",
   description: "Swap on Base with auto-TOBY burn",
+  openGraph: {
+    title: "Toby Swapper",
+    description: "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
+    images: ["/og.PNG"], // ← your blue frog OG
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og.PNG"],
+  },
   other: {
     "fc:frame": "vNext",
-    "og:title": "Toby Swapper",
-    "og:description": "Swap USDC/ETH ↔️ TOBY|PATIENCE|TABOSHI. 1% auto-burn to TOBY.",
+    "og:image": "/og.PNG",
   },
 };
 
