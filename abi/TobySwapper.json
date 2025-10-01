@@ -1,4 +1,4 @@
-export default [
+[
   { "inputs": [
       { "internalType": "address", "name": "_router", "type": "address" },
       { "internalType": "address", "name": "_toby", "type": "address" },
