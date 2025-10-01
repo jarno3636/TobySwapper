@@ -1,7 +1,14 @@
+// app/layout.tsx
 import "./globals.css";
 import Brand from "@/components/Brand";
-import { WalletProvider } from "@/components/Wallet";
 import Background from "@/components/Background";
+import dynamic from "next/dynamic";
+
+// 👇 Only load WalletProvider on client (avoids indexedDB issue on server)
+const WalletProvider = dynamic(
+  () => import("@/components/Wallet").then(m => m.WalletProvider),
+  { ssr: false }
+);
 
 export const metadata = {
   title: "Toby Swapper",
@@ -20,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <WalletProvider>
-          <Background />   {/* ← NEW: token wall background */}
+          <Background />
           <Brand />
           <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
         </WalletProvider>
