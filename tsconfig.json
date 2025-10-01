@@ -1,4 +1,5 @@
-compilerOptions": {
+{
+  "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
@@ -18,5 +19,6 @@ compilerOptions": {
       "@/hooks/*": ["hooks/*"]
     }
   },
-  "include": ["app", "components", "lib", "hooks", "abi"]
+  "include": ["app", "components", "lib", "hooks", "abi"],
+  "exclude": ["node_modules"]
 }
