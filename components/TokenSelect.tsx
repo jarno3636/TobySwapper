@@ -23,6 +23,8 @@ export default function TokenSelect({
   balance?: string; // human readable
 }) {
   const selected = TOKENS.find((t) => t.address.toLowerCase() === value.toLowerCase());
+  const numBal = balance != null ? Number(balance) : undefined;
+  const balText = numBal != null && Number.isFinite(numBal) ? numBal.toFixed(6) : "—";
 
   return (
     <div className="glass rounded-pill px-3 py-2">
@@ -40,7 +42,6 @@ export default function TokenSelect({
         ))}
       </select>
 
-      {/* Tiny preview row under the select */}
       <div className="flex items-center justify-between pt-2 text-xs text-inkSub">
         <span className="inline-flex items-center gap-2">
           <span className="relative inline-block w-5 h-5 rounded-full overflow-hidden">
@@ -54,11 +55,7 @@ export default function TokenSelect({
           </span>
           {selected?.symbol}
         </span>
-
-        {/* balance on the right */}
-        <span className="font-mono">
-          {balance ? Number(balance).toFixed(6) : "—"}
-        </span>
+        <span className="font-mono">{balText}</span>
       </div>
     </div>
   );
