@@ -7,6 +7,7 @@ import { useAccount, useBalance, useReadContract } from "wagmi";
 import TokenSelect from "./TokenSelect";
 import { TOKENS, USDC, ROUTER } from "@/lib/addresses";
 import { useDoSwap, buildPaths } from "@/hooks/useTobySwapper";
+import { useUsdPriceSingle } from "@/lib/prices";   // ✅ NEW
 
 /** Minimal UniV2-style router ABI for quoting */
 const UniV2RouterAbi = [
@@ -34,18 +35,6 @@ function byAddress(addr?: Address | "ETH") {
         address: t.address as Address,
       }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
-}
-
-/** simple USD price placeholders (swap in a live hook later) */
-function useUsdPrice(symbol?: string) {
-  const PRICES: Record<string, number> = {
-    ETH: 3300,
-    USDC: 1,
-    TOBY: 0.000001,
-    PATIENCE: 0.00002,
-    TABOSHI: 0.02,
-  };
-  return PRICES[symbol ?? ""] ?? 0;
 }
 
 export default function SwapForm() {
@@ -78,9 +67,10 @@ export default function SwapForm() {
     query: { enabled: Boolean(address) },
   });
 
-  // USD display
-  const inUsd = useUsdPrice(inMeta.symbol);
-  const outUsd = useUsdPrice(outMeta.symbol);
+  // ✅ Live USD display
+  const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
+  const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
+
   const amtNum = Number(amt || "0");
   const amtInUsd = useMemo(
     () => (isFinite(amtNum) ? amtNum * inUsd : 0),
