@@ -7,24 +7,23 @@ import { WalletPill, ConnectPill } from "./Wallet";
 export default function Brand() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []); // avoid any hydration timing weirdness
-
+  useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
   return (
     <header className="sticky top-0 z-30 glass-strong border-b border-white/10">
       <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-        {/* Left: avatar */}
+        {/* Left: avatar only */}
         <Link href="/" className="flex items-center gap-3 group">
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
             <Image src="/toby.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
           </span>
         </Link>
 
-        {/* Center: title */}
+        {/* Center: title only */}
         <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
 
-        {/* Right: Desktop nav + connect */}
+        {/* Right: Desktop nav (Home + About) + Connect */}
         <nav className="hidden md:flex items-center gap-2">
           <Link href="/" className="pill pill-opaque hover:opacity-90">Home</Link>
           <Link href="/about" className="pill pill-opaque hover:opacity-90">About</Link>
@@ -41,7 +40,7 @@ export default function Brand() {
         </button>
       </div>
 
-      {/* Mobile slide-over (opaque) */}
+      {/* Mobile slide-over (fully opaque) */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 menu-overlay" onClick={() => setOpen(false)} />
@@ -55,7 +54,7 @@ export default function Brand() {
               <Link href="/" onClick={() => setOpen(false)} className="block pill pill-opaque text-center">Home</Link>
               <Link href="/about" onClick={() => setOpen(false)} className="block pill pill-opaque text-center">About</Link>
               <div className="pt-2">
-                <ConnectPill />
+                <ConnectPill onBeforeOpen={() => setOpen(false)} />
               </div>
             </div>
           </aside>
