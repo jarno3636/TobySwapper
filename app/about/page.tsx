@@ -1,19 +1,14 @@
-// app/about/page.tsx
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
 import { Address, formatUnits } from "viem";
 import { base } from "viem/chains";
 import { useReadContract, useReadContracts } from "wagmi";
-
 import { TOBY, PATIENCE, TABOSHI, USDC, WETH, SWAPPER, DEAD } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 
-/** ──────────────────────────────────────────────────────────────────────────
- * Small client components so we can read on-chain (like BaseScan does).
- * We avoid third-party APIs and pull data directly with wagmi/viem.
- * ────────────────────────────────────────────────────────────────────────── */
-
+/** ── minimal ABIs ───────────────────────────────────────────────────────── */
 const erc20Abi = [
   { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
@@ -26,6 +21,7 @@ const swapperAbi = [
   { type: "function", name: "totalTobyBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
+/** ── helpers ─────────────────────────────────────────────────────────────── */
 function fmt(n?: number, max = 4) {
   if (n === undefined || !isFinite(n)) return "—";
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
@@ -34,7 +30,17 @@ function fmt(n?: number, max = 4) {
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
-function CardShell({ children, title, href, iconSrc }: { children: React.ReactNode; title: string; href: string; iconSrc: string }) {
+function CardShell({
+  children,
+  title,
+  href,
+  iconSrc,
+}: {
+  children: React.ReactNode;
+  title: string;
+  href: string;
+  iconSrc: string;
+}) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className="glass rounded-3xl p-5 shadow-soft block group">
       <div className="flex items-center justify-between mb-3">
@@ -69,6 +75,11 @@ function TokenInfoCard({
       { address, abi: erc20Abi, functionName: "decimals", chainId: base.id },
       { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
     ],
+    query: {
+      refetchOnWindowFocus: false,
+      staleTime: 10_000,
+      gcTime: 60_000,
+    },
   });
 
   const name = data?.[0]?.result as string | undefined;
@@ -110,16 +121,16 @@ function SwapperCard() {
     abi: swapperAbi,
     functionName: "totalTobyBurned",
     chainId: base.id,
-    query: { refetchInterval: 20_000, staleTime: 10_000 },
+    query: { refetchInterval: 20_000, staleTime: 10_000, refetchOnWindowFocus: false },
   });
 
-  // Helpful: show DEAD balance of $TOBY as an extra burn signal
-  const tobyDead = useReadContracts({
+  const deadReads = useReadContracts({
     allowFailure: true,
     contracts: [
       { address: TOBY, abi: erc20Abi, functionName: "decimals", chainId: base.id },
       { address: TOBY, abi: erc20Abi, functionName: "balanceOf", args: [DEAD], chainId: base.id },
     ],
+    query: { refetchOnWindowFocus: false, staleTime: 10_000 },
   });
 
   const burnedNum = (() => {
@@ -128,8 +139,8 @@ function SwapperCard() {
     return Number(formatUnits(v, 18));
   })();
 
-  const dec = (tobyDead.data?.[0]?.result as number | undefined) ?? 18;
-  const deadBal = tobyDead.data?.[1]?.result as bigint | undefined;
+  const dec = (deadReads.data?.[0]?.result as number | undefined) ?? 18;
+  const deadBal = deadReads.data?.[1]?.result as bigint | undefined;
   const deadBalNum = deadBal ? Number(formatUnits(deadBal, dec)) : undefined;
 
   const href = `https://basescan.org/address/${SWAPPER}`;
@@ -165,9 +176,7 @@ function SwapperCard() {
   );
 }
 
-/** ──────────────────────────────────────────────────────────────────────────
- * PAGE
- * ────────────────────────────────────────────────────────────────────────── */
+/** ── PAGE (client) ───────────────────────────────────────────────────────── */
 export default function AboutPage() {
   const pills = [
     "Base-native swapping, Toby style",
@@ -188,7 +197,6 @@ export default function AboutPage() {
 
   return (
     <section className="space-y-8">
-      {/* Header + pills */}
       <div>
         <h1 className="text-3xl font-bold mb-4">About TobySwap</h1>
         <div className="flex flex-wrap gap-3">
@@ -204,21 +212,14 @@ export default function AboutPage() {
         </p>
       </div>
 
-      {/* Swapper */}
-      <Suspense fallback={<div className="glass rounded-3xl p-6">Loading Swapper…</div>}>
-        <SwapperCard />
-      </Suspense>
+      <SwapperCard />
 
-      {/* Tokens grid */}
       <div className="grid md:grid-cols-2 gap-6">
         {items.map((t) => (
-          <Suspense key={t.address} fallback={<div className="glass rounded-3xl p-6">Loading {t.title}…</div>}>
-            <TokenInfoCard address={t.address} icon={t.icon} titleOverride={t.title} />
-          </Suspense>
+          <TokenInfoCard key={t.address} address={t.address} icon={t.icon} titleOverride={t.title} />
         ))}
       </div>
 
-      {/* Community / links row (mirrors home) */}
       <div className="glass rounded-3xl p-6 shadow-soft">
         <h3 className="font-semibold mb-4">Quick Links</h3>
         <div className="flex flex-wrap gap-3">
