@@ -1,76 +1,71 @@
-// components/Background.tsx
 "use client";
+import Link from "next/link";
 import Image from "next/image";
-import { useMemo } from "react";
+import { useState } from "react";
+import { WalletPill } from "./Wallet";
 
-export default function Background() {
-  const tokens = [
-    "/tokens/patience.PNG",
-    "/tokens/taboshi.PNG",
-    "/toby.PNG",
-    "/satoswap.PNG",
-  ];
-
-  const floaties = useMemo(() => {
-    return Array.from({ length: 14 }).map((_, i) => {
-      const src = tokens[i % tokens.length];
-      const w = 60 + Math.floor(Math.random() * 100);
-      return {
-        src,
-        w,
-        x: `${Math.random() * 100}%`,
-        y: `${Math.random() * 100}%`,
-        r: Math.floor(Math.random() * 360),
-        o: 0.3 + Math.random() * 0.5,
-      };
-    });
-  }, [tokens]);
+export default function Brand() {
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-[var(--bg)] pointer-events-none">
-      {/* optional: remove this if you don't need the global blur wash */}
-      <div className="absolute inset-0 backdrop-blur-3xl" />
+    <header className="sticky top-0 z-40 bg-[rgba(15,15,20,0.95)] backdrop-blur-md border-b border-white/10">
+      <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
+        {/* Left: Toby avatar + TobySwap */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
+            <Image
+              src="/tobyswapper.PNG"
+              alt="Toby"
+              fill
+              sizes="40px"
+              className="object-cover"
+            />
+          </span>
+          <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
+        </Link>
 
-      {floaties.map((t, i) => (
-        <div
-          key={i}
-          className="absolute floaty"
-          style={{
-            left: t.x,
-            top: t.y,
-            // pass base rotation via CSS var; your keyframes can use rotate(var(--r))
-            // (works even if your current keyframes don't use it)
-            ["--r" as any]: `${t.r}deg`,
-            animationDelay: `${i * 3}s`,
-            animationDuration: `${16 + i * 2}s`,
-          }}
+        {/* Right: Desktop nav + connect */}
+        <nav className="hidden md:flex items-center gap-2">
+          <Link href="/" className="pill glass hover:opacity-90">Home</Link>
+          <Link href="/about" className="pill glass hover:opacity-90">About</Link>
+          <WalletPill />
+        </nav>
+
+        {/* Mobile: hamburger */}
+        <button
+          aria-label="Open menu"
+          className="md:hidden pill glass"
+          onClick={() => setOpen(true)}
         >
+          Menu
+        </button>
+      </div>
+
+      {/* Slide-over menu (mobile) */}
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="rounded-3xl backdrop-blur-sm"
-            style={{
-              width: t.w,
-              height: t.w,
-              background: "rgba(255,255,255,.06)",
-              border: "1px solid rgba(255,255,255,.08)",
-              boxShadow: "0 16px 40px rgba(0,0,0,.35)",
-              overflow: "hidden",
-              opacity: t.o,
-              zIndex: Math.round(t.o * 10),
-            }}
-          >
-            <div className="relative w-full h-full">
-              <Image
-                src={t.src}
-                alt=""
-                fill
-                sizes={`${t.w}px`}
-                className="object-cover"
-                priority={i < 2}
-              />
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setOpen(false)}
+          />
+          <aside className="absolute right-0 top-0 h-full w-[78%] max-w-sm bg-[rgba(15,15,20,0.97)] backdrop-blur-md border-l border-white/10 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-lg">TobySwap</span>
+              <button className="pill glass" onClick={() => setOpen(false)}>
+                Close
+              </button>
             </div>
-          </div>
+
+            <div className="space-y-3">
+              <Link href="/" onClick={() => setOpen(false)} className="block pill glass">Home</Link>
+              <Link href="/about" onClick={() => setOpen(false)} className="block pill glass">About</Link>
+              <div className="pt-2">
+                <WalletPill />
+              </div>
+            </div>
+          </aside>
         </div>
-      ))}
-    </div>
+      )}
+    </header>
   );
 }
