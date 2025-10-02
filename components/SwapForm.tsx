@@ -4,10 +4,11 @@
 import { useMemo, useState } from "react";
 import { Address, formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
+import { base } from "viem/chains";                 // ← add this
 import TokenSelect from "./TokenSelect";
 import { TOKENS, USDC, ROUTER } from "@/lib/addresses";
 import { useDoSwap, buildPaths } from "@/hooks/useTobySwapper";
-import { useUsdPriceSingle } from "@/lib/prices";   // ✅ NEW
+import { useUsdPriceSingle } from "@/lib/prices";
 
 /** Minimal UniV2-style router ABI for quoting */
 const UniV2RouterAbi = [
@@ -38,7 +39,7 @@ function byAddress(addr?: Address | "ETH") {
 }
 
 export default function SwapForm() {
-  const { address } = useAccount();
+  const { address, chain } = useAccount();
   const { swapETHForTokens, swapTokensForTokens } = useDoSwap();
 
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
@@ -55,16 +56,21 @@ export default function SwapForm() {
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
 
-  // balances
+  // ---------- balances (pin to Base + live watch) ----------
   const { data: balIn } = useBalance({
     address,
-    token: inMeta.address, // undefined => native
+    token: inMeta.address,                // undefined => native
+    chainId: base.id,                     // ← force Base mainnet
     query: { enabled: Boolean(address) },
+    watch: true,                          // ← keep fresh
   });
+
   const { data: balOut } = useBalance({
     address,
     token: outMeta.address,
+    chainId: base.id,                     // ← force Base mainnet
     query: { enabled: Boolean(address) },
+    watch: true,                          // ← keep fresh
   });
 
   // ✅ Live USD display
@@ -138,8 +144,7 @@ export default function SwapForm() {
   const setMax = () => {
     if (!balIn) return;
     const raw = parseFloat(formatUnits(balIn.value, balIn.decimals));
-    // leave some gas if native
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // buffer if native
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
@@ -152,7 +157,6 @@ export default function SwapForm() {
   };
 
   const doSwap = async () => {
-    // feed minOutMain from quote & slippage; keep fee minOut = "0" (fee path)
     if (tokenIn === "ETH") {
       await swapETHForTokens(
         tokenOut,
@@ -183,7 +187,6 @@ export default function SwapForm() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
 
-        {/* smaller slippage button */}
         <button
           className="pill pill-opaque px-3 py-1 text-xs"
           onClick={() => setSlippageOpen(true)}
@@ -193,6 +196,13 @@ export default function SwapForm() {
           Slippage: {slippage}%
         </button>
       </div>
+
+      {/* (Optional) warn if not on Base */}
+      {chain && chain.id !== base.id && (
+        <div className="mb-3 text-xs text-warn">
+          Connected to {chain.name}. Please switch to Base for balances & swaps.
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* Toggle: ETH vs Token→Token */}
@@ -273,7 +283,6 @@ export default function SwapForm() {
             aria-label="Swap sides"
             title="Swap sides"
           >
-            {/* thin double arrow */}
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v18M8 7l4-4 4 4M16 17l-4 4-4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
             </svg>
@@ -290,7 +299,7 @@ export default function SwapForm() {
             balance={balOut ? formatUnits(balOut.value, balOut.decimals) : undefined}
           />
 
-          {/* Quote preview */}
+        {/* Quote preview */}
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
               <>
