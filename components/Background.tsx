@@ -7,7 +7,7 @@ export default function Background() {
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
     "/tokens/taboshi.PNG",
-    "/toby.PNG",          // ← fixed: was /satoby.PNG
+    "/toby.PNG",
   ];
 
   const floaties = useMemo(() => {
@@ -22,7 +22,7 @@ export default function Background() {
         o: 0.30 + Math.random() * 0.5,
       };
     });
-  }, []);
+  }, []); // ← no deps
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-[var(--bg)]">
