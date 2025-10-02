@@ -1,49 +1,22 @@
+// components/Wallet.tsx
 "use client";
-import {
-  RainbowKitProvider,
-  darkTheme,
-  Theme,
-  ConnectButton,
-  useConnectModal,
-} from "@rainbow-me/rainbowkit";
+
+import "@rainbow-me/rainbowkit/styles.css";
+import { RainbowKitProvider, ConnectButton } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/lib/wallet";
 import { base } from "viem/chains";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [qc] = useState(() => new QueryClient());
 
-  // Toby-styled RainbowKit theme (opaque, centered modal)
-  const tobyTheme: Theme = useMemo(() => {
-    const t = darkTheme({
-      accentColor: "#2ea0ff",
-      accentColorForeground: "#0a0b12",
-      borderRadius: "large",
-      overlayBlur: "large",
-    });
-    return {
-      ...t,
-      colors: {
-        ...t.colors,
-        overlayBackground: "rgba(0,0,0,0.75)",
-        modalBackground: "rgba(15,15,20,0.98)",
-        modalBorder: "rgba(255,255,255,0.08)",
-        generalBorder: "rgba(255,255,255,0.10)",
-        menuItemBackground: "rgba(255,255,255,0.08)",
-        closeButtonBackground: "rgba(255,255,255,0.10)",
-        connectButtonBackground: "rgba(255,255,255,0.10)",
-      },
-      radii: { ...t.radii, modal: "20px", connectButton: "9999px" },
-    };
-  }, []);
-
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        {/* IMPORTANT: no modalSize="compact" → forces centered modal instead of mobile bottom-sheet */}
-        <RainbowKitProvider theme={tobyTheme} initialChain={base}>
+        {/* Default RainbowKit (no custom theme). */}
+        <RainbowKitProvider initialChain={base}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
@@ -51,27 +24,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Desktop connect pill
+/** Simple connect button for desktop header */
 export function WalletPill() {
-  return (
-    <div className="pill pill-opaque">
-      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
-    </div>
-  );
+  return <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />;
 }
 
-// Mobile menu connect button (closes sheet before opening modal)
-export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
-  const { openConnectModal } = useConnectModal();
+/** Simple connect button for the mobile menu (keeps your API, no custom modal logic) */
+export function ConnectPill(_props?: { onBeforeOpen?: () => void }) {
   return (
-    <button
-      className="pill pill-opaque w-full justify-center"
-      onClick={() => {
-        onBeforeOpen?.();
-        openConnectModal?.();
-      }}
-    >
-      Connect Wallet
-    </button>
+    <div className="w-full flex justify-center">
+      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+    </div>
   );
 }
