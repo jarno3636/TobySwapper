@@ -67,7 +67,7 @@ export default function Page() {
                 href: "https://basescan.org/address/0x4200000000000000000000000000000000000006",
               },
               {
-                src: "/toby-hero.PNG",
+                src: "/toby2.PNG",
                 title: "Swapper",
                 href: "https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c#code",
               },
