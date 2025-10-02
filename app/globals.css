@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- Theme tokens ---------- */
 :root{
   --bg:#0a0b12;
   --glass:rgba(255,255,255,.08);
+  --glass-strong:rgba(255,255,255,.12); /* new: a touch stronger */
   --panel:rgba(255,255,255,.9);
   --ink:#e5e7eb;
   --ink-sub:#9aa4b2;
@@ -22,15 +24,26 @@
   --pill-px:18px;
 }
 
+/* Base */
 html, body { background: var(--bg); color: var(--ink); }
+body { min-height: 100dvh; }
 
-/* Glass + pills */
+/* ---------- Glass + Pills ---------- */
 .glass {
   background: var(--glass);
-  backdrop-filter: blur(8px);            /* smaller blur per your request */
+  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,.08);
 }
+
+/* slightly stronger glass (use on header if desired) */
+.glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
 .pill {
   height: var(--pill-h);
   border-radius: 9999px;
@@ -38,14 +51,22 @@ html, body { background: var(--bg); color: var(--ink); }
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  box-shadow: var(--shadow-soft)
+  box-shadow: var(--shadow-soft);
 }
+
+/* OPAQUE pill (good for header/menu buttons on dark bg) */
+.pill-opaque {
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.pill-opaque:hover { background: rgba(255,255,255,.14); }
+
 .pip { width: 8px; height: 8px; border-radius: 9999px; display:inline-block }
 .pip-a { background: var(--accent) }
 .pip-b { background: var(--accent-2) }
 .pip-c { background: var(--accent-3) }
 
-/* Subtle float/rotate animation for background tiles */
+/* ---------- Background floaters ---------- */
 @keyframes floaty {
   0%   { transform: translateY(0px) rotate(0deg); }
   25%  { transform: translateY(-10px) rotate(2deg); }
@@ -55,7 +76,7 @@ html, body { background: var(--bg); color: var(--ink); }
 }
 .floaty { animation: floaty 18s ease-in-out infinite; }
 
-/* Helpers to vary speed/delay (optional) */
+/* Helpers */
 .floaty-slow  { animation-duration: 22s; }
 .floaty-fast  { animation-duration: 14s; }
 .floaty-d0    { animation-delay: 0s; }
@@ -68,10 +89,38 @@ html, body { background: var(--bg); color: var(--ink); }
   .floaty, .floaty-slow, .floaty-fast { animation: none !important; }
 }
 
-/* Optional: slightly stronger header blur to separate from bg */
+/* ---------- Header helper (optional) ---------- */
 .header-glass {
   background: rgba(0,0,0,.25);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+/* ---------- Mobile menu sheet (opaque) ---------- */
+.menu-sheet {
+  background: #0f1117;                     /* opaque dark */
+  border-left: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 24px 80px rgba(0,0,0,.7);
+}
+.menu-overlay {
+  background: rgba(0,0,0,.70);
+}
+
+/* ---------- RainbowKit (wallet) overrides ---------- */
+/* Ensure wallet modal sits above our sheets */
+[data-rk] { z-index: 60; }
+
+/* Opaque modal + stronger border/shadow */
+[data-rk] [role="dialog"]{
+  background: rgba(15,15,20,0.98) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.8) !important;
+  border-radius: 20px !important;
+}
+
+/* Darker overlay behind modal */
+[data-rk]::backdrop,
+[data-rk] ._overlay {
+  background: rgba(0,0,0,.75) !important;
 }
