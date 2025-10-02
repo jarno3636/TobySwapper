@@ -27,16 +27,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       ...baseT,
       colors: {
         ...baseT.colors,
-        modalBackground: "rgba(15,15,20,0.98)",
+        overlayBackground: "rgba(0,0,0,0.75)",   // darker scrim
+        modalBackground: "rgba(15,15,20,0.98)",  // opaque modal
         modalBorder: "rgba(255,255,255,0.06)",
         menuItemBackground: "rgba(255,255,255,0.08)",
         generalBorder: "rgba(255,255,255,0.08)",
       },
-      radii: {
-        ...baseT.radii,
-        modal: "20px",
-        connectButton: "9999px",
-      },
+      radii: { ...baseT.radii, modal: "20px", connectButton: "9999px" },
+      // lift the z-index so it always sits above the menu
+      shadows: { ...baseT.shadows },
     };
   }, []);
 
@@ -51,7 +50,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Desktop chip — simple RainbowKit button inside a pill */
 export function WalletPill() {
   return (
     <div className="pill glass">
@@ -61,12 +59,11 @@ export function WalletPill() {
   );
 }
 
-/** Mobile-friendly chip — closes any sheet first, then opens RainbowKit modal */
 export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
   const { openConnectModal } = useConnectModal();
   return (
     <button
-      className="pill glass w-full justify-center"
+      className="pill bg-white/10 w-full justify-center"
       onClick={() => {
         onBeforeOpen?.();
         openConnectModal?.();
