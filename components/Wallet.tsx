@@ -1,4 +1,3 @@
-// components/Wallet.tsx
 "use client";
 import {
   RainbowKitProvider,
@@ -16,6 +15,7 @@ import { useMemo, useState } from "react";
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [qc] = useState(() => new QueryClient());
 
+  // Toby-styled RainbowKit theme (opaque, centered modal)
   const tobyTheme: Theme = useMemo(() => {
     const t = darkTheme({
       accentColor: "#2ea0ff",
@@ -29,9 +29,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         ...t.colors,
         overlayBackground: "rgba(0,0,0,0.75)",
         modalBackground: "rgba(15,15,20,0.98)",
-        modalBorder: "rgba(255,255,255,0.06)",
+        modalBorder: "rgba(255,255,255,0.08)",
+        generalBorder: "rgba(255,255,255,0.10)",
         menuItemBackground: "rgba(255,255,255,0.08)",
-        generalBorder: "rgba(255,255,255,0.08)",
+        closeButtonBackground: "rgba(255,255,255,0.10)",
+        connectButtonBackground: "rgba(255,255,255,0.10)",
       },
       radii: { ...t.radii, modal: "20px", connectButton: "9999px" },
     };
@@ -40,7 +42,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        <RainbowKitProvider theme={tobyTheme} initialChain={base} modalSize="compact">
+        {/* IMPORTANT: no modalSize="compact" → forces centered modal instead of mobile bottom-sheet */}
+        <RainbowKitProvider theme={tobyTheme} initialChain={base}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
@@ -48,21 +51,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Desktop pill
+// Desktop connect pill
 export function WalletPill() {
   return (
-    <div className="pill glass">
+    <div className="pill pill-opaque">
       <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
     </div>
   );
 }
 
-// Mobile menu pill
+// Mobile menu connect button (closes sheet before opening modal)
 export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
   const { openConnectModal } = useConnectModal();
   return (
     <button
-      className="pill glass w-full justify-center"
+      className="pill pill-opaque w-full justify-center"
       onClick={() => {
         onBeforeOpen?.();
         openConnectModal?.();
