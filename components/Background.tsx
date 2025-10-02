@@ -5,13 +5,10 @@ import { useMemo } from "react";
 
 export default function Background() {
   const tokens = [
-    "/tokens/toby.PNG",
     "/tokens/patience.PNG",
     "/tokens/taboshi.PNG",
-    "/tokens/usdc.PNG",
-    "/tokens/weth.PNG",
     "/toby.PNG",
-    "/toby-hero.PNG",
+    "/satoswap.PNG",
   ];
 
   const floaties = useMemo(() => {
