@@ -6,7 +6,7 @@
 :root{
   --bg:#0a0b12;
   --glass:rgba(255,255,255,.08);
-  --glass-strong:rgba(255,255,255,.12); /* new: a touch stronger */
+  --glass-strong:rgba(255,255,255,.12);
   --panel:rgba(255,255,255,.9);
   --ink:#e5e7eb;
   --ink-sub:#9aa4b2;
@@ -24,7 +24,6 @@
   --pill-px:18px;
 }
 
-/* Base */
 html, body { background: var(--bg); color: var(--ink); }
 body { min-height: 100dvh; }
 
@@ -36,7 +35,6 @@ body { min-height: 100dvh; }
   border: 1px solid rgba(255,255,255,.08);
 }
 
-/* slightly stronger glass (use on header if desired) */
 .glass-strong {
   background: var(--glass-strong);
   backdrop-filter: blur(10px);
@@ -54,17 +52,12 @@ body { min-height: 100dvh; }
   box-shadow: var(--shadow-soft);
 }
 
-/* OPAQUE pill (good for header/menu buttons on dark bg) */
+/* Opaque pill (good for header/menu) */
 .pill-opaque {
   background: rgba(255,255,255,.10);
   border: 1px solid rgba(255,255,255,.12);
 }
 .pill-opaque:hover { background: rgba(255,255,255,.14); }
-
-.pip { width: 8px; height: 8px; border-radius: 9999px; display:inline-block }
-.pip-a { background: var(--accent) }
-.pip-b { background: var(--accent-2) }
-.pip-c { background: var(--accent-3) }
 
 /* ---------- Background floaters ---------- */
 @keyframes floaty {
@@ -76,50 +69,22 @@ body { min-height: 100dvh; }
 }
 .floaty { animation: floaty 18s ease-in-out infinite; }
 
-/* Helpers */
-.floaty-slow  { animation-duration: 22s; }
-.floaty-fast  { animation-duration: 14s; }
-.floaty-d0    { animation-delay: 0s; }
-.floaty-d3    { animation-delay: 3s; }
-.floaty-d6    { animation-delay: 6s; }
-.floaty-d9    { animation-delay: 9s; }
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .floaty, .floaty-slow, .floaty-fast { animation: none !important; }
-}
-
-/* ---------- Header helper (optional) ---------- */
-.header-glass {
-  background: rgba(0,0,0,.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
 /* ---------- Mobile menu sheet (opaque) ---------- */
 .menu-sheet {
-  background: #0f1117;                     /* opaque dark */
+  background: #0f1117; /* opaque dark */
   border-left: 1px solid rgba(255,255,255,.10);
   box-shadow: 0 24px 80px rgba(0,0,0,.7);
 }
-.menu-overlay {
-  background: rgba(0,0,0,.70);
-}
+.menu-overlay { background: rgba(0,0,0,.70); }
 
-/* ---------- RainbowKit (wallet) overrides ---------- */
-/* Ensure wallet modal sits above our sheets */
+/* ---------- RainbowKit overrides ---------- */
 [data-rk] { z-index: 60; }
-
-/* Opaque modal + stronger border/shadow */
 [data-rk] [role="dialog"]{
   background: rgba(15,15,20,0.98) !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
   box-shadow: 0 24px 80px rgba(0,0,0,.8) !important;
   border-radius: 20px !important;
 }
-
-/* Darker overlay behind modal */
 [data-rk]::backdrop,
 [data-rk] ._overlay {
   background: rgba(0,0,0,.75) !important;
