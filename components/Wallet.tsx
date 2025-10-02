@@ -1,10 +1,11 @@
+// components/Wallet.tsx
 "use client";
-import "@rainbow-me/rainbowkit/styles.css"; // ← important: RainbowKit base styles
 import {
   RainbowKitProvider,
   darkTheme,
   Theme,
   ConnectButton,
+  useConnectModal,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -39,7 +40,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        <RainbowKitProvider theme={tobyTheme} modalSize="compact" initialChain={base}>
+        <RainbowKitProvider theme={tobyTheme} initialChain={base} modalSize="compact">
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
@@ -47,20 +48,27 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Desktop header pill */
+// Desktop pill
 export function WalletPill() {
   return (
-    <div className="pill pill-opaque">
+    <div className="pill glass">
       <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
     </div>
   );
 }
 
-/** Mobile menu pill (no hook; safe + consistent) */
-export function ConnectPill() {
+// Mobile menu pill
+export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
+  const { openConnectModal } = useConnectModal();
   return (
-    <div className="pill pill-opaque w-full justify-center">
-      <ConnectButton chainStatus="none" accountStatus="address" showBalance={false} />
-    </div>
+    <button
+      className="pill glass w-full justify-center"
+      onClick={() => {
+        onBeforeOpen?.();
+        openConnectModal?.();
+      }}
+    >
+      Connect Wallet
+    </button>
   );
 }
