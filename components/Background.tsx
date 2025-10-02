@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useMemo } from "react";
 
 export default function Background() {
+  // Make sure these images exist in /public
   const tokens = [
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
@@ -18,11 +19,10 @@ export default function Background() {
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        r: Math.floor(Math.random() * 360),
         o: 0.30 + Math.random() * 0.5,
       };
     });
-  }, []); // ← no deps
+  }, []); // stable once
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-[var(--bg)]">
