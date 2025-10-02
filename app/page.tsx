@@ -1,6 +1,7 @@
 // app/page.tsx
 import Image from "next/image";
 import SwapForm from "@/components/SwapForm";
+import TokensBurned from "@/components/TokensBurned";
 import Footer from "@/components/Footer";
 
 export default function Page() {
@@ -16,7 +17,7 @@ export default function Page() {
               alt="Toby hero"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-contain" // <-- contain instead of cover
+              className="object-contain"
             />
           </div>
 
@@ -29,6 +30,9 @@ export default function Page() {
           </div>
 
           <SwapForm />
+
+          {/* 🔥 Burn tracker + share CTAs */}
+          <TokensBurned />
         </div>
 
         {/* RIGHT SIDE - Contracts */}
