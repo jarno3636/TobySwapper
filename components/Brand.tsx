@@ -25,8 +25,8 @@ export default function Brand() {
 
         {/* Right: Desktop nav (Home + About) + Connect */}
         <nav className="hidden md:flex items-center gap-2">
-          <Link href="/" className="pill pill-opaque hover:opacity-90">Home</Link>
-          <Link href="/about" className="pill pill-opaque hover:opacity-90">About</Link>
+          <Link href="/" className="pill pill-nav hover:opacity-90">Home</Link>
+          <Link href="/about" className="pill pill-nav hover:opacity-90">About</Link>
           <WalletPill />
         </nav>
 
