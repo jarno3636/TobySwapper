@@ -1,29 +1,41 @@
 // hooks/useAllowance.ts
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Address, erc20Abi } from "viem";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 
 type StickyAllowance = {
-  value?: bigint;          // last good raw allowance
+  value?: bigint;      // last good raw allowance
   isLoading: boolean;
   refetch: () => void;
 };
 
-export function useStickyAllowance(token?: Address, owner?: Address, spender?: Address): StickyAllowance {
+export function useStickyAllowance(
+  token?: Address,
+  owner?: Address,
+  spender?: Address
+): StickyAllowance {
   const enabled = Boolean(token && owner && spender);
+
   const { data, refetch, isFetching } = useReadContract({
-    address: enabled ? token : undefined,
+    address: enabled ? (token as Address) : undefined,
     abi: erc20Abi,
     functionName: "allowance",
-    args: enabled ? [owner as Address, spender as Address] : undefined,
+    args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
     query: {
       enabled,
       refetchInterval: 10_000,
       staleTime: 8_000,
       refetchOnWindowFocus: false,
-      placeholderData: (prev) => prev,
+      retry: 2,
+      // Explicit param type to satisfy TS under isolatedModules
+      placeholderData: (prev: unknown) => prev,
     },
   } as any);
 
@@ -48,15 +60,18 @@ export function useApprove(token?: Address, spender?: Address) {
   const { writeContractAsync, data: hash, isPending } = useWriteContract();
   const wait = useWaitForTransactionReceipt({ hash });
 
-  const approve = useCallback(async (amount: bigint) => {
-    if (!token || !spender) throw new Error("Missing token or spender");
-    return writeContractAsync({
-      address: token,
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [spender, amount],
-    });
-  }, [token, spender, writeContractAsync]);
+  const approve = useCallback(
+    async (amount: bigint) => {
+      if (!token || !spender) throw new Error("Missing token or spender");
+      return writeContractAsync({
+        address: token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender, amount] as const,
+      });
+    },
+    [token, spender, writeContractAsync]
+  );
 
   return { approve, txHash: hash, isPending, wait, owner };
 }
