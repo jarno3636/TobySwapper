@@ -3,12 +3,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Address, formatUnits, isAddress, parseUnits } from "viem";
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
 import { TOKENS, USDC, ROUTER } from "@/lib/addresses";
 import { useDoSwap, buildPaths } from "@/hooks/useTobySwapper";
 import { useUsdPriceSingle } from "@/lib/prices";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
 
 const UniV2RouterAbi = [
   {
@@ -33,11 +34,11 @@ function byAddress(addr?: Address | "ETH") {
 }
 
 // keep last non-empty balance string so UI never flickers to "—"
-function useStickyBalance(val?: { value: bigint; decimals: number }) {
+function useStickyBalance(val?: { value?: bigint; decimals?: number }) {
   const [sticky, setSticky] = useState<string | undefined>(undefined);
   const last = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!val) return;
+    if (!val?.value || val.decimals == null) return;
     try {
       const f = formatUnits(val.value, val.decimals);
       last.current = f;
@@ -71,43 +72,16 @@ export default function SwapForm() {
 
   // update mode when user toggles
   useEffect(() => {
-    if (modeTokenToToken && tokenIn === "ETH") {
-      setTokenIn(USDC as Address);
-    }
-    if (!modeTokenToToken && tokenIn !== "ETH") {
-      setTokenIn("ETH");
-    }
+    if (modeTokenToToken && tokenIn === "ETH") setTokenIn(USDC as Address);
+    if (!modeTokenToToken && tokenIn !== "ETH") setTokenIn("ETH");
   }, [modeTokenToToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
 
-  // ---------- Balances (pin to Base, keep previous data, refresh quietly) ----------
-  const { data: balInRaw } = useBalance({
-    address,
-    token: inMeta.address,
-    chainId: base.id,
-    query: {
-      enabled: Boolean(address),
-      refetchInterval: 10_000,
-      staleTime: 8_000,
-      refetchOnWindowFocus: false,
-      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
-    },
-  });
-
-  const { data: balOutRaw } = useBalance({
-    address,
-    token: outMeta.address,
-    chainId: base.id,
-    query: {
-      enabled: Boolean(address),
-      refetchInterval: 10_000,
-      staleTime: 8_000,
-      refetchOnWindowFocus: false,
-      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
-    },
-  });
+  // ---------- Balances (robust: wagmi + ERC20 fallback) ----------
+  const balInRaw = useTokenBalance(address, inMeta.address);
+  const balOutRaw = useTokenBalance(address, outMeta.address);
 
   const balInSticky  = useStickyBalance(balInRaw);
   const balOutSticky = useStickyBalance(balOutRaw);
@@ -144,7 +118,7 @@ export default function SwapForm() {
       enabled: quoteEnabled,
       refetchInterval: 15_000,
       retry: 2,
-      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
+      placeholderData: (prev: any) => prev,
     },
   } as any);
 
@@ -157,7 +131,6 @@ export default function SwapForm() {
     try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
     catch { return undefined; }
   }, [expectedOutBig, outMeta.decimals]);
-
   if (expectedOutHuman != null && isFinite(expectedOutHuman) && expectedOutHuman > 0) {
     lastQuoteRef.current = expectedOutHuman;
   }
