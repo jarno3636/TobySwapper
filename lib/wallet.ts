@@ -1,11 +1,26 @@
+// lib/wallet.ts
 "use client";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { http } from "viem";
 import { base } from "viem/chains";
 
+/**
+ * RainbowKit/Wagmi config for TobySwapper
+ * - Uses NEXT_PUBLIC_PROJECT_NAME (fallback "TobySwapper")
+ * - Uses NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID (must be set for WalletConnect v2)
+ * - RPC comes from NEXT_PUBLIC_RPC_BASE
+ */
 export const wagmiConfig = getDefaultConfig({
-  appName: process.env.NEXT_PUBLIC_PROJECT_NAME || "Toby Swapper",
-  projectId: "toby-swapper", // local-only; for WalletConnect V2 a real ID is recommended
+  appName: process.env.NEXT_PUBLIC_PROJECT_NAME || "TobySwapper",
+
+  // ✅ IMPORTANT: WalletConnect V2 requires a real projectId
+  // get one free at https://cloud.walletconnect.com
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "demo",
+
   chains: [base],
-  transports: { [base.id]: http(process.env.NEXT_PUBLIC_RPC_BASE) },
+
+  // transports must map chainId -> transport
+  transports: {
+    [base.id]: http(process.env.NEXT_PUBLIC_RPC_BASE || "https://mainnet.base.org"),
+  },
 });
