@@ -1,11 +1,10 @@
-// components/Wallet.tsx
 "use client";
+import "@rainbow-me/rainbowkit/styles.css"; // ← important: RainbowKit base styles
 import {
   RainbowKitProvider,
   darkTheme,
   Theme,
   ConnectButton,
-  useConnectModal,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -48,27 +47,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Pill used in desktop header
+/** Desktop header pill */
 export function WalletPill() {
   return (
-    <div className="pill bg-white/10">
+    <div className="pill pill-opaque">
       <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
     </div>
   );
 }
 
-// Button for the mobile menu: closes sheet, then opens wallet modal
-export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
-  const { openConnectModal } = useConnectModal();
+/** Mobile menu pill (no hook; safe + consistent) */
+export function ConnectPill() {
   return (
-    <button
-      className="pill bg-white/10 w-full justify-center"
-      onClick={() => {
-        onBeforeOpen?.();
-        openConnectModal?.();
-      }}
-    >
-      Connect Wallet
-    </button>
+    <div className="pill pill-opaque w-full justify-center">
+      <ConnectButton chainStatus="none" accountStatus="address" showBalance={false} />
+    </div>
   );
 }
