@@ -28,7 +28,7 @@ function byAddress(addr?: Address | "ETH") {
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase());
   return t
-    ? { symbol: t.symbol, decimals: t.decimals, address: t.address as Address }
+    ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
 
@@ -69,7 +69,7 @@ export default function SwapForm() {
     return () => clearTimeout(id);
   }, [amt]);
 
-  // toggle effect
+  // update mode when user toggles
   useEffect(() => {
     if (modeTokenToToken && tokenIn === "ETH") {
       setTokenIn(USDC as Address);
@@ -77,12 +77,12 @@ export default function SwapForm() {
     if (!modeTokenToToken && tokenIn !== "ETH") {
       setTokenIn("ETH");
     }
-  }, [modeTokenToToken]);
+  }, [modeTokenToToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
 
-  // ---------- Balances ----------
+  // ---------- Balances (pin to Base, keep previous data, refresh quietly) ----------
   const { data: balInRaw } = useBalance({
     address,
     token: inMeta.address,
@@ -92,9 +92,10 @@ export default function SwapForm() {
       refetchInterval: 10_000,
       staleTime: 8_000,
       refetchOnWindowFocus: false,
-      placeholderData: (prev) => prev,
+      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
     },
   });
+
   const { data: balOutRaw } = useBalance({
     address,
     token: outMeta.address,
@@ -104,14 +105,14 @@ export default function SwapForm() {
       refetchInterval: 10_000,
       staleTime: 8_000,
       refetchOnWindowFocus: false,
-      placeholderData: (prev) => prev,
+      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
     },
   });
 
   const balInSticky  = useStickyBalance(balInRaw);
   const balOutSticky = useStickyBalance(balOutRaw);
 
-  // ---------- Prices ----------
+  // ---------- Prices (sticky cached in hook) ----------
   const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
 
@@ -121,7 +122,7 @@ export default function SwapForm() {
     [amtNum, inUsd]
   );
 
-  // ---------- On-chain quote ----------
+  // ---------- On-chain quote (debounced input, sticky display) ----------
   const mainPath = useMemo(
     () => buildPaths(tokenIn, tokenOut).pathForMainSwap,
     [tokenIn, tokenOut]
@@ -143,13 +144,14 @@ export default function SwapForm() {
       enabled: quoteEnabled,
       refetchInterval: 15_000,
       retry: 2,
-      placeholderData: (prev) => prev,
+      placeholderData: (prev: any) => prev, // explicit param type to satisfy TS
     },
   } as any);
 
   const expectedOutBig: bigint | undefined =
     Array.isArray(amountsOut) ? (amountsOut as bigint[]).at(-1) : undefined;
 
+  // sticky last good quote
   const lastQuoteRef = useRef<number | undefined>(undefined);
   const expectedOutHuman = useMemo(() => {
     try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
@@ -161,6 +163,7 @@ export default function SwapForm() {
   }
   const displayQuote = expectedOutHuman ?? lastQuoteRef.current ?? undefined;
 
+  // minOut = expected * (1 - slippage)
   const minOutMainStr = useMemo(() => {
     if (!expectedOutBig) return "0";
     const bps = Math.round((100 - slippage) * 100);
@@ -171,7 +174,7 @@ export default function SwapForm() {
   const setMax = () => {
     if (!balInSticky) return;
     const raw = parseFloat(balInSticky);
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // gas dust if native
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
@@ -230,7 +233,7 @@ export default function SwapForm() {
           </button>
         </div>
 
-        {/* Token In */}
+        {/* Token In select only when Token→Token */}
         {modeTokenToToken && (
           <div className="space-y-2">
             <label className="text-sm text-inkSub">Token In</label>
@@ -254,6 +257,7 @@ export default function SwapForm() {
               <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>MAX</button>
             </div>
           </div>
+
           <input
             value={amt}
             onChange={(e) => setAmt(e.target.value)}
@@ -264,7 +268,7 @@ export default function SwapForm() {
           <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
         </div>
 
-        {/* Swap sides */}
+        {/* Center swap-sides */}
         <div className="flex justify-center">
           <button
             className="pill pill-opaque px-3 py-1 text-sm"
