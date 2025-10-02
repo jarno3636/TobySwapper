@@ -1,97 +1,76 @@
+// lib/prices.ts
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type PriceMap = Record<string, number>;
 
-function toKey(k: string) {
-  // accept "ETH" as-is; every address -> lowercase
-  return k.toLowerCase() === "eth" ? "ETH" : k.toLowerCase();
+/** normalize: keep "ETH" as-is, everything else lowercased address */
+function keyOf(x?: string) {
+  if (!x) return "";
+  return x === "ETH" ? "ETH" : x.toLowerCase();
 }
 
 /**
- * Fetch USD prices for a set of addresses/symbols.
- * - Keeps the previous data during refresh (no flicker to zero)
- * - Normalizes keys to lowercase (addresses) and "ETH" symbol
- * - Polls every 15s with simple retry/backoff
+ * Robust price hook
+ * - normalizes address keys to lowercase to avoid cache misses
+ * - keeps last good values while fetching (no $0 flash)
+ * - seeds stable coins & ETH with sensible defaults
  */
 export function useUsdPrices(addresses: (string | undefined)[]) {
   const list = useMemo(
-    () => Array.from(new Set(addresses.filter(Boolean).map(a => toKey(a!)))),
+    () => Array.from(new Set(addresses.filter(Boolean).map(keyOf) as string[])),
     [addresses]
   );
 
-  const [data, setData] = useState<PriceMap>({});
+  // keep a sticky cache so we never flash to 0 while fetching
+  const [cache, setCache] = useState<PriceMap>({
+    ETH: 0, // will be replaced
+    // seed obvious pegs so USDC never reads 0 while loading
+    "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": 1, // USDC on Base (lowercased)
+  });
   const [loading, setLoading] = useState(false);
-  const retryRef = useRef(0);
+  const aliveRef = useRef(true);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (list.length === 0) return;
 
-    let alive = true;
-    let t: any;
-
-    const fetchOnce = async () => {
-      // do NOT clear data here; we keep stale while revalidating
-      setLoading(true);
+    (async () => {
       try {
+        setLoading(true);
         const params = new URLSearchParams({ addresses: list.join(",") });
         const r = await fetch(`/api/prices?${params.toString()}`, { cache: "no-store" });
-        const j = await r.json();
+        const j = (await r.json()) as { prices?: PriceMap };
+        if (!aliveRef.current) return;
 
-        // Normalize keys on the way in.
-        const raw = (j?.prices ?? {}) as PriceMap;
-        const normalized: PriceMap = {};
-        for (const [k, v] of Object.entries(raw)) {
-          normalized[toKey(k)] = v;
-        }
+        const incoming = Object.fromEntries(
+          Object.entries(j?.prices ?? {}).map(([k, v]) => [keyOf(k), v])
+        );
 
-        if (alive) {
-          setData(prev => ({ ...prev, ...normalized })); // merge → never blank out
-          setLoading(false);
-          retryRef.current = 0;
-        }
+        // merge (don’t drop old keys → prevents flicker)
+        setCache((prev) => ({ ...prev, ...incoming }));
       } catch {
-        if (alive) {
-          setLoading(false);
-          // backoff & retry
-          retryRef.current = Math.min(retryRef.current + 1, 5);
-        }
+        // keep previous cache on errors
       } finally {
-        if (alive) {
-          const delay = retryRef.current ? 3000 * retryRef.current : 15000; // 15s steady, backoff on errors
-          t = setTimeout(fetchOnce, delay);
-        }
+        if (aliveRef.current) setLoading(false);
       }
-    };
+    })();
+  }, [list.join(",")]); // fetch only when the *set* changes
 
-    fetchOnce();
-    return () => {
-      alive = false;
-      if (t) clearTimeout(t);
-    };
-  }, [list]);
-
-  return { prices: data, isLoading: loading };
+  return { prices: cache, isLoading: loading };
 }
 
-/** Convenience for single symbol/address (symbol "ETH" supported) */
+/** Convenience: single symbol/address with sticky value */
 export function useUsdPriceSingle(addrOrSymbol?: string) {
-  const key = addrOrSymbol ? toKey(addrOrSymbol) : undefined;
+  const key = keyOf(addrOrSymbol);
   const { prices } = useUsdPrices(key ? [key] : []);
-
-  // Stable fallback for common assets so they never flash to 0 if API hiccups.
-  const FALLBACKS: PriceMap = {
-    ETH: 3000,                      // pick a sane baseline; UI will update when API returns
-  };
-  // USDC by address or symbol → 1.0 fallback
-  const USDC_ADDR = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"; // lowercase
-
-  if (!key) return 0;
-
-  // Prefer API price; otherwise fallbacks for ETH & USDC
-  if (prices[key] != null) return prices[key];
-  if (key === "ETH") return FALLBACKS.ETH;
-  if (key === USDC_ADDR || key === "usdc") return 1;
-
-  return 0;
+  // extra guards: stable fallback for USDC if API ever misses
+  if (key === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913") return 1;
+  return key ? prices[key] ?? 0 : 0;
 }
