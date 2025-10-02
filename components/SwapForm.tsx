@@ -4,13 +4,12 @@
 import { useMemo, useState } from "react";
 import { Address, formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import { base } from "viem/chains";                 // ← add this
+import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
 import { TOKENS, USDC, ROUTER } from "@/lib/addresses";
 import { useDoSwap, buildPaths } from "@/hooks/useTobySwapper";
 import { useUsdPriceSingle } from "@/lib/prices";
 
-/** Minimal UniV2-style router ABI for quoting */
 const UniV2RouterAbi = [
   {
     type: "function",
@@ -24,7 +23,6 @@ const UniV2RouterAbi = [
   },
 ] as const;
 
-/** tiny util: find token meta by address */
 function byAddress(addr?: Address | "ETH") {
   if (!addr || addr === "ETH")
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
@@ -48,59 +46,49 @@ export default function SwapForm() {
   );
   const [amt, setAmt] = useState("0.01");
 
-  // slippage (%)
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
 
-  // meta
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
 
-  // ---------- balances (pin to Base + live watch) ----------
+  // ---- balances (pin to Base; refresh periodically) ----
   const { data: balIn } = useBalance({
     address,
-    token: inMeta.address,                // undefined => native
-    chainId: base.id,                     // ← force Base mainnet
-    query: { enabled: Boolean(address) },
-    watch: true,                          // ← keep fresh
+    token: inMeta.address,               // undefined = native
+    chainId: base.id,
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 10_000,          // refresh every 10s
+    },
   });
 
   const { data: balOut } = useBalance({
     address,
     token: outMeta.address,
-    chainId: base.id,                     // ← force Base mainnet
-    query: { enabled: Boolean(address) },
-    watch: true,                          // ← keep fresh
+    chainId: base.id,
+    query: {
+      enabled: Boolean(address),
+      refetchInterval: 10_000,
+    },
   });
 
-  // ✅ Live USD display
+  // live USD display (from your /api/prices)
   const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
 
   const amtNum = Number(amt || "0");
-  const amtInUsd = useMemo(
-    () => (isFinite(amtNum) ? amtNum * inUsd : 0),
-    [amtNum, inUsd]
-  );
+  const amtInUsd = useMemo(() => (isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
 
-  // ----- On-chain quoting with ROUTER -----
-  const mainPath = useMemo(
-    () => buildPaths(tokenIn, tokenOut).pathForMainSwap,
-    [tokenIn, tokenOut]
-  );
+  // ----- on-chain quote -----
+  const mainPath = useMemo(() => buildPaths(tokenIn, tokenOut).pathForMainSwap, [tokenIn, tokenOut]);
 
   const amountInBig = useMemo(() => {
-    try {
-      return parseUnits(amt || "0", inMeta.decimals);
-    } catch {
-      return 0n;
-    }
+    try { return parseUnits(amt || "0", inMeta.decimals); } catch { return 0n; }
   }, [amt, inMeta.decimals]);
 
   const quoteEnabled =
-    amountInBig > 0n &&
-    mainPath.length >= 1 &&
-    isAddress(mainPath[mainPath.length - 1]!);
+    amountInBig > 0n && mainPath.length >= 1 && isAddress(mainPath[mainPath.length - 1]!);
 
   const { data: amountsOut } = useReadContract({
     address: quoteEnabled ? (ROUTER as Address) : undefined,
@@ -110,41 +98,30 @@ export default function SwapForm() {
     query: { enabled: quoteEnabled },
   } as any);
 
-  const expectedOutBig: bigint | undefined = Array.isArray(amountsOut)
-    ? (amountsOut as bigint[])[(amountsOut as bigint[]).length - 1]
-    : undefined;
+  const expectedOutBig: bigint | undefined =
+    Array.isArray(amountsOut) ? (amountsOut as bigint[]).at(-1) : undefined;
 
-  // minOut = expected * (1 - slippage)
   const minOutMainStr = useMemo(() => {
     if (!expectedOutBig) return "0";
-    const bps = Math.round((100 - slippage) * 100); // e.g., 0.5% -> 9950
+    const bps = Math.round((100 - slippage) * 100); // e.g. 0.5 => 9950
     const minOut = (expectedOutBig * BigInt(bps)) / 10000n;
-    return minOut.toString(); // as wei string
+    return minOut.toString();
   }, [expectedOutBig, slippage]);
 
   const expectedOutHuman = useMemo(() => {
-    try {
-      return expectedOutBig
-        ? Number(formatUnits(expectedOutBig, outMeta.decimals))
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
+    catch { return undefined; }
   }, [expectedOutBig, outMeta.decimals]);
 
   const maxReadable = useMemo(() => {
     if (!balIn) return "0";
-    try {
-      return formatUnits(balIn.value, balIn.decimals);
-    } catch {
-      return "0";
-    }
+    try { return formatUnits(balIn.value, balIn.decimals); } catch { return "0"; }
   }, [balIn]);
 
   const setMax = () => {
     if (!balIn) return;
     const raw = parseFloat(formatUnits(balIn.value, balIn.decimals));
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // buffer if native
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // dust for gas if native
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
@@ -158,35 +135,17 @@ export default function SwapForm() {
 
   const doSwap = async () => {
     if (tokenIn === "ETH") {
-      await swapETHForTokens(
-        tokenOut,
-        amt,
-        expectedOutBig ? minOutMainStr : "0",
-        "0"
-      );
+      await swapETHForTokens(tokenOut, amt, expectedOutBig ? minOutMainStr : "0", "0");
     } else {
-      if (
-        !isAddress(tokenIn) ||
-        !isAddress(tokenOut) ||
-        tokenIn.toLowerCase() === tokenOut.toLowerCase()
-      )
-        return;
-      await swapTokensForTokens(
-        tokenIn as Address,
-        tokenOut,
-        amt,
-        expectedOutBig ? minOutMainStr : "0",
-        "0"
-      );
+      if (!isAddress(tokenIn) || !isAddress(tokenOut) || tokenIn.toLowerCase() === tokenOut.toLowerCase()) return;
+      await swapTokensForTokens(tokenIn as Address, tokenOut, amt, expectedOutBig ? minOutMainStr : "0", "0");
     }
   };
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
-      {/* Header row */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
-
         <button
           className="pill pill-opaque px-3 py-1 text-xs"
           onClick={() => setSlippageOpen(true)}
@@ -197,7 +156,6 @@ export default function SwapForm() {
         </button>
       </div>
 
-      {/* (Optional) warn if not on Base */}
       {chain && chain.id !== base.id && (
         <div className="mb-3 text-xs text-warn">
           Connected to {chain.name}. Please switch to Base for balances & swaps.
@@ -205,27 +163,21 @@ export default function SwapForm() {
       )}
 
       <div className="space-y-4">
-        {/* Toggle: ETH vs Token→Token */}
         <div className="grid grid-cols-2 gap-3">
           <button
-            className={`pill justify-center ${
-              tokenIn === "ETH" ? "outline outline-1 outline-white/20" : ""
-            }`}
+            className={`pill justify-center ${tokenIn === "ETH" ? "outline outline-1 outline-white/20" : ""}`}
             onClick={() => setTokenIn("ETH")}
           >
             Base ETH
           </button>
           <button
-            className={`pill justify-center ${
-              tokenIn !== "ETH" ? "outline outline-1 outline-white/20" : ""
-            }`}
+            className={`pill justify-center ${tokenIn !== "ETH" ? "outline outline-1 outline-white/20" : ""}`}
             onClick={() => setTokenIn(USDC as Address)}
           >
             Token → Token
           </button>
         </div>
 
-        {/* Token In (only shows when doing token-token) */}
         {tokenIn !== "ETH" && (
           <div className="space-y-2">
             <label className="text-sm text-inkSub">Token In</label>
@@ -238,7 +190,6 @@ export default function SwapForm() {
           </div>
         )}
 
-        {/* Amount + MAX */}
         <div>
           <div className="flex items-center justify-between">
             <label className="text-sm text-inkSub">
@@ -247,14 +198,9 @@ export default function SwapForm() {
             <div className="text-xs text-inkSub">
               Bal:{" "}
               <span className="font-mono">
-                {balIn
-                  ? Number(formatUnits(balIn.value, balIn.decimals)).toFixed(6)
-                  : "—"}
+                {balIn ? Number(formatUnits(balIn.value, balIn.decimals)).toFixed(6) : "—"}
               </span>
-              <button
-                className="ml-2 underline opacity-90 hover:opacity-100"
-                onClick={setMax}
-              >
+              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
                 MAX
               </button>
             </div>
@@ -268,13 +214,9 @@ export default function SwapForm() {
             inputMode="decimal"
           />
 
-          {/* USD under amount */}
-          <div className="mt-2 text-xs text-inkSub">
-            ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
-          </div>
+          <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
         </div>
 
-        {/* Center swap-sides control (thin up/down double-line icon) */}
         <div className="flex justify-center">
           <button
             className="pill pill-opaque px-3 py-1 text-sm"
@@ -289,7 +231,6 @@ export default function SwapForm() {
           </button>
         </div>
 
-        {/* Token Out */}
         <div className="space-y-2">
           <label className="text-sm text-inkSub">Token Out</label>
           <TokenSelect
@@ -298,14 +239,10 @@ export default function SwapForm() {
             exclude={tokenIn as Address}
             balance={balOut ? formatUnits(balOut.value, balOut.decimals) : undefined}
           />
-
-        {/* Quote preview */}
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
               <>
-                Est:{" "}
-                <span className="font-mono">{expectedOutHuman.toFixed(6)}</span>{" "}
-                {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+                Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
               </>
             ) : (
               <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
@@ -313,30 +250,18 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* CTA */}
-        <button
-          onClick={doSwap}
-          className="pill w-full justify-center font-semibold hover:opacity-90"
-        >
-          <span className="pip pip-a" /> <span className="pip pip-b" />{" "}
-          <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
+        <button onClick={doSwap} className="pill w-full justify-center font-semibold hover:opacity-90">
+          <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
       </div>
 
-      {/* Slippage modal */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setSlippageOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button
-                className="pill pill-opaque px-3 py-1 text-xs"
-                onClick={() => setSlippageOpen(false)}
-              >
+              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>
                 Close
               </button>
             </div>
@@ -345,9 +270,7 @@ export default function SwapForm() {
                 <button
                   key={v}
                   onClick={() => setSlippage(v)}
-                  className={`pill justify-center px-3 py-1 text-xs ${
-                    slippage === v ? "outline outline-1 outline-white/20" : ""
-                  }`}
+                  className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}
                 >
                   {v}%
                 </button>
