@@ -26,3 +26,7 @@ export const TOKENS: readonly TokenInfo[] = [
   { symbol: "PATIENCE", address: PATIENCE, decimals: 18 },
   { symbol: "TABOSHI",  address: TABOSHI,  decimals: 18 },
 ] as const;
+
+/** Small helper that’s handy all over the app */
+export const isUSDC = (addr?: string) =>
+  !!addr && addr.toLowerCase() === USDC.toLowerCase();
