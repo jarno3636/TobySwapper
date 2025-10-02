@@ -17,25 +17,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [qc] = useState(() => new QueryClient());
 
   const tobyTheme: Theme = useMemo(() => {
-    const baseT = darkTheme({
+    const t = darkTheme({
       accentColor: "#2ea0ff",
       accentColorForeground: "#0a0b12",
       borderRadius: "large",
       overlayBlur: "large",
     });
     return {
-      ...baseT,
+      ...t,
       colors: {
-        ...baseT.colors,
-        overlayBackground: "rgba(0,0,0,0.75)",   // darker scrim
-        modalBackground: "rgba(15,15,20,0.98)",  // opaque modal
+        ...t.colors,
+        overlayBackground: "rgba(0,0,0,0.75)",
+        modalBackground: "rgba(15,15,20,0.98)",
         modalBorder: "rgba(255,255,255,0.06)",
         menuItemBackground: "rgba(255,255,255,0.08)",
         generalBorder: "rgba(255,255,255,0.08)",
       },
-      radii: { ...baseT.radii, modal: "20px", connectButton: "9999px" },
-      // lift the z-index so it always sits above the menu
-      shadows: { ...baseT.shadows },
+      radii: { ...t.radii, modal: "20px", connectButton: "9999px" },
     };
   }, []);
 
@@ -50,15 +48,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Pill used in desktop header
 export function WalletPill() {
   return (
-    <div className="pill glass">
-      <span className="pip pip-a" />
+    <div className="pill bg-white/10">
       <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
     </div>
   );
 }
 
+// Button for the mobile menu: closes sheet, then opens wallet modal
 export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
   const { openConnectModal } = useConnectModal();
   return (
@@ -69,7 +68,6 @@ export function ConnectPill({ onBeforeOpen }: { onBeforeOpen?: () => void }) {
         openConnectModal?.();
       }}
     >
-      <span className="pip pip-a" />
       Connect Wallet
     </button>
   );
