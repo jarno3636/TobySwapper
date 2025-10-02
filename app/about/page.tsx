@@ -1,7 +1,6 @@
-// app/about/page.tsx
 "use client";
 
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Address, formatUnits } from "viem";
@@ -68,7 +67,7 @@ function TokenInfoCard({
   icon: string;
   titleOverride?: string;
 }) {
-  // Batch read: name, symbol, decimals, totalSupply
+  // These hooks will only run on the client after "mounted" because the parent gates rendering.
   const { data } = useReadContracts({
     allowFailure: true,
     contracts: [
@@ -77,11 +76,7 @@ function TokenInfoCard({
       { address, abi: erc20Abi, functionName: "decimals", chainId: base.id },
       { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
     ],
-    query: {
-      refetchOnWindowFocus: false,
-      staleTime: 10_000,
-      gcTime: 60_000,
-    },
+    query: { refetchOnWindowFocus: false, staleTime: 10_000, gcTime: 60_000 },
   });
 
   const name = data?.[0]?.result as string | undefined;
@@ -178,8 +173,12 @@ function SwapperCard() {
   );
 }
 
-/** The actual page content, intended to run on the client only */
-function AboutClient() {
+/** ── PAGE ─────────────────────────────────────────────────────────────── **/
+export default function AboutPage() {
+  // Gate the on-chain sections until mounted so SSR/prerender never runs Wagmi/IDB code.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const pills = [
     "Base-native swapping, Toby style",
     "1% fee auto-buys $TOBY → burn",
@@ -209,19 +208,28 @@ function AboutClient() {
           ))}
         </div>
         <p className="text-inkSub mt-4">
-          This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn{" "}
-          <span className="font-semibold">$TOBY</span> using the 1% fee. Data below is read on-chain (the same core fields
-          BaseScan displays) and links you to the verified contracts.
+          This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn <span className="font-semibold">$TOBY</span> using the
+          1% fee. Data below is read on-chain (the same core fields BaseScan displays) and links you to the verified contracts.
         </p>
       </div>
 
-      <SwapperCard />
+      {/* On first SSR render, we don't mount these to avoid indexDB access. */}
+      {mounted ? (
+        <>
+          <SwapperCard />
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {items.map((t) => (
-          <TokenInfoCard key={t.address} address={t.address} icon={t.icon} titleOverride={t.title} />
-        ))}
-      </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {items.map((t) => (
+              <TokenInfoCard key={t.address} address={t.address} icon={t.icon} titleOverride={t.title} />
+            ))}
+          </div>
+        </>
+      ) : (
+        // Simple skeleton keeps the layout & background intact
+        <div className="glass rounded-3xl p-6 shadow-soft">
+          <p className="text-inkSub">Loading on-chain details…</p>
+        </div>
+      )}
 
       {/* Protocol Links */}
       <div className="glass rounded-3xl p-6 shadow-soft">
@@ -269,20 +277,3 @@ function AboutClient() {
     </section>
   );
 }
-
-/**
- * Export the page as a client-only component using next/dynamic with ssr:false.
- * This prevents Next from trying to prerender it on the server (which previously
- * caused the `indexedDB is not defined` / wagmi SSR crash).
- */
-const AboutPage = dynamic(async () => AboutClient, {
-  ssr: false,
-  loading: () => (
-    <section className="space-y-6">
-      <h1 className="text-3xl font-bold">About TobySwap</h1>
-      <p className="text-inkSub">Loading on-chain data…</p>
-    </section>
-  ),
-});
-
-export default AboutPage;
