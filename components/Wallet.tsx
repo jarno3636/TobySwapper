@@ -1,8 +1,7 @@
-// components/Wallet.tsx
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { RainbowKitProvider, ConnectButton } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, ConnectButton, darkTheme } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/lib/wallet";
@@ -15,8 +14,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        {/* Default RainbowKit (no custom theme). */}
-        <RainbowKitProvider initialChain={base}>
+        {/* Minimal change: dark theme only (keeps default modal behavior) */}
+        <RainbowKitProvider
+          initialChain={base}
+          theme={darkTheme({
+            accentColor: "#2ea0ff",            // matches your blue
+            accentColorForeground: "#0a0b12",  // readable on blue
+            borderRadius: "large",
+            overlayBlur: "large",
+          })}
+        >
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
@@ -24,16 +31,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Simple connect button for desktop header */
+/** Desktop header button — styled as opaque pill to match theme */
 export function WalletPill() {
-  return <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />;
+  return (
+    <div className="pill pill-opaque">
+      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+    </div>
+  );
 }
 
-/** Simple connect button for the mobile menu (keeps your API, no custom modal logic) */
+/** Mobile menu button — same pill styling, no custom modal logic */
 export function ConnectPill(_props?: { onBeforeOpen?: () => void }) {
   return (
     <div className="w-full flex justify-center">
-      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+      <div className="pill pill-opaque w-full justify-center">
+        <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+      </div>
     </div>
   );
 }
