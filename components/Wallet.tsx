@@ -14,12 +14,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={qc}>
-        {/* Minimal change: dark theme only (keeps default modal behavior) */}
         <RainbowKitProvider
           initialChain={base}
           theme={darkTheme({
-            accentColor: "#2ea0ff",            // matches your blue
-            accentColorForeground: "#0a0b12",  // readable on blue
+            accentColor: "transparent",          // remove blue
+            accentColorForeground: "var(--ink)", // use your theme text color
             borderRadius: "large",
             overlayBlur: "large",
           })}
@@ -31,21 +30,29 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Desktop header button — styled as opaque pill to match theme */
+/** Desktop header button — fully themed pill */
 export function WalletPill() {
   return (
     <div className="pill pill-opaque">
-      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+      <ConnectButton
+        chainStatus="icon"
+        accountStatus="address"
+        showBalance={false}
+      />
     </div>
   );
 }
 
-/** Mobile menu button — same pill styling, no custom modal logic */
+/** Mobile menu button — same pill styling */
 export function ConnectPill(_props?: { onBeforeOpen?: () => void }) {
   return (
     <div className="w-full flex justify-center">
       <div className="pill pill-opaque w-full justify-center">
-        <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
+        <ConnectButton
+          chainStatus="icon"
+          accountStatus="address"
+          showBalance={false}
+        />
       </div>
     </div>
   );
