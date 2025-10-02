@@ -7,7 +7,7 @@ export default function Background() {
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
     "/tokens/taboshi.PNG",
-    "/satoby.PNG",
+    "/satoswap.PNG",
   ];
 
   const floaties = useMemo(() => {
