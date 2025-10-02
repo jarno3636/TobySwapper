@@ -14,7 +14,6 @@ export default function Brand() {
   if (!mounted) return null;
 
   function go(href: string) {
-    // close any mobile UI first, then navigate
     setOpen(false);
     router.push(href);
   }
@@ -32,14 +31,9 @@ export default function Brand() {
         {/* Center: title only */}
         <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
 
-        {/* Right: Desktop nav (Home + About) + Connect */}
+        {/* Right: Desktop nav + Connect (buttons ensure nav even if pointer-events get funky) */}
         <nav className="hidden md:flex items-center gap-2">
-          {/* Use buttons to guarantee navigation even if pointer-events is applied somewhere */}
-          <button
-            type="button"
-            onClick={() => go("/")}
-            className="pill pill-nav hover:opacity-90"
-          >
+          <button type="button" onClick={() => go("/")} className="pill pill-nav hover:opacity-90">
             Home
           </button>
           <button
@@ -64,13 +58,10 @@ export default function Brand() {
         </button>
       </div>
 
-      {/* Mobile slide-over (fully opaque) */}
+      {/* Mobile slide-over (opaque), overlay uses your .menu-overlay to keep background visible */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
+          <div className="menu-overlay absolute inset-0" onClick={() => setOpen(false)} />
           <aside className="absolute right-0 top-0 h-full w-[78%] max-w-sm menu-sheet p-4">
             <div className="flex items-center justify-between mb-4">
               <span className="font-semibold text-lg">TobySwap</span>
