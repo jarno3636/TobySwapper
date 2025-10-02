@@ -6,6 +6,8 @@ import { useReadContract } from "wagmi";
 import { Address, formatUnits } from "viem";
 import { SWAPPER } from "@/lib/addresses";
 
+const APP_URL = "https://tobyswap.vercel.app";
+
 const SwapperAbi = [
   {
     type: "function",
@@ -39,7 +41,7 @@ function useAnimatedNumber(target: number, duration = 800) {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
+  }, [target, duration, value]);
 
   return value;
 }
@@ -70,10 +72,15 @@ export default function TokensBurned() {
   const stepNext = (stepIdx + 1) * STEP;
   const stepProg = Math.max(0, Math.min(1, (burned - stepBase) / (stepNext - stepBase)));
 
-  // Share text
-  const castText = `🔥 ${fmt(burned, 2)} $TOBY burned forever!\nSwap, burn, and spread the lore 🐸🔥`;
+  // Share text (URL auto-appended to text)
+  const castText = `🔥 ${fmt(burned, 2)} $TOBY burned forever!\nSwap, burn, and spread the lore 🐸🔥\n${APP_URL}`;
   const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}`;
-  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(castText)}`;
+
+  // X: include URL in both text and as the dedicated url param (better previews)
+  const xText = `🔥 ${fmt(burned, 2)} $TOBY burned forever! Swap, burn, and spread the lore 🐸🔥 ${APP_URL}`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    xText
+  )}&url=${encodeURIComponent(APP_URL)}`;
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft mt-6 relative overflow-hidden">
