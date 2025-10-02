@@ -1,5 +1,7 @@
+// app/about/page.tsx
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { Address, formatUnits } from "viem";
@@ -176,8 +178,8 @@ function SwapperCard() {
   );
 }
 
-/** ── PAGE (client) ───────────────────────────────────────────────────────── */
-export default function AboutPage() {
+/** The actual page content, intended to run on the client only */
+function AboutClient() {
   const pills = [
     "Base-native swapping, Toby style",
     "1% fee auto-buys $TOBY → burn",
@@ -207,8 +209,9 @@ export default function AboutPage() {
           ))}
         </div>
         <p className="text-inkSub mt-4">
-          This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn <span className="font-semibold">$TOBY</span> using the
-          1% fee. Data below is read on-chain (the same core fields BaseScan displays) and links you to the verified contracts.
+          This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn{" "}
+          <span className="font-semibold">$TOBY</span> using the 1% fee. Data below is read on-chain (the same core fields
+          BaseScan displays) and links you to the verified contracts.
         </p>
       </div>
 
@@ -261,12 +264,25 @@ export default function AboutPage() {
           <a className="pill" href="https://t.me/toadgang" target="_blank" rel="noopener noreferrer">
             Toadgang Telegram
           </a>
-          {/* Add more when ready:
-          <a className="pill" href="https://warpcast.com/~/channel/toby" target="_blank" rel="noopener noreferrer">
-            Farcaster Channel
-          </a> */}
         </div>
       </div>
     </section>
   );
 }
+
+/**
+ * Export the page as a client-only component using next/dynamic with ssr:false.
+ * This prevents Next from trying to prerender it on the server (which previously
+ * caused the `indexedDB is not defined` / wagmi SSR crash).
+ */
+const AboutPage = dynamic(async () => AboutClient, {
+  ssr: false,
+  loading: () => (
+    <section className="space-y-6">
+      <h1 className="text-3xl font-bold">About TobySwap</h1>
+      <p className="text-inkSub">Loading on-chain data…</p>
+    </section>
+  ),
+});
+
+export default AboutPage;
