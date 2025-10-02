@@ -1,36 +1,32 @@
+// components/Background.tsx
 "use client";
 import Image from "next/image";
 import { useMemo } from "react";
 
 export default function Background() {
-  // token + frog images (use your normalized names)
   const tokens = [
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
     "/tokens/taboshi.PNG",
-    "/toby.PNG",
     "/satoby.PNG",
   ];
 
-  // generate floaty tiles once on mount
   const floaties = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => {
-      const src = tokens[i % tokens.length];
-      const w = 60 + Math.floor(Math.random() * 100); // 60–160
+      const w = 60 + Math.floor(Math.random() * 100);
       return {
-        src,
+        src: tokens[i % tokens.length],
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        o: 0.3 + Math.random() * 0.5, // 0.3–0.8
+        r: Math.floor(Math.random() * 360),
+        o: 0.30 + Math.random() * 0.5,
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // don't re-run
+  }, []);
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-[var(--bg)]">
-      {/* global blur veil */}
       <div className="absolute inset-0 backdrop-blur-3xl" />
       {floaties.map((t, i) => (
         <div
