@@ -1,3 +1,4 @@
+// components/Brand.tsx
 "use client";
 import Link from "next/link";
 import Image from "next/image";
@@ -43,16 +44,34 @@ export default function Brand() {
       {/* Mobile slide-over (fully opaque) */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 menu-overlay" onClick={() => setOpen(false)} />
+          {/* Darker, slightly blurred overlay that closes on click */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
           <aside className="absolute right-0 top-0 h-full w-[78%] max-w-sm menu-sheet p-4">
             <div className="flex items-center justify-between mb-4">
               <span className="font-semibold text-lg">TobySwap</span>
-              <button className="pill pill-opaque" onClick={() => setOpen(false)}>Close</button>
+              <button className="pill pill-opaque" onClick={() => setOpen(false)}>
+                Close
+              </button>
             </div>
 
             <div className="space-y-3">
-              <Link href="/" onClick={() => setOpen(false)} className="block pill pill-opaque text-center">Home</Link>
-              <Link href="/about" onClick={() => setOpen(false)} className="block pill pill-opaque text-center">About</Link>
+              <Link
+                href="/"
+                onClick={() => setOpen(false)}
+                className="block pill pill-opaque text-center"
+              >
+                Home
+              </Link>
+              <Link
+                href="/about"
+                onClick={() => setOpen(false)}
+                className="block pill pill-opaque text-center"
+              >
+                About
+              </Link>
               <div className="pt-2">
                 <ConnectPill onBeforeOpen={() => setOpen(false)} />
               </div>
