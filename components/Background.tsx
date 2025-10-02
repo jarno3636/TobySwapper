@@ -18,7 +18,7 @@ export default function Background() {
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        o: 0.35 + Math.random() * 0.4, // a bit stronger so they show through
+        o: 0.35 + Math.random() * 0.4, // opacity range
         delay: i * 2,
         dur: 16 + i * 2,
       };
@@ -26,9 +26,9 @@ export default function Background() {
   }, []);
 
   return (
-    // NOTE: z-0 (not negative) + pointer-events-none so it never blocks clicks
+    // z-0 so it sits under content, pointer-events-none so it never blocks clicks
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-      {/* keep the dark bg so it reads as “black” */}
+      {/* dark base background */}
       <div className="absolute inset-0 bg-[var(--bg)]" />
 
       {floaties.map((t, i) => (
@@ -42,28 +42,24 @@ export default function Background() {
             animationDuration: `${t.dur}s`,
           } as React.CSSProperties}
         >
+          {/* just the image, no glass wrapper */}
           <div
-            className="rounded-3xl backdrop-blur-sm"
+            className="relative"
             style={{
               width: t.w,
               height: t.w,
-              background: "rgba(255,255,255,.06)",
-              border: "1px solid rgba(255,255,255,.08)",
-              boxShadow: "0 16px 40px rgba(0,0,0,.35)",
-              overflow: "hidden",
               opacity: t.o,
+              filter: "drop-shadow(0 10px 24px rgba(0,0,0,.35))", // optional depth
             }}
           >
-            <div className="relative w-full h-full">
-              <Image
-                src={t.src}
-                alt=""
-                fill
-                sizes={`${t.w}px`}
-                className="object-cover"
-                priority={i < 2}
-              />
-            </div>
+            <Image
+              src={t.src}
+              alt=""
+              fill
+              sizes={`${t.w}px`}
+              className="object-contain select-none"
+              priority={i < 2}
+            />
           </div>
         </div>
       ))}
