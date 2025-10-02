@@ -17,7 +17,7 @@ export default function Brand() {
         {/* Left: avatar only */}
         <Link href="/" className="flex items-center gap-3 group">
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
-            <Image src="/toby.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
+            <Image src="/toby2.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
           </span>
         </Link>
 
