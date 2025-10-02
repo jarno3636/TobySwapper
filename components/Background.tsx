@@ -3,7 +3,6 @@ import Image from "next/image";
 import { useMemo } from "react";
 
 export default function Background() {
-  // Make sure these images exist in /public
   const tokens = [
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
@@ -19,14 +18,19 @@ export default function Background() {
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        o: 0.30 + Math.random() * 0.5,
+        o: 0.35 + Math.random() * 0.4, // a bit stronger so they show through
+        delay: i * 2,
+        dur: 16 + i * 2,
       };
     });
-  }, []); // stable once
+  }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-[var(--bg)]">
-      <div className="absolute inset-0 backdrop-blur-3xl" />
+    // NOTE: z-0 (not negative) + pointer-events-none so it never blocks clicks
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+      {/* keep the dark bg so it reads as “black” */}
+      <div className="absolute inset-0 bg-[var(--bg)]" />
+
       {floaties.map((t, i) => (
         <div
           key={i}
@@ -34,8 +38,8 @@ export default function Background() {
           style={{
             left: t.x,
             top: t.y,
-            animationDelay: `${i * 3}s`,
-            animationDuration: `${16 + i * 2}s`,
+            animationDelay: `${t.delay}s`,
+            animationDuration: `${t.dur}s`,
           } as React.CSSProperties}
         >
           <div
