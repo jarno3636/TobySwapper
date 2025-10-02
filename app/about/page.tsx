@@ -220,6 +220,7 @@ export default function AboutPage() {
         ))}
       </div>
 
+      {/* Protocol Links */}
       <div className="glass rounded-3xl p-6 shadow-soft">
         <h3 className="font-semibold mb-4">Quick Links</h3>
         <div className="flex flex-wrap gap-3">
@@ -247,6 +248,23 @@ export default function AboutPage() {
           <a className="pill" href={`https://basescan.org/address/${DEAD}`} target="_blank" rel="noopener noreferrer">
             DEAD Burn Wallet
           </a>
+        </div>
+      </div>
+
+      {/* Community & Social */}
+      <div className="glass rounded-3xl p-6 shadow-soft">
+        <h3 className="font-semibold mb-4">Community & Social</h3>
+        <div className="flex flex-wrap gap-3">
+          <a className="pill" href="https://toadgod.xyz" target="_blank" rel="noopener noreferrer">
+            Official Site — toadgod.xyz
+          </a>
+          <a className="pill" href="https://t.me/toadgang" target="_blank" rel="noopener noreferrer">
+            Toadgang Telegram
+          </a>
+          {/* Add more when ready:
+          <a className="pill" href="https://warpcast.com/~/channel/toby" target="_blank" rel="noopener noreferrer">
+            Farcaster Channel
+          </a> */}
         </div>
       </div>
     </section>
