@@ -8,19 +8,18 @@ export default function Background() {
     "/tokens/toby.PNG",
     "/tokens/patience.PNG",
     "/tokens/taboshi.PNG",
-    "/satoby.PNG",
+    "/tokens/satoswap.PNG",
   ];
 
   const floaties = useMemo(() => {
-    return Array.from({ length: 14 }).map((_, i) => {
+    return Array.from({ length: 16 }).map((_, i) => {
       const w = 60 + Math.floor(Math.random() * 100);
       return {
         src: tokens[i % tokens.length],
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        r: Math.floor(Math.random() * 360),
-        o: 0.30 + Math.random() * 0.5,
+        o: 0.3 + Math.random() * 0.5,
       };
     });
   }, []);
@@ -40,7 +39,7 @@ export default function Background() {
           } as React.CSSProperties}
         >
           <div
-            className="rounded-3xl backdrop-blur-sm"
+            className="rounded-3xl"
             style={{
               width: t.w,
               height: t.w,
@@ -52,14 +51,7 @@ export default function Background() {
             }}
           >
             <div className="relative w-full h-full">
-              <Image
-                src={t.src}
-                alt=""
-                fill
-                sizes={`${t.w}px`}
-                className="object-cover"
-                priority={i < 2}
-              />
+              <Image src={t.src} alt="" fill sizes={`${t.w}px`} className="object-cover" />
             </div>
           </div>
         </div>
