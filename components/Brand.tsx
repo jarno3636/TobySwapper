@@ -9,7 +9,7 @@ export default function Brand() {
     <header className="sticky top-0 z-30 glass-strong border-b border-white/10">
       <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
         {/* Left: logo + title */}
-        <Link href="/" prefetch className="flex items-center gap-3 group">
+        <Link href="/" prefetch={false} className="flex items-center gap-3 group">
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
             <Image
               src="/toby2.PNG"
@@ -22,7 +22,7 @@ export default function Brand() {
           <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
         </Link>
 
-        {/* Right: connect (styled wrapper so button looks consistent) */}
+        {/* Right: connect pill (wrapper applies style, not WalletPill itself) */}
         <div className="pill pill-opaque hover:opacity-90">
           <WalletPill />
         </div>
