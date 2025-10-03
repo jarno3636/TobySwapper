@@ -3,36 +3,20 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { WalletPill, ConnectPill } from "./Wallet";
 
 export default function Brand() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const router = useRouter();
-
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
-
-  // Close sheet first (if open), then navigate on next tick for smooth UX
-  const go = useCallback(
-    (path: string) => {
-      if (open) {
-        setOpen(false);
-        setTimeout(() => router.push(path), 0);
-      } else {
-        router.push(path);
-      }
-    },
-    [open, router]
-  );
 
   return (
     <header className="sticky top-0 z-30 glass-strong border-b border-white/10">
       <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
         {/* Left: avatar only */}
-        <Link href="/" className="flex items-center gap-3 group" prefetch={false}>
+        <Link href="/" className="flex items-center gap-3 group" prefetch>
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
             <Image src="/toby2.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
           </span>
@@ -43,22 +27,12 @@ export default function Brand() {
 
         {/* Right: Desktop nav (Home + About) + Connect */}
         <nav className="hidden md:flex items-center gap-2">
-          <button
-            type="button"
-            className="pill pill-nav hover:opacity-90"
-            onClick={() => go("/")}
-            aria-label="Go to Home"
-          >
+          <Link href="/" className="pill pill-nav hover:opacity-90" prefetch>
             Home
-          </button>
-          <button
-            type="button"
-            className="pill pill-nav hover:opacity-90"
-            onClick={() => go("/about")}
-            aria-label="Go to About"
-          >
+          </Link>
+          <Link href="/about" className="pill pill-nav hover:opacity-90" prefetch>
             About
-          </button>
+          </Link>
           <WalletPill />
         </nav>
 
@@ -76,7 +50,7 @@ export default function Brand() {
       {/* Mobile slide-over (fully opaque) */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          {/* Darker, slightly blurred overlay that closes on click */}
+          {/* Dark, slightly blurred overlay that closes on click */}
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setOpen(false)}
@@ -90,20 +64,22 @@ export default function Brand() {
             </div>
 
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => go("/")}
+              <Link
+                href="/"
                 className="block w-full pill pill-opaque text-center"
+                prefetch
+                onClick={() => setOpen(false)}
               >
                 Home
-              </button>
-              <button
-                type="button"
-                onClick={() => go("/about")}
+              </Link>
+              <Link
+                href="/about"
                 className="block w-full pill pill-opaque text-center"
+                prefetch
+                onClick={() => setOpen(false)}
               >
                 About
-              </button>
+              </Link>
               <div className="pt-2">
                 <ConnectPill onBeforeOpen={() => setOpen(false)} />
               </div>
