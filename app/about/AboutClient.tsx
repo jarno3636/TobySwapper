@@ -1,8 +1,9 @@
+// app/about/AboutClient.tsx
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { Address, formatUnits } from "viem";
+import type { Address } from "viem";
+import { formatUnits } from "viem";
 import { base } from "viem/chains";
 import { useReadContract, useReadContracts } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI, USDC, WETH, SWAPPER, DEAD } from "@/lib/addresses";
@@ -42,7 +43,12 @@ function CardShell({
   iconSrc: string;
 }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="glass rounded-3xl p-5 shadow-soft block group">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="glass rounded-3xl p-5 shadow-soft block group"
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className="relative inline-block w-8 h-8 rounded-full overflow-hidden">
@@ -153,9 +159,9 @@ function SwapperCard() {
         </div>
         <div className="space-y-1">
           <div className="text-inkSub">DEAD Wallet $TOBY</div>
-          <Link href={deadHref} target="_blank" className="font-mono underline">
+          <a href={deadHref} target="_blank" rel="noopener noreferrer" className="font-mono underline">
             {fmt(deadBalNum)}
-          </Link>
+          </a>
         </div>
       </div>
 
