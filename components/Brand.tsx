@@ -1,5 +1,6 @@
 // components/Brand.tsx
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
@@ -14,16 +15,18 @@ export default function Brand() {
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
-  // Safe nav helper: close sheet first (if open), then push on next tick
-  const go = useCallback((path: string) => {
-    if (open) {
-      setOpen(false);
-      // Allow the sheet to start closing, then navigate
-      setTimeout(() => router.push(path), 0);
-    } else {
-      router.push(path);
-    }
-  }, [open, router]);
+  // Close sheet first (if open), then navigate on next tick for smooth UX
+  const go = useCallback(
+    (path: string) => {
+      if (open) {
+        setOpen(false);
+        setTimeout(() => router.push(path), 0);
+      } else {
+        router.push(path);
+      }
+    },
+    [open, router]
+  );
 
   return (
     <header className="sticky top-0 z-30 glass-strong border-b border-white/10">
