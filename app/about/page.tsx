@@ -163,6 +163,15 @@ function SwapperCard() {
 }
 
 export default function AboutPage() {
+  const pills = [
+    "Base-native swapping, Toby style",
+    "1% fee auto-buys $TOBY → burn",
+    "Dark glass + playful color pips",
+    "USDC / WETH ↔ TOBY · PATIENCE · TABOSHI",
+    "On-chain reads (same data as BaseScan)",
+    "Open-source front-end; verified contracts",
+  ];
+
   const items: { address: Address; icon: string; title?: string }[] = [
     { address: TOBY, icon: "/tokens/toby.PNG", title: "TOBY" },
     { address: PATIENCE, icon: "/tokens/patience.PNG", title: "PATIENCE" },
@@ -173,26 +182,26 @@ export default function AboutPage() {
 
   return (
     <section className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-4">About TobySwap</h1>
-        <div className="flex flex-wrap gap-3">
-          {[
-            "Base-native swapping, Toby style",
-            "1% fee auto-buys $TOBY → burn",
-            "Dark glass + playful color pips",
-            "USDC / WETH ↔ TOBY · PATIENCE · TABOSHI",
-            "On-chain reads (same data as BaseScan)",
-            "Open-source front-end; verified contracts",
-          ].map((p) => (
-            <span key={p} className="pill bg-[var(--glass)] text-sm">
-              {p}
-            </span>
-          ))}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-4">About TobySwap</h1>
+          <div className="flex flex-wrap gap-3">
+            {pills.map((p) => (
+              <span key={p} className="pill bg-[var(--glass)] text-sm">
+                {p}
+              </span>
+            ))}
+          </div>
+          <p className="text-inkSub mt-4">
+            This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn <span className="font-semibold">$TOBY</span> using the
+            1% fee. Data below is read on-chain (the same core fields BaseScan displays) and links you to the verified contracts.
+          </p>
         </div>
-        <p className="text-inkSub mt-4">
-          This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn <span className="font-semibold">$TOBY</span> using the 1% fee.
-          Data below is read on-chain and links you to verified contracts.
-        </p>
+
+        {/* CTA back home */}
+        <Link href="/" className="pill pill-opaque hover:opacity-90 whitespace-nowrap self-start">
+          ← Back home to burn more TOBY
+        </Link>
       </div>
 
       <SwapperCard />
@@ -203,12 +212,38 @@ export default function AboutPage() {
         ))}
       </div>
 
-      {/* CTA back home */}
-      <div className="glass rounded-3xl p-6 shadow-soft text-center relative z-10">
-        <p className="text-sm text-inkSub mb-3">Ready to add to the flames?</p>
-        <Link href="/" prefetch className="pill pill-opaque hover:opacity-90 text-sm" role="button">
-          Burn more TOBY 🔥
-        </Link>
+      {/* Links */}
+      <div className="glass rounded-3xl p-6 shadow-soft">
+        <h3 className="font-semibold mb-4">Quick Links</h3>
+        <div className="flex flex-wrap gap-3">
+          <a className="pill" href={`https://basescan.org/address/${SWAPPER}`} target="_blank" rel="noopener noreferrer">
+            Swapper on BaseScan
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${TOBY}`} target="_blank" rel="noopener noreferrer">
+            $TOBY Token
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${PATIENCE}`} target="_blank" rel="noopener noreferrer">
+            PATIENCE Token
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${TABOSHI}`} target="_blank" rel="noopener noreferrer">
+            TABOSHI Token
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${USDC}`} target="_blank" rel="noopener noreferrer">
+            USDC on Base
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${WETH}`} target="_blank" rel="noopener noreferrer">
+            WETH on Base
+          </a>
+          <a className="pill" href={`https://basescan.org/address/${DEAD}`} target="_blank" rel="noopener noreferrer">
+            DEAD Burn Wallet
+          </a>
+          <a className="pill" href="https://toadgod.xyz" target="_blank" rel="noopener noreferrer">
+            Official Site — toadgod.xyz
+          </a>
+          <a className="pill" href="https://t.me/toadgang" target="_blank" rel="noopener noreferrer">
+            Toadgang Telegram
+          </a>
+        </div>
       </div>
     </section>
   );
