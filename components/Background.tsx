@@ -18,7 +18,7 @@ export default function Background() {
         w,
         x: `${Math.random() * 100}%`,
         y: `${Math.random() * 100}%`,
-        o: 0.35 + Math.random() * 0.4, // opacity range
+        o: 0.35 + Math.random() * 0.4,
         delay: i * 2,
         dur: 16 + i * 2,
       };
@@ -26,8 +26,8 @@ export default function Background() {
   }, []);
 
   return (
-    // z-0 so it sits under content, pointer-events-none so it never blocks clicks
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    // pointer-events-none: never blocks clicks; z-0 keeps it under your z-10 content wrapper
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
       {/* dark base background */}
       <div className="absolute inset-0 bg-[var(--bg)]" />
 
@@ -40,21 +40,23 @@ export default function Background() {
             top: t.y,
             animationDelay: `${t.delay}s`,
             animationDuration: `${t.dur}s`,
+            // smoother animation on mobile GPUs
+            willChange: "transform",
+            transform: "translateZ(0)",
           } as React.CSSProperties}
         >
-          {/* just the image, no glass wrapper */}
           <div
             className="relative"
             style={{
-              width: t.w,
+              width: t.w, // px implied
               height: t.w,
               opacity: t.o,
-              filter: "drop-shadow(0 10px 24px rgba(0,0,0,.35))", // optional depth
+              filter: "drop-shadow(0 10px 24px rgba(0,0,0,.35))",
             }}
           >
             <Image
               src={t.src}
-              alt=""
+              alt=""              // decorative
               fill
               sizes={`${t.w}px`}
               className="object-contain select-none"
