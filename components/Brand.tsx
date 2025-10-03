@@ -11,14 +11,20 @@ export default function Brand() {
         {/* Left: logo + title */}
         <Link href="/" prefetch className="flex items-center gap-3 group">
           <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full overflow-hidden ring-1 ring-white/10 group-hover:ring-white/20 transition">
-            <Image src="/toby2.PNG" alt="Toby" fill sizes="40px" className="object-cover" />
+            <Image
+              src="/toby2.PNG"
+              alt="Toby"
+              fill
+              sizes="40px"
+              className="object-cover"
+            />
           </span>
           <span className="text-2xl font-extrabold tracking-tight">TobySwap</span>
         </Link>
 
-        {/* Right: connect (keeps same style connected/disconnected) */}
-        <div>
-          <WalletPill className="pill pill-opaque hover:opacity-90" />
+        {/* Right: connect (styled wrapper so button looks consistent) */}
+        <div className="pill pill-opaque hover:opacity-90">
+          <WalletPill />
         </div>
       </div>
     </header>
