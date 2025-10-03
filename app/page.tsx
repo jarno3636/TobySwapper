@@ -1,4 +1,3 @@
-// app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
 import SwapForm from "@/components/SwapForm";
@@ -35,13 +34,13 @@ export default function Page() {
           {/* 🔥 Burn tracker + share CTAs */}
           <TokensBurned />
 
-          {/* Teaser → About (z-10 so nothing blocks it) */}
-          <div className="glass rounded-3xl p-5 shadow-soft mt-6 relative z-10">
+          {/* Teaser → About */}
+          <div className="glass rounded-3xl p-5 shadow-soft mt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm text-inkSub">
                 New here? Come see what this project is about and how the burn works.
               </p>
-              <Link href="/about" prefetch className="pill pill-opaque hover:opacity-90 text-sm">
+              <Link href="/about" className="pill pill-opaque hover:opacity-90 text-sm">
                 Learn more on the About page →
               </Link>
             </div>
