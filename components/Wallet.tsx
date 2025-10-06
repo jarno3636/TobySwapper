@@ -3,7 +3,7 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import {
   RainbowKitProvider,
-  ConnectButton,   // ← keep this
+  ConnectButton, // used only for .Custom
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
@@ -18,7 +18,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => setMounted(true), []);
 
   const qc = useMemo(() => new QueryClient(), []);
-
   const rkTheme = useMemo(
     () =>
       darkTheme({
@@ -48,41 +47,42 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** ---- Desktop header button — themed pill wrapper ---- */
-export function WalletPill() {
+/** Reusable pill renderer for both desktop + mobile */
+function PillButton({
+  fullWidth = false,
+}: {
+  fullWidth?: boolean;
+}) {
   return (
-    <div className="pill pill-opaque">
-      <ConnectButton chainStatus="icon" accountStatus="address" showBalance={false} />
-    </div>
+    <ConnectButton.Custom>
+      {({ mounted, account, chain, openConnectModal }) => {
+        const connected = mounted && !!account && !!chain;
+
+        return (
+          <button
+            type="button"
+            onClick={openConnectModal}
+            className={`pill pill-opaque ${fullWidth ? "w-full justify-center" : ""}`}
+            aria-label={connected ? "Wallet connected" : "Connect wallet"}
+          >
+            {connected ? account.displayName : "Connect"}
+          </button>
+        );
+      }}
+    </ConnectButton.Custom>
   );
 }
 
-/** ---- Mobile pill using ConnectButton.Custom ---- */
-export function ConnectPill(props?: { onBeforeOpen?: () => void }) {
+/** ---- Desktop header button — clean single pill ---- */
+export function WalletPill() {
+  return <PillButton />;
+}
+
+/** ---- Mobile pill — full width ---- */
+export function ConnectPill() {
   return (
     <div className="w-full flex justify-center">
-      <ConnectButton.Custom>
-        {({ mounted, account, chain, openConnectModal }) => {
-          if (!mounted) return <div className="pill pill-opaque w-full justify-center">Connect</div>;
-
-          const connected = !!(account && chain);
-          const handleClick = () => {
-            props?.onBeforeOpen?.();
-            openConnectModal();
-          };
-
-          return (
-            <button
-              type="button"
-              onClick={handleClick}
-              className="pill pill-opaque w-full justify-center"
-              aria-label={connected ? "Wallet connected" : "Connect wallet"}
-            >
-              {connected ? account.displayName : "Connect"}
-            </button>
-          );
-        }}
-      </ConnectButton.Custom>
+      <PillButton fullWidth />
     </div>
   );
 }
