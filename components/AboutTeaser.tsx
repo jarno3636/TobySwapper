@@ -1,3 +1,4 @@
+// components/AboutTeaser.tsx
 "use client";
 import Link from "next/link";
 
@@ -5,7 +6,7 @@ export default function AboutTeaser() {
   return (
     <div className="glass rounded-3xl p-5 shadow-soft mt-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p className="text-sm text-inkSub">
+        <p className="text-sm text-[var(--ink-sub)]">
           New here? Come see what this project is about and how the burn works.
         </p>
         <Link
