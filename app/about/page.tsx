@@ -1,3 +1,4 @@
+// app/about/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -8,6 +9,7 @@ import { base } from "viem/chains";
 import { useReadContract, useReadContracts } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI, USDC, WETH, SWAPPER, DEAD } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
+import { SafeBoundary } from "@/components/SafeBoundary";
 
 /** minimal ABIs */
 const erc20Abi = [
@@ -46,12 +48,7 @@ function CardShell({
   iconSrc: string;
 }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="glass rounded-3xl p-5 shadow-soft block group"
-    >
+    <a href={href} target="_blank" rel="noopener noreferrer" className="glass rounded-3xl p-5 shadow-soft block group glass-hover">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className="relative inline-block w-8 h-8 rounded-full overflow-hidden">
@@ -66,15 +63,7 @@ function CardShell({
   );
 }
 
-function TokenInfoCard({
-  address,
-  icon,
-  titleOverride,
-}: {
-  address: Address;
-  icon: string;
-  titleOverride?: string;
-}) {
+function TokenInfoCard({ address, icon, titleOverride, enabled }: { address: Address; icon: string; titleOverride?: string; enabled: boolean }) {
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
     contracts: [
@@ -83,7 +72,8 @@ function TokenInfoCard({
       { address, abi: erc20Abi, functionName: "decimals", chainId: base.id },
       { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
     ],
-    query: { refetchOnWindowFocus: false, staleTime: 10_000, gcTime: 60_000 },
+    // gate queries until mounted/provider is ready
+    query: { enabled, refetchOnWindowFocus: false, staleTime: 10_000, gcTime: 60_000 },
   });
 
   const name = data?.[0]?.result as string | undefined;
@@ -119,13 +109,13 @@ function TokenInfoCard({
   );
 }
 
-function SwapperCard() {
+function SwapperCard({ enabled }: { enabled: boolean }) {
   const burned = useReadContract({
     address: SWAPPER,
     abi: swapperAbi,
     functionName: "totalTobyBurned",
     chainId: base.id,
-    query: { refetchInterval: 20_000, staleTime: 10_000, refetchOnWindowFocus: false },
+    query: { enabled, refetchInterval: 20_000, staleTime: 10_000, refetchOnWindowFocus: false },
   });
 
   const deadReads = useReadContracts({
@@ -134,7 +124,7 @@ function SwapperCard() {
       { address: TOBY, abi: erc20Abi, functionName: "decimals", chainId: base.id },
       { address: TOBY, abi: erc20Abi, functionName: "balanceOf", args: [DEAD], chainId: base.id },
     ],
-    query: { refetchOnWindowFocus: false, staleTime: 10_000 },
+    query: { enabled, refetchOnWindowFocus: false, staleTime: 10_000 },
   });
 
   const burnedNum = (() => {
@@ -187,7 +177,6 @@ function SwapperCard() {
 }
 
 export default function AboutPage() {
-  // Mount gate prevents first-paint crashes if providers/hooks momentarily mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
@@ -216,71 +205,73 @@ export default function AboutPage() {
   );
 
   return (
-    <section className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-4">About TobySwap</h1>
-          <div className="flex flex-wrap gap-3">
-            {pills.map((p) => (
-              <span key={p} className="pill bg-[var(--glass)] text-sm">
-                {p}
-              </span>
-            ))}
+    <SafeBoundary>
+      <section className="space-y-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-4">About TobySwap</h1>
+            <div className="flex flex-wrap gap-3">
+              {pills.map((p) => (
+                <span key={p} className="pill bg-[var(--glass)] text-sm">
+                  {p}
+                </span>
+              ))}
+            </div>
+            <p className="text-[var(--ink-sub)] mt-4">
+              This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn{" "}
+              <span className="font-semibold">$TOBY</span> using the 1% fee. Data below is read on-chain
+              (the same core fields BaseScan displays) and links you to the verified contracts.
+            </p>
           </div>
-          <p className="text-[var(--ink-sub)] mt-4">
-            This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn{" "}
-            <span className="font-semibold">$TOBY</span> using the 1% fee. Data below is read on-chain
-            (the same core fields BaseScan displays) and links you to the verified contracts.
-          </p>
+
+          {/* CTA back home */}
+          <Link href="/" className="pill pill-opaque hover:opacity-90 whitespace-nowrap self-start">
+            ← Back home to burn more TOBY
+          </Link>
         </div>
 
-        {/* CTA back home */}
-        <Link href="/" className="pill pill-opaque hover:opacity-90 whitespace-nowrap self-start">
-          ← Back home to burn more TOBY
-        </Link>
-      </div>
+        <SwapperCard enabled={mounted} />
 
-      <SwapperCard />
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {items.map((t) => (
-          <TokenInfoCard key={t.address} address={t.address} icon={t.icon} titleOverride={t.title} />
-        ))}
-      </div>
-
-      {/* Links */}
-      <div className="glass rounded-3xl p-6 shadow-soft">
-        <h3 className="font-semibold mb-4">Quick Links</h3>
-        <div className="flex flex-wrap gap-3">
-          <a className="pill" href={`https://basescan.org/address/${SWAPPER}`} target="_blank" rel="noopener noreferrer">
-            Swapper on BaseScan
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${TOBY}`} target="_blank" rel="noopener noreferrer">
-            $TOBY Token
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${PATIENCE}`} target="_blank" rel="noopener noreferrer">
-            PATIENCE Token
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${TABOSHI}`} target="_blank" rel="noopener noreferrer">
-            TABOSHI Token
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${USDC}`} target="_blank" rel="noopener noreferrer">
-            USDC on Base
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${WETH}`} target="_blank" rel="noopener noreferrer">
-            WETH on Base
-          </a>
-          <a className="pill" href={`https://basescan.org/address/${DEAD}`} target="_blank" rel="noopener noreferrer">
-            DEAD Burn Wallet
-          </a>
-          <a className="pill" href="https://toadgod.xyz" target="_blank" rel="noopener noreferrer">
-            Official Site — toadgod.xyz
-          </a>
-          <a className="pill" href="https://t.me/toadgang" target="_blank" rel="noopener noreferrer">
-            Toadgang Telegram
-          </a>
+        <div className="grid md:grid-cols-2 gap-6">
+          {items.map((t) => (
+            <TokenInfoCard key={t.address} address={t.address} icon={t.icon} titleOverride={t.title} enabled={mounted} />
+          ))}
         </div>
-      </div>
-    </section>
+
+        {/* Links */}
+        <div className="glass rounded-3xl p-6 shadow-soft">
+          <h3 className="font-semibold mb-4">Quick Links</h3>
+          <div className="flex flex-wrap gap-3">
+            <a className="pill" href={`https://basescan.org/address/${SWAPPER}`} target="_blank" rel="noopener noreferrer">
+              Swapper on BaseScan
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${TOBY}`} target="_blank" rel="noopener noreferrer">
+              $TOBY Token
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${PATIENCE}`} target="_blank" rel="noopener noreferrer">
+              PATIENCE Token
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${TABOSHI}`} target="_blank" rel="noopener noreferrer">
+              TABOSHI Token
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${USDC}`} target="_blank" rel="noopener noreferrer">
+              USDC on Base
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${WETH}`} target="_blank" rel="noopener noreferrer">
+              WETH on Base
+            </a>
+            <a className="pill" href={`https://basescan.org/address/${DEAD}`} target="_blank" rel="noopener noreferrer">
+              DEAD Burn Wallet
+            </a>
+            <a className="pill" href="https://toadgod.xyz" target="_blank" rel="noopener noreferrer">
+              Official Site — toadgod.xyz
+            </a>
+            <a className="pill" href="https://t.me/toadgang" target="_blank" rel="noopener noreferrer">
+              Toadgang Telegram
+            </a>
+          </div>
+        </div>
+      </section>
+    </SafeBoundary>
   );
 }
