@@ -20,6 +20,8 @@
   --shadow-strong:0 12px 0 #0b0b0b;
   --shadow-soft:0 16px 40px rgba(0,0,0,.45);
 
+  --ring: rgba(121,255,225,.6);
+
   --pill-h:48px;
   --pill-px:18px;
 }
@@ -27,19 +29,36 @@
 html, body { background: var(--bg); color: var(--ink); }
 body { min-height: 100dvh; }
 
+/* Utility text color bridges (so "text-inkSub" still works) */
+.text-inkSub, .text-ink-sub { color: var(--ink-sub); }
+
+/* ---------- Shadows ---------- */
+.shadow-soft { box-shadow: var(--shadow-soft); }
+
 /* ---------- Glass + Pills ---------- */
 .glass {
   background: var(--glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,.08);
+  /* Prefer blur when supported, fall back gracefully */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .glass-strong {
   background: var(--glass-strong);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,.10);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Subtle hover lift for interactive glass blocks */
+.glass-hover {
+  transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.10);
 }
 
 .pill {
@@ -50,6 +69,7 @@ body { min-height: 100dvh; }
   align-items: center;
   gap: 10px;
   box-shadow: var(--shadow-soft);
+  transition: background-color .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
 }
 
 /* Opaque pill (general header/menu) */
@@ -68,6 +88,28 @@ body { min-height: 100dvh; }
   background: rgba(255,255,255,.28);
 }
 
+/* Focus ring for keyboard users */
+.pill:focus-visible,
+a.pill:focus-visible,
+button.pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Subtle link style for inline anchors */
+a.link,
+.link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(121,255,225,.35);
+  transition: border-color .15s ease, opacity .15s ease;
+}
+a.link:hover,
+.link:hover {
+  border-bottom-color: rgba(121,255,225,.7);
+  opacity: .95;
+}
+
 /* ---------- Background floaters ---------- */
 @keyframes floaty {
   0%   { transform: translateY(0px) rotate(0deg); }
@@ -78,6 +120,20 @@ body { min-height: 100dvh; }
 }
 .floaty { animation: floaty 18s ease-in-out infinite; }
 
+/* Respect user motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .floaty { animation: none !important; }
+  .glass-hover:hover { transform: none !important; }
+}
+
+/* ---------- Mobile performance tweaks ---------- */
+@media (max-width: 768px) {
+  .glass, .glass-strong {
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+}
+
 /* ---------- Mobile menu sheet (opaque) ---------- */
 .menu-sheet {
   background: #0f1117; /* opaque dark */
@@ -87,8 +143,8 @@ body { min-height: 100dvh; }
 /* Overlay matches Brand.tsx now: dark + blurred */
 .menu-overlay {
   background: rgba(0,0,0,.80);
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 /* ---------- RainbowKit overrides ---------- */
