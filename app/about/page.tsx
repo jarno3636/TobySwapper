@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Address, formatUnits } from "viem";
 import { base } from "viem/chains";
 import { useReadContract, useReadContracts } from "wagmi";
@@ -29,6 +30,10 @@ function fmt(n?: number, max = 4) {
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse bg-white/10 rounded ${className}`} />;
+}
+
 function CardShell({
   children,
   title,
@@ -41,7 +46,12 @@ function CardShell({
   iconSrc: string;
 }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="glass rounded-3xl p-5 shadow-soft block group">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="glass rounded-3xl p-5 shadow-soft block group"
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className="relative inline-block w-8 h-8 rounded-full overflow-hidden">
@@ -56,8 +66,16 @@ function CardShell({
   );
 }
 
-function TokenInfoCard({ address, icon, titleOverride }: { address: Address; icon: string; titleOverride?: string }) {
-  const { data } = useReadContracts({
+function TokenInfoCard({
+  address,
+  icon,
+  titleOverride,
+}: {
+  address: Address;
+  icon: string;
+  titleOverride?: string;
+}) {
+  const { data, isLoading } = useReadContracts({
     allowFailure: true,
     contracts: [
       { address, abi: erc20Abi, functionName: "name", chainId: base.id },
@@ -81,20 +99,20 @@ function TokenInfoCard({ address, icon, titleOverride }: { address: Address; ico
     <CardShell title={titleOverride ?? symbol ?? "Token"} href={href} iconSrc={icon}>
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="space-y-1">
-          <div className="text-inkSub">Name</div>
-          <div className="font-mono">{name ?? "—"}</div>
+          <div className="text-[var(--ink-sub)]">Name</div>
+          <div className="font-mono">{isLoading ? <Skeleton className="h-4 w-24" /> : name ?? "—"}</div>
         </div>
         <div className="space-y-1">
-          <div className="text-inkSub">Symbol</div>
-          <div className="font-mono">{symbol ?? "—"}</div>
+          <div className="text-[var(--ink-sub)]">Symbol</div>
+          <div className="font-mono">{isLoading ? <Skeleton className="h-4 w-16" /> : symbol ?? "—"}</div>
         </div>
         <div className="space-y-1">
-          <div className="text-inkSub">Total Supply</div>
-          <div className="font-mono">{fmt(totalSupply)}</div>
+          <div className="text-[var(--ink-sub)]">Total Supply</div>
+          <div className="font-mono">{isLoading ? <Skeleton className="h-4 w-28" /> : fmt(totalSupply)}</div>
         </div>
         <div className="space-y-1">
-          <div className="text-inkSub">Spot (USDC)</div>
-          <div className="font-mono">${usd ? usd.toFixed(6) : "—"}</div>
+          <div className="text-[var(--ink-sub)]">Spot (USDC)</div>
+          <div className="font-mono">{usd ? `$${usd.toFixed(6)}` : <Skeleton className="h-4 w-24" />}</div>
         </div>
       </div>
     </CardShell>
@@ -132,21 +150,27 @@ function SwapperCard() {
   const href = `https://basescan.org/address/${SWAPPER}`;
   const deadHref = `https://basescan.org/address/${DEAD}`;
 
+  const loading = burned.isLoading || deadReads.isLoading;
+
   return (
     <CardShell title="Toby Swapper" href={href} iconSrc="/tobyswapper.PNG">
-      <p className="text-sm text-inkSub mb-4">
+      <p className="text-sm text-[var(--ink-sub)] mb-4">
         Routes swaps on Base and sends a 1% fee to market-buy <span className="font-semibold">$TOBY</span>, then burns it forever.
       </p>
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="space-y-1">
-          <div className="text-inkSub">Total $TOBY Burned</div>
-          <div className="font-mono">{fmt(burnedNum)}</div>
+          <div className="text-[var(--ink-sub)]">Total $TOBY Burned</div>
+          <div className="font-mono">{loading ? <Skeleton className="h-4 w-28" /> : fmt(burnedNum)}</div>
         </div>
         <div className="space-y-1">
-          <div className="text-inkSub">DEAD Wallet $TOBY</div>
-          <Link href={deadHref} target="_blank" className="font-mono underline">
-            {fmt(deadBalNum)}
-          </Link>
+          <div className="text-[var(--ink-sub)]">DEAD Wallet $TOBY</div>
+          {loading ? (
+            <Skeleton className="h-4 w-24" />
+          ) : (
+            <Link href={deadHref} target="_blank" className="font-mono underline">
+              {fmt(deadBalNum)}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -163,22 +187,33 @@ function SwapperCard() {
 }
 
 export default function AboutPage() {
-  const pills = [
-    "Base-native swapping, Toby style",
-    "1% fee auto-buys $TOBY → burn",
-    "Dark glass + playful color pips",
-    "USDC / WETH ↔ TOBY · PATIENCE · TABOSHI",
-    "On-chain reads (same data as BaseScan)",
-    "Open-source front-end; verified contracts",
-  ];
+  // Mount gate prevents first-paint crashes if providers/hooks momentarily mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
 
-  const items: { address: Address; icon: string; title?: string }[] = [
-    { address: TOBY, icon: "/tokens/toby.PNG", title: "TOBY" },
-    { address: PATIENCE, icon: "/tokens/patience.PNG", title: "PATIENCE" },
-    { address: TABOSHI, icon: "/tokens/taboshi.PNG", title: "TABOSHI" },
-    { address: USDC, icon: "/tokens/usdc.PNG", title: "USDC" },
-    { address: WETH, icon: "/tokens/weth.PNG", title: "WETH" },
-  ];
+  const pills = useMemo(
+    () => [
+      "Base-native swapping, Toby style",
+      "1% fee auto-buys $TOBY → burn",
+      "Dark glass + playful color pips",
+      "USDC / WETH ↔ TOBY · PATIENCE · TABOSHI",
+      "On-chain reads (same data as BaseScan)",
+      "Open-source front-end; verified contracts",
+    ],
+    []
+  );
+
+  const items: { address: Address; icon: string; title?: string }[] = useMemo(
+    () => [
+      { address: TOBY as Address, icon: "/tokens/toby.PNG", title: "TOBY" },
+      { address: PATIENCE as Address, icon: "/tokens/patience.PNG", title: "PATIENCE" },
+      { address: TABOSHI as Address, icon: "/tokens/taboshi.PNG", title: "TABOSHI" },
+      { address: USDC as Address, icon: "/tokens/usdc.PNG", title: "USDC" },
+      { address: WETH as Address, icon: "/tokens/weth.PNG", title: "WETH" },
+    ],
+    []
+  );
 
   return (
     <section className="space-y-8">
@@ -192,9 +227,10 @@ export default function AboutPage() {
               </span>
             ))}
           </div>
-          <p className="text-inkSub mt-4">
-            This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn <span className="font-semibold">$TOBY</span> using the
-            1% fee. Data below is read on-chain (the same core fields BaseScan displays) and links you to the verified contracts.
+          <p className="text-[var(--ink-sub)] mt-4">
+            This UI calls the Toby Swapper contract on Base and constructs paths that buy-burn{" "}
+            <span className="font-semibold">$TOBY</span> using the 1% fee. Data below is read on-chain
+            (the same core fields BaseScan displays) and links you to the verified contracts.
           </p>
         </div>
 
