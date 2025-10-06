@@ -3,9 +3,8 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import {
   RainbowKitProvider,
-  ConnectButton,
+  ConnectButton,   // ← keep this
   darkTheme,
-  ConnectButtonCustom,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,22 +17,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // single QC instance; avoids cache resets across re-renders
   const qc = useMemo(() => new QueryClient(), []);
 
-  // theme integrated w/ your CSS vars (no default blue)
   const rkTheme = useMemo(
     () =>
       darkTheme({
-        accentColor: "var(--accent)",            // your theme accent
-        accentColorForeground: "var(--ink)",     // your light ink text
+        accentColor: "var(--accent)",
+        accentColorForeground: "var(--ink)",
         borderRadius: "large",
         overlayBlur: "large",
       }),
     []
   );
 
-  if (!mounted) return null; // prevents SSR/CSR mismatch + hook timing issues
+  if (!mounted) return null;
 
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -60,22 +57,15 @@ export function WalletPill() {
   );
 }
 
-/** ---- Mobile pill with guaranteed modal open ----
- * Uses ConnectButton.Custom so a tap always opens the modal,
- * even if default button UI changes.
- */
+/** ---- Mobile pill using ConnectButton.Custom ---- */
 export function ConnectPill(props?: { onBeforeOpen?: () => void }) {
   return (
     <div className="w-full flex justify-center">
       <ConnectButton.Custom>
         {({ mounted, account, chain, openConnectModal }) => {
-          // while unmounted (SSR/first paint), render nothing interactive
-          if (!mounted) {
-            return <div className="pill pill-opaque w-full justify-center">Connect</div>;
-          }
+          if (!mounted) return <div className="pill pill-opaque w-full justify-center">Connect</div>;
 
-          const connected = mounted && account && chain;
-
+          const connected = !!(account && chain);
           const handleClick = () => {
             props?.onBeforeOpen?.();
             openConnectModal();
@@ -88,7 +78,7 @@ export function ConnectPill(props?: { onBeforeOpen?: () => void }) {
               className="pill pill-opaque w-full justify-center"
               aria-label={connected ? "Wallet connected" : "Connect wallet"}
             >
-              {connected ? `${account.displayName}` : "Connect"}
+              {connected ? account.displayName : "Connect"}
             </button>
           );
         }}
