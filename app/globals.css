@@ -159,3 +159,15 @@ a.link:hover,
 [data-rk] ._overlay {
   background: rgba(0,0,0,.75) !important;
 }
+/* --- Safety: overlays are non-interactive unless opened --- */
+.menu-overlay { pointer-events: none; } /* your mobile sheet overlay */
+.menu-overlay.open,
+.menu-overlay[aria-hidden="false"] {
+  pointer-events: auto;
+}
+
+/* If you have a sheet panel that can sit offscreen, make it inert when closed */
+.menu-sheet[aria-hidden="true"],
+.menu-sheet:not(.open) {
+  pointer-events: none;
+}
