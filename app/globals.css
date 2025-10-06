@@ -39,11 +39,9 @@ body { min-height: 100dvh; }
 .glass {
   background: var(--glass);
   border: 1px solid rgba(255,255,255,.08);
-  /* Prefer blur when supported, fall back gracefully */
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-
 .glass-strong {
   background: var(--glass-strong);
   border: 1px solid rgba(255,255,255,.10);
@@ -71,15 +69,13 @@ body { min-height: 100dvh; }
   box-shadow: var(--shadow-soft);
   transition: background-color .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
 }
-
 /* Opaque pill (general header/menu) */
 .pill-opaque {
   background: rgba(255,255,255,.10);
   border: 1px solid rgba(255,255,255,.12);
 }
 .pill-opaque:hover { background: rgba(255,255,255,.14); }
-
-/* Stronger pills specifically for Brand nav links (Home/About) */
+/* Stronger accent pill for selected states */
 .pill-nav {
   background: rgba(255,255,255,.22);
   border: 1px solid rgba(255,255,255,.28);
@@ -97,18 +93,23 @@ button.pill:focus-visible {
 }
 
 /* Subtle link style for inline anchors */
-a.link,
-.link {
+a.link, .link {
   color: var(--accent);
   text-decoration: none;
   border-bottom: 1px dashed rgba(121,255,225,.35);
   transition: border-color .15s ease, opacity .15s ease;
 }
-a.link:hover,
-.link:hover {
+a.link:hover, .link:hover {
   border-bottom-color: rgba(121,255,225,.7);
   opacity: .95;
 }
+
+/* ---------- InfoWheel helpers ---------- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Gives selected orbit icon a clean ring (used by InfoWheel) */
+.ring-accent { box-shadow: 0 0 0 2px var(--accent); }
 
 /* ---------- Background floaters ---------- */
 @keyframes floaty {
@@ -147,6 +148,15 @@ a.link:hover,
   backdrop-filter: blur(4px);
 }
 
+/* --- Safety: overlays are non-interactive unless opened --- */
+.menu-overlay { pointer-events: none; }
+.menu-overlay.open,
+.menu-overlay[aria-hidden="false"] { pointer-events: auto; }
+
+/* If a sheet can be offscreen, make it inert when closed */
+.menu-sheet[aria-hidden="true"],
+.menu-sheet:not(.open) { pointer-events: none; }
+
 /* ---------- RainbowKit overrides ---------- */
 [data-rk] { z-index: 60; }
 [data-rk] [role="dialog"]{
@@ -156,18 +166,13 @@ a.link:hover,
   border-radius: 20px !important;
 }
 [data-rk]::backdrop,
-[data-rk] ._overlay {
-  background: rgba(0,0,0,.75) !important;
-}
-/* --- Safety: overlays are non-interactive unless opened --- */
-.menu-overlay { pointer-events: none; } /* your mobile sheet overlay */
-.menu-overlay.open,
-.menu-overlay[aria-hidden="false"] {
-  pointer-events: auto;
-}
+[data-rk] ._overlay { background: rgba(0,0,0,.75) !important; }
 
-/* If you have a sheet panel that can sit offscreen, make it inert when closed */
-.menu-sheet[aria-hidden="true"],
-.menu-sheet:not(.open) {
-  pointer-events: none;
+/* Ensure RainbowKit’s default button styles don’t peek through
+   when using ConnectButton.Custom with your own .pill */
+[data-rk] button {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
