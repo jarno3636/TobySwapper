@@ -1,23 +1,27 @@
 // lib/addresses.ts
+import type { Address } from "viem";
+import { isAddressEqual } from "viem";
+
 // Base mainnet (chainId 8453)
 export const CHAIN_ID = 8453 as const;
+export const BASESCAN = "https://basescan.org" as const;
 
 // Core tokens
-export const WETH  = "0x4200000000000000000000000000000000000006" as const;
-export const USDC  = "0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913" as const;
+export const WETH: Address = "0x4200000000000000000000000000000000000006";
+export const USDC: Address = "0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913";
 
 // Tobyworld tokens
-export const TOBY     = "0xb8D98a102b0079B69FFbc760C8d857A31653e56e" as const;
-export const PATIENCE = "0x6D96f18F00B815B2109A3766E79F6A7aD7785624" as const;
-export const TABOSHI  = "0x3a1a33cf4553db61f0db2c1e1721cd480b02789f" as const;
+export const TOBY: Address     = "0xb8D98a102b0079B69FFbc760C8d857A31653e56e";
+export const PATIENCE: Address = "0x6D96f18F00B815B2109A3766E79F6A7aD7785624";
+export const TABOSHI: Address  = "0x3a1a33cf4553db61f0db2c1e1721cd480b02789f";
 
 // Router / burn / swapper
-export const ROUTER  = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24" as const;
-export const DEAD    = "0x000000000000000000000000000000000000dEaD" as const;
-export const SWAPPER = "0x6da391f470a00a206dded0f5fc0f144cae776d7c" as const;
+export const ROUTER: Address  = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24";
+export const DEAD: Address    = "0x000000000000000000000000000000000000dEaD";
+export const SWAPPER: Address = "0x6da391f470a00a206dded0f5fc0f144cae776d7c";
 
 // Token list for selects
-export type TokenInfo = { symbol: string; address: `0x${string}`; decimals: number };
+export type TokenInfo = { symbol: string; address: Address; decimals: number };
 
 export const TOKENS: readonly TokenInfo[] = [
   { symbol: "USDC",     address: USDC,     decimals: 6  },
@@ -27,6 +31,18 @@ export const TOKENS: readonly TokenInfo[] = [
   { symbol: "TABOSHI",  address: TABOSHI,  decimals: 18 },
 ] as const;
 
-/** Small helper that’s handy all over the app */
-export const isUSDC = (addr?: string) =>
-  !!addr && addr.toLowerCase() === USDC.toLowerCase();
+// Quick lookup map (by symbol)
+export const TOKENS_MAP = Object.freeze(
+  TOKENS.reduce<Record<string, TokenInfo>>((acc, t) => {
+    acc[t.symbol] = t;
+    return acc;
+  }, {})
+);
+
+/** Safer address equality (checksum-agnostic) */
+export const isUSDC = (addr?: Address | string): boolean =>
+  !!addr && isAddressEqual(addr as Address, USDC);
+
+/** Small helpers you may use elsewhere */
+export const basescanAddress = (addr: Address) => `${BASESCAN}/address/${addr}` as const;
+export const basescanTx = (tx: `0x${string}`) => `${BASESCAN}/tx/${tx}` as const;
