@@ -1,8 +1,13 @@
 // components/AboutTeaser.tsx
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AboutTeaser() {
+  const router = useRouter();
+  useEffect(() => { router.prefetch("/about"); }, [router]);
+
   return (
     <div className="glass rounded-3xl p-5 shadow-soft mt-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
