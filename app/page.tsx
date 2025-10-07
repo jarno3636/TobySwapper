@@ -1,18 +1,17 @@
-// app/page.tsx
 import Image from "next/image";
 import SwapForm from "@/components/SwapForm";
 import TokensBurned from "@/components/TokensBurned";
 import Footer from "@/components/Footer";
-import InfoWheel from "@/components/InfoWheel"; // ← new wheel selector
+import InfoWheel from "@/components/InfoWheel";
 
 export default function Page() {
   return (
-    <>
-      <div className="grid md:grid-cols-2 gap-8 items-start">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
+      <div className="w-full max-w-6xl grid md:grid-cols-2 gap-10 items-center">
         {/* LEFT SIDE */}
-        <div>
-          {/* Hero image - smaller so it doesn’t crop */}
-          <div className="glass rounded-3xl overflow-hidden mb-6 relative aspect-[4/3]">
+        <div className="flex flex-col items-center md:items-start">
+          {/* Hero image */}
+          <div className="glass rounded-3xl overflow-hidden mb-6 relative aspect-[4/3] w-full max-w-md">
             <Image
               src="/toby-hero.PNG"
               alt="Toby hero"
@@ -23,27 +22,32 @@ export default function Page() {
           </div>
 
           {/* Header + Pills */}
-          <h1 className="text-3xl font-bold mb-4">Swap. Burn. Spread the Lore.</h1>
-          <div className="flex flex-wrap gap-3 mb-6">
+          <h1 className="text-3xl font-bold mb-4 text-center md:text-left">
+            Swap. Burn. Spread the Lore.
+          </h1>
+          <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-6">
             <span className="pill bg-[var(--glass)] text-sm">1% auto-burn to $TOBY 🔥</span>
-            <span className="pill bg-[var(--glass)] text-sm">Swap USDC, WETH, Patience, Taboshi</span>
-            <span className="pill bg-[var(--glass)] text-sm">Fuel the meme · Join the lore 🐸</span>
+            <span className="pill bg-[var(--glass)] text-sm">
+              Swap USDC, WETH, Patience, Taboshi
+            </span>
+            <span className="pill bg-[var(--glass)] text-sm">
+              Fuel the meme · Join the lore 🐸
+            </span>
           </div>
 
+          {/* Swap form + Tokens burned */}
           <SwapForm />
-
-          {/* 🔥 Burn tracker + share CTAs */}
           <TokensBurned />
         </div>
 
-        {/* RIGHT SIDE - Wheel + Contracts */}
-        <div className="space-y-6">
+        {/* RIGHT SIDE */}
+        <div className="flex flex-col items-center gap-8">
           <InfoWheel />
 
-          <div className="glass rounded-3xl p-6 shadow-soft">
-            <h3 className="font-semibold mb-6">Contracts</h3>
+          <div className="glass rounded-3xl p-6 shadow-soft w-full max-w-md">
+            <h3 className="font-semibold mb-6 text-center">Contracts</h3>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 justify-items-center">
               {[
                 {
                   src: "/tokens/toby.PNG",
@@ -102,8 +106,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
-    </>
+    </div>
   );
 }
