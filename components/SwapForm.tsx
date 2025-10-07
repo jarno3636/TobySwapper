@@ -12,14 +12,8 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 
 const UniV2RouterAbi = [
-  {
-    type: "function",
-    name: "getAmountsOut",
-    stateMutability: "view",
-    inputs: [
-      { name: "amountIn", type: "uint256" },
-      { name: "path", type: "address[]" },
-    ],
+  { type: "function", name: "getAmountsOut", stateMutability: "view",
+    inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],
     outputs: [{ name: "amounts", type: "uint256[]" }],
   },
 ] as const;
@@ -165,6 +159,7 @@ function useStickyBalance(
 
 export default function SwapForm() {
   const { address, chain, isConnected } = useAccount();
+  const chainId = chain?.id ?? base.id;
   const { swapETHForTokens, swapTokensForTokens } = useDoSwap();
 
   const [modeTokenToToken, setModeTokenToToken] = useState(false);
@@ -173,7 +168,7 @@ export default function SwapForm() {
     TOKENS.find((t) => t.address !== USDC)!.address
   );
   const [amt, setAmt] = useState("0.01");
-  const [showDebug, setShowDebug] = useState(true); // default ON so you see it immediately
+  const [showDebug, setShowDebug] = useState(true);
 
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
@@ -196,12 +191,12 @@ export default function SwapForm() {
   const outMeta = byAddress(tokenOut);
 
   // Balances
-  const balInRaw = useTokenBalance(address, inMeta.address);
+  const balInRaw  = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
 
-  // include wallet address in reset keys (prevents “ghost” balances)
-  const balInSticky  = useStickyBalance(balInRaw,  `${address ?? "0x"}-${inMeta.address ?? "ETH"}`);
-  const balOutSticky = useStickyBalance(balOutRaw, `${address ?? "0x"}-${outMeta.address ?? "ETH"}`);
+  // include chainId + wallet address in reset keys (prevents “ghost” balances)
+  const balInSticky  = useStickyBalance(balInRaw,  `${chainId}-${address ?? "0x"}-${inMeta.address ?? "ETH"}`);
+  const balOutSticky = useStickyBalance(balOutRaw, `${chainId}-${address ?? "0x"}-${outMeta.address ?? "ETH"}`);
 
   // Prices
   const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
