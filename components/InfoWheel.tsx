@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Address, formatUnits } from "viem";
 import { base } from "viem/chains";
 import { useReadContracts } from "wagmi";
@@ -27,14 +26,11 @@ const ITEMS: WheelItem[] = [
   { kind: "token", title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
   { kind: "token", title: "USDC",     icon: "/tokens/usdc.PNG",     address: USDC },
   { kind: "token", title: "WETH",     icon: "/tokens/weth.PNG",     address: WETH },
-
   { kind: "link",  title: "toadgod.xyz", icon: "/toby2.PNG", href: "https://toadgod.xyz",
     blurb: "Official site: lore, links, and updates." },
-
   { kind: "link",  title: "Telegram", icon: "/toby2.PNG",
     href: "https://t.me/toadgang/212753",
     blurb: "Join Toadgang — community chat & alpha." },
-
   { kind: "link",  title: "@toadgod1017", icon: "/toby2.PNG",
     href: "https://x.com/toadgod1017?s=21",
     blurb: "Follow on X for drops & news." },
@@ -56,7 +52,6 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
       { address, abi: erc20Abi, functionName: "symbol",      chainId: base.id },
       { address, abi: erc20Abi, functionName: "decimals",    chainId: base.id },
       { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
-      // optionally show DEAD wallet holdings as a fun stat
       { address, abi: erc20Abi, functionName: "balanceOf",   args: [DEAD], chainId: base.id },
     ],
     query: { refetchOnWindowFocus: false, staleTime: 15_000, gcTime: 60_000 },
@@ -73,7 +68,7 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const href = `https://basescan.org/address/${address}`;
 
   return (
-    <div className="glass rounded-3xl p-5 shadow-soft">
+    <div className="glass rounded-3xl p-5 shadow-soft hover-glow">
       <div className="flex items-center gap-3 mb-4">
         <span className="relative inline-block w-10 h-10 rounded-full overflow-hidden">
           <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
@@ -85,22 +80,10 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <div className="text-[var(--ink-sub)]">Name</div>
-          <div className="font-mono">{isLoading ? "…" : name ?? "—"}</div>
-        </div>
-        <div>
-          <div className="text-[var(--ink-sub)]">Symbol</div>
-          <div className="font-mono">{isLoading ? "…" : symbol ?? "—"}</div>
-        </div>
-        <div>
-          <div className="text-[var(--ink-sub)]">Total Supply</div>
-          <div className="font-mono">{isLoading ? "…" : fmt(supply)}</div>
-        </div>
-        <div>
-          <div className="text-[var(--ink-sub)]">DEAD Wallet</div>
-          <div className="font-mono">{isLoading ? "…" : fmt(deadAmt)}</div>
-        </div>
+        <div><div className="text-[var(--ink-sub)]">Name</div><div className="font-mono">{isLoading ? "…" : name ?? "—"}</div></div>
+        <div><div className="text-[var(--ink-sub)]">Symbol</div><div className="font-mono">{isLoading ? "…" : symbol ?? "—"}</div></div>
+        <div><div className="text-[var(--ink-sub)]">Total Supply</div><div className="font-mono">{isLoading ? "…" : fmt(supply)}</div></div>
+        <div><div className="text-[var(--ink-sub)]">DEAD Wallet</div><div className="font-mono">{isLoading ? "…" : fmt(deadAmt)}</div></div>
       </div>
     </div>
   );
@@ -108,7 +91,7 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
 
 function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; blurb: string; icon: string }) {
   return (
-    <div className="glass rounded-3xl p-5 shadow-soft">
+    <div className="glass rounded-3xl p-5 shadow-soft hover-glow">
       <div className="flex items-center gap-3 mb-3">
         <span className="relative inline-block w-10 h-10 rounded-full overflow-hidden">
           <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
@@ -122,61 +105,84 @@ function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; 
 }
 
 export default function InfoWheel() {
-  const [active, setActive] = useState(ITEMS[0]); // default to first slice
-  const slices = useMemo(() => ITEMS.length, []);
-  const radius = 120; // px from center for icons
+  const [active, setActive] = useState<WheelItem>(ITEMS[0]);
+  const [paused, setPaused] = useState(false);
+
+  const slices = ITEMS.length;
+  const radius = 120; // px
+  const containerSize = 320;
+  const center = containerSize / 2;
 
   return (
-    <div className="grid md:grid-cols-2 gap-8 items-start">
-      {/* WHEEL */}
-      <div className="glass rounded-3xl p-6 shadow-soft">
-        <h3 className="font-semibold mb-4">Explore TobyWorld</h3>
-        <div className="relative mx-auto" style={{ width: 320, height: 320 }}>
-          {/* center node */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+    <div className="grid md:grid-cols-2 gap-8 items-start w-full">
+      {/* WHEEL CARD */}
+      <div className="glass rounded-3xl p-6 shadow-soft hover-glow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Explore TobyWorld</h3>
+          <button
+            type="button"
+            onClick={() => setPaused(p => !p)}
+            className={`pill ${paused ? "pill-nav" : "pill-opaque"} text-xs`}
+            aria-pressed={paused}
+          >
+            {paused ? "Play" : "Pause"}
+          </button>
+        </div>
+
+        <div className="relative mx-auto" style={{ width: containerSize, height: containerSize }}>
+          {/* Center label */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
             <div className="text-xs text-[var(--ink-sub)] mb-1">Selected</div>
             <div className="pill pill-nav">{active.title}</div>
           </div>
 
-          {/* slices as orbiting icons */}
-          {ITEMS.map((item, i) => {
-            const angle = (i / slices) * Math.PI * 2;
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
+          {/* Rotating ring */}
+          <div
+            className={`${paused ? "" : "spin-slow pause-on-hover"} absolute inset-0`}
+            style={{ transformOrigin: "50% 50%" }}
+          >
+            {ITEMS.map((item, i) => {
+              const angle = (i / slices) * Math.PI * 2;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              const isActive = active === item;
 
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setActive(item)}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full p-2 glass-hover
-                  ${active === item ? "ring-2 ring-[var(--accent)]" : ""}`}
-                style={{ left: 160 + x, top: 160 + y }}
-                aria-pressed={active === item}
-                aria-label={item.title}
-              >
-                <span className="relative inline-block w-14 h-14 rounded-2xl overflow-hidden glass">
-                  <Image
-                    src={item.kind === "token" ? (item as any).icon : item.icon}
-                    alt={item.title}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
-                </span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActive(item)}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: center + x, top: center + y }}
+                  aria-pressed={isActive}
+                  aria-label={item.title}
+                >
+                  <span
+                    className={`relative inline-block w-14 h-14 rounded-2xl overflow-hidden glass transition-transform
+                      ${isActive ? "ring-2 ring-[var(--accent)] scale-[1.06]" : "hover:scale-105"}`}
+                  >
+                    <Image
+                      src={item.icon}
+                      alt={item.title}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Mobile fallback: horizontal scroll list */}
+        {/* Mobile: quick list */}
         <div className="mt-4 flex md:hidden gap-2 overflow-x-auto no-scrollbar">
           {ITEMS.map((item, i) => (
             <button
               key={i}
               type="button"
               onClick={() => setActive(item)}
-              className={`pill ${active === item ? "pill-nav" : "pill-opaque"}`}
+              className={`pill ${active === item ? "pill-nav" : "pill-opaque"} text-sm`}
             >
               {item.title}
             </button>
@@ -184,19 +190,19 @@ export default function InfoWheel() {
         </div>
       </div>
 
-      {/* DETAILS PANEL */}
+      {/* DETAILS */}
       <div className="space-y-4">
         {active.kind === "token" ? (
           <TokenPanel
-            address={(active as Extract<WheelItem,{kind:"token"}>).address}
+            address={(active as Extract<WheelItem, { kind: "token" }>).address}
             title={active.title}
             icon={active.icon}
           />
         ) : (
           <LinkPanel
-            href={(active as Extract<WheelItem,{kind:"link"}>).href}
+            href={(active as Extract<WheelItem, { kind: "link" }>).href}
             title={active.title}
-            blurb={(active as Extract<WheelItem,{kind:"link"}>).blurb}
+            blurb={(active as Extract<WheelItem, { kind: "link" }>).blurb}
             icon={active.icon}
           />
         )}
