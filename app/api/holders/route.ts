@@ -1,40 +1,53 @@
 import { NextResponse } from "next/server";
 
-// Revalidate this route every 60s (Route Handler style)
-export const revalidate = 60;
-
-// Put your BaseScan API key in .env / Vercel Project Settings
-// BASESCAN_API_KEY=xxxxxxxx
 const KEY = process.env.BASESCAN_API_KEY;
+
+// Minimal safe fetch wrapper
+async function safeFetchJSON(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(url, { cache: "no-store" }); // fetch fresh each time
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
+  if (!address) return NextResponse.json({ error: "Missing address" }, { status: 400 });
 
-  if (!address) {
-    return NextResponse.json({ error: "Missing address" }, { status: 400 });
+  let holders: number | null = null;
+
+  /* --------------------
+     1️⃣ Try BaseScan first
+     -------------------- */
+  if (KEY) {
+    const baseScanUrl = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${address}&page=1&offset=100&apikey=${KEY}`;
+    const baseScan = await safeFetchJSON(baseScanUrl);
+
+    if (Array.isArray(baseScan?.result) && baseScan.result.length > 0) {
+      holders = baseScan.result.length;
+    }
   }
-  if (!KEY) {
-    // No key configured — UI will show "—"
-    return NextResponse.json({ holders: null }, { status: 200 });
+
+  /* --------------------
+     2️⃣ Fallback: DexScreener
+     -------------------- */
+  if (holders === null) {
+    const dexUrl = `https://api.dexscreener.com/latest/dex/tokens/${address}`;
+    const dex = await safeFetchJSON(dexUrl);
+
+    // DexScreener sometimes embeds this info in "pair" metadata
+    const altCount = dex?.pair?.holders || dex?.holders || null;
+    if (typeof altCount === "number" && altCount > 0) {
+      holders = altCount;
+    }
   }
 
-  try {
-    // Etherscan-style endpoint (BaseScan compatible)
-    const url = `https://api.basescan.org/api?module=token&action=tokenholderchart&contractaddress=${address}&range=365&apikey=${KEY}`;
-
-    // Use standard RequestInit; caching controlled by `revalidate` export above
-    const r = await fetch(url, { cache: "force-cache" });
-    const json = await r.json();
-
-    // expected: { status, message, result: [{ Date, Holder }, ...] }
-    const series = Array.isArray(json?.result) ? json.result : [];
-    const last = series[series.length - 1];
-    const holders =
-      last && Number.isFinite(Number(last?.Holder)) ? Number(last.Holder) : null;
-
-    return NextResponse.json({ holders }, { status: 200 });
-  } catch {
-    return NextResponse.json({ holders: null }, { status: 200 });
-  }
+  /* --------------------
+     3️⃣ Return result once
+     -------------------- */
+  return NextResponse.json({ holders }, { status: 200 });
 }
