@@ -4,11 +4,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { erc20Abi } from "viem";
-import { base } from "viem/chains";
 import { useBalance, usePublicClient } from "wagmi";
 import { TOKENS, USDC } from "@/lib/addresses";
 
-/** Look up known decimals from your TOKENS list (falls back to 18, USDC=6) */
 function knownDecimals(token?: Address) {
   if (!token) return 18;
   if (token.toLowerCase() === USDC.toLowerCase()) return 6;
@@ -16,20 +14,31 @@ function knownDecimals(token?: Address) {
   return hit?.decimals ?? 18;
 }
 
-/**
- * Reliable balance for native or ERC-20 on Base:
- * 1) wagmi useBalance (fast cached)
- * 2) Fallback to viem:
- *    - Native: getBalance
- *    - ERC20: balanceOf + decimals
- * Strong per-user+token scopeKey prevents cross-bleed.
- */
-export function useTokenBalance(user?: Address, token?: Address) {
-  const client = usePublicClient({ chainId: base.id });
+export type UseTokenBalanceResult = {
+  // unified
+  value?: bigint;
+  decimals: number;
+  isLoading: boolean;
+  error?: unknown;
+  refetch: () => void;
+
+  // diagnostics
+  wagmi?: { value?: bigint; decimals?: number };
+  fallback?: { value?: bigint; decimals?: number };
+};
+
+export function useTokenBalance(
+  user?: Address,
+  token?: Address,
+  opts?: { chainId?: number } // allow explicit chainId
+): UseTokenBalanceResult {
+  const chainId = opts?.chainId ?? 8453; // Base by default
+  const client = usePublicClient({ chainId });
 
   const scopeKey = useMemo(
-    () => `bal-${(user ?? "0x").toLowerCase()}-${(token ?? "native").toLowerCase()}`,
-    [user, token]
+    () =>
+      `bal-${chainId}-${(user ?? "0x").toLowerCase()}-${(token ?? "native").toLowerCase()}`,
+    [user, token, chainId]
   );
 
   const {
@@ -40,7 +49,7 @@ export function useTokenBalance(user?: Address, token?: Address) {
   } = useBalance({
     address: user,
     token,
-    chainId: base.id,
+    chainId,
     scopeKey,
     query: {
       enabled: Boolean(user),
@@ -57,18 +66,16 @@ export function useTokenBalance(user?: Address, token?: Address) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user) return;
+      if (!user || !client) return;
 
-      // prefer wagmi result when complete
+      // If wagmi already delivered both fields, we can skip fallback
       if (data?.value !== undefined && data?.decimals !== undefined) {
         if (!cancelled) setFallback({});
         return;
       }
-      if (!client) return;
 
       try {
         if (!token) {
-          // native ETH on Base
           const raw = await client.getBalance({ address: user });
           if (!cancelled) setFallback({ value: raw, decimals: 18 });
         } else {
@@ -78,23 +85,26 @@ export function useTokenBalance(user?: Address, token?: Address) {
           ]);
           if (!cancelled) setFallback({ value: raw, decimals: dec });
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) setFallback({});
       }
     })();
     return () => { cancelled = true; };
-  }, [client, user, token, data?.value, data?.decimals, scopeKey]);
+    // include data fields so we stop falling back once wagmi has them
+  }, [client, user, token, chainId, data?.value, data?.decimals, scopeKey]);
 
-  const decimals =
+  const finalDecimals =
     data?.decimals ??
     fallback.decimals ??
     knownDecimals(token);
 
   return {
     value: data?.value ?? fallback.value,
-    decimals,
+    decimals: finalDecimals,
     isLoading: isFetching,
     error,
     refetch,
+    wagmi: { value: data?.value, decimals: data?.decimals },
+    fallback,
   };
 }
