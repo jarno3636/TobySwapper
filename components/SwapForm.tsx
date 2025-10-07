@@ -1,3 +1,4 @@
+// components/SwapForm.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -9,7 +10,6 @@ import { TOKENS, USDC, ROUTER, WETH } from "@/lib/addresses";
 import { useDoSwap, buildPaths } from "@/hooks/useTobySwapper";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
-import BalanceDebug from "./debug/BalanceDebug"; // <-- NEW
 
 const UniV2RouterAbi = [
   {
@@ -33,23 +33,125 @@ function byAddress(addr?: Address | "ETH") {
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
 
-const eq = (a?: string, b?: string) =>
-  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-// keep last non-empty balance string; reset when asset OR user changes
+// ---------- local tiny DebugPanel (no imports/paths) ----------
+function DebugPanel({
+  address,
+  chain,
+  tokenIn,
+  tokenOut,
+  inMeta,
+  outMeta,
+  balInRaw,
+  balOutRaw,
+  amountInHuman,
+  amountInBig,
+  path,
+  expectedOutBig,
+  quoteEnabled,
+  refetchQuote,
+  slippage,
+  minOutMainStr,
+}: {
+  address?: Address;
+  chain?: { id: number; name?: string };
+  tokenIn: Address | "ETH";
+  tokenOut: Address;
+  inMeta: { symbol: string; decimals: number; address?: Address };
+  outMeta: { symbol: string; decimals: number; address?: Address };
+  balInRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
+  balOutRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
+  amountInHuman: string;
+  amountInBig: bigint;
+  path: Address[];
+  expectedOutBig?: bigint;
+  quoteEnabled: boolean;
+  refetchQuote: () => void;
+  slippage: number;
+  minOutMainStr: string;
+}) {
+  const fmt = (v?: bigint, d = 18) => {
+    try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
+    catch { return "—"; }
+  };
+  return (
+    <div className="glass rounded-2xl p-4 border border-white/10 text-xs">
+      <div className="mb-3 font-semibold">Debug</div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <div>Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}</div>
+          <div>Account: <code className="break-all">{address ?? "—"}</code></div>
+          <div>Token In: <b>{inMeta.symbol}</b> <small>({inMeta.address ?? "ETH"})</small></div>
+          <div>Token Out: <b>{outMeta.symbol}</b> <small>({outMeta.address})</small></div>
+        </div>
+
+        <div className="space-y-1">
+          <div>Amount In (human): <code>{amountInHuman}</code></div>
+          <div>Amount In (raw): <code>{amountInBig.toString()}</code></div>
+          <div>Quote enabled: <code>{String(quoteEnabled)}</code></div>
+          <div>Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code></div>
+          <div>Expected Out (human): <code>{fmt(expectedOutBig, outMeta.decimals)}</code></div>
+          <div>MinOut main: <code>{minOutMainStr}</code> · Slippage: <code>{slippage}%</code></div>
+        </div>
+      </div>
+
+      <div className="mt-2">
+        <div className="mb-1">Main Path:</div>
+        <div className="flex flex-wrap gap-1">
+          {path.length ? path.map((a, i) => (
+            <code key={i} className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">{a}</code>
+          )) : <span>—</span>}
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="glass rounded-xl p-3">
+          <div className="font-semibold mb-1">Balance In</div>
+          <div>decimals: <code>{balInRaw.decimals ?? "—"}</code></div>
+          <div>raw: <code>{balInRaw.value?.toString() ?? "—"}</code></div>
+          <div>human: <code>{fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}</code></div>
+          <div>loading: <code>{String(balInRaw.isLoading)}</code></div>
+          <div>error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code></div>
+          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balInRaw.refetch?.()}>
+            Refetch In
+          </button>
+        </div>
+
+        <div className="glass rounded-xl p-3">
+          <div className="font-semibold mb-1">Balance Out</div>
+          <div>decimals: <code>{balOutRaw.decimals ?? "—"}</code></div>
+          <div>raw: <code>{balOutRaw.value?.toString() ?? "—"}</code></div>
+          <div>human: <code>{fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}</code></div>
+          <div>loading: <code>{String(balOutRaw.isLoading)}</code></div>
+          <div>error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code></div>
+          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balOutRaw.refetch?.()}>
+            Refetch Out
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <button className="pill pill-opaque px-2 py-1" onClick={() => refetchQuote()}>
+          Refetch Quote
+        </button>
+      </div>
+    </div>
+  );
+}
+// ---------- end local DebugPanel ----------
+
 function useStickyBalance(
   val?: { value?: bigint; decimals?: number },
   resetKey?: string
 ) {
   const [sticky, setSticky] = useState<string | undefined>(undefined);
   const last = useRef<string | undefined>(undefined);
-
-  // clear when token/user changes to avoid lingering values
   useEffect(() => {
     last.current = undefined;
     setSticky(undefined);
   }, [resetKey]);
-
   useEffect(() => {
     if (!val?.value || val.decimals == null) return;
     try {
@@ -58,7 +160,6 @@ function useStickyBalance(
       setSticky(f);
     } catch {}
   }, [val?.value, val?.decimals]);
-
   return last.current ?? sticky;
 }
 
@@ -72,20 +173,19 @@ export default function SwapForm() {
     TOKENS.find((t) => t.address !== USDC)!.address
   );
   const [amt, setAmt] = useState("0.01");
-  const [showDebug, setShowDebug] = useState(false); // <-- NEW
+  const [showDebug, setShowDebug] = useState(true); // default ON so you see it immediately
 
-  // slippage (%)
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
 
-  // debounce amount to reduce quote churn
+  // debounce amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
   useEffect(() => {
     const id = setTimeout(() => setDebouncedAmt(amt), 300);
     return () => clearTimeout(id);
   }, [amt]);
 
-  // update mode when user toggles
+  // toggle ETH vs token→token
   useEffect(() => {
     if (modeTokenToToken && tokenIn === "ETH") setTokenIn(USDC as Address);
     if (!modeTokenToToken && tokenIn !== "ETH") setTokenIn("ETH");
@@ -95,54 +195,39 @@ export default function SwapForm() {
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
 
-  // ---------- Balances (wagmi + ERC20 fallback) ----------
+  // Balances
   const balInRaw = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
 
-  // IMPORTANT: include wallet address in the reset key so values never cross-bleed
+  // include wallet address in reset keys (prevents “ghost” balances)
   const balInSticky  = useStickyBalance(balInRaw,  `${address ?? "0x"}-${inMeta.address ?? "ETH"}`);
   const balOutSticky = useStickyBalance(balOutRaw, `${address ?? "0x"}-${outMeta.address ?? "ETH"}`);
 
-  // ---------- Prices (sticky cached in hook) ----------
+  // Prices
   const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
-
   const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = useMemo(
-    () => (Number.isFinite(amtNum) ? amtNum * inUsd : 0),
-    [amtNum, inUsd]
-  );
+  const amtInUsd = useMemo(() => (Number.isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
 
-  // ---------- Build main path & detect identity/ETH↔WETH 1:1 ----------
+  // Paths & identity detection
   const { mainPath, isIdentityRoute, isEthWrapUnwrap } = useMemo(() => {
     const built = buildPaths(tokenIn, tokenOut) as any;
     const p: Address[] = Array.isArray(built?.pathForMainSwap) ? built.pathForMainSwap : [];
-
-    // identity if (tokenIn == tokenOut) after normalizing ETH→WETH for routing
     const inAddr = tokenIn === "ETH" ? WETH : (tokenIn as Address);
     const identity = eq(inAddr, tokenOut);
     const ethWrap = tokenIn === "ETH" && eq(tokenOut, WETH);
     const wethUnwrap = inMeta.address && eq(inMeta.address, WETH) && tokenOut === (WETH as Address);
-
-    return {
-      mainPath: p,
-      isIdentityRoute: identity,
-      isEthWrapUnwrap: ethWrap || wethUnwrap,
-    };
+    return { mainPath: p, isIdentityRoute: identity, isEthWrapUnwrap: ethWrap || wethUnwrap };
   }, [tokenIn, tokenOut, inMeta.address]);
 
-  // ---------- Amount in (debounced) ----------
+  // Amount in (raw)
   const amountInBig = useMemo(() => {
-    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); }
-    catch { return 0n; }
+    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
 
-  // Only enable on-chain quote when path has ≥ 2 and not identity
+  // Quote
   const quoteEnabled =
-    amountInBig > 0n &&
-    mainPath.length >= 2 &&
-    isAddress(mainPath[mainPath.length - 1]!) &&
-    !isIdentityRoute;
+    amountInBig > 0n && mainPath.length >= 2 && isAddress(mainPath[mainPath.length - 1]!) && !isIdentityRoute;
 
   const { data: amountsOut, isFetching: isQuoteLoading, refetch: refetchQuote } = useReadContract({
     address: quoteEnabled ? (ROUTER as Address) : undefined,
@@ -157,7 +242,6 @@ export default function SwapForm() {
     },
   } as any);
 
-  // expectedOut: identity or ETH↔WETH => 1:1; else last amount from router
   const expectedOutBig: bigint | undefined = useMemo(() => {
     if (isIdentityRoute || isEthWrapUnwrap) return amountInBig;
     if (Array.isArray(amountsOut)) {
@@ -167,25 +251,21 @@ export default function SwapForm() {
     return undefined;
   }, [isIdentityRoute, isEthWrapUnwrap, amountInBig, amountsOut]);
 
-  // sticky last good quote (human)
   const lastQuoteRef = useRef<number | undefined>(undefined);
   const expectedOutHuman = useMemo(() => {
-    try {
-      return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined;
-    } catch { return undefined; }
+    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
+    catch { return undefined; }
   }, [expectedOutBig, outMeta.decimals]);
-
   if (expectedOutHuman != null && isFinite(expectedOutHuman) && expectedOutHuman > 0) {
     lastQuoteRef.current = expectedOutHuman;
   }
   const displayQuote = expectedOutHuman ?? lastQuoteRef.current ?? undefined;
 
-  // minOut = expected * (1 - slippage)
   const minOutMainStr = useMemo(() => {
     if (!expectedOutBig) return "0";
     const bps = Math.round((100 - slippage) * 100);
     const minOut = (expectedOutBig * BigInt(bps)) / 10000n;
-    return minOut.toString(); // out decimals implied by expectedOutBig
+    return minOut.toString();
   }, [expectedOutBig, slippage]);
 
   const setMax = () => {
@@ -232,7 +312,7 @@ export default function SwapForm() {
           </button>
           <button
             className="pill pill-opaque px-3 py-1 text-xs"
-            onClick={() => setShowDebug(v => !v)}
+            onClick={() => setShowDebug((v) => !v)}
             title="Toggle debug"
           >
             {showDebug ? "Hide Debug" : "Show Debug"}
@@ -245,12 +325,7 @@ export default function SwapForm() {
           Connected to {chain?.name}. Please switch to Base for balances & swaps.
         </div>
       )}
-
-      {!isConnected && (
-        <div className="mb-3 text-xs text-inkSub">
-          Connect your wallet to load balances.
-        </div>
-      )}
+      {!isConnected && <div className="mb-3 text-xs text-inkSub">Connect your wallet to load balances.</div>}
 
       <div className="space-y-4">
         {/* Mode toggle */}
@@ -289,13 +364,10 @@ export default function SwapForm() {
               Amount {tokenIn === "ETH" ? "(ETH)" : `(${inMeta.symbol})`}
             </label>
             <div className="text-xs text-inkSub">
-              Bal:{" "}
-              <span className="font-mono">
+              Bal: <span className="font-mono">
                 {balInSticky ? Number(balInSticky).toFixed(6) : (isConnected ? "—" : "Connect wallet")}
               </span>
-              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
-                MAX
-              </button>
+              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>MAX</button>
             </div>
           </div>
 
@@ -306,20 +378,12 @@ export default function SwapForm() {
             placeholder="0.0"
             inputMode="decimal"
           />
-          <div className="mt-2 text-xs text-inkSub">
-            ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
-          </div>
+          <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
         </div>
 
         {/* Center swap-sides */}
         <div className="flex justify-center">
-          <button
-            className="pill pill-opaque px-3 py-1 text-sm"
-            type="button"
-            onClick={swapSides}
-            aria-label="Swap sides"
-            title="Swap sides"
-          >
+          <button className="pill pill-opaque px-3 py-1 text-sm" type="button" onClick={swapSides} aria-label="Swap sides" title="Swap sides">
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v18M8 7l4-4 4 4M16 17l-4 4-4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
             </svg>
@@ -329,26 +393,14 @@ export default function SwapForm() {
         {/* Token Out */}
         <div className="space-y-2">
           <label className="text-sm text-inkSub">Token Out</label>
-          <TokenSelect
-            value={tokenOut}
-            onChange={setTokenOut}
-            exclude={tokenIn as Address}
-            balance={balOutSticky}
-          />
+          <TokenSelect value={tokenOut} onChange={setTokenOut} exclude={tokenIn as Address} balance={balOutSticky} />
           <div className="text-xs text-inkSub">
             {isIdentityRoute || isEthWrapUnwrap ? (
-              <>
-                1:1 route · Est:{" "}
-                <span className="font-mono">{Number(debouncedAmt || "0").toFixed(6)}</span>{" "}
-                {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              </>
+              <>1:1 route · Est: <span className="font-mono">{Number(debouncedAmt || "0").toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
             ) : isQuoteLoading && displayQuote === undefined ? (
               <>Fetching…</>
             ) : displayQuote !== undefined ? (
-              <>
-                Est: <span className="font-mono">{displayQuote.toFixed(6)}</span> {outMeta.symbol}
-                {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              </>
+              <>Est: <span className="font-mono">{displayQuote.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
             ) : (
               <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
             )}
@@ -364,8 +416,9 @@ export default function SwapForm() {
       {/* Debug panel */}
       {showDebug && (
         <div className="mt-6">
-          <BalanceDebug
+          <DebugPanel
             address={address}
+            chain={chain}
             tokenIn={tokenIn}
             tokenOut={tokenOut}
             inMeta={inMeta}
@@ -380,7 +433,6 @@ export default function SwapForm() {
             refetchQuote={refetchQuote}
             slippage={slippage}
             minOutMainStr={minOutMainStr}
-            chain={chain}
           />
         </div>
       )}
@@ -392,30 +444,17 @@ export default function SwapForm() {
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>
-                Close
-              </button>
+              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0.1, 0.5, 1, 2].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSlippage(v)}
-                  className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}
-                >
+                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
                   {v}%
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={slippage}
-                onChange={(e) => setSlippage(Number(e.target.value))}
-                className="glass rounded-pill px-3 py-2 w-full"
-              />
+              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
