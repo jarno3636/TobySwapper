@@ -14,15 +14,14 @@ function knownDecimals(token?: Address) {
   return hit?.decimals ?? 18;
 }
 
+const lc = (a?: Address) => (a ? (a.toLowerCase() as Address) : undefined);
+
 export type UseTokenBalanceResult = {
-  // unified
   value?: bigint;
   decimals: number;
   isLoading: boolean;
   error?: unknown;
   refetch: () => void;
-
-  // diagnostics
   wagmi?: { value?: bigint; decimals?: number };
   fallback?: { value?: bigint; decimals?: number };
 };
@@ -30,15 +29,17 @@ export type UseTokenBalanceResult = {
 export function useTokenBalance(
   user?: Address,
   token?: Address,
-  opts?: { chainId?: number } // allow explicit chainId
+  opts?: { chainId?: number }
 ): UseTokenBalanceResult {
-  const chainId = opts?.chainId ?? 8453; // Base by default
+  const chainId = opts?.chainId ?? 8453;
   const client = usePublicClient({ chainId });
 
+  const userLC = lc(user);
+  const tokenLC = lc(token);
+
   const scopeKey = useMemo(
-    () =>
-      `bal-${chainId}-${(user ?? "0x").toLowerCase()}-${(token ?? "native").toLowerCase()}`,
-    [user, token, chainId]
+    () => `bal-${chainId}-${(userLC ?? "0x")}-${(tokenLC ?? "native")}`,
+    [userLC, tokenLC, chainId]
   );
 
   const {
@@ -47,12 +48,12 @@ export function useTokenBalance(
     refetch,
     error,
   } = useBalance({
-    address: user,
-    token,
+    address: userLC,
+    token: tokenLC,          // <- lowercase avoids checksum complaint
     chainId,
     scopeKey,
     query: {
-      enabled: Boolean(user),
+      enabled: Boolean(userLC),
       refetchInterval: 15_000,
       staleTime: 10_000,
       refetchOnWindowFocus: false,
@@ -66,22 +67,32 @@ export function useTokenBalance(
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user || !client) return;
+      if (!userLC || !client) return;
 
-      // If wagmi already delivered both fields, we can skip fallback
       if (data?.value !== undefined && data?.decimals !== undefined) {
         if (!cancelled) setFallback({});
         return;
       }
 
       try {
-        if (!token) {
-          const raw = await client.getBalance({ address: user });
+        if (!tokenLC) {
+          // native ETH
+          const raw = await client.getBalance({ address: userLC });
           if (!cancelled) setFallback({ value: raw, decimals: 18 });
         } else {
+          // ERC-20
           const [raw, dec] = await Promise.all([
-            client.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [user] }) as Promise<bigint>,
-            client.readContract({ address: token, abi: erc20Abi, functionName: "decimals" }) as Promise<number>,
+            client.readContract({
+              address: tokenLC,          // <- lowercase
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [userLC],            // <- lowercase
+            }) as Promise<bigint>,
+            client.readContract({
+              address: tokenLC,          // <- lowercase
+              abi: erc20Abi,
+              functionName: "decimals",
+            }) as Promise<number>,
           ]);
           if (!cancelled) setFallback({ value: raw, decimals: dec });
         }
@@ -90,17 +101,13 @@ export function useTokenBalance(
       }
     })();
     return () => { cancelled = true; };
-    // include data fields so we stop falling back once wagmi has them
-  }, [client, user, token, chainId, data?.value, data?.decimals, scopeKey]);
+  }, [client, userLC, tokenLC, chainId, data?.value, data?.decimals, scopeKey]);
 
-  const finalDecimals =
-    data?.decimals ??
-    fallback.decimals ??
-    knownDecimals(token);
+  const decimals = data?.decimals ?? fallback.decimals ?? knownDecimals(tokenLC);
 
   return {
     value: data?.value ?? fallback.value,
-    decimals: finalDecimals,
+    decimals,
     isLoading: isFetching,
     error,
     refetch,
