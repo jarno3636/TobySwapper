@@ -1,92 +1,111 @@
 // hooks/useTokenBalance.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { erc20Abi } from "viem";
 import { base } from "viem/chains";
 import { useBalance, usePublicClient } from "wagmi";
-import { USDC } from "@/lib/addresses";
 
 /**
- * Returns a reliable balance for native or ERC-20:
+ * Returns a reliable balance for native or ERC-20 on Base:
  * 1) Try wagmi useBalance (fast + cached)
- * 2) If missing, fall back to direct ERC20 balanceOf + decimals via viem client
- *    (guarded so TS and runtime are both safe)
+ * 2) Fallback to direct viem reads:
+ *    - Native: client.getBalance
+ *    - ERC-20: balanceOf + decimals
+ *
+ * Also fixes:
+ *  - Scope key includes user+token (no cross-sticky)
+ *  - Native ETH fallback path (previously missing)
+ *  - Reset-safe and refetches on token/address change
  */
 export function useTokenBalance(user?: Address, token?: Address) {
   const client = usePublicClient({ chainId: base.id });
 
+  // Stronger cache key (per user+token)
+  const scopeKey = useMemo(
+    () => `bal-${(user ?? "0x").toLowerCase()}-${(token ?? "native").toLowerCase()}`,
+    [user, token]
+  );
+
   const {
-    data,
+    data,          // { value, decimals, symbol }
     isFetching,
-    error,
     refetch,
+    error,
   } = useBalance({
     address: user,
     token,
     chainId: base.id,
-    // keep things calm & sticky:
-    scopeKey: token ? `bal-${token}` : "bal-native",
+    scopeKey,
     query: {
       enabled: Boolean(user),
       refetchInterval: 15_000,
       staleTime: 10_000,
       refetchOnWindowFocus: false,
       placeholderData: (prev: any) => prev,
+      retry: 2,
     },
   });
 
   const [fallback, setFallback] = useState<{ value?: bigint; decimals?: number }>({});
 
-  // When wagmi has no value for ERC-20, do a direct read (safe-guard client)
+  // Fallback for BOTH native and ERC-20
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (!user || !token) return;
 
-      // if wagmi already has a value, prefer it
+    (async () => {
+      if (!user) return;
+
+      // If wagmi already has both pieces, prefer it
       if (data?.value !== undefined && data?.decimals !== undefined) {
         if (!cancelled) setFallback({});
         return;
       }
 
-      // viem client may be momentarily undefined during hydration—guard it
       if (!client) return;
 
       try {
-        const [raw, dec] = await Promise.all([
-          client.readContract({
-            address: token,
-            abi: erc20Abi,
-            functionName: "balanceOf",
-            args: [user],
-          }) as Promise<bigint>,
-          client.readContract({
-            address: token,
-            abi: erc20Abi,
-            functionName: "decimals",
-          }) as Promise<number>,
-        ]);
-
-        if (!cancelled) setFallback({ value: raw, decimals: dec });
+        if (!token) {
+          // Native (ETH on Base)
+          const [raw] = await Promise.all([
+            client.getBalance({ address: user }),
+          ]);
+          if (!cancelled) setFallback({ value: raw, decimals: 18 });
+        } else {
+          // ERC-20
+          const [raw, dec] = await Promise.all([
+            client.readContract({
+              address: token,
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [user],
+            }) as Promise<bigint>,
+            client.readContract({
+              address: token,
+              abi: erc20Abi,
+              functionName: "decimals",
+            }) as Promise<number>,
+          ]);
+          if (!cancelled) setFallback({ value: raw, decimals: dec });
+        }
       } catch {
         if (!cancelled) setFallback({});
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user, token, data?.value, data?.decimals, client]);
+    return () => { cancelled = true; };
+  }, [client, user, token, data?.value, data?.decimals, scopeKey]);
 
-  // sensible last-resort decimals if both wagmi & fallback are missing
-  const inferredDecimals =
-    token?.toLowerCase() === USDC.toLowerCase() ? 6 : 18;
+  // Final output with reasonable default decimals if absolutely necessary
+  const decimals =
+    data?.decimals ??
+    fallback.decimals ??
+    (token ? 18 : 18); // (your listed tokens are 18; USDC is handled elsewhere in UI)
 
   return {
     value: data?.value ?? fallback.value,
-    decimals: data?.decimals ?? fallback.decimals ?? inferredDecimals,
+    decimals,
     isLoading: isFetching,
     error,
     refetch,
