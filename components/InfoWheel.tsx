@@ -26,11 +26,11 @@ const ITEMS: WheelItem[] = [
   { kind: "token", title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
   { kind: "token", title: "USDC",     icon: "/tokens/usdc.PNG",     address: USDC },
   { kind: "token", title: "WETH",     icon: "/tokens/weth.PNG",     address: WETH },
-  { kind: "link",  title: "toadgod.xyz",   icon: "/toby2.PNG", href: "https://toadgod.xyz",
+  { kind: "link",  title: "toadgod.xyz",  icon: "/toby2.PNG", href: "https://toadgod.xyz",
     blurb: "Official site: lore, links, and updates." },
-  { kind: "link",  title: "Telegram",      icon: "/toby2.PNG", href: "https://t.me/toadgang/212753",
+  { kind: "link",  title: "Telegram",     icon: "/toby2.PNG", href: "https://t.me/toadgang/212753",
     blurb: "Join Toadgang — community chat & alpha." },
-  { kind: "link",  title: "@toadgod1017",  icon: "/toby2.PNG", href: "https://x.com/toadgod1017?s=21",
+  { kind: "link",  title: "@toadgod1017", icon: "/toby2.PNG", href: "https://x.com/toadgod1017?s=21",
     blurb: "Follow on X for drops & news." },
 ];
 
@@ -42,7 +42,7 @@ function fmt(n?: number, max = 4) {
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
-/* ----------------- Detail Panels ----------------- */
+/* ---------- Detail Panels ---------- */
 function TokenPanel({ address, title, icon }: { address: Address; title: string; icon: string }) {
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
@@ -102,17 +102,17 @@ function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; 
   );
 }
 
-/* ----------------- Wheel ----------------- */
+/* ---------- Wheel ---------- */
 export default function InfoWheel() {
   const items = ITEMS;
   const count = items.length;
   const step = 360 / count;
 
-  // Responsive size
-  const size = useResponsiveWheelSize(); // 280 on small, 320+ on larger
-  const radius = Math.max(96, Math.floor(size * 0.375)); // keep icons inside
+  // Responsive wheel size: clamp(240px, viewport - 48px, 320px)
+  const size = useResponsiveWheelSize();
+  const radius = Math.max(88, Math.floor(size * 0.36)); // keep icons inside ring
 
-  // rotationDeg: 0 means "item 0 at top". Positive rotates clockwise.
+  // rotationDeg: 0 => item 0 at top. Positive clockwise.
   const [rotationDeg, setRotationDeg] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -121,30 +121,22 @@ export default function InfoWheel() {
   const centerRef = useRef<HTMLDivElement | null>(null);
   const lastAngleRef = useRef<number | null>(null);
 
-  // Snap rotation to nearest slice and update active to the one at top (0deg)
   const snapToNearest = (rot: number) => {
     const normalized = normalizeDeg(rot);
-    // Which index should be at top? angle for index k is k*step + rot.
-    // We want k such that k*step + rot ≈ 0 (mod 360) => k ≈ -rot/step
     let k = Math.round(-normalized / step);
     k = mod(k, count);
-    const snappedRot = -k * step; // put k at top exactly
+    const snappedRot = -k * step;
     setRotationDeg(snappedRot);
     setActiveIndex(k);
   };
 
-  // Clicking a slice: rotate so that slice lands at top
   const handleSelect = (i: number) => {
     const targetRot = -i * step;
-    // choose the shorter path visually: rotate to equivalent angle near current
     const adj = shortestRotation(rotationDeg, targetRot);
     setRotationDeg(adj);
-    // After transition (~250ms), ensure state is snapped/clean
-    // (if you want instantaneous snap, call snapToNearest(adj) here instead)
-    setTimeout(() => snapToNearest(adj), 260);
+    setTimeout(() => snapToNearest(adj), 220);
   };
 
-  // Pointer helpers
   const angleFromEvent = (e: PointerEvent | TouchEvent | MouseEvent) => {
     const el = centerRef.current;
     if (!el) return 0;
@@ -154,16 +146,13 @@ export default function InfoWheel() {
 
     let clientX = 0, clientY = 0;
     if ("touches" in e && e.touches.length) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+      clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
     } else if ("clientX" in e) {
-      clientX = (e as MouseEvent).clientX;
-      clientY = (e as MouseEvent).clientY;
+      clientX = (e as MouseEvent).clientX; clientY = (e as MouseEvent).clientY;
     }
-    // angle in degrees, 0° at +X axis. We want 0° at TOP, so subtract 90.
     const rad = Math.atan2(clientY - cy, clientX - cx);
-    let deg = (rad * 180) / Math.PI; // -180..180, 0 at right
-    deg -= 90; // shift so 0 = top
+    let deg = (rad * 180) / Math.PI;
+    deg -= 90; // 0° at top
     return deg;
   };
 
@@ -172,26 +161,22 @@ export default function InfoWheel() {
     dragging.current = true;
     lastAngleRef.current = angleFromEvent(e.nativeEvent);
   };
-
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
     const current = angleFromEvent(e.nativeEvent);
     const last = lastAngleRef.current ?? current;
     const delta = current - last;
-    // Keep rotation continuous (no snapping yet)
     setRotationDeg((r) => r + delta);
     lastAngleRef.current = current;
   };
-
-  const onPointerUp = (e: React.PointerEvent) => {
+  const onPointerUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
     lastAngleRef.current = null;
-    // Snap to nearest slice
     snapToNearest(rotationDeg);
   };
 
-  // Compute the item that's at top from rotationDeg, keep UI in sync
+  // keep active in sync if rotationDeg changes by other means
   useEffect(() => {
     const normalized = normalizeDeg(rotationDeg);
     let k = Math.round(-normalized / step);
@@ -204,37 +189,41 @@ export default function InfoWheel() {
 
   return (
     <div className="grid md:grid-cols-2 gap-6 items-start w-full">
-      {/* WHEEL CARD */}
-      <div className="glass rounded-3xl p-6 shadow-soft hover-glow">
+      {/* WHEEL CARD (fits screen) */}
+      <div
+        className="glass rounded-3xl p-6 shadow-soft hover-glow w-full"
+        style={{ maxWidth: "min(520px, 100%)" }}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Explore TobyWorld</h3>
           <div className="pill pill-nav text-xs">{active.title}</div>
         </div>
 
-        <div className="relative mx-auto select-none" style={{ width: size, height: size }}>
-          {/* Interaction surface */}
+        <div
+          className="relative mx-auto select-none"
+          style={{ width: size, height: size }}
+        >
+          {/* Interaction surface (prevents page scroll while dragging) */}
           <div
             ref={centerRef}
             className="absolute inset-0 rounded-full"
+            style={{ touchAction: "none" }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           />
 
-          {/* Orbiting icons rotated as a group */}
+          {/* Orbiting icons — group rotation */}
           <div
             className="absolute inset-0 transition-transform duration-200 ease-out"
             style={{ transform: `rotate(${rotationDeg}deg)`, transformOrigin: "50% 50%" }}
           >
             {items.map((item, i) => {
-              // position each item on the circle BEFORE group rotation:
-              // angle for slot i (0 = top)
               const baseAngle = i * step;
-              const angleRad = ((baseAngle) * Math.PI) / 180; // with 0 at top already
+              const angleRad = (baseAngle * Math.PI) / 180;
               const cx = size / 2 + radius * Math.cos(angleRad - Math.PI / 2);
               const cy = size / 2 + radius * Math.sin(angleRad - Math.PI / 2);
-
               const isActive = i === activeIndex;
 
               return (
@@ -247,22 +236,35 @@ export default function InfoWheel() {
                   aria-pressed={isActive}
                   aria-label={item.title}
                 >
+                  {/* Outer: handles hover/scale & ring */}
                   <span
                     className={`relative inline-block w-14 h-14 rounded-2xl overflow-hidden glass transition-transform
                       ${isActive ? "ring-2 ring-[var(--accent)] scale-[1.06]" : "hover:scale-105"}`}
                   >
-                    <Image src={item.icon} alt={item.title} fill sizes="56px" className="object-cover" />
+                    {/* Inner: COUNTER-ROTATE so icons stay upright */}
+                    <span
+                      className="absolute inset-0"
+                      style={{ transform: `rotate(${-rotationDeg}deg)` }}
+                    >
+                      <Image
+                        src={item.icon}
+                        alt={item.title}
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                    </span>
                   </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Top marker (optional) */}
+          {/* Top marker */}
           <div className="absolute left-1/2 -translate-x-1/2 top-0 w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-[var(--accent)] opacity-70 pointer-events-none" />
         </div>
 
-        {/* Mobile quick picker */}
+        {/* Mobile quick picker (fits width) */}
         <div className="mt-4 flex md:hidden gap-2 overflow-x-auto no-scrollbar">
           {items.map((item, i) => (
             <button
@@ -277,8 +279,8 @@ export default function InfoWheel() {
         </div>
       </div>
 
-      {/* DETAILS */}
-      <div className="space-y-4 w-full">
+      {/* DETAILS (fits screen) */}
+      <div className="space-y-4 w-full" style={{ maxWidth: "min(520px, 100%)" }}>
         {active.kind === "token" ? (
           <TokenPanel
             address={(active as Extract<WheelItem, { kind: "token" }>).address}
@@ -298,7 +300,7 @@ export default function InfoWheel() {
   );
 }
 
-/* ----------------- Helpers ----------------- */
+/* ---------- Helpers ---------- */
 
 function normalizeDeg(d: number) {
   let x = d % 360;
@@ -318,14 +320,18 @@ function shortestRotation(current: number, target: number) {
   return c + diff;
 }
 
-/** Responsive wheel size: 280 on small screens, 320 otherwise */
+/** clamp(240px, viewport-48px, 320px) with resize listener */
 function useResponsiveWheelSize() {
   const [w, setW] = useState(320);
   useEffect(() => {
-    const update = () => setW(window.innerWidth < 380 ? 280 : 320);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    const compute = () => {
+      const vw = typeof window !== "undefined" ? window.innerWidth : 360;
+      const candidate = Math.min(320, Math.max(240, vw - 48)); // 24px pad on each side
+      setW(candidate);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
   }, []);
   return w;
 }
