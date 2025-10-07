@@ -7,7 +7,6 @@ import {
   formatUnits,
   isAddress,
   parseUnits,
-  maxUint256,
 } from "viem";
 import {
   useAccount,
@@ -57,7 +56,6 @@ function byAddress(addr?: Address | "ETH") {
 const eq = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-// checksum-safe helpers (viem accepts lowercase just fine)
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
@@ -77,6 +75,9 @@ function DebugPanel({
   expectedOutBig,
   slippage,
   minOutMainHuman,
+  allowanceOwner,
+  allowanceSpender,
+  allowanceValue,
 }: {
   address?: Address;
   chain?: { id: number; name?: string };
@@ -92,6 +93,9 @@ function DebugPanel({
   expectedOutBig?: bigint;
   slippage: number;
   minOutMainHuman: string;
+  allowanceOwner?: Address;
+  allowanceSpender?: Address;
+  allowanceValue?: bigint;
 }) {
   const fmt = (v?: bigint, d = 18) => {
     try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
@@ -168,6 +172,14 @@ function DebugPanel({
             Refetch Out
           </button>
         </div>
+      </div>
+
+      <div className="mt-3 glass rounded-xl p-3">
+        <div className="font-semibold mb-1">Allowance (tokenIn → SWAPPER)</div>
+        <div>owner: <code className="break-all">{allowanceOwner ?? "—"}</code></div>
+        <div>spender: <code className="break-all">{allowanceSpender ?? "—"}</code></div>
+        <div>current: <code>{allowanceValue?.toString() ?? "—"}</code></div>
+        <div>needs ≥ amountInRaw: <code>{String((allowanceValue ?? 0n) >= amountInBig)}</code></div>
       </div>
     </div>
   );
@@ -246,7 +258,7 @@ export default function SwapForm() {
     try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
 
-  // -------- Multi-path quote probe (direct, via WETH, reverse-hop) --------
+  // -------- Multi-path quote probe --------
   const [quotePath, setQuotePath] = useState<Address[] | undefined>(undefined);
   const [quoteOut, setQuoteOut] = useState<bigint | undefined>(undefined);
   const [quoteErr, setQuoteErr] = useState<string | undefined>(undefined);
@@ -279,9 +291,9 @@ export default function SwapForm() {
       const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
 
       const candidates = [direct, viaWeth, backHop]
-        .map(lcPath) // normalize to lowercase (fixes "Address is invalid")
+        .map(lcPath)
         .filter((p) => p.every(Boolean))
-        .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i); // dedupe
+        .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i);
 
       setPathsTried(candidates);
 
@@ -311,7 +323,7 @@ export default function SwapForm() {
     return () => { alive = false; };
   }, [client, tokenIn, tokenOut, amountInBig]);
 
-  // Displayed expectedOut & minOut (human)
+  // expected & minOut
   const expectedOutBig = quoteOut;
   const expectedOutHuman = useMemo(() => {
     try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
@@ -325,20 +337,17 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
-  // Allowance (only for token→token where tokenIn is ERC-20)
-  const needAllowance = modeTokenToToken && tokenIn !== "ETH" && isAddress(tokenIn as string);
+  // -------- Allowance (always when tokenIn is ERC20) --------
+  const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
   const allowance = useStickyAllowance(
     needAllowance ? (tokenIn as Address) : undefined,
     needAllowance ? (address as Address) : undefined,
     needAllowance ? (SWAPPER as Address) : undefined
   );
 
-  // useApprove returns approveOnce + approveMaxFlow
   const {
-    approveOnce,
     approveMaxFlow,
     isPending: isApprovePending,
-    txHash: approveHash, // not used in UI, but available
   } = useApprove(
     needAllowance ? (tokenIn as Address) : undefined,
     needAllowance ? (SWAPPER as Address) : undefined
@@ -366,12 +375,10 @@ export default function SwapForm() {
 
   const doApprove = async () => {
     if (!needAllowance) return;
-    // Prefer the helper that handles direct max or 0->max internally
     await approveMaxFlow(allowance.value);
     await allowance.refetch();
   };
 
-  // fee path (TOBY burn), keep len ≥ 2, lowercase everything
   const buildFeePath = (inA: Address): Address[] => {
     const inL = lc(inA);
     if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
@@ -381,6 +388,14 @@ export default function SwapForm() {
 
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
+
+    // last-chance safety: if allowance still short, try to approve now
+    if (needAllowance && !hasEnoughAllowance) {
+      try {
+        await approveMaxFlow(allowance.value);
+        await allowance.refetch();
+      } catch {}
+    }
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
@@ -406,15 +421,6 @@ export default function SwapForm() {
         value: parseUnits(amt || "0", 18),
       });
     } else {
-      // if for any reason allowance is insufficient (AA wallets sometimes mis-estimate),
-      // try a last-chance max approve Once and continue (best-effort UX):
-      if (!hasEnoughAllowance) {
-        try {
-          await approveMaxFlow(allowance.value);
-          await allowance.refetch();
-        } catch {/* ignore */}
-      }
-
       await writeContractAsync({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
@@ -521,7 +527,7 @@ export default function SwapForm() {
             inputMode="decimal"
           />
           <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
-          {!hasEnoughBalance && isConnected && (
+          {isConnected && !hasEnoughBalance && (
             <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
           )}
         </div>
@@ -566,8 +572,8 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* CTA(s): Approve if needed, then Swap */}
-        {modeTokenToToken && tokenIn !== "ETH" && !hasEnoughAllowance ? (
+        {/* CTA(s): Approve (if tokenIn is ERC20) then Swap */}
+        {tokenIn !== "ETH" && !hasEnoughAllowance ? (
           <button
             onClick={doApprove}
             className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
@@ -604,6 +610,9 @@ export default function SwapForm() {
             expectedOutBig={expectedOutBig}
             slippage={slippage}
             minOutMainHuman={minOutMainHuman}
+            allowanceOwner={address}
+            allowanceSpender={SWAPPER as Address}
+            allowanceValue={allowance.value}
           />
         </div>
       )}
