@@ -57,6 +57,10 @@ function byAddress(addr?: Address | "ETH") {
 const eq = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
+// checksum-safe helpers (viem accepts lowercase just fine)
+const lc = (a: Address) => a.toLowerCase() as Address;
+const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
+
 /* ---------------- Debug Panel ---------------- */
 function DebugPanel({
   address,
@@ -256,23 +260,26 @@ export default function SwapForm() {
       setQuoteErr(undefined);
       setPathsTried([]);
 
-      // identity / ETH↔WETH 1:1 short-circuit
       const inAddr = tokenIn === "ETH" ? WETH : (tokenIn as Address);
+
+      // identity / ETH↔WETH 1:1 short-circuit
       if (eq(inAddr, tokenOut) && amountInBig > 0n) {
         if (!alive) return;
-        setQuotePath([inAddr, tokenOut]);
+        const idPath = lcPath([inAddr as Address, tokenOut as Address]);
+        setQuotePath(idPath);
         setQuoteOut(amountInBig);
+        setPathsTried([idPath]);
         return;
       }
 
       if (!client || amountInBig === 0n || !isAddress(tokenOut)) return;
 
-      // Candidates: direct, via WETH, (rare) back-hop via out
-      const direct: Address[] = [inAddr, tokenOut];
-      const viaWeth: Address[] = [inAddr, WETH as Address, tokenOut];
-      const backHop: Address[] = [inAddr, tokenOut, WETH as Address]; // sometimes middle tokens weirdly help
+      const direct: Address[] = [inAddr as Address, tokenOut as Address];
+      const viaWeth: Address[] = [inAddr as Address, WETH as Address, tokenOut as Address];
+      const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
 
       const candidates = [direct, viaWeth, backHop]
+        .map(lcPath) // normalize to lowercase (fixes "Address is invalid")
         .filter((p) => p.every(Boolean))
         .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i); // dedupe
 
@@ -281,7 +288,7 @@ export default function SwapForm() {
       for (const p of candidates) {
         try {
           const amounts = (await client.readContract({
-            address: ROUTER as Address,
+            address: lc(ROUTER as Address),
             abi: UniV2RouterAbi as any,
             functionName: "getAmountsOut",
             args: [amountInBig, p],
@@ -295,13 +302,10 @@ export default function SwapForm() {
             return;
           }
         } catch (e: any) {
-          // keep last error, but continue trying
           if (!alive) return;
           setQuoteErr(String(e?.shortMessage || e?.message || e));
         }
       }
-
-      // If no path worked, leave quoteOut undefined to disable swap
     })();
 
     return () => { alive = false; };
@@ -342,7 +346,7 @@ export default function SwapForm() {
   const canSwap =
     isConnected &&
     amountInBig > 0n &&
-    !!quotePath && // must have a working path (or identity case sets quotePath)
+    !!quotePath &&
     hasEnoughBalance &&
     hasEnoughAllowance;
 
@@ -359,11 +363,12 @@ export default function SwapForm() {
     allowance.refetch();
   };
 
-  // Build fee path (always convert fee to TOBY; keep len ≥ 2)
-  const buildFeePath = (inAddr: Address): Address[] => {
-    if (eq(inAddr, TOBY)) return [inAddr as Address, TOBY as Address];
-    if (eq(inAddr, WETH)) return [WETH as Address, TOBY as Address];
-    return [inAddr as Address, WETH as Address, TOBY as Address];
+  // fee path (TOBY burn), keep len ≥ 2, lowercase everything
+  const buildFeePath = (inA: Address): Address[] => {
+    const inL = lc(inA);
+    if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
+    if (eq(inL, WETH)) return lcPath([WETH as Address, TOBY as Address]);
+    return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
   const doSwap = async () => {
@@ -374,21 +379,18 @@ export default function SwapForm() {
     const decOut = outMeta.decimals;
     const now = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
 
-    // fee path from inAddr
+    const mainPath = lcPath(quotePath);
     const feePath = buildFeePath(inAddr);
 
     if (tokenIn === "ETH") {
-      // swapETHForTokensSupportingFeeOnTransferTokens(
-      //   tokenOut, minOutMain, pathMain, pathFee, minOutFee, deadline
-      // )
       await writeContractAsync({
-        address: SWAPPER,
+        address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
         functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
         args: [
-          tokenOut,
+          lc(tokenOut),
           parseUnits(expectedOutBig ? minOutMainHuman : "0", decOut),
-          quotePath,
+          mainPath,
           feePath,
           parseUnits("0", 18),
           now,
@@ -396,19 +398,16 @@ export default function SwapForm() {
         value: parseUnits(amt || "0", 18),
       });
     } else {
-      // swapTokensForTokensSupportingFeeOnTransferTokens(
-      //   tokenIn, tokenOut, amountIn, minOutMain, pathMain, pathFee, minOutFee, deadline
-      // )
       await writeContractAsync({
-        address: SWAPPER,
+        address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
         functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
         args: [
-          tokenIn as Address,
-          tokenOut,
+          lc(tokenIn as Address),
+          lc(tokenOut),
           parseUnits(amt || "0", decIn),
           parseUnits(expectedOutBig ? minOutMainHuman : "0", decOut),
-          quotePath,
+          mainPath,
           feePath,
           parseUnits("0", 18),
           now,
