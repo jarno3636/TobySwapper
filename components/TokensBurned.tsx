@@ -187,7 +187,7 @@ export default function TokensBurned() {
             className="pill pill-opaque hover:opacity-90 font-semibold"
             aria-label="Share on Farcaster"
           >
-            Spread the Lore on Farcaster 🚀
+            Spread the Lore on Farcaster 
           </a>
           <a
             href={twitterUrl}
@@ -196,7 +196,7 @@ export default function TokensBurned() {
             className="pill pill-opaque hover:opacity-90 font-semibold"
             aria-label="Share on X"
           >
-            Share on X 🐦🔥
+            Share on X 🐦
           </a>
         </div>
       </div>
