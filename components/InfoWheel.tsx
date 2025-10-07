@@ -7,7 +7,7 @@ import { base } from "viem/chains";
 import { useReadContract, useReadContracts } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI, DEAD, SWAPPER } from "@/lib/addresses";
 
-/** Minimal ERC20 ABI */
+/* ---- ABIs ---- */
 const erc20Abi = [
   { type: "function", name: "name",        stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
   { type: "function", name: "symbol",      stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
@@ -20,6 +20,7 @@ const swapperAbi = [
   { type: "function", name: "totalTobyBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
+/* ---- Items ---- */
 type WheelItem =
   | { kind: "token"; title: string; icon: string; address: Address }
   | { kind: "swapper"; title: string; icon: string; address: Address }
@@ -38,6 +39,7 @@ const ITEMS: WheelItem[] = [
     blurb: "Follow on X for drops & news." },
 ];
 
+/* ---- Small helpers ---- */
 function fmt(n?: number, max = 4) {
   if (n === undefined || !isFinite(n)) return "—";
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
@@ -46,7 +48,7 @@ function fmt(n?: number, max = 4) {
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
-/* ---------- Panels ---------- */
+/* ---- Panels ---- */
 function TokenPanel({ address, title, icon }: { address: Address; title: string; icon: string }) {
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
@@ -71,17 +73,17 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const href = `https://basescan.org/address/${address}`;
 
   return (
-    <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
-      <div className="flex items-center gap-3 mb-4">
-        <span className="relative inline-block w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden">
-          <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
+    <div className="glass rounded-3xl p-4 sm:p-5 shadow-soft w-full">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="relative inline-block w-9 h-9 rounded-full overflow-hidden">
+          <Image src={icon} alt={title} fill sizes="36px" className="object-cover" />
         </span>
         <div>
           <h3 className="font-semibold leading-tight">{title}</h3>
           <a className="text-sm link" href={href} target="_blank" rel="noopener noreferrer">View on BaseScan ↗</a>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-2 gap-3 text-sm">
         <div><div className="text-[var(--ink-sub)]">Name</div><div className="font-mono">{isLoading ? "…" : name ?? "—"}</div></div>
         <div><div className="text-[var(--ink-sub)]">Symbol</div><div className="font-mono">{isLoading ? "…" : symbol ?? "—"}</div></div>
         <div><div className="text-[var(--ink-sub)]">Total Supply</div><div className="font-mono">{isLoading ? "…" : fmt(supply)}</div></div>
@@ -109,7 +111,7 @@ function SwapperPanel() {
   const href = `https://basescan.org/address/${SWAPPER}`;
 
   return (
-    <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
+    <div className="glass rounded-3xl p-4 sm:p-5 shadow-soft w-full">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold">Toby Swapper</h3>
         <a className="text-sm link" href={href} target="_blank" rel="noopener noreferrer">View Contract ↗</a>
@@ -117,7 +119,7 @@ function SwapperPanel() {
       <p className="text-sm text-inkSub mb-3">
         Routes swaps on Base and buys-&-burns <span className="font-semibold">$TOBY</span> with a 1% fee.
       </p>
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-2 gap-3 text-sm">
         <div><div className="text-[var(--ink-sub)]">Total $TOBY Burned</div><div className="font-mono">{fmt(burnedNum)}</div></div>
         <div><div className="text-[var(--ink-sub)]">Address</div><div className="font-mono truncate">{SWAPPER.slice(0,6)}…{SWAPPER.slice(-4)}</div></div>
       </div>
@@ -127,30 +129,30 @@ function SwapperPanel() {
 
 function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; blurb: string; icon: string }) {
   return (
-    <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
-      <div className="flex items-center gap-3 mb-3">
-        <span className="relative inline-block w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden">
-          <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
+    <div className="glass rounded-3xl p-4 sm:p-5 shadow-soft w-full">
+      <div className="flex items-center gap-3 mb-2.5">
+        <span className="relative inline-block w-9 h-9 rounded-full overflow-hidden">
+          <Image src={icon} alt={title} fill sizes="36px" className="object-cover" />
         </span>
         <h3 className="font-semibold">{title}</h3>
       </div>
-      <p className="text-[var(--ink-sub)] mb-4">{blurb}</p>
+      <p className="text-[var(--ink-sub)] mb-3">{blurb}</p>
       <a className="pill pill-opaque" href={href} target="_blank" rel="noopener noreferrer">Open ↗</a>
     </div>
   );
 }
 
-/* ---------- Wheel ---------- */
+/* ---- Wheel ---- */
 export default function InfoWheel() {
   const items = ITEMS;
   const count = items.length;
   const step = 360 / count;
 
-  // Smaller for phones: clamp(200px, vw - 56px, 280px)
+  // Much tighter wheel on phones: clamp(180px, vw - 64px, 240px)
   const size = useResponsiveWheelSize();
-  const radius = Math.max(76, Math.floor(size * 0.34));
+  const radius = Math.max(64, Math.floor(size * 0.30)); // tighter ring
 
-  // rotationDeg: 0 => item 0 at top. Positive clockwise.
+  // rotationDeg: 0 => item 0 at top.
   const [rotationDeg, setRotationDeg] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -159,7 +161,7 @@ export default function InfoWheel() {
   const centerRef = useRef<HTMLDivElement | null>(null);
   const lastAngleRef = useRef<number | null>(null);
 
-  // --- math helpers
+  // math helpers
   const normalizeDeg = (d: number) => {
     let x = d % 360;
     if (x > 180) x -= 360;
@@ -176,20 +178,17 @@ export default function InfoWheel() {
     return c + diff;
   };
 
-  // snap & select (single source of truth to avoid “weirdness”)
+  // One-tap: rotate + select, then exact snap to avoid drift
   const snapToIndex = (i: number) => {
     const exact = -i * step;
     setActiveIndex(i);
-    // animate near current, then snap to exact angle for perfect alignment
     const adj = shortestRotation(rotationDeg, exact);
     setRotationDeg(adj);
-    setTimeout(() => setRotationDeg(exact), 200);
+    setTimeout(() => setRotationDeg(exact), 160);
   };
-
-  // click a slice → bring to top AND select (one tap)
   const handleSelect = (i: number) => snapToIndex(i);
 
-  // drag helpers
+  // pointer helpers
   const angleFromEvent = (e: PointerEvent | TouchEvent | MouseEvent) => {
     const el = centerRef.current!;
     const rect = el.getBoundingClientRect();
@@ -203,7 +202,7 @@ export default function InfoWheel() {
     }
     const rad = Math.atan2(clientY - cy, clientX - cx);
     let deg = (rad * 180) / Math.PI;
-    deg -= 90; // 0° at top
+    deg -= 90;
     return deg;
   };
 
@@ -224,8 +223,6 @@ export default function InfoWheel() {
     if (!dragging.current) return;
     dragging.current = false;
     lastAngleRef.current = null;
-
-    // compute nearest index at top from current rotation, then snap+select
     const normalized = normalizeDeg(rotationDeg);
     let k = Math.round(-normalized / step);
     k = mod(k, count);
@@ -235,19 +232,15 @@ export default function InfoWheel() {
   const active = items[activeIndex];
 
   return (
-    <div className="grid md:grid-cols-2 gap-6 items-start w-full">
-      {/* WHEEL CARD */}
-      <div
-        className="glass rounded-3xl p-5 sm:p-6 shadow-soft hover-glow w-full"
-        style={{ maxWidth: "min(520px, 100%)" }}
-      >
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+    <div className="grid md:grid-cols-2 gap-5 items-start w-full">
+      {/* Compact card width */}
+      <div className="glass rounded-3xl p-4 sm:p-5 shadow-soft w-full mx-auto" style={{ maxWidth: 380 }}>
+        <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Explore TobyWorld</h3>
           <div className="pill pill-nav text-xs">{active.title}</div>
         </div>
 
         <div className="relative mx-auto select-none" style={{ width: size, height: size }}>
-          {/* Interaction surface */}
           <div
             ref={centerRef}
             className="absolute inset-0 rounded-full"
@@ -257,13 +250,13 @@ export default function InfoWheel() {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           />
-
-          {/* Orbiting icons — group rotation */}
+          {/* wheel group */}
           <div
-            className="absolute inset-0 transition-transform duration-200 ease-out"
+            className="absolute inset-0 transition-transform duration-150 ease-out"
             style={{ transform: `rotate(${rotationDeg}deg)`, transformOrigin: "50% 50%" }}
           >
             {items.map((item, i) => {
+              const step = 360 / items.length;
               const baseAngle = i * step;
               const angleRad = (baseAngle * Math.PI) / 180;
               const cx = size / 2 + radius * Math.cos(angleRad - Math.PI / 2);
@@ -281,12 +274,12 @@ export default function InfoWheel() {
                   aria-label={item.title}
                 >
                   <span
-                    className={`relative inline-block w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden glass transition-transform
+                    className={`relative inline-block w-11 h-11 sm:w-13 sm:h-13 rounded-2xl overflow-hidden glass transition-transform
                       ${isActive ? "ring-2 ring-[var(--accent)] scale-[1.06]" : "hover:scale-105"}`}
                   >
-                    {/* counter-rotate so images stay upright */}
+                    {/* keep icons upright */}
                     <span className="absolute inset-0" style={{ transform: `rotate(${-rotationDeg}deg)` }}>
-                      <Image src={item.icon} alt={item.title} fill sizes="56px" className="object-cover" />
+                      <Image src={item.icon} alt={item.title} fill sizes="48px" className="object-cover" />
                     </span>
                   </span>
                 </button>
@@ -294,27 +287,26 @@ export default function InfoWheel() {
             })}
           </div>
 
-          {/* Top marker */}
+          {/* top marker */}
           <div className="absolute left-1/2 -translate-x-1/2 top-0 w-0 h-0 border-l-3 border-r-3 border-b-6 border-transparent border-b-[var(--accent)] opacity-70 pointer-events-none" />
         </div>
 
-        {/* Mobile quick picker */}
-        <div className="mt-3 sm:mt-4 flex md:hidden gap-2 overflow-x-auto no-scrollbar">
-          {items.map((item, i) => (
+        {/* tiny ticker under wheel (wraps nicely) */}
+        <div className="mt-3 flex flex-wrap gap-2 justify-center text-xs text-inkSub">
+          {ITEMS.map((it, i) => (
             <button
               key={i}
-              type="button"
               onClick={() => handleSelect(i)}
-              className={`pill ${i === activeIndex ? "pill-nav" : "pill-opaque"} text-sm`}
+              className={`px-2 py-1 rounded-full border ${i === activeIndex ? "border-[var(--accent)] text-[var(--ink)]" : "border-white/10"}`}
             >
-              {item.title}
+              {it.title}
             </button>
           ))}
         </div>
       </div>
 
       {/* DETAILS */}
-      <div className="space-y-4 w-full" style={{ maxWidth: "min(520px, 100%)" }}>
+      <div className="space-y-4 w-full mx-auto" style={{ maxWidth: 380 }}>
         {active.kind === "token" ? (
           <TokenPanel address={active.address as Address} title={active.title} icon={active.icon} />
         ) : active.kind === "swapper" ? (
@@ -327,13 +319,13 @@ export default function InfoWheel() {
   );
 }
 
-/** clamp(200px, viewport-56px, 280px) */
+/* clamp(180px, vw - 64px, 240px) */
 function useResponsiveWheelSize() {
-  const [w, setW] = useState(280);
+  const [w, setW] = useState(220);
   useEffect(() => {
     const compute = () => {
       const vw = typeof window !== "undefined" ? window.innerWidth : 360;
-      const candidate = Math.min(280, Math.max(200, vw - 56)); // 28px padding each side
+      const candidate = Math.min(240, Math.max(180, vw - 64)); // 32px padding each side
       setW(candidate);
     };
     compute();
