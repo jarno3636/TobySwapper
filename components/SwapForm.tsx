@@ -2,27 +2,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Address,
-  formatUnits,
-  isAddress,
-  parseUnits,
-} from "viem";
-import {
-  useAccount,
-  usePublicClient,
-  useWriteContract,
-} from "wagmi";
+import { Address, formatUnits, isAddress, parseUnits } from "viem";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
-import {
-  TOKENS,
-  USDC,
-  ROUTER,
-  WETH,
-  SWAPPER,
-  TOBY,
-} from "@/lib/addresses";
+import { TOKENS, USDC, ROUTER, WETH, SWAPPER, TOBY } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
@@ -53,9 +37,11 @@ function byAddress(addr?: Address | "ETH") {
       }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
+
 const eq = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
+// checksum-safe helpers (viem accepts lowercase fine)
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
@@ -83,8 +69,20 @@ function DebugPanel({
   chain?: { id: number; name?: string };
   inMeta: { symbol: string; decimals: number; address?: Address };
   outMeta: { symbol: string; decimals: number; address?: Address };
-  balInRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
-  balOutRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
+  balInRaw: {
+    value?: bigint;
+    decimals?: number;
+    isLoading?: boolean;
+    error?: unknown;
+    refetch?: () => void;
+  };
+  balOutRaw: {
+    value?: bigint;
+    decimals?: number;
+    isLoading?: boolean;
+    error?: unknown;
+    refetch?: () => void;
+  };
   amountInHuman: string;
   amountInBig: bigint;
   pathTried: Address[][];
@@ -98,8 +96,11 @@ function DebugPanel({
   allowanceValue?: bigint;
 }) {
   const fmt = (v?: bigint, d = 18) => {
-    try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
-    catch { return "—"; }
+    try {
+      return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—";
+    } catch {
+      return "—";
+    }
   };
   return (
     <div className="glass rounded-2xl p-4 border border-white/10 text-xs">
@@ -107,31 +108,57 @@ function DebugPanel({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-1">
-          <div>Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}</div>
-          <div>Account: <code className="break-all">{address ?? "—"}</code></div>
-          <div>Token In: <b>{inMeta.symbol}</b> <small>({inMeta.address ?? "ETH"})</small></div>
-          <div>Token Out: <b>{outMeta.symbol}</b> <small>({outMeta.address})</small></div>
+          <div>
+            Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}
+          </div>
+          <div>
+            Account: <code className="break-all">{address ?? "—"}</code>
+          </div>
+          <div>
+            Token In: <b>{inMeta.symbol}</b>{" "}
+            <small>({inMeta.address ?? "ETH"})</small>
+          </div>
+          <div>
+            Token Out: <b>{outMeta.symbol}</b>{" "}
+            <small>({outMeta.address})</small>
+          </div>
         </div>
 
         <div className="space-y-1">
-          <div>Amount In (human): <code>{amountInHuman}</code></div>
-          <div>Amount In (raw): <code>{amountInBig.toString()}</code></div>
-          <div>Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code></div>
-          <div>Expected Out (human): <code>{fmt(expectedOutBig, outMeta.decimals)}</code></div>
-          <div>MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage: <code>{slippage}%</code></div>
+          <div>
+            Amount In (human): <code>{amountInHuman}</code>
+          </div>
+          <div>
+            Amount In (raw): <code>{amountInBig.toString()}</code>
+          </div>
+          <div>
+            Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code>
+          </div>
+          <div>
+            Expected Out (human):{" "}
+            <code>{fmt(expectedOutBig, outMeta.decimals)}</code>
+          </div>
+          <div>
+            MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage:{" "}
+            <code>{slippage}%</code>
+          </div>
         </div>
       </div>
 
       <div className="mt-2">
         <div className="mb-1">Paths tried (first success wins):</div>
         <div className="flex flex-col gap-1">
-          {pathTried.length ? pathTried.map((p, i) => (
-            <div key={i} className="flex flex-wrap gap-1">
-              <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
-                {p.join(" → ")}
-              </code>
-            </div>
-          )) : <span>—</span>}
+          {pathTried.length ? (
+            pathTried.map((p, i) => (
+              <div key={i} className="flex flex-wrap gap-1">
+                <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
+                  {p.join(" → ")}
+                </code>
+              </div>
+            ))
+          ) : (
+            <span>—</span>
+          )}
         </div>
         <div className="mt-2">
           Chosen path:{" "}
@@ -139,7 +166,9 @@ function DebugPanel({
             <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
               {pathChosen.join(" → ")}
             </code>
-          ) : "—"}
+          ) : (
+            "—"
+          )}
         </div>
         {quoteError && (
           <div className="mt-2 text-[11px] text-warn">
@@ -151,24 +180,56 @@ function DebugPanel({
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="glass rounded-xl p-3">
           <div className="font-semibold mb-1">Balance In</div>
-          <div>decimals: <code>{balInRaw.decimals ?? "—"}</code></div>
-          <div>raw: <code>{balInRaw.value?.toString() ?? "—"}</code></div>
-          <div>human: <code>{fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}</code></div>
-          <div>loading: <code>{String(balInRaw.isLoading)}</code></div>
-          <div>error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code></div>
-          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balInRaw.refetch?.()}>
+          <div>
+            decimals: <code>{balInRaw.decimals ?? "—"}</code>
+          </div>
+          <div>
+            raw: <code>{balInRaw.value?.toString() ?? "—"}</code>
+          </div>
+          <div>
+            human:{" "}
+            <code>
+              {fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}
+            </code>
+          </div>
+          <div>
+            loading: <code>{String(balInRaw.isLoading)}</code>
+          </div>
+          <div>
+            error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code>
+          </div>
+          <button
+            className="mt-2 pill pill-opaque px-2 py-1"
+            onClick={() => balInRaw.refetch?.()}
+          >
             Refetch In
           </button>
         </div>
 
         <div className="glass rounded-xl p-3">
           <div className="font-semibold mb-1">Balance Out</div>
-          <div>decimals: <code>{balOutRaw.decimals ?? "—"}</code></div>
-          <div>raw: <code>{balOutRaw.value?.toString() ?? "—"}</code></div>
-          <div>human: <code>{fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}</code></div>
-          <div>loading: <code>{String(balOutRaw.isLoading)}</code></div>
-          <div>error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code></div>
-          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balOutRaw.refetch?.()}>
+          <div>
+            decimals: <code>{balOutRaw.decimals ?? "—"}</code>
+          </div>
+          <div>
+            raw: <code>{balOutRaw.value?.toString() ?? "—"}</code>
+          </div>
+          <div>
+            human:{" "}
+            <code>
+              {fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}
+            </code>
+          </div>
+          <div>
+            loading: <code>{String(balOutRaw.isLoading)}</code>
+          </div>
+          <div>
+            error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code>
+          </div>
+          <button
+            className="mt-2 pill pill-opaque px-2 py-1"
+            onClick={() => balOutRaw.refetch?.()}
+          >
             Refetch Out
           </button>
         </div>
@@ -176,9 +237,15 @@ function DebugPanel({
 
       <div className="mt-3 glass rounded-xl p-3">
         <div className="font-semibold mb-1">Allowance (tokenIn → SWAPPER)</div>
-        <div>owner: <code className="break-all">{allowanceOwner ?? "—"}</code></div>
-        <div>spender: <code className="break-all">{allowanceSpender ?? "—"}</code></div>
-        <div>current: <code>{allowanceValue?.toString() ?? "—"}</code></div>
+        <div>
+          owner: <code className="break-all">{allowanceOwner ?? "—"}</code>
+        </div>
+        <div>
+          spender: <code className="break-all">{allowanceSpender ?? "—"}</code>
+        </div>
+        <div>
+          current: <code>{allowanceValue?.toString() ?? "—"}</code>
+        </div>
       </div>
     </div>
   );
@@ -212,6 +279,7 @@ export default function SwapForm() {
   const client = usePublicClient({ chainId: base.id });
   const { writeContractAsync } = useWriteContract();
 
+  // UI state
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<Address>(
     TOKENS.find((t) => t.address !== USDC)!.address
@@ -227,12 +295,22 @@ export default function SwapForm() {
   const outMeta = byAddress(tokenOut);
   const balInRaw = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
-  const balInSticky  = useStickyBalance(balInRaw,  `${chainId}-${address ?? "0x"}-${inMeta.address ?? "ETH"}`);
-  const balOutSticky = useStickyBalance(balOutRaw, `${chainId}-${address ?? "0x"}-${outMeta.address ?? "ETH"}`);
+  const balInSticky = useStickyBalance(
+    balInRaw,
+    `${chainId}-${address ?? "0x"}-${inMeta.address ?? "ETH"}`
+  );
+  const balOutSticky = useStickyBalance(
+    balOutRaw,
+    `${chainId}-${address ?? "0x"}-${outMeta.address ?? "ETH"}`
+  );
 
   // prices
-  const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
-  const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
+  const inUsd = useUsdPriceSingle(
+    inMeta.symbol === "ETH" ? "ETH" : inMeta.address!
+  );
+  const outUsd = useUsdPriceSingle(
+    outMeta.symbol === "ETH" ? "ETH" : outMeta.address!
+  );
 
   // amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
@@ -242,10 +320,17 @@ export default function SwapForm() {
   }, [amt]);
 
   const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = useMemo(() => (Number.isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
+  const amtInUsd = useMemo(
+    () => (Number.isFinite(amtNum) ? amtNum * inUsd : 0),
+    [amtNum, inUsd]
+  );
 
   const amountInBig = useMemo(() => {
-    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
+    try {
+      return parseUnits(debouncedAmt || "0", inMeta.decimals);
+    } catch {
+      return 0n;
+    }
   }, [debouncedAmt, inMeta.decimals]);
 
   // ---------- Multi-path quote ----------
@@ -264,7 +349,7 @@ export default function SwapForm() {
 
       const inAddr = tokenIn === "ETH" ? WETH : (tokenIn as Address);
 
-      // identity/ETH↔WETH
+      // identity/ETH↔WETH 1:1
       if (eq(inAddr, tokenOut) && amountInBig > 0n) {
         if (!alive) return;
         const idPath = lcPath([inAddr as Address, tokenOut as Address]);
@@ -277,13 +362,23 @@ export default function SwapForm() {
       if (!client || amountInBig === 0n || !isAddress(tokenOut)) return;
 
       const direct: Address[] = [inAddr as Address, tokenOut as Address];
-      const viaWeth: Address[] = [inAddr as Address, WETH as Address, tokenOut as Address];
-      const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
+      const viaWeth: Address[] = [
+        inAddr as Address,
+        WETH as Address,
+        tokenOut as Address,
+      ];
+      const backHop: Address[] = [
+        inAddr as Address,
+        tokenOut as Address,
+        WETH as Address,
+      ];
 
       const candidates = [direct, viaWeth, backHop]
         .map(lcPath)
         .filter((p) => p.every(Boolean))
-        .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i);
+        .filter(
+          (p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i
+        );
 
       setPathsTried(candidates);
 
@@ -310,14 +405,21 @@ export default function SwapForm() {
       }
     })();
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [client, tokenIn, tokenOut, amountInBig]);
 
   // expected & minOut
   const expectedOutBig = quoteOut;
   const expectedOutHuman = useMemo(() => {
-    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
-    catch { return undefined; }
+    try {
+      return expectedOutBig
+        ? Number(formatUnits(expectedOutBig, outMeta.decimals))
+        : undefined;
+    } catch {
+      return undefined;
+    }
   }, [expectedOutBig, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
@@ -335,26 +437,20 @@ export default function SwapForm() {
     needAllowance ? (SWAPPER as Address) : undefined
   );
 
-  const {
-    approveMaxFlow,
-    isPending: isApprovePending,
-  } = useApprove(
+  const { approveMaxFlow, isPending: isApprovePending } = useApprove(
     needAllowance ? (tokenIn as Address) : undefined,
     needAllowance ? (SWAPPER as Address) : undefined
   );
 
-  // Treat "undefined" as 0 so we ALWAYS show Approve in that case
+  // Treat "undefined" as 0n so Approve renders until we know it's big enough
   const allowanceValue = allowance.value ?? 0n;
   const hasEnoughAllowance = !needAllowance || allowanceValue >= amountInBig;
 
-  const hasEnoughBalance = balInSticky && Number(balInSticky) >= Number(debouncedAmt || "0");
+  const hasEnoughBalance =
+    balInSticky && Number(balInSticky) >= Number(debouncedAmt || "0");
 
   const canSwap =
-    isConnected &&
-    amountInBig > 0n &&
-    !!quotePath &&
-    hasEnoughBalance &&
-    hasEnoughAllowance;
+    isConnected && amountInBig > 0n && !!quotePath && hasEnoughBalance && hasEnoughAllowance;
 
   const setMax = () => {
     if (!balInSticky) return;
@@ -366,13 +462,15 @@ export default function SwapForm() {
   const doApprove = async () => {
     if (!needAllowance) return;
     try {
-      await approveMaxFlow(allowance.value); // pass through current (may be undefined)
+      // ask hook to bump to max if needed; passing current lets it decide
+      await approveMaxFlow(allowance.value);
       await allowance.refetch();
     } catch (e) {
       console.error("approve error", e);
     }
   };
 
+  // fee path (TOBY burn), keep len ≥ 2, lowercase everything
   const buildFeePath = (inA: Address): Address[] => {
     const inL = lc(inA);
     if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
@@ -383,34 +481,10 @@ export default function SwapForm() {
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
 
-    // Last-chance guard: fresh on-chain allowance check
-    if (needAllowance && address) {
-      try {
-        const fresh = (await client.readContract({
-          abi: [
-            { type: "function", name: "allowance", stateMutability: "view", inputs: [
-              { name: "owner", type: "address" }, { name: "spender", type: "address" }
-            ], outputs: [{ name: "", type: "uint256" }] }
-          ] as const,
-          address: lc(tokenIn as Address),
-          functionName: "allowance",
-          args: [address as Address, lc(SWAPPER as Address)],
-        })) as bigint;
-
-        if (fresh < amountInBig) {
-          // Kick off approval and stop here; user can click Swap again after it confirms
-          await approveMaxFlow(fresh);
-          await allowance.refetch();
-          return;
-        }
-      } catch (e) {
-        // If allowance check itself failed, err on the safe side: try approve then stop
-        try {
-          await approveMaxFlow(allowance.value);
-          await allowance.refetch();
-        } catch {}
-        return;
-      }
+    // last-chance safety: if allowance is still short (or unknown), try to approve now and exit
+    if (needAllowance && (!hasEnoughAllowance || allowance.value === undefined)) {
+      await doApprove();
+      return; // user can click Swap again after approval confirms
     }
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
@@ -484,7 +558,9 @@ export default function SwapForm() {
         </div>
       )}
       {!isConnected && (
-        <div className="mb-3 text-xs text-inkSub">Connect your wallet to load balances.</div>
+        <div className="mb-3 text-xs text-inkSub">
+          Connect your wallet to load balances.
+        </div>
       )}
 
       <div className="space-y-4">
@@ -492,7 +568,7 @@ export default function SwapForm() {
         <div className="space-y-2">
           <label className="text-sm text-inkSub">Token In</label>
           <TokenSelect
-            value={(tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address))}
+            value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
             onChange={(a) => setTokenIn(a)}
             exclude={tokenOut}
             balance={balInSticky}
@@ -506,14 +582,20 @@ export default function SwapForm() {
               Amount {tokenIn === "ETH" ? "(ETH)" : `(${inMeta.symbol})`}
             </label>
             <div className="text-xs text-inkSub">
-              Bal: <span className="font-mono">
+              Bal:{" "}
+              <span className="font-mono">
                 {balInSticky
                   ? Number(balInSticky).toFixed(6)
                   : isConnected
                   ? "—"
                   : "Connect wallet"}
               </span>
-              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>MAX</button>
+              <button
+                className="ml-2 underline opacity-90 hover:opacity-100"
+                onClick={setMax}
+              >
+                MAX
+              </button>
             </div>
           </div>
 
@@ -524,19 +606,34 @@ export default function SwapForm() {
             placeholder="0.0"
             inputMode="decimal"
           />
-          <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
+          <div className="mt-2 text-xs text-inkSub">
+            ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
+          </div>
           {isConnected && !hasEnoughBalance && (
-            <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
+            <div className="mt-1 text-xs text-warn">
+              Insufficient {inMeta.symbol} balance.
+            </div>
           )}
         </div>
 
         {/* Token Out */}
         <div className="space-y-2">
           <label className="text-sm text-inkSub">Token Out</label>
-          <TokenSelect value={tokenOut} onChange={setTokenOut} exclude={tokenIn as Address} balance={balOutSticky} />
+          <TokenSelect
+            value={tokenOut}
+            onChange={setTokenOut}
+            exclude={tokenIn as Address}
+            balance={balOutSticky}
+          />
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
-              <>Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
+              <>
+                Est:{" "}
+                <span className="font-mono">
+                  {expectedOutHuman.toFixed(6)}
+                </span>{" "}
+                {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              </>
             ) : quoteErr ? (
               <>No route found on router.</>
             ) : (
@@ -545,8 +642,8 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* Approve (always visible when ERC-20 input & allowance unknown/short) */}
-        {tokenIn !== "ETH" && (!hasEnoughAllowance) && (
+        {/* Approve (ERC-20 input & allowance unknown/short) */}
+        {tokenIn !== "ETH" && !hasEnoughAllowance && (
           <button
             onClick={doApprove}
             className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
@@ -562,7 +659,8 @@ export default function SwapForm() {
           className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
           disabled={!canSwap}
         >
-          <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
+          <span className="pip pip-a" /> <span className="pip pip-b" />{" "}
+          <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
       </div>
 
@@ -586,7 +684,7 @@ export default function SwapForm() {
             minOutMainHuman={minOutMainHuman}
             allowanceOwner={address}
             allowanceSpender={SWAPPER as Address}
-            allowanceValue={allowance.value}
+            allowanceValue={allowance.value ?? 0n}
           />
         </div>
       )}
@@ -594,21 +692,42 @@ export default function SwapForm() {
       {/* Slippage modal */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setSlippageOpen(false)}
+          />
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
+              <button
+                className="pill pill-opaque px-3 py-1 text-xs"
+                onClick={() => setSlippageOpen(false)}
+              >
+                Close
+              </button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0.1, 0.5, 1, 2].map((v) => (
-                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
+                <button
+                  key={v}
+                  onClick={() => setSlippage(v)}
+                  className={`pill justify-center px-3 py-1 text-xs ${
+                    slippage === v ? "outline outline-1 outline-white/20" : ""
+                  }`}
+                >
                   {v}%
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(Number(e.target.value))}
+                className="glass rounded-pill px-3 py-2 w-full"
+              />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
