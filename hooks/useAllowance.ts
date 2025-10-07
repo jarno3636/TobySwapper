@@ -1,8 +1,7 @@
-// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Address, erc20Abi } from "viem";
+import { Address, erc20Abi, maxUint256 } from "viem";
 import {
   useAccount,
   useReadContract,
@@ -34,7 +33,6 @@ export function useStickyAllowance(
       staleTime: 8_000,
       refetchOnWindowFocus: false,
       retry: 2,
-      // Explicit param type to satisfy TS under isolatedModules
       placeholderData: (prev: unknown) => prev,
     },
   } as any);
@@ -60,18 +58,43 @@ export function useApprove(token?: Address, spender?: Address) {
   const { writeContractAsync, data: hash, isPending } = useWriteContract();
   const wait = useWaitForTransactionReceipt({ hash });
 
-  const approve = useCallback(
+  const approveOnce = useCallback(
     async (amount: bigint) => {
       if (!token || !spender) throw new Error("Missing token or spender");
-      return writeContractAsync({
+      const tx = await writeContractAsync({
         address: token,
         abi: erc20Abi,
         functionName: "approve",
         args: [spender, amount] as const,
       });
+      // wait for this approval to mine
+      await new Promise<void>((resolve, reject) => {
+        const unsub = wait.refetch().then(() => resolve()).catch(reject);
+        // we can rely on wagmi's internal tracking via `hash`, so no manual unsub needed
+        return unsub;
+      });
+      return tx;
     },
-    [token, spender, writeContractAsync]
+    [token, spender, writeContractAsync, wait]
   );
 
-  return { approve, txHash: hash, isPending, wait, owner };
+  /**
+   * Robust “set max allowance” flow:
+   * - If current allowance > 0 and target is max, some tokens require approve(0) first.
+   * - Then approve(max).
+   */
+  const approveMaxFlow = useCallback(
+    async (current?: bigint) => {
+      if (!token || !spender) throw new Error("Missing token or spender");
+      // step 1: if current > 0, reset to 0 first
+      if (current && current > 0n) {
+        await approveOnce(0n);
+      }
+      // step 2: set max
+      await approveOnce(maxUint256);
+    },
+    [token, spender, approveOnce]
+  );
+
+  return { approveOnce, approveMaxFlow, txHash: hash, isPending, wait, owner };
 }
