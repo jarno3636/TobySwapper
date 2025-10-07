@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Address, formatUnits } from "viem";
 import { base } from "viem/chains";
-import { useReadContracts } from "wagmi";
-import { TOBY, PATIENCE, TABOSHI, USDC, WETH, DEAD } from "@/lib/addresses";
+import { useReadContract, useReadContracts } from "wagmi";
+import { TOBY, PATIENCE, TABOSHI, DEAD, SWAPPER } from "@/lib/addresses";
 
 /** Minimal ERC20 ABI */
 const erc20Abi = [
@@ -16,21 +16,25 @@ const erc20Abi = [
   { type: "function", name: "balanceOf",   stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
 ] as const;
 
+const swapperAbi = [
+  { type: "function", name: "totalTobyBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+] as const;
+
 type WheelItem =
   | { kind: "token"; title: string; icon: string; address: Address }
+  | { kind: "swapper"; title: string; icon: string; address: Address }
   | { kind: "link";  title: string; icon: string; href: string; blurb: string };
 
 const ITEMS: WheelItem[] = [
-  { kind: "token", title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
-  { kind: "token", title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
-  { kind: "token", title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
-  { kind: "token", title: "USDC",     icon: "/tokens/usdc.PNG",     address: USDC },
-  { kind: "token", title: "WETH",     icon: "/tokens/weth.PNG",     address: WETH },
-  { kind: "link",  title: "toadgod.xyz",  icon: "/toby2.PNG", href: "https://toadgod.xyz",
+  { kind: "token",   title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
+  { kind: "token",   title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
+  { kind: "token",   title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
+  { kind: "swapper", title: "SWAPPER",  icon: "/toby2.PNG",           address: SWAPPER },
+  { kind: "link",    title: "toadgod.xyz",  icon: "/toby2.PNG", href: "https://toadgod.xyz",
     blurb: "Official site: lore, links, and updates." },
-  { kind: "link",  title: "Telegram",     icon: "/toby2.PNG", href: "https://t.me/toadgang/212753",
+  { kind: "link",    title: "Telegram",     icon: "/toby2.PNG", href: "https://t.me/toadgang/212753",
     blurb: "Join Toadgang — community chat & alpha." },
-  { kind: "link",  title: "@toadgod1017", icon: "/toby2.PNG", href: "https://x.com/toadgod1017?s=21",
+  { kind: "link",    title: "@toadgod1017", icon: "/toby2.PNG", href: "https://x.com/toadgod1017?s=21",
     blurb: "Follow on X for drops & news." },
 ];
 
@@ -42,7 +46,7 @@ function fmt(n?: number, max = 4) {
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
-/* ---------- Detail Panels ---------- */
+/* ---------- Panels ---------- */
 function TokenPanel({ address, title, icon }: { address: Address; title: string; icon: string }) {
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
@@ -60,7 +64,7 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const symbol = data?.[1]?.result as string | undefined;
   const decimals = (data?.[2]?.result as number | undefined) ?? 18;
   const supplyBig = data?.[3]?.result as bigint | undefined;
-  const deadBal = data?.[4]?.result as bigint | undefined;
+  const deadBal   = data?.[4]?.result as bigint | undefined;
 
   const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
   const deadAmt = deadBal ? Number(formatUnits(deadBal, decimals)) : undefined;
@@ -69,7 +73,7 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   return (
     <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
       <div className="flex items-center gap-3 mb-4">
-        <span className="relative inline-block w-10 h-10 rounded-full overflow-hidden">
+        <span className="relative inline-block w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden">
           <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
         </span>
         <div>
@@ -87,11 +91,45 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   );
 }
 
+function SwapperPanel() {
+  const burned = useReadContract({
+    address: SWAPPER,
+    abi: swapperAbi,
+    functionName: "totalTobyBurned",
+    chainId: base.id,
+    query: { refetchInterval: 20_000, staleTime: 10_000, refetchOnWindowFocus: false },
+  });
+
+  const burnedNum = (() => {
+    const v = burned.data as bigint | undefined;
+    if (!v) return undefined;
+    return Number(formatUnits(v, 18));
+  })();
+
+  const href = `https://basescan.org/address/${SWAPPER}`;
+
+  return (
+    <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold">Toby Swapper</h3>
+        <a className="text-sm link" href={href} target="_blank" rel="noopener noreferrer">View Contract ↗</a>
+      </div>
+      <p className="text-sm text-inkSub mb-3">
+        Routes swaps on Base and buys-&-burns <span className="font-semibold">$TOBY</span> with a 1% fee.
+      </p>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div><div className="text-[var(--ink-sub)]">Total $TOBY Burned</div><div className="font-mono">{fmt(burnedNum)}</div></div>
+        <div><div className="text-[var(--ink-sub)]">Address</div><div className="font-mono truncate">{SWAPPER.slice(0,6)}…{SWAPPER.slice(-4)}</div></div>
+      </div>
+    </div>
+  );
+}
+
 function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; blurb: string; icon: string }) {
   return (
     <div className="glass rounded-3xl p-5 shadow-soft hover-glow w-full">
       <div className="flex items-center gap-3 mb-3">
-        <span className="relative inline-block w-10 h-10 rounded-full overflow-hidden">
+        <span className="relative inline-block w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden">
           <Image src={icon} alt={title} fill sizes="40px" className="object-cover" />
         </span>
         <h3 className="font-semibold">{title}</h3>
@@ -108,9 +146,9 @@ export default function InfoWheel() {
   const count = items.length;
   const step = 360 / count;
 
-  // Responsive wheel size: clamp(240px, viewport - 48px, 320px)
+  // Smaller for phones: clamp(200px, vw - 56px, 280px)
   const size = useResponsiveWheelSize();
-  const radius = Math.max(88, Math.floor(size * 0.36)); // keep icons inside ring
+  const radius = Math.max(76, Math.floor(size * 0.34));
 
   // rotationDeg: 0 => item 0 at top. Positive clockwise.
   const [rotationDeg, setRotationDeg] = useState(0);
@@ -121,29 +159,42 @@ export default function InfoWheel() {
   const centerRef = useRef<HTMLDivElement | null>(null);
   const lastAngleRef = useRef<number | null>(null);
 
-  const snapToNearest = (rot: number) => {
-    const normalized = normalizeDeg(rot);
-    let k = Math.round(-normalized / step);
-    k = mod(k, count);
-    const snappedRot = -k * step;
-    setRotationDeg(snappedRot);
-    setActiveIndex(k);
+  // --- math helpers
+  const normalizeDeg = (d: number) => {
+    let x = d % 360;
+    if (x > 180) x -= 360;
+    if (x < -180) x += 360;
+    return x;
+  };
+  const mod = (n: number, m: number) => ((n % m) + m) % m;
+  const shortestRotation = (current: number, target: number) => {
+    const c = normalizeDeg(current);
+    let t = normalizeDeg(target);
+    let diff = t - c;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return c + diff;
   };
 
-  const handleSelect = (i: number) => {
-    const targetRot = -i * step;
-    const adj = shortestRotation(rotationDeg, targetRot);
+  // snap & select (single source of truth to avoid “weirdness”)
+  const snapToIndex = (i: number) => {
+    const exact = -i * step;
+    setActiveIndex(i);
+    // animate near current, then snap to exact angle for perfect alignment
+    const adj = shortestRotation(rotationDeg, exact);
     setRotationDeg(adj);
-    setTimeout(() => snapToNearest(adj), 220);
+    setTimeout(() => setRotationDeg(exact), 200);
   };
 
+  // click a slice → bring to top AND select (one tap)
+  const handleSelect = (i: number) => snapToIndex(i);
+
+  // drag helpers
   const angleFromEvent = (e: PointerEvent | TouchEvent | MouseEvent) => {
-    const el = centerRef.current;
-    if (!el) return 0;
+    const el = centerRef.current!;
     const rect = el.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-
     let clientX = 0, clientY = 0;
     if ("touches" in e && e.touches.length) {
       clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
@@ -173,37 +224,30 @@ export default function InfoWheel() {
     if (!dragging.current) return;
     dragging.current = false;
     lastAngleRef.current = null;
-    snapToNearest(rotationDeg);
-  };
 
-  // keep active in sync if rotationDeg changes by other means
-  useEffect(() => {
+    // compute nearest index at top from current rotation, then snap+select
     const normalized = normalizeDeg(rotationDeg);
     let k = Math.round(-normalized / step);
     k = mod(k, count);
-    if (k !== activeIndex) setActiveIndex(k);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotationDeg]);
+    snapToIndex(k);
+  };
 
   const active = items[activeIndex];
 
   return (
     <div className="grid md:grid-cols-2 gap-6 items-start w-full">
-      {/* WHEEL CARD (fits screen) */}
+      {/* WHEEL CARD */}
       <div
-        className="glass rounded-3xl p-6 shadow-soft hover-glow w-full"
+        className="glass rounded-3xl p-5 sm:p-6 shadow-soft hover-glow w-full"
         style={{ maxWidth: "min(520px, 100%)" }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <h3 className="font-semibold">Explore TobyWorld</h3>
           <div className="pill pill-nav text-xs">{active.title}</div>
         </div>
 
-        <div
-          className="relative mx-auto select-none"
-          style={{ width: size, height: size }}
-        >
-          {/* Interaction surface (prevents page scroll while dragging) */}
+        <div className="relative mx-auto select-none" style={{ width: size, height: size }}>
+          {/* Interaction surface */}
           <div
             ref={centerRef}
             className="absolute inset-0 rounded-full"
@@ -236,23 +280,13 @@ export default function InfoWheel() {
                   aria-pressed={isActive}
                   aria-label={item.title}
                 >
-                  {/* Outer: handles hover/scale & ring */}
                   <span
-                    className={`relative inline-block w-14 h-14 rounded-2xl overflow-hidden glass transition-transform
+                    className={`relative inline-block w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden glass transition-transform
                       ${isActive ? "ring-2 ring-[var(--accent)] scale-[1.06]" : "hover:scale-105"}`}
                   >
-                    {/* Inner: COUNTER-ROTATE so icons stay upright */}
-                    <span
-                      className="absolute inset-0"
-                      style={{ transform: `rotate(${-rotationDeg}deg)` }}
-                    >
-                      <Image
-                        src={item.icon}
-                        alt={item.title}
-                        fill
-                        sizes="56px"
-                        className="object-cover"
-                      />
+                    {/* counter-rotate so images stay upright */}
+                    <span className="absolute inset-0" style={{ transform: `rotate(${-rotationDeg}deg)` }}>
+                      <Image src={item.icon} alt={item.title} fill sizes="56px" className="object-cover" />
                     </span>
                   </span>
                 </button>
@@ -261,11 +295,11 @@ export default function InfoWheel() {
           </div>
 
           {/* Top marker */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-0 h-0 border-l-4 border-r-4 border-b-8 border-transparent border-b-[var(--accent)] opacity-70 pointer-events-none" />
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-0 h-0 border-l-3 border-r-3 border-b-6 border-transparent border-b-[var(--accent)] opacity-70 pointer-events-none" />
         </div>
 
-        {/* Mobile quick picker (fits width) */}
-        <div className="mt-4 flex md:hidden gap-2 overflow-x-auto no-scrollbar">
+        {/* Mobile quick picker */}
+        <div className="mt-3 sm:mt-4 flex md:hidden gap-2 overflow-x-auto no-scrollbar">
           {items.map((item, i) => (
             <button
               key={i}
@@ -279,54 +313,27 @@ export default function InfoWheel() {
         </div>
       </div>
 
-      {/* DETAILS (fits screen) */}
+      {/* DETAILS */}
       <div className="space-y-4 w-full" style={{ maxWidth: "min(520px, 100%)" }}>
         {active.kind === "token" ? (
-          <TokenPanel
-            address={(active as Extract<WheelItem, { kind: "token" }>).address}
-            title={active.title}
-            icon={active.icon}
-          />
+          <TokenPanel address={active.address as Address} title={active.title} icon={active.icon} />
+        ) : active.kind === "swapper" ? (
+          <SwapperPanel />
         ) : (
-          <LinkPanel
-            href={(active as Extract<WheelItem, { kind: "link" }>).href}
-            title={active.title}
-            blurb={(active as Extract<WheelItem, { kind: "link" }>).blurb}
-            icon={active.icon}
-          />
+          <LinkPanel href={(active as any).href} title={active.title} blurb={(active as any).blurb} icon={active.icon} />
         )}
       </div>
     </div>
   );
 }
 
-/* ---------- Helpers ---------- */
-
-function normalizeDeg(d: number) {
-  let x = d % 360;
-  if (x > 180) x -= 360;
-  if (x < -180) x += 360;
-  return x;
-}
-function mod(n: number, m: number) {
-  return ((n % m) + m) % m;
-}
-function shortestRotation(current: number, target: number) {
-  const c = normalizeDeg(current);
-  let t = normalizeDeg(target);
-  let diff = t - c;
-  if (diff > 180) diff -= 360;
-  if (diff < -180) diff += 360;
-  return c + diff;
-}
-
-/** clamp(240px, viewport-48px, 320px) with resize listener */
+/** clamp(200px, viewport-56px, 280px) */
 function useResponsiveWheelSize() {
-  const [w, setW] = useState(320);
+  const [w, setW] = useState(280);
   useEffect(() => {
     const compute = () => {
       const vw = typeof window !== "undefined" ? window.innerWidth : 360;
-      const candidate = Math.min(320, Math.max(240, vw - 48)); // 24px pad on each side
+      const candidate = Math.min(280, Math.max(200, vw - 56)); // 28px padding each side
       setW(candidate);
     };
     compute();
