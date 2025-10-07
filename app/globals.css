@@ -176,3 +176,43 @@ a.link:hover, .link:hover {
   box-shadow: none !important;
   padding: 0 !important;
 }
+/* Spinning wheel */
+@keyframes wheel-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spin-slow { animation: wheel-spin 28s linear infinite; }
+.pause-on-hover:hover { animation-play-state: paused; }
+
+/* keep it accessible */
+@media (prefers-reduced-motion: reduce) {
+  .spin-slow { animation: none !important; }
+}
+/* --- Glow + pulse utilities --- */
+.hover-glow {
+  transition: box-shadow .25s ease, transform .2s ease, background-color .2s ease, border-color .2s ease;
+  box-shadow: 0 0 0 rgba(121,255,225,0);
+}
+.hover-glow:hover {
+  box-shadow: 0 0 24px rgba(121,255,225,.25), 0 8px 32px rgba(0,0,0,.35);
+}
+
+/* Subtle pulse for "active" items */
+@keyframes pulse-soft {
+  0%,100% { box-shadow: 0 0 0 rgba(121,255,225,0); }
+  50% { box-shadow: 0 0 18px rgba(121,255,225,.18); }
+}
+.pulse-soft { animation: pulse-soft 2.2s ease-in-out infinite; }
+
+/* Tiny float for cards */
+@keyframes floaty-sm {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.floaty-sm { animation: floaty-sm 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-glow { transition: none; }
+  .pulse-soft, .floaty-sm { animation: none !important; }
+}
