@@ -2,7 +2,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Address, formatUnits, isAddress, parseUnits } from "viem";
+import {
+  Address,
+  formatUnits,
+  isAddress,
+  parseUnits,
+  maxUint256,
+} from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
@@ -12,6 +18,7 @@ import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 
+/* ---------- ABIs ---------- */
 const UniV2RouterAbi = [
   {
     type: "function",
@@ -25,6 +32,21 @@ const UniV2RouterAbi = [
   },
 ] as const;
 
+// tiny ERC20 approve ABI for fallback
+const ERC20_ABI_MIN = [
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
+
+/* ---------- helpers ---------- */
 function byAddress(addr?: Address | "ETH") {
   if (!addr || addr === "ETH")
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
@@ -37,11 +59,8 @@ function byAddress(addr?: Address | "ETH") {
       }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
-
 const eq = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
-
-// checksum-safe helpers (viem accepts lowercase fine)
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
@@ -108,40 +127,18 @@ function DebugPanel({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-1">
-          <div>
-            Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}
-          </div>
-          <div>
-            Account: <code className="break-all">{address ?? "—"}</code>
-          </div>
-          <div>
-            Token In: <b>{inMeta.symbol}</b>{" "}
-            <small>({inMeta.address ?? "ETH"})</small>
-          </div>
-          <div>
-            Token Out: <b>{outMeta.symbol}</b>{" "}
-            <small>({outMeta.address})</small>
-          </div>
+          <div>Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}</div>
+          <div>Account: <code className="break-all">{address ?? "—"}</code></div>
+          <div>Token In: <b>{inMeta.symbol}</b> <small>({inMeta.address ?? "ETH"})</small></div>
+          <div>Token Out: <b>{outMeta.symbol}</b> <small>({outMeta.address})</small></div>
         </div>
 
         <div className="space-y-1">
-          <div>
-            Amount In (human): <code>{amountInHuman}</code>
-          </div>
-          <div>
-            Amount In (raw): <code>{amountInBig.toString()}</code>
-          </div>
-          <div>
-            Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code>
-          </div>
-          <div>
-            Expected Out (human):{" "}
-            <code>{fmt(expectedOutBig, outMeta.decimals)}</code>
-          </div>
-          <div>
-            MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage:{" "}
-            <code>{slippage}%</code>
-          </div>
+          <div>Amount In (human): <code>{amountInHuman}</code></div>
+          <div>Amount In (raw): <code>{amountInBig.toString()}</code></div>
+          <div>Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code></div>
+          <div>Expected Out (human): <code>{fmt(expectedOutBig, outMeta.decimals)}</code></div>
+          <div>MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage: <code>{slippage}%</code></div>
         </div>
       </div>
 
@@ -180,72 +177,30 @@ function DebugPanel({
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="glass rounded-xl p-3">
           <div className="font-semibold mb-1">Balance In</div>
-          <div>
-            decimals: <code>{balInRaw.decimals ?? "—"}</code>
-          </div>
-          <div>
-            raw: <code>{balInRaw.value?.toString() ?? "—"}</code>
-          </div>
-          <div>
-            human:{" "}
-            <code>
-              {fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}
-            </code>
-          </div>
-          <div>
-            loading: <code>{String(balInRaw.isLoading)}</code>
-          </div>
-          <div>
-            error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code>
-          </div>
-          <button
-            className="mt-2 pill pill-opaque px-2 py-1"
-            onClick={() => balInRaw.refetch?.()}
-          >
-            Refetch In
-          </button>
+          <div>decimals: <code>{balInRaw.decimals ?? "—"}</code></div>
+          <div>raw: <code>{balInRaw.value?.toString() ?? "—"}</code></div>
+          <div>human: <code>{fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}</code></div>
+          <div>loading: <code>{String(balInRaw.isLoading)}</code></div>
+          <div>error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code></div>
+          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balInRaw.refetch?.()}>Refetch In</button>
         </div>
 
         <div className="glass rounded-xl p-3">
           <div className="font-semibold mb-1">Balance Out</div>
-          <div>
-            decimals: <code>{balOutRaw.decimals ?? "—"}</code>
-          </div>
-          <div>
-            raw: <code>{balOutRaw.value?.toString() ?? "—"}</code>
-          </div>
-          <div>
-            human:{" "}
-            <code>
-              {fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}
-            </code>
-          </div>
-          <div>
-            loading: <code>{String(balOutRaw.isLoading)}</code>
-          </div>
-          <div>
-            error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code>
-          </div>
-          <button
-            className="mt-2 pill pill-opaque px-2 py-1"
-            onClick={() => balOutRaw.refetch?.()}
-          >
-            Refetch Out
-          </button>
+          <div>decimals: <code>{balOutRaw.decimals ?? "—"}</code></div>
+          <div>raw: <code>{balOutRaw.value?.toString() ?? "—"}</code></div>
+          <div>human: <code>{fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}</code></div>
+          <div>loading: <code>{String(balOutRaw.isLoading)}</code></div>
+          <div>error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code></div>
+          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balOutRaw.refetch?.()}>Refetch Out</button>
         </div>
       </div>
 
       <div className="mt-3 glass rounded-xl p-3">
         <div className="font-semibold mb-1">Allowance (tokenIn → SWAPPER)</div>
-        <div>
-          owner: <code className="break-all">{allowanceOwner ?? "—"}</code>
-        </div>
-        <div>
-          spender: <code className="break-all">{allowanceSpender ?? "—"}</code>
-        </div>
-        <div>
-          current: <code>{allowanceValue?.toString() ?? "—"}</code>
-        </div>
+        <div>owner: <code className="break-all">{allowanceOwner ?? "—"}</code></div>
+        <div>spender: <code className="break-all">{allowanceSpender ?? "—"}</code></div>
+        <div>current: <code>{allowanceValue?.toString() ?? "—"}</code></div>
       </div>
     </div>
   );
@@ -305,12 +260,8 @@ export default function SwapForm() {
   );
 
   // prices
-  const inUsd = useUsdPriceSingle(
-    inMeta.symbol === "ETH" ? "ETH" : inMeta.address!
-  );
-  const outUsd = useUsdPriceSingle(
-    outMeta.symbol === "ETH" ? "ETH" : outMeta.address!
-  );
+  const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
+  const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
 
   // amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
@@ -349,7 +300,7 @@ export default function SwapForm() {
 
       const inAddr = tokenIn === "ETH" ? WETH : (tokenIn as Address);
 
-      // identity/ETH↔WETH 1:1
+      // identity / ETH↔WETH 1:1
       if (eq(inAddr, tokenOut) && amountInBig > 0n) {
         if (!alive) return;
         const idPath = lcPath([inAddr as Address, tokenOut as Address]);
@@ -362,23 +313,13 @@ export default function SwapForm() {
       if (!client || amountInBig === 0n || !isAddress(tokenOut)) return;
 
       const direct: Address[] = [inAddr as Address, tokenOut as Address];
-      const viaWeth: Address[] = [
-        inAddr as Address,
-        WETH as Address,
-        tokenOut as Address,
-      ];
-      const backHop: Address[] = [
-        inAddr as Address,
-        tokenOut as Address,
-        WETH as Address,
-      ];
+      const viaWeth: Address[] = [inAddr as Address, WETH as Address, tokenOut as Address];
+      const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
 
       const candidates = [direct, viaWeth, backHop]
         .map(lcPath)
         .filter((p) => p.every(Boolean))
-        .filter(
-          (p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i
-        );
+        .filter((p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i);
 
       setPathsTried(candidates);
 
@@ -459,15 +400,26 @@ export default function SwapForm() {
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
+  // ---------- Approve (hook first, then direct fallback) ----------
+  const approveDirect = async () => {
+    if (tokenIn === "ETH" || !isAddress(tokenIn as string)) return;
+    await writeContractAsync({
+      address: tokenIn as Address,
+      abi: ERC20_ABI_MIN,
+      functionName: "approve",
+      args: [SWAPPER as Address, maxUint256],
+    });
+    await allowance.refetch();
+  };
+
   const doApprove = async () => {
     if (!needAllowance) return;
     try {
-      // ask hook to bump to max if needed; passing current lets it decide
-      await approveMaxFlow(allowance.value);
-      await allowance.refetch();
-    } catch (e) {
-      console.error("approve error", e);
+      await approveMaxFlow(allowance.value);   // your hook's path to max
+    } catch {
+      await approveDirect();                   // hard fallback
     }
+    await allowance.refetch();
   };
 
   // fee path (TOBY burn), keep len ≥ 2, lowercase everything
@@ -484,7 +436,7 @@ export default function SwapForm() {
     // last-chance safety: if allowance is still short (or unknown), try to approve now and exit
     if (needAllowance && (!hasEnoughAllowance || allowance.value === undefined)) {
       await doApprove();
-      return; // user can click Swap again after approval confirms
+      return; // user clicks Swap again after approval confirms
     }
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
@@ -628,10 +580,7 @@ export default function SwapForm() {
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
               <>
-                Est:{" "}
-                <span className="font-mono">
-                  {expectedOutHuman.toFixed(6)}
-                </span>{" "}
+                Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span>{" "}
                 {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
               </>
             ) : quoteErr ? (
