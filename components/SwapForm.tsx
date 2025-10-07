@@ -8,13 +8,11 @@ import {
   isAddress,
   parseUnits,
   maxUint256,
-  erc20Abi,
 } from "viem";
 import {
   useAccount,
   usePublicClient,
   useWriteContract,
-  useWaitForTransactionReceipt,
 } from "wagmi";
 import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
@@ -59,7 +57,7 @@ function byAddress(addr?: Address | "ETH") {
 const eq = (a?: string, b?: string) =>
   !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-// checksum-safe helpers
+// checksum-safe helpers (viem accepts lowercase just fine)
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
@@ -79,8 +77,6 @@ function DebugPanel({
   expectedOutBig,
   slippage,
   minOutMainHuman,
-  allowanceValue,
-  needAllowance,
 }: {
   address?: Address;
   chain?: { id: number; name?: string };
@@ -96,8 +92,6 @@ function DebugPanel({
   expectedOutBig?: bigint;
   slippage: number;
   minOutMainHuman: string;
-  allowanceValue?: bigint;
-  needAllowance: boolean;
 }) {
   const fmt = (v?: bigint, d = 18) => {
     try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
@@ -113,8 +107,6 @@ function DebugPanel({
           <div>Account: <code className="break-all">{address ?? "—"}</code></div>
           <div>Token In: <b>{inMeta.symbol}</b> <small>({inMeta.address ?? "ETH"})</small></div>
           <div>Token Out: <b>{outMeta.symbol}</b> <small>({outMeta.address})</small></div>
-          <div>Allowance (raw): <code>{allowanceValue?.toString() ?? "—"}</code></div>
-          <div>Needs allowance?: <code>{String(needAllowance)}</code></div>
         </div>
 
         <div className="space-y-1">
@@ -208,10 +200,7 @@ export default function SwapForm() {
   const chainId = chain?.id ?? base.id;
   const client = usePublicClient({ chainId: base.id });
   const { writeContractAsync } = useWriteContract();
-  const [_, setLastTxHash] = useState<`0x${string}` | undefined>(undefined);
-  const waitFor = useWaitForTransactionReceipt();
 
-  // UI state
   const [modeTokenToToken, setModeTokenToToken] = useState(false);
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<Address>(
@@ -290,9 +279,9 @@ export default function SwapForm() {
       const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
 
       const candidates = [direct, viaWeth, backHop]
-        .map(lcPath)
+        .map(lcPath) // normalize to lowercase (fixes "Address is invalid")
         .filter((p) => p.every(Boolean))
-        .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i);
+        .filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i); // dedupe
 
       setPathsTried(candidates);
 
@@ -336,16 +325,21 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
-  // ---------- Allowance (now based solely on tokenIn !== "ETH") ----------
-  const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
+  // Allowance (only for token→token where tokenIn is ERC-20)
+  const needAllowance = modeTokenToToken && tokenIn !== "ETH" && isAddress(tokenIn as string);
   const allowance = useStickyAllowance(
     needAllowance ? (tokenIn as Address) : undefined,
     needAllowance ? (address as Address) : undefined,
     needAllowance ? (SWAPPER as Address) : undefined
   );
 
-  // If your useApprove exposes approveMaxFlow, prefer that:
-  const { approve: approveOnce, isPending: isApprovePending, txHash: approveHash, wait } = useApprove(
+  // useApprove returns approveOnce + approveMaxFlow
+  const {
+    approveOnce,
+    approveMaxFlow,
+    isPending: isApprovePending,
+    txHash: approveHash, // not used in UI, but available
+  } = useApprove(
     needAllowance ? (tokenIn as Address) : undefined,
     needAllowance ? (SWAPPER as Address) : undefined
   );
@@ -372,30 +366,9 @@ export default function SwapForm() {
 
   const doApprove = async () => {
     if (!needAllowance) return;
-    // Try direct max; if token requires reset-to-zero, the wallet will revert on-chain
-    // and we’ll fall back to 0->max sequence below.
-    try {
-      const h = await approveOnce(maxUint256);
-      setLastTxHash(h as any);
-      await wait;
-      await allowance.refetch();
-      return;
-    } catch {
-      // Fallback for USDC-style: approve(0) then approve(max)
-      const zero = await writeContractAsync({
-        address: tokenIn as Address,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [SWAPPER as Address, 0n],
-      });
-      setLastTxHash(zero as any);
-      await waitFor.refetch({ queryKey: ['tx', zero] } as any);
-
-      const max = await approveOnce(maxUint256);
-      setLastTxHash(max as any);
-      await wait;
-      await allowance.refetch();
-    }
+    // Prefer the helper that handles direct max or 0->max internally
+    await approveMaxFlow(allowance.value);
+    await allowance.refetch();
   };
 
   // fee path (TOBY burn), keep len ≥ 2, lowercase everything
@@ -409,13 +382,6 @@ export default function SwapForm() {
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
 
-    // AUTO-APPROVE if short (so users don’t have to notice the button)
-    if (needAllowance && (!allowance.value || allowance.value < amountInBig)) {
-      await doApprove();
-      // Re-check post-approve
-      if (!allowance.value || allowance.value < amountInBig) return;
-    }
-
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
@@ -425,7 +391,7 @@ export default function SwapForm() {
     const feePath = buildFeePath(inAddr);
 
     if (tokenIn === "ETH") {
-      const h = await writeContractAsync({
+      await writeContractAsync({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
         functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
@@ -439,9 +405,17 @@ export default function SwapForm() {
         ],
         value: parseUnits(amt || "0", 18),
       });
-      setLastTxHash(h as any);
     } else {
-      const h = await writeContractAsync({
+      // if for any reason allowance is insufficient (AA wallets sometimes mis-estimate),
+      // try a last-chance max approve Once and continue (best-effort UX):
+      if (!hasEnoughAllowance) {
+        try {
+          await approveMaxFlow(allowance.value);
+          await allowance.refetch();
+        } catch {/* ignore */}
+      }
+
+      await writeContractAsync({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
         functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
@@ -456,7 +430,6 @@ export default function SwapForm() {
           now,
         ],
       });
-      setLastTxHash(h as any);
     }
   };
 
@@ -594,7 +567,7 @@ export default function SwapForm() {
         </div>
 
         {/* CTA(s): Approve if needed, then Swap */}
-        {needAllowance && !hasEnoughAllowance ? (
+        {modeTokenToToken && tokenIn !== "ETH" && !hasEnoughAllowance ? (
           <button
             onClick={doApprove}
             className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
@@ -607,7 +580,7 @@ export default function SwapForm() {
         <button
           onClick={doSwap}
           className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-          disabled={!isConnected || amountInBig === 0n || !quotePath || !hasEnoughBalance}
+          disabled={!canSwap}
         >
           <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
@@ -631,8 +604,6 @@ export default function SwapForm() {
             expectedOutBig={expectedOutBig}
             slippage={slippage}
             minOutMainHuman={minOutMainHuman}
-            allowanceValue={allowance.value}
-            needAllowance={needAllowance}
           />
         </div>
       )}
