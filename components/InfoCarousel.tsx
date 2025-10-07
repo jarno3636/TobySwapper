@@ -119,61 +119,75 @@ function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; 
   );
 }
 
-/* ---------- Scroll Gallery ---------- */
+/* ---------- Carousel ---------- */
 export default function InfoCarousel() {
   const [index, setIndex] = useState(0);
-  const [showInfo, setShowInfo] = useState(true);
-  const active = ITEMS[index];
+  const [animating, setAnimating] = useState(false);
 
-  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const scrollIndex = Math.round(el.scrollLeft / el.clientWidth);
-    if (scrollIndex !== index) {
-      setIndex(scrollIndex);
-      setShowInfo(false);
-      setTimeout(() => setShowInfo(true), 150);
-    }
+  const prev = () => {
+    setAnimating(true);
+    setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length);
   };
+  const next = () => {
+    setAnimating(true);
+    setIndex((i) => (i + 1) % ITEMS.length);
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimating(false), 300);
+    return () => clearTimeout(t);
+  }, [index]);
+
+  const active = ITEMS[index];
 
   return (
     <div className="flex flex-col items-center w-full overflow-hidden">
-      {/* Horizontal scroll of images */}
-      <div
-        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar w-full max-w-[420px]"
-        onScroll={onScroll}
-      >
-        {ITEMS.map((item, i) => (
-          <div
-            key={i}
-            className="flex-shrink-0 w-full snap-center flex flex-col items-center px-4"
-          >
-            <div className="rounded-3xl overflow-hidden glass shadow-soft aspect-square w-full max-w-[320px] mx-auto">
-              <Image
-                src={item.icon}
-                alt={item.title}
-                width={320}
-                height={320}
-                className="object-contain"
-              />
-            </div>
-            <h3 className="text-lg font-semibold mt-3">{item.title}</h3>
-          </div>
-        ))}
+      {/* Image carousel area */}
+      <div className="relative flex items-center justify-center w-full max-w-[420px]">
+        <button
+          onClick={prev}
+          className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1"
+          aria-label="Previous"
+        >
+          ←
+        </button>
+
+        <div className="w-[50%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex items-center justify-center">
+          <Image
+            src={active.icon}
+            alt={active.title}
+            width={180}
+            height={180}
+            className="object-contain"
+          />
+        </div>
+
+        <button
+          onClick={next}
+          className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1"
+          aria-label="Next"
+        >
+          →
+        </button>
       </div>
 
-      {/* Info section */}
-      <div className="mt-5 transition-all duration-300 ease-in-out w-full flex justify-center px-3">
-        {showInfo && (
-          <div className="w-full max-w-[420px]">
-            {active.kind === "token" ? (
-              <TokenPanel address={active.address} title={active.title} icon={active.icon} />
-            ) : active.kind === "swapper" ? (
-              <SwapperPanel />
-            ) : (
-              <LinkPanel href={active.href} title={active.title} blurb={active.blurb} icon={active.icon} />
-            )}
-          </div>
-        )}
+      <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
+
+      {/* Info section with slide-up animation */}
+      <div
+        className={`mt-5 w-full flex justify-center px-3 transition-all duration-500 transform ${
+          animating ? "opacity-0 translate-y-6" : "opacity-100 translate-y-0"
+        }`}
+      >
+        <div className="w-full max-w-[420px]">
+          {active.kind === "token" ? (
+            <TokenPanel address={active.address} title={active.title} icon={active.icon} />
+          ) : active.kind === "swapper" ? (
+            <SwapperPanel />
+          ) : (
+            <LinkPanel href={active.href} title={active.title} blurb={active.blurb} icon={active.icon} />
+          )}
+        </div>
       </div>
     </div>
   );
