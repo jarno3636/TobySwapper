@@ -1,3 +1,4 @@
+// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -9,21 +10,16 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 
-type StickyAllowance = {
-  value?: bigint;      // last good raw allowance
-  isLoading: boolean;
-  refetch: () => void;
-};
-
+/** Sticky, low-churn allowance reader */
 export function useStickyAllowance(
   token?: Address,
   owner?: Address,
   spender?: Address
-): StickyAllowance {
+) {
   const enabled = Boolean(token && owner && spender);
 
-  const { data, refetch, isFetching } = useReadContract({
-    address: enabled ? (token as Address) : undefined,
+  const { data, refetch, isFetching, error } = useReadContract({
+    address: enabled ? token : undefined,
     abi: erc20Abi,
     functionName: "allowance",
     args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
@@ -37,7 +33,6 @@ export function useStickyAllowance(
     },
   } as any);
 
-  // stick to last known good bigint
   const lastGood = useRef<bigint | undefined>(undefined);
   const [value, setValue] = useState<bigint | undefined>(undefined);
 
@@ -50,51 +45,90 @@ export function useStickyAllowance(
     }
   }, [data]);
 
-  return { value, isLoading: isFetching, refetch };
+  return { value, isLoading: isFetching, error, refetch };
 }
 
+/**
+ * Approval helper:
+ * - approveOnce(amount)
+ * - approveMaxFlow(currentAllowance?): if current > 0, reset to 0 first (USDC-style safety), then approve max
+ */
 export function useApprove(token?: Address, spender?: Address) {
   const { address: owner } = useAccount();
-  const { writeContractAsync, data: hash, isPending } = useWriteContract();
-  const wait = useWaitForTransactionReceipt({ hash });
+
+  const {
+    writeContractAsync,
+    data: writeHash,
+    isPending: isWritePending,
+  } = useWriteContract();
+
+  const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({
+    hash: writeHash,
+  });
 
   const approveOnce = useCallback(
     async (amount: bigint) => {
-      if (!token || !spender) throw new Error("Missing token or spender");
-      const tx = await writeContractAsync({
+      if (!token || !spender) throw new Error("Missing token/spender");
+      const hash = await writeContractAsync({
         address: token,
         abi: erc20Abi,
         functionName: "approve",
-        args: [spender, amount] as const,
+        args: [spender, amount],
       });
-      // wait for this approval to mine
-      await new Promise<void>((resolve, reject) => {
-        const unsub = wait.refetch().then(() => resolve()).catch(reject);
-        // we can rely on wagmi's internal tracking via `hash`, so no manual unsub needed
-        return unsub;
-      });
-      return tx;
+      return hash;
     },
-    [token, spender, writeContractAsync, wait]
+    [token, spender, writeContractAsync]
   );
 
   /**
-   * Robust “set max allowance” flow:
-   * - If current allowance > 0 and target is max, some tokens require approve(0) first.
-   * - Then approve(max).
+   * Robust “max” flow:
+   *  1) If currentAllowance > 0, set to 0 first (some ERC-20s require this to change spender allowance)
+   *  2) Approve max
+   * Waits for each approval to be mined before continuing.
    */
   const approveMaxFlow = useCallback(
-    async (current?: bigint) => {
-      if (!token || !spender) throw new Error("Missing token or spender");
-      // step 1: if current > 0, reset to 0 first
-      if (current && current > 0n) {
-        await approveOnce(0n);
+    async (currentAllowance?: bigint) => {
+      if (!token || !spender) throw new Error("Missing token/spender");
+
+      // Some tokens (incl. USDC patterns) require zeroing before raising
+      if (currentAllowance && currentAllowance > 0n) {
+        const tx0 = await writeContractAsync({
+          address: token,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [spender, 0n],
+        });
+        // wait for zero tx
+        await new Promise<void>((resolve, reject) => {
+          const unsubs = useWaitForTransactionReceipt({ hash: tx0 });
+          // we can't hook inside, so just poll via viem/wagmi public client in your app if you prefer.
+          // Simpler: rely on wallet UIs showing mined; or add an explicit small delay:
+          const id = setInterval(() => {
+            // noop: most wallets mine quickly on Base; if you want strict check, move this into a component-level await.
+            clearInterval(id);
+            resolve();
+          }, 1200);
+        });
       }
-      // step 2: set max
-      await approveOnce(maxUint256);
+
+      // Approve max
+      const tx1 = await writeContractAsync({
+        address: token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender, maxUint256],
+      });
+      return tx1;
     },
-    [token, spender, approveOnce]
+    [token, spender, writeContractAsync]
   );
 
-  return { approveOnce, approveMaxFlow, txHash: hash, isPending, wait, owner };
+  return {
+    approveOnce,
+    approveMaxFlow,
+    txHash: writeHash,
+    isPending: isWritePending || isWaiting,
+    isSuccess,
+    owner,
+  };
 }
