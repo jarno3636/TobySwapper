@@ -31,11 +31,11 @@ const ITEMS: WheelItem[] = [
   { kind: "token",   title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
   { kind: "token",   title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
   { kind: "swapper", title: "SWAPPER",  icon: "/toby2.PNG",           address: SWAPPER },
-  { kind: "link",    title: "toadgod.xyz",  icon: "/toby2.PNG", href: "https://toadgod.xyz",
+  { kind: "link",    title: "toadgod.xyz",  icon: "/tobyworld.PNG", href: "https://toadgod.xyz",
     blurb: "Official site: lore, links, and updates." },
-  { kind: "link",    title: "Telegram",     icon: "/toby2.PNG", href: "https://t.me/toadgang/212753",
+  { kind: "link",    title: "Telegram",     icon: "/toadlore.PNG", href: "https://t.me/toadgang/212753",
     blurb: "Join Toadgang — community chat & alpha." },
-  { kind: "link",    title: "@toadgod1017", icon: "/toby2.PNG", href: "https://x.com/toadgod1017?s=21",
+  { kind: "link",    title: "@toadgod1017", icon: "/twitter.PNG", href: "https://x.com/toadgod1017?s=21",
     blurb: "Follow on X for drops & news." },
 ];
 
