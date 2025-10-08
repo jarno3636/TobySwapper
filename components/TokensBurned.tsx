@@ -1,9 +1,9 @@
-// components/TokensBurned.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReadContract } from "wagmi";
 import type { Address } from "viem";
+import { base } from "viem/chains";
 import { SWAPPER } from "@/lib/addresses";
 
 const APP_URL = "https://tobyswap.vercel.app" as const;
@@ -83,6 +83,7 @@ export default function TokensBurned() {
     address: SWAPPER as Address,
     abi: SwapperAbi,
     functionName: "totalTobyBurned",
+    chainId: base.id,               // ✅ ensure we read from Base
     query: {
       refetchInterval: 20_000,
       staleTime: 10_000,
@@ -90,7 +91,7 @@ export default function TokensBurned() {
     },
   });
 
-  const burned18 = useMemo(() => (data ? (data as bigint) : 0n), [data]);
+  const burned18 = useMemo(() => (typeof data === "bigint" ? data : 0n), [data]);
   const burnedAnim18 = useAnimatedBigint(burned18, 900);
 
   const burnedPretty =
@@ -120,11 +121,7 @@ export default function TokensBurned() {
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(APP_URL)}`;
 
   const onRefresh = async () => {
-    try {
-      await refetch?.();
-    } catch {
-      // ignore – UI already shows last known value
-    }
+    try { await refetch?.(); } catch {}
   };
 
   return (
@@ -148,12 +145,8 @@ export default function TokensBurned() {
         className="absolute right-3 top-3 h-10 w-10 rounded-full pill-opaque flex items-center justify-center border border-white/15 shadow-soft hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:opacity-60"
       >
         <span
-          className={`text-xl drop-shadow ${
-            isFetching ? "animate-spin" : "animate-none"
-          }`}
-          style={{
-            filter: "drop-shadow(0 0 8px rgba(255,110,64,.6))",
-          }}
+          className={`text-xl drop-shadow ${isFetching ? "animate-spin" : "animate-none"}`}
+          style={{ filter: "drop-shadow(0 0 8px rgba(255,110,64,.6))" }}
         >
           🔥
         </span>
