@@ -1,4 +1,3 @@
-// hooks/useUsdPrice.ts
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,44 +20,26 @@ const UniV2RouterAbi = [
   },
 ] as const;
 
-// Base WETH
-const WETH: Address = "0x4200000000000000000000000000000000000006";
+// force same router as app uses
+const ROUTER = ADDR.QUOTE_ROUTER_V2;
+const WETH = ADDR.WETH;
+const USDC = ADDR.USDC;
 
-/** Resolve addresses flexibly so missing exports don't break types/builds */
-function resolveAddresses() {
-  const USDC =
-    (ADDR as any).USDC ??
-    (process.env.NEXT_PUBLIC_USDC as Address) ??
-    ("0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913" as Address); // Base USDC
-
-  const ROUTER =
-    (ADDR as any).ROUTER ??
-    (ADDR as any).SWAPPER ?? // if you prefer to route via your own swapper (must expose getAmountsOut)
-    (process.env.NEXT_PUBLIC_V2_ROUTER as Address);
-
-  return { USDC: USDC as Address, ROUTER: ROUTER as Address | undefined };
-}
-
-/** Safely get a viem client (wagmi public client if present, else a fallback) */
 function useSafePublicClient() {
-  const wagmiClient = usePublicClient(); // may be undefined during build/type-check
+  const wagmiClient = usePublicClient();
   const rpcUrl =
     process.env.NEXT_PUBLIC_RPC_BASE ||
     (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
       ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
-      : undefined);
+      : "https://mainnet.base.org");
 
-  // Fallback viem client so we never end up with an undefined client
-  const fallback = useMemo(
-    () =>
-      createPublicClient({
-        chain: base,
-        transport: http(rpcUrl || "https://mainnet.base.org"),
-      }),
-    [rpcUrl]
+  return (
+    wagmiClient ??
+    createPublicClient({
+      chain: base,
+      transport: http(rpcUrl),
+    })
   );
-
-  return wagmiClient ?? fallback;
 }
 
 /**
@@ -74,14 +55,6 @@ export function useUsdPriceSingle(idOrAddr: "ETH" | Address) {
 
     (async () => {
       try {
-        const { USDC, ROUTER } = resolveAddresses();
-        if (!ROUTER) {
-          // No router configured; fail soft to 0 instead of crashing build
-          if (!cancelled) setPrice(0);
-          return;
-        }
-
-        // ETH path: WETH -> USDC
         if (idOrAddr === "ETH") {
           const amountIn = parseUnits("1", 18);
           const amounts = (await client.readContract({
@@ -90,14 +63,12 @@ export function useUsdPriceSingle(idOrAddr: "ETH" | Address) {
             functionName: "getAmountsOut",
             args: [amountIn, [WETH, USDC]],
           })) as bigint[];
-
           const out = amounts[amounts.length - 1];
           const p = Number(out) / 1e6; // USDC has 6 decimals on Base
           if (!cancelled) setPrice(Number.isFinite(p) ? p : 0);
           return;
         }
 
-        // ERC20 path: token -> USDC
         const [decimals, usdcDecimals] = await Promise.all([
           client.readContract({
             address: idOrAddr as Address,
@@ -118,7 +89,6 @@ export function useUsdPriceSingle(idOrAddr: "ETH" | Address) {
           functionName: "getAmountsOut",
           args: [amountIn, [idOrAddr as Address, USDC]],
         })) as bigint[];
-
         const out = amounts[amounts.length - 1];
         const p = Number(out) / 10 ** usdcDecimals;
         if (!cancelled) setPrice(Number.isFinite(p) ? p : 0);
