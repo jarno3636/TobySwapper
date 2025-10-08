@@ -16,12 +16,12 @@ import TokenSelect from "./TokenSelect";
 import {
   TOKENS,
   USDC,
-  QUOTE_ROUTER_V2, // MUST match the router your on-chain swapper uses
+  QUOTE_ROUTER_V2, // MUST match router used for quotes
   WETH,
-  SWAPPER,
+  SWAPPER,         // NEW address wired here
   TOBY,
 } from "@/lib/addresses";
-import { useUsdPriceSingle } from "@/hooks/useUsdPrice";
+import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 
@@ -68,7 +68,6 @@ function byAddress(addr?: Address | "ETH") {
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
-
 function useSafePublicClient() {
   const wagmiClient = usePublicClient();
   const rpcUrl =
@@ -107,7 +106,7 @@ export default function SwapForm() {
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
   /* ---------- feeBps ---------- */
-  const [feeBps, setFeeBps] = useState<bigint>(100n); // 1% default
+  const [feeBps, setFeeBps] = useState<bigint>(100n); // default
   useEffect(() => {
     (async () => {
       try {
@@ -121,7 +120,7 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  /* ---------- quote (use POST-FEE amount!) ---------- */
+  /* ---------- quote (use POST-FEE amount) ---------- */
   const mainAmountIn = useMemo(() => amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM, [amountInBig, feeBps]);
   const [quotePath, setQuotePath] = useState<Address[] | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -166,8 +165,6 @@ export default function SwapForm() {
     const raw = (quoteOutMain * BigInt(bps)) / 10000n;
     return formatUnits(raw, outMeta.decimals);
   }, [quoteOutMain, slippage, outMeta.decimals]);
-
-  const minOutFeeHuman = "0"; // keep the TOBY fee-leg minOut at 0 for now
 
   /* ---------- allowance / approval to SWAPPER ---------- */
   const needsApproval = !!inMeta.address && isAddress(inMeta.address);
@@ -246,7 +243,7 @@ export default function SwapForm() {
             parseUnits(minOutMainHuman, decOut),
             mainPath,
             feePath,
-            parseUnits(minOutFeeHuman, 18),
+            parseUnits("0", 18),
             deadline,
           ],
           value: parseUnits(amt || "0", 18),
@@ -266,7 +263,7 @@ export default function SwapForm() {
             parseUnits(minOutMainHuman, decOut),
             mainPath,
             feePath,
-            parseUnits(minOutFeeHuman, 18),
+            parseUnits("0", 18),
             deadline,
           ],
           account: address as Address,
@@ -292,14 +289,10 @@ export default function SwapForm() {
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
-        <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(true)}>Slippage: {slippage}%</button>
+        <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(true)}>
+          Slippage: {slippage}%
+        </button>
       </div>
-
-      {chain && chain.id !== base.id && (
-        <div className="mb-3 text-xs text-warn">
-          Connected to {chain?.name}. Please switch to Base for balances & swaps.
-        </div>
-      )}
 
       {/* Token In */}
       <div className="space-y-2">
@@ -318,7 +311,7 @@ export default function SwapForm() {
           const prevIn = tokenIn, prevOut = tokenOut;
           setTokenIn(prevOut as Address);
           setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
-        }} aria-label="Swap sides" title="Swap sides">
+        }}>
           ↕
         </button>
       </div>
