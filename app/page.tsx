@@ -1,4 +1,6 @@
 // app/page.tsx
+"use client";
+
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import SwapForm from "@/components/SwapForm";
@@ -16,23 +18,26 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
-// ✅ Fixed: must return default export for dynamic import
-const InfoCarousel = dynamic(() => import("@/components/InfoCarousel").then((m) => m.default), {
-  ssr: false,
-  loading: () => (
-    <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
-      <div className="h-5 w-44 bg-white/10 rounded mb-4" />
-      <div className="flex gap-4">
-        <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
-        <div className="flex-1 h-40 bg-white/10 rounded-3xl" />
-        <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
+// ✅ must resolve .default for dynamic import
+const InfoCarousel = dynamic(
+  () => import("@/components/InfoCarousel").then((m) => m.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
+        <div className="h-5 w-44 bg-white/10 rounded mb-4" />
+        <div className="flex gap-4">
+          <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
+          <div className="flex-1 h-40 bg-white/10 rounded-3xl" />
+          <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
+        </div>
+        <div className="mt-3 h-2.5 w-24 bg-white/10 rounded-full" />
       </div>
-      <div className="mt-3 h-2.5 w-24 bg-white/10 rounded-full" />
-    </div>
-  ),
-});
+    ),
+  }
+);
 
-// Micro blur placeholder to avoid heavy preview loads
+// Tiny blur to avoid heavy preview loads
 const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
@@ -43,7 +48,6 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
           {/* LEFT */}
           <div className="flex flex-col items-center md:items-start">
-            {/* Hero image with slide-up + fade-in animation */}
             <div
               className="glass rounded-3xl overflow-hidden mb-6 relative w-[70%] max-w-[360px] sm:max-w-[420px] md:max-w-[480px]
               animate-[slideUpFade_0.8s_ease-out]"
@@ -82,7 +86,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* RIGHT: Carousel section */}
+          {/* RIGHT */}
           <div className="flex w-full justify-center">
             <div className="w-full" style={{ maxWidth: 520 }}>
               <InfoCarousel />
@@ -93,7 +97,7 @@ export default function Page() {
 
       <Footer />
 
-      {/* slideUp + fade keyframes */}
+      {/* animations */}
       <style jsx global>{`
         @keyframes slideUpFade {
           from {
