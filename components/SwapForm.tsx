@@ -8,7 +8,6 @@ import {
   parseUnits,
   isAddress,
   maxUint256,
-  getAddress, // (optional) for checksummed display
 } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { base } from "viem/chains";
@@ -16,12 +15,10 @@ import TokenSelect from "./TokenSelect";
 import {
   TOKENS,
   USDC,
-  QUOTE_ROUTER_V2,   // 👈 use this for getAmountsOut
+  QUOTE_ROUTER_V2, // used for getAmountsOut
   WETH,
   SWAPPER,
   TOBY,
-  // UNIVERSAL_ROUTER_V4, // available if/when you wire UR execution
-  // PERMIT2,             // available if/when you wire Permit2 approvals
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -42,12 +39,26 @@ const UniV2RouterAbi = [
 ] as const;
 
 const ERC20_ABI = [
-  { type: "function", name: "allowance", stateMutability: "view",
-    inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "approve", stateMutability: "nonpayable",
-    inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }],
-    outputs: [{ name: "", type: "bool" }] },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
 
 /* ---------- helpers ---------- */
@@ -56,12 +67,37 @@ function byAddress(addr?: Address | "ETH") {
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase());
   return t
-    ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
+    ? {
+        symbol: t.symbol,
+        decimals: (t.decimals ?? 18) as 18 | 6,
+        address: t.address as Address,
+      }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
-const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eq = (a?: string, b?: string) =>
+  !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
+
+/** Resilient public client so reads never stall if wagmi client is momentarily undefined */
+function useSafePublicClient() {
+  const wagmiClient = usePublicClient();
+  const rpcUrl =
+    process.env.NEXT_PUBLIC_RPC_BASE ||
+    (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+      ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+      : "https://mainnet.base.org");
+
+  // If wagmi client exists, use it; otherwise construct a lightweight fallback viem client.
+  return (
+    wagmiClient ??
+    // @ts-expect-error createPublicClient is available via viem's public import in your setup
+    new (require("viem").PublicClient)({
+      chain: base,
+      transport: (require("viem").http)(rpcUrl),
+    })
+  );
+}
 
 function DebugPanel({
   address,
@@ -86,8 +122,20 @@ function DebugPanel({
   chain?: { id: number; name?: string };
   inMeta: { symbol: string; decimals: number; address?: Address };
   outMeta: { symbol: string; decimals: number; address?: Address };
-  balInRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
-  balOutRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
+  balInRaw: {
+    value?: bigint;
+    decimals?: number;
+    isLoading?: boolean;
+    error?: unknown;
+    refetch?: () => void;
+  };
+  balOutRaw: {
+    value?: bigint;
+    decimals?: number;
+    isLoading?: boolean;
+    error?: unknown;
+    refetch?: () => void;
+  };
   amountInHuman: string;
   amountInBig: bigint;
   pathTried: Address[][];
@@ -101,8 +149,11 @@ function DebugPanel({
   allowanceValue?: bigint;
 }) {
   const fmt = (v?: bigint, d = 18) => {
-    try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
-    catch { return "—"; }
+    try {
+      return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—";
+    } catch {
+      return "—";
+    }
   };
   return (
     <div className="glass rounded-2xl p-4 border border-white/10 text-xs">
@@ -110,31 +161,59 @@ function DebugPanel({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-1">
-          <div>Chain: <code>{chain?.id}</code> {chain?.name ? `· ${chain?.name}` : ""}</div>
-          <div>Account: <code className="break-all">{address ?? "—"}</code></div>
-          <div>Token In: <b>{inMeta.symbol}</b> <small>({inMeta.address ?? "ETH"})</small></div>
-          <div>Token Out: <b>{outMeta.symbol}</b> <small>({outMeta.address})</small></div>
+          <div>
+            Chain: <code>{chain?.id}</code>{" "}
+            {chain?.name ? `· ${chain?.name}` : ""}
+          </div>
+          <div>
+            Account: <code className="break-all">{address ?? "—"}</code>
+          </div>
+          <div>
+            Token In: <b>{inMeta.symbol}</b>{" "}
+            <small>({inMeta.address ?? "ETH"})</small>
+          </div>
+          <div>
+            Token Out: <b>{outMeta.symbol}</b>{" "}
+            <small>({outMeta.address})</small>
+          </div>
         </div>
 
         <div className="space-y-1">
-          <div>Amount In (human): <code>{amountInHuman}</code></div>
-          <div>Amount In (raw): <code>{amountInBig.toString()}</code></div>
-          <div>Expected Out (raw): <code>{expectedOutBig?.toString() ?? "—"}</code></div>
-          <div>Expected Out (human): <code>{fmt(expectedOutBig, outMeta.decimals)}</code></div>
-          <div>MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage: <code>{slippage}%</code></div>
+          <div>
+            Amount In (human): <code>{amountInHuman}</code>
+          </div>
+          <div>
+            Amount In (raw): <code>{amountInBig.toString()}</code>
+          </div>
+          <div>
+            Expected Out (raw):{" "}
+            <code>{expectedOutBig?.toString() ?? "—"}</code>
+          </div>
+          <div>
+            Expected Out (human):{" "}
+            <code>{fmt(expectedOutBig, outMeta.decimals)}</code>
+          </div>
+          <div>
+            MinOut (human): <code>{minOutMainHuman || "0"}</code> · Slippage:{" "}
+            <code>{slippage}%</code>
+          </div>
         </div>
       </div>
 
       <div className="mt-2">
         <div className="mb-1">Paths tried (first success wins):</div>
         <div className="flex flex-col gap-1">
-          {pathTried.length ? pathTried.map((p, i) => (
-            <div key={i} className="flex flex-wrap gap-1">
-              <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
-                {p.join(" → ")}
-              </code>
-            </div>
-          )) : <span>—</span>}
+          {pathTried.length ? (
+            pathTried.map((p, i) => (
+              <div key={i} className="flex flex-wrap gap-1">
+                <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
+                  {p.join(" → ")}
+                </code>
+              </div>
+            ))
+          ) : (
+            <span>—</span>
+          )}
         </div>
         <div className="mt-2">
           Chosen path:{" "}
@@ -142,7 +221,9 @@ function DebugPanel({
             <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
               {pathChosen.join(" → ")}
             </code>
-          ) : "—"}
+          ) : (
+            "—"
+          )}
         </div>
         {quoteError && (
           <div className="mt-2 text-[11px] text-warn">
@@ -153,9 +234,15 @@ function DebugPanel({
 
       <div className="mt-3 glass rounded-xl p-3">
         <div className="font-semibold mb-1">Allowance (tokenIn → SWAPPER)</div>
-        <div>owner: <code className="break-all">{allowanceOwner ?? "—"}</code></div>
-        <div>spender: <code className="break-all">{allowanceSpender ?? "—"}</code></div>
-        <div>current: <code>{allowanceValue?.toString() ?? "—"}</code></div>
+        <div>
+          owner: <code className="break-all">{allowanceOwner ?? "—"}</code>
+        </div>
+        <div>
+          spender: <code className="break-all">{allowanceSpender ?? "—"}</code>
+        </div>
+        <div>
+          current: <code>{allowanceValue?.toString() ?? "—"}</code>
+        </div>
       </div>
     </div>
   );
@@ -165,7 +252,7 @@ function DebugPanel({
 export default function SwapForm() {
   const { address, chain, isConnected } = useAccount();
   const chainId = chain?.id ?? base.id;
-  const client = usePublicClient({ chainId: base.id });
+  const client = useSafePublicClient();
   const { writeContractAsync } = useWriteContract();
 
   // UI state
@@ -186,8 +273,12 @@ export default function SwapForm() {
   const balOutRaw = useTokenBalance(address, outMeta.address);
 
   // prices
-  const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
-  const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
+  const inUsd = useUsdPriceSingle(
+    inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address)
+  );
+  const outUsd = useUsdPriceSingle(
+    outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address)
+  );
 
   // amount (debounced)
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
@@ -197,10 +288,17 @@ export default function SwapForm() {
   }, [amt]);
 
   const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = useMemo(() => (Number.isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
+  const amtInUsd = useMemo(
+    () => (Number.isFinite(amtNum) ? amtNum * inUsd : 0),
+    [amtNum, inUsd]
+  );
 
   const amountInBig = useMemo(() => {
-    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
+    try {
+      return parseUnits(debouncedAmt || "0", inMeta.decimals);
+    } catch {
+      return 0n;
+    }
   }, [debouncedAmt, inMeta.decimals]);
 
   /* ---------- Quote (multi-path) ---------- */
@@ -232,13 +330,23 @@ export default function SwapForm() {
       if (!client || amountInBig === 0n || !isAddress(tokenOut)) return;
 
       const direct: Address[] = [inAddr as Address, tokenOut as Address];
-      const viaWeth: Address[] = [inAddr as Address, WETH as Address, tokenOut as Address];
-      const backHop: Address[] = [inAddr as Address, tokenOut as Address, WETH as Address];
+      const viaWeth: Address[] = [
+        inAddr as Address,
+        WETH as Address,
+        tokenOut as Address,
+      ];
+      const backHop: Address[] = [
+        inAddr as Address,
+        tokenOut as Address,
+        WETH as Address,
+      ];
 
       const candidates = [direct, viaWeth, backHop]
         .map(lcPath)
         .filter((p) => p.every(Boolean))
-        .filter((p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i);
+        .filter(
+          (p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i
+        );
 
       setPathsTried(candidates);
 
@@ -265,14 +373,21 @@ export default function SwapForm() {
       }
     })();
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [client, tokenIn, tokenOut, amountInBig]);
 
   // expected & minOut
   const expectedOutBig = quoteOut;
   const expectedOutHuman = useMemo(() => {
-    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
-    catch { return undefined; }
+    try {
+      return expectedOutBig
+        ? Number(formatUnits(expectedOutBig, outMeta.decimals))
+        : undefined;
+    } catch {
+      return undefined;
+    }
   }, [expectedOutBig, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
@@ -283,13 +398,20 @@ export default function SwapForm() {
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
   /* ---------- Allowance (explicit on-chain reads) ---------- */
-  const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
+  const isEthIn = tokenIn === "ETH";
+  const needAllowance = !isEthIn && isAddress(tokenIn as string);
+
   const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
   const [isReadingAllowance, setIsReadingAllowance] = useState(false);
-  const [approveError, setApproveError] = useState<string | undefined>(undefined);
+  const [approveError, setApproveError] = useState<string | undefined>(
+    undefined
+  );
 
   const readAllowance = async () => {
-    if (!client || !needAllowance || !address) { setAllowance(undefined); return; }
+    if (!client || !needAllowance || !address) {
+      setAllowance(undefined);
+      return;
+    }
     try {
       setIsReadingAllowance(true);
       const a = (await client.readContract({
@@ -312,6 +434,14 @@ export default function SwapForm() {
     if (needAllowance && address) readAllowance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, address, tokenIn, needAllowance, chainId]);
+
+  // tiny retry to overcome initial race where client/address just appeared
+  useEffect(() => {
+    if (!needAllowance || !address) return;
+    const t = setTimeout(() => readAllowance(), 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, address, tokenIn, needAllowance]);
 
   const allowanceLoaded = !needAllowance || allowance !== undefined;
   const allowanceValue = allowance ?? 0n;
@@ -343,7 +473,7 @@ export default function SwapForm() {
       setApproveError(undefined);
       setIsApproving(true);
 
-      // Some ERC-20s (incl. USDC patterns) require zeroing before raising
+      // Many tokens (USDT/USDC patterns) require zeroing before raising.
       if (allowanceValue > 0n) {
         const tx0 = await writeContractAsync({
           address: tokenIn as Address,
@@ -395,7 +525,8 @@ export default function SwapForm() {
       await writeContractAsync({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
-        functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
+        functionName:
+          "swapETHForTokensSupportingFeeOnTransferTokens",
         args: [
           lc(tokenOut),
           parseUnits(expectedOutBig ? minOutMainHuman : "0", decOut),
@@ -410,12 +541,16 @@ export default function SwapForm() {
       await writeContractAsync({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
-        functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
+        functionName:
+          "swapTokensForTokensSupportingFeeOnTransferTokens",
         args: [
           lc(tokenIn as Address),
           lc(tokenOut),
           parseUnits(amt || "0", decIn),
-          parseUnits(expectedOutBig ? minOutMainHuman : "0", decOut),
+          parseUnits(
+            expectedOutBig ? minOutMainHuman : "0",
+            decOut
+          ),
           mainPath,
           feePath,
           parseUnits("0", 18),
@@ -426,16 +561,15 @@ export default function SwapForm() {
   };
 
   /* ---------- UI helpers ---------- */
-  const approveLabel =
-    needAllowance
-      ? hasEnoughAllowance
-        ? `Approved ✓`
-        : `Approve ${byAddress(tokenIn).symbol}`
-      : `—`;
+  const approveLabel = needAllowance
+    ? hasEnoughAllowance
+      ? `Approved ✓`
+      : `Approve ${byAddress(tokenIn).symbol}`
+    : `—`;
 
   const swapTitle = !allowanceLoaded
     ? "Waiting for allowance check…"
-    : (needAllowance && !hasEnoughAllowance)
+    : needAllowance && !hasEnoughAllowance
     ? "Approve first"
     : undefined;
 
@@ -464,11 +598,14 @@ export default function SwapForm() {
 
       {chain && chain.id !== base.id && (
         <div className="mb-3 text-xs text-warn">
-          Connected to {chain?.name}. Please switch to Base for balances & swaps.
+          Connected to {chain?.name}. Please switch to Base for balances &
+          swaps.
         </div>
       )}
       {!isConnected && (
-        <div className="mb-3 text-xs text-inkSub">Connect your wallet to load balances.</div>
+        <div className="mb-3 text-xs text-inkSub">
+          Connect your wallet to load balances.
+        </div>
       )}
 
       <div className="space-y-4">
@@ -481,7 +618,9 @@ export default function SwapForm() {
             exclude={tokenOut}
             balance={
               balInRaw.value !== undefined
-                ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
+                ? Number(
+                    formatUnits(balInRaw.value, inMeta.decimals)
+                  ).toFixed(6)
                 : undefined
             }
           />
@@ -496,18 +635,30 @@ export default function SwapForm() {
               const prevIn = tokenIn;
               const prevOut = tokenOut;
               setTokenIn(prevOut as Address);
-              setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
+              setTokenOut(
+                prevIn === "ETH" ? (USDC as Address) : (prevIn as Address)
+              );
             }}
             aria-label="Swap sides"
             title="Swap sides"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v18M8 7l4-4 4 4M16 17l-4 4-4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 3v18M8 7l4-4 4 4M16 17l-4 4-4-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
             </svg>
           </button>
         </div>
 
-        {/* Amount */}
+        {/* Amount + Always-visible Approve */}
         <div>
           <div className="flex items-center justify-between">
             <label className="text-sm text-inkSub">
@@ -517,12 +668,17 @@ export default function SwapForm() {
               Bal:{" "}
               <span className="font-mono">
                 {balInRaw.value !== undefined
-                  ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
+                  ? Number(
+                      formatUnits(balInRaw.value, inMeta.decimals)
+                    ).toFixed(6)
                   : isConnected
                   ? "—"
                   : "Connect wallet"}
               </span>
-              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
+              <button
+                className="ml-2 underline opacity-90 hover:opacity-100"
+                onClick={setMax}
+              >
                 MAX
               </button>
             </div>
@@ -535,9 +691,67 @@ export default function SwapForm() {
             placeholder="0.0"
             inputMode="decimal"
           />
-          <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
-          {isConnected && balInRaw.value !== undefined && (balInRaw.value < amountInBig) && (
-            <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
+          <div className="mt-2 text-xs text-inkSub">
+            ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
+          </div>
+          {isConnected &&
+            balInRaw.value !== undefined &&
+            balInRaw.value < amountInBig && (
+              <div className="mt-1 text-xs text-warn">
+                Insufficient {inMeta.symbol} balance.
+              </div>
+            )}
+
+          {/* Approve block lives directly below amount and is always visible for ERC-20 */}
+          {!isEthIn && (
+            <div className="mt-3 flex flex-col gap-1">
+              <div className="flex gap-2">
+                <button
+                  onClick={doApprove}
+                  className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 ${
+                    hasEnoughAllowance ? "opacity-60" : ""
+                  }`}
+                  // allow forcing approve even if allowance read is in-flight
+                  disabled={isApproving || !isConnected || hasEnoughAllowance}
+                  title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
+                >
+                  {isApproving ? "Approving…" : approveLabel}
+                </button>
+                <button
+                  onClick={() => readAllowance()}
+                  className="pill px-3 py-1 text-xs"
+                  disabled={isReadingAllowance}
+                  title="Refresh allowance"
+                >
+                  {isReadingAllowance ? "…" : "Refresh"}
+                </button>
+              </div>
+              <div className="text-[11px] text-inkSub">
+                {needAllowance ? (
+                  allowanceLoaded ? (
+                    <>
+                      Allowance:{" "}
+                      <span className="font-mono">
+                        {allowanceValue.toString()}
+                      </span>
+                    </>
+                  ) : (
+                    <>Checking allowance…</>
+                  )
+                ) : (
+                  <>Select a valid ERC-20 input.</>
+                )}
+                {approveError && (
+                  <div className="text-warn mt-1">
+                    Approve error: {approveError}
+                  </div>
+                )}
+              </div>
+              <div className="text-[11px] text-inkSub">
+                Spender:{" "}
+                <code className="break-all">{SWAPPER as Address}</code>
+              </div>
+            </div>
           )}
         </div>
 
@@ -550,50 +764,31 @@ export default function SwapForm() {
             exclude={tokenIn as Address}
             balance={
               balOutRaw.value !== undefined
-                ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6)
+                ? Number(
+                    formatUnits(balOutRaw.value, outMeta.decimals)
+                  ).toFixed(6)
                 : undefined
             }
           />
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
-              <>Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
+              <>
+                Est:{" "}
+                <span className="font-mono">
+                  {expectedOutHuman.toFixed(6)}
+                </span>{" "}
+                {outMeta.symbol} · 1 {outMeta.symbol} ≈ $
+                {outUsd.toFixed(4)}
+              </>
             ) : quoteErr ? (
               <>No route found on router.</>
             ) : (
-              <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
+              <>
+                1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              </>
             )}
           </div>
         </div>
-
-        {/* Approve (always visible for ERC-20 input, with status) */}
-        {needAllowance && (
-          <div className="flex flex-col gap-1">
-            <div className="flex gap-2">
-              <button
-                onClick={doApprove}
-                className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 ${hasEnoughAllowance ? "opacity-60" : ""}`}
-                disabled={isApproving || !isConnected || isReadingAllowance || hasEnoughAllowance}
-                title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
-              >
-                {isApproving ? "Approving…" : approveLabel}
-              </button>
-              <button
-                onClick={() => readAllowance()}
-                className="pill px-3 py-1 text-xs"
-                disabled={isReadingAllowance}
-                title="Refresh allowance"
-              >
-                {isReadingAllowance ? "…" : "Refresh"}
-              </button>
-            </div>
-            <div className="text-[11px] text-inkSub">
-              {allowanceLoaded
-                ? <>Allowance: <span className="font-mono">{allowanceValue.toString()}</span></>
-                : <>Checking allowance…</>}
-              {approveError && <div className="text-warn mt-1">Approve error: {approveError}</div>}
-            </div>
-          </div>
-        )}
 
         {/* Swap (disabled until allowance is loaded and sufficient) */}
         <button
@@ -602,7 +797,8 @@ export default function SwapForm() {
           disabled={!canSwap}
           title={swapTitle}
         >
-          <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
+          <span className="pip pip-a" /> <span className="pip pip-b" />{" "}
+          <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
       </div>
 
@@ -634,21 +830,42 @@ export default function SwapForm() {
       {/* Slippage modal */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setSlippageOpen(false)}
+          />
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
+              <button
+                className="pill pill-opaque px-3 py-1 text-xs"
+                onClick={() => setSlippageOpen(false)}
+              >
+                Close
+              </button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0.1, 0.5, 1, 2].map((v) => (
-                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
+                <button
+                  key={v}
+                  onClick={() => setSlippage(v)}
+                  className={`pill justify-center px-3 py-1 text-xs ${
+                    slippage === v ? "outline outline-1 outline-white/20" : ""
+                  }`}
+                >
                   {v}%
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(Number(e.target.value))}
+                className="glass rounded-pill px-3 py-2 w-full"
+              />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
