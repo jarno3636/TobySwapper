@@ -6,21 +6,9 @@ import dynamic from "next/dynamic";
 import SwapForm from "@/components/SwapForm";
 import Footer from "@/components/Footer";
 
-// Lazy-load heavier client components
-const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
-  ssr: false,
-  loading: () => (
-    <div className="glass rounded-3xl p-6 shadow-soft mt-6 animate-pulse">
-      <div className="h-5 w-40 bg-white/10 rounded mb-4" />
-      <div className="h-10 w-64 bg-white/10 rounded mb-3" />
-      <div className="h-3 w-full bg-white/10 rounded" />
-    </div>
-  ),
-});
-
-// ✅ must resolve .default for dynamic import
+// If InfoCarousel is a *named* export (e.g. `export function InfoCarousel() {}`)
 const InfoCarousel = dynamic(
-  () => import("@/components/InfoCarousel").then((m) => m.default),
+  () => import("@/components/InfoCarousel").then((m) => m.InfoCarousel),
   {
     ssr: false,
     loading: () => (
@@ -37,7 +25,18 @@ const InfoCarousel = dynamic(
   }
 );
 
-// Tiny blur to avoid heavy preview loads
+// Lazy-load TokensBurned (default export is fine)
+const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
+  ssr: false,
+  loading: () => (
+    <div className="glass rounded-3xl p-6 shadow-soft mt-6 animate-pulse">
+      <div className="h-5 w-40 bg-white/10 rounded mb-4" />
+      <div className="h-10 w-64 bg-white/10 rounded mb-3" />
+      <div className="h-3 w-full bg-white/10 rounded" />
+    </div>
+  ),
+});
+
 const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
@@ -97,7 +96,6 @@ export default function Page() {
 
       <Footer />
 
-      {/* animations */}
       <style jsx global>{`
         @keyframes slideUpFade {
           from {
