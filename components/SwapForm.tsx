@@ -1,3 +1,4 @@
+// components/SwapForm.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -16,9 +17,9 @@ import TokenSelect from "./TokenSelect";
 import {
   TOKENS,
   USDC,
-  QUOTE_ROUTER_V2, // MUST match router used for quotes
+  QUOTE_ROUTER_V2,
   WETH,
-  SWAPPER,         // NEW address wired here
+  SWAPPER,
   TOBY,
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
@@ -44,12 +45,26 @@ const UniV2RouterAbi = [
 ] as const;
 
 const ERC20_ABI = [
-  { type: "function", name: "allowance", stateMutability: "view",
-    inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "approve", stateMutability: "nonpayable",
-    inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }],
-    outputs: [{ name: "", type: "bool" }] },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
 
 const SWAPPER_VIEW_ABI = [
@@ -83,12 +98,17 @@ export default function SwapForm() {
   const client = useSafePublicClient();
   const { writeContractAsync } = useWriteContract();
 
-  // UI state
+  // UI state (start fresh — no sticky values)
   const [tokenIn, setTokenIn]   = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<Address>(TOKENS.find((t) => t.address !== USDC)!.address);
-  const [amt, setAmt]           = useState("5");
+  const [amt, setAmt]           = useState<string>(""); // ← empty by default
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
+
+  // Reset amount on mount, wallet change, chain change, or token flip
+  useEffect(() => { setAmt(""); }, []); // first load
+  useEffect(() => { setAmt(""); }, [address, chain?.id]); // wallet/chain change
+  // When switching sides, we also clear the amount below.
 
   // balances & price
   const inMeta  = byAddress(tokenIn);
@@ -100,13 +120,20 @@ export default function SwapForm() {
 
   // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
-  useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt), 250); return () => clearTimeout(id); }, [amt]);
-  const amountInBig = useMemo(() => { try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; } }, [debouncedAmt, inMeta.decimals]);
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAmt(amt.trim()), 250);
+    return () => clearTimeout(id);
+  }, [amt]);
+
+  const amountInBig = useMemo(() => {
+    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
+  }, [debouncedAmt, inMeta.decimals]);
+
   const amtNum   = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
   /* ---------- feeBps ---------- */
-  const [feeBps, setFeeBps] = useState<bigint>(100n); // default
+  const [feeBps, setFeeBps] = useState<bigint>(100n); // default 1%
   useEffect(() => {
     (async () => {
       try {
@@ -121,7 +148,10 @@ export default function SwapForm() {
   }, [client]);
 
   /* ---------- quote (use POST-FEE amount) ---------- */
-  const mainAmountIn = useMemo(() => amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM, [amountInBig, feeBps]);
+  const mainAmountIn = useMemo(
+    () => amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM,
+    [amountInBig, feeBps]
+  );
   const [quotePath, setQuotePath] = useState<Address[] | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
@@ -151,7 +181,8 @@ export default function SwapForm() {
           if (out && out > 0n) { if (!alive) return; setQuotePath(p); setQuoteOutMain(out); return; }
         } catch (e: any) { if (!alive) return; setQuoteErr(String(e?.shortMessage || e?.message || e)); }
       }
-    })(); return () => { alive = false; };
+    })();
+    return () => { alive = false; };
   }, [client, tokenIn, tokenOut, mainAmountIn]);
 
   const expectedOutMainHuman = useMemo(() => {
@@ -215,7 +246,6 @@ export default function SwapForm() {
     setPreflightError(undefined);
     if (!isConnected || !quotePath || amountInBig === 0n) return;
 
-    // quick recheck allowance
     if (needsApproval && tokenInAddr) {
       const fresh = (await client.readContract({
         address: tokenInAddr, abi: ERC20_ABI, functionName: "allowance",
@@ -289,7 +319,10 @@ export default function SwapForm() {
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
-        <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(true)}>
+        <button
+          className="pill pill-opaque px-3 py-1 text-xs"
+          onClick={() => setSlippageOpen(true)}
+        >
           Slippage: {slippage}%
         </button>
       </div>
@@ -299,7 +332,7 @@ export default function SwapForm() {
         <label className="text-sm text-inkSub">Token In</label>
         <TokenSelect
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          onChange={(a) => setTokenIn(a)}
+          onChange={(a) => { setTokenIn(a); setAmt(""); }} // clear on token change
           exclude={tokenOut}
           balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
         />
@@ -307,11 +340,17 @@ export default function SwapForm() {
 
       {/* swap sides */}
       <div className="flex justify-center my-2">
-        <button className="pill pill-opaque px-3 py-1 text-sm" onClick={() => {
-          const prevIn = tokenIn, prevOut = tokenOut;
-          setTokenIn(prevOut as Address);
-          setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
-        }}>
+        <button
+          className="pill pill-opaque px-3 py-1 text-sm"
+          onClick={() => {
+            const prevIn = tokenIn, prevOut = tokenOut;
+            setTokenIn(prevOut as Address);
+            setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
+            setAmt(""); // clear on side switch
+          }}
+          aria-label="Swap sides"
+          title="Swap sides"
+        >
           ↕
         </button>
       </div>
@@ -319,28 +358,60 @@ export default function SwapForm() {
       {/* Amount */}
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-inkSub">Amount {inMeta.symbol === "ETH" ? "(ETH)" : `(${inMeta.symbol})`}</label>
+          <label className="text-sm text-inkSub">
+            Amount {inMeta.symbol === "ETH" ? "(ETH)" : `(${inMeta.symbol})`}
+          </label>
           <div className="text-xs text-inkSub">
-            Bal: <span className="font-mono">{balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : "—"}</span>
-            <button className="ml-2 underline" onClick={() => {
-              if (!balInRaw.value) return;
-              const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-              const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
-              setAmt((safe > 0 ? safe : 0).toString());
-            }}>MAX</button>
+            Bal: <span className="font-mono">
+              {balInRaw.value !== undefined
+                ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
+                : "—"}
+            </span>
+            <button
+              className="ml-2 underline"
+              onClick={() => {
+                if (!balInRaw.value) return;
+                const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
+                const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
+                setAmt((safe > 0 ? safe : 0).toString());
+              }}
+            >
+              MAX
+            </button>
           </div>
         </div>
-        <input value={amt} onChange={(e) => setAmt(e.target.value)} className="w-full glass rounded-pill px-4 py-3" inputMode="decimal" />
-        <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
+
+        <input
+          value={amt}
+          onChange={(e) => setAmt(e.target.value)}
+          className="w-full glass rounded-pill px-4 py-3"
+          placeholder="0.0"
+          inputMode="decimal"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          name="swap-amount"
+        />
+
+        <div className="mt-2 text-xs text-inkSub">
+          ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
+        </div>
+
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
-          <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
+          <div className="mt-1 text-xs text-warn">
+            Insufficient {inMeta.symbol} balance.
+          </div>
         )}
 
-        {/* Approve (always shown for ERC-20 inputs) */}
+        {/* Approve (only for ERC-20 inputs) */}
         {needsApproval && (
           <div className="mt-3">
-            <button onClick={doApprove} className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApproving || !isConnected} title={`Approve ${inMeta.symbol} for ${SWAPPER}`}>
+            <button
+              onClick={doApprove}
+              className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
+              disabled={isApproving || !isConnected}
+              title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
+            >
               {isApproving ? "Approving…" : approveText}
             </button>
             <div className="mt-1 text-[11px] text-inkSub">
@@ -355,20 +426,36 @@ export default function SwapForm() {
       {/* Token Out & estimate */}
       <div className="space-y-2 mt-4">
         <label className="text-sm text-inkSub">Token Out</label>
-        <TokenSelect value={tokenOut} onChange={setTokenOut} exclude={tokenIn as Address}
-          balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined} />
+        <TokenSelect
+          value={tokenOut}
+          onChange={(v) => { setTokenOut(v); setAmt(""); }} // clear on token change
+          exclude={tokenIn as Address}
+          balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
+        />
         <div className="text-xs text-inkSub">
           {expectedOutMainHuman !== undefined
             ? <>Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
-            : quoteErr ? <>No route found on router.</> : <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>}
+            : quoteErr
+            ? <>No route found on router.</>
+            : <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>}
         </div>
       </div>
 
       {/* Swap */}
-      <button onClick={doSwap} className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 mt-4"
-        disabled={swapDisabled}>
-        Swap &amp; Burn 1% 🔥
+      <button
+        onClick={doSwap}
+        className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 mt-4"
+        disabled={
+          !isConnected ||
+          amountInBig === 0n ||
+          !quotePath ||
+          (balInRaw.value ?? 0n) < amountInBig ||
+          (needsApproval && allowanceValue < amountInBig)
+        }
+      >
+        Swap &amp; Burn {Number(feeBps) / 100}% 🔥
       </button>
+
       {preflightError && <div className="text-[11px] text-warn mt-2">{preflightError}</div>}
 
       {/* Slippage modal */}
@@ -388,7 +475,14 @@ export default function SwapForm() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(Number(e.target.value))}
+                className="glass rounded-pill px-3 py-2 w-full"
+              />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
