@@ -1,194 +1,161 @@
-"use client";
+// app/api/holders/route.ts
+import { NextResponse } from "next/server";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { Address, formatUnits } from "viem";
-import { base } from "viem/chains";
-import { useReadContracts } from "wagmi";
-import { TOBY, PATIENCE, TABOSHI, SWAPPER } from "@/lib/addresses";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";  // always execute (we still in-memory cache)
+export const revalidate = 0;             // do not let ISR cache this handler
 
-/* ---------- ABIs ---------- */
-const erc20Abi = [
-  { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
-  { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-] as const;
+const MORALIS  = process.env.MORALIS_API_KEY;
+const COVALENT = process.env.COVALENT_API_KEY;
+const BASESCAN = process.env.BASESCAN_API_KEY;
 
-type Item =
-  | { kind: "token"; title: string; icon: string; address: Address }
-  | { kind: "swapper"; title: string; icon: string; address: Address }
-  | { kind: "link"; title: string; icon: string; href: string; blurb: string };
+type CacheEntry = { value: number | null; source: string; ts: number };
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
+const cache = new Map<string, CacheEntry>();
 
-const ITEMS: Item[] = [
-  { kind: "token", title: "TOBY", icon: "/tokens/toby.PNG", address: TOBY },
-  { kind: "token", title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
-  { kind: "token", title: "TABOSHI", icon: "/tokens/taboshi.PNG", address: TABOSHI },
-  { kind: "swapper", title: "SWAPPER", icon: "/toby2.PNG", address: SWAPPER },
-  { kind: "link", title: "toadgod.xyz", icon: "/tobyworld.PNG", href: "https://toadgod.xyz", blurb: "Official site: lore, links, and updates." },
-  { kind: "link", title: "Telegram", icon: "/toadlore.PNG", href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
-  { kind: "link", title: "@toadgod1017", icon: "/twitter.PNG", href: "https://x.com/toadgod1017?s=21", blurb: "Follow on X for drops & news." },
-];
+const numOrNull = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
 
-/* ---------- Helpers ---------- */
-function fmt(n?: number, max = 4) {
-  if (n === undefined || !isFinite(n)) return "—";
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(2) + "K";
-  return n.toLocaleString(undefined, { maximumFractionDigits: max });
+async function safeFetchJSON(url: string, init?: RequestInit) {
+  try {
+    const res = await fetch(url, { ...init, cache: "no-store" });
+    if (!res.ok) return { ok: false, err: `http ${res.status}`, json: null as any };
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return { ok: false, err: "not-json", json: null as any };
+    const json = await res.json();
+    return { ok: true, err: null, json };
+  } catch (e: any) {
+    return { ok: false, err: e?.message || "fetch-failed", json: null as any };
+  }
 }
 
-/* ---------- Panels ---------- */
-function TokenPanel({ address, title, icon }: { address: Address; title: string; icon: string }) {
-  const { data, isLoading } = useReadContracts({
-    allowFailure: true,
-    contracts: [
-      { address, abi: erc20Abi, functionName: "name", chainId: base.id },
-      { address, abi: erc20Abi, functionName: "symbol", chainId: base.id },
-      { address, abi: erc20Abi, functionName: "decimals", chainId: base.id },
-      { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
-    ],
-  });
+/* ---------- Providers (best → fallback) ---------- */
 
-  const name = data?.[0]?.result as string | undefined;
-  const symbol = data?.[1]?.result as string | undefined;
-  const decimals = (data?.[2]?.result as number | undefined) ?? 18;
-  const supplyBig = data?.[3]?.result as bigint | undefined;
-  const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
-
-  const [holders, setHolders] = useState<number | null>(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch(`/api/holders?address=${address}`);
-        if (r.ok) {
-          const { holders } = await r.json();
-          setHolders(typeof holders === "number" ? holders : null);
-        } else setHolders(null);
-      } catch {
-        setHolders(null);
-      }
-    })();
-  }, [address]);
-
-  const href = `https://basescan.org/address/${address}`;
-
-  return (
-    <div className="glass rounded-3xl p-5 shadow-soft w-full max-w-[420px] mx-auto text-sm">
-      <div className="flex items-center gap-3 mb-3">
-        <Image src={icon} alt={title} width={40} height={40} className="rounded-full" />
-        <div>
-          <h3 className="font-semibold">{title}</h3>
-          <a href={href} className="link text-xs" target="_blank" rel="noreferrer">View on BaseScan ↗</a>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><div className="text-[var(--ink-sub)]">Name</div><div>{isLoading ? "…" : name ?? "—"}</div></div>
-        <div><div className="text-[var(--ink-sub)]">Symbol</div><div>{isLoading ? "…" : symbol ?? "—"}</div></div>
-        <div><div className="text-[var(--ink-sub)]">Total Supply</div><div>{fmt(supply)}</div></div>
-        <div><div className="text-[var(--ink-sub)]">Holders</div><div>{holders === null ? "—" : fmt(holders, 0)}</div></div>
-      </div>
-    </div>
-  );
+// 1) Moralis v2.2 (try base + 0x2105)
+async function tryMoralis(address: string) {
+  if (!MORALIS) return { holders: null, source: "moralis:missing-key", detail: null };
+  for (const chain of ["base", "0x2105"]) {
+    const url = `https://deep-index.moralis.io/api/v2.2/erc20/${address}/holders?chain=${chain}&limit=1`;
+    const { ok, err, json } = await safeFetchJSON(url, { headers: { "X-API-Key": MORALIS } });
+    if (!ok) {
+      console.error("[holders] moralis", chain, address, err);
+      continue;
+    }
+    const total = numOrNull(json?.total);
+    if (total !== null) return { holders: total, source: `moralis:${chain}`, detail: null };
+  }
+  return { holders: null, source: "moralis:none", detail: null };
 }
 
-function SwapperPanel() {
-  const href = `https://basescan.org/address/${SWAPPER}`;
-  return (
-    <div className="glass rounded-3xl p-5 shadow-soft w-full max-w-[420px] mx-auto text-sm">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold">Toby Swapper</h3>
-        <a href={href} className="link text-xs" target="_blank" rel="noreferrer">View ↗</a>
-      </div>
-      <p className="text-[var(--ink-sub)]">Routes swaps on Base and buys-&-burns <span className="font-semibold">$TOBY</span> with a 1% fee.</p>
-    </div>
-  );
+// 2) Covalent (Base chain id 8453)
+async function tryCovalent(address: string) {
+  if (!COVALENT) return { holders: null, source: "covalent:missing-key", detail: null };
+  const url = `https://api.covalenthq.com/v1/8453/tokens/${address}/token_holders/?page-size=1&key=${COVALENT}`;
+  const { ok, err, json } = await safeFetchJSON(url);
+  if (!ok) {
+    console.error("[holders] covalent", address, err);
+    return { holders: null, source: "covalent:err", detail: err };
+  }
+  const total =
+    json?.data?.pagination?.total_count ??
+    json?.data?.pagination?.count ??
+    json?.data?.items_count;
+  const n = numOrNull(total);
+  return { holders: n, source: n !== null ? "covalent" : "covalent:parse", detail: null };
 }
 
-function LinkPanel({ href, title, blurb, icon }: { href: string; title: string; blurb: string; icon: string }) {
-  return (
-    <div className="glass rounded-3xl p-5 shadow-soft w-full max-w-[420px] mx-auto text-sm">
-      <div className="flex items-center gap-3 mb-2">
-        <Image src={icon} alt={title} width={40} height={40} className="rounded-full" />
-        <h3 className="font-semibold">{title}</h3>
-      </div>
-      <p className="text-[var(--ink-sub)] mb-3">{blurb}</p>
-      <a className="pill pill-opaque text-center" href={href} target="_blank" rel="noreferrer">Open ↗</a>
-    </div>
-  );
+// 3a) BaseScan tokenholderlist (lower bound if paginated)
+async function tryBaseScanList(address: string) {
+  if (!BASESCAN) return { holders: null, source: "basescan:missing-key", detail: null };
+  const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${address}&page=1&offset=10000&apikey=${BASESCAN}`;
+  const { ok, err, json } = await safeFetchJSON(url);
+  if (!ok) {
+    console.error("[holders] basescan:list", address, err);
+    return { holders: null, source: "basescan:list:err", detail: err };
+  }
+  const n = Array.isArray(json?.result) ? numOrNull(json.result.length) : null;
+  return { holders: n, source: n !== null ? "basescan:list" : "basescan:list:parse", detail: null };
 }
 
-/* ---------- Carousel ---------- */
-export default function InfoCarousel() {
-  const [index, setIndex] = useState(0);
-  const [animating, setAnimating] = useState(false);
+// 3b) BaseScan tokenholderchart (last point “Holder”)
+async function tryBaseScanChart(address: string) {
+  if (!BASESCAN) return { holders: null, source: "basescan:missing-key", detail: null };
+  const url = `https://api.basescan.org/api?module=token&action=tokenholderchart&contractaddress=${address}&range=365&apikey=${BASESCAN}`;
+  const { ok, err, json } = await safeFetchJSON(url);
+  if (!ok) {
+    console.error("[holders] basescan:chart", address, err);
+    return { holders: null, source: "basescan:chart:err", detail: err };
+  }
+  const arr = Array.isArray(json?.result) ? json.result : [];
+  const last = arr[arr.length - 1];
+  const n = last ? numOrNull(last.Holder ?? last.holders ?? last.count) : null;
+  return { holders: n, source: n !== null ? "basescan:chart" : "basescan:chart:parse", detail: null };
+}
 
-  const prev = () => {
-    setAnimating(true);
-    setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length);
-  };
-  const next = () => {
-    setAnimating(true);
-    setIndex((i) => (i + 1) % ITEMS.length);
-  };
+// 4) DexScreener (opportunistic)
+async function tryDexScreener(address: string) {
+  const url = `https://api.dexscreener.com/latest/dex/tokens/${address}`;
+  const { ok, err, json } = await safeFetchJSON(url);
+  if (!ok) {
+    console.error("[holders] dexscreener", address, err);
+    return { holders: null, source: "dexscreener:err", detail: err };
+  }
+  const candidates = [
+    json?.holders,
+    json?.pair?.holders,
+    json?.pairs?.[0]?.holders,
+    json?.token?.holders,
+  ];
+  for (const c of candidates) {
+    const n = numOrNull(c);
+    if (n !== null) return { holders: n, source: "dexscreener", detail: null };
+  }
+  return { holders: null, source: "dexscreener:parse", detail: null };
+}
 
-  useEffect(() => {
-    const t = setTimeout(() => setAnimating(false), 300);
-    return () => clearTimeout(t);
-  }, [index]);
+/* ---------- Route ---------- */
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const address = (searchParams.get("address") || "").trim();
+  const debug = searchParams.get("debug") === "1";
 
-  const active = ITEMS[index];
+  if (!address) return NextResponse.json({ error: "Missing address" }, { status: 400 });
 
-  return (
-    <div className="flex flex-col items-center w-full overflow-hidden">
-      {/* Image carousel area */}
-      <div className="relative flex items-center justify-center w-full max-w-[420px]">
-        <button
-          onClick={prev}
-          className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1"
-          aria-label="Previous"
-        >
-          ←
-        </button>
+  // Cache
+  const key = address.toLowerCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.ts < CACHE_TTL_MS) {
+    return NextResponse.json(
+      debug
+        ? { holders: hit.value, source: `cache:${hit.source}`, cachedAt: hit.ts }
+        : { holders: hit.value, source: `cache:${hit.source}` },
+      { status: 200 }
+    );
+  }
 
-        <div className="w-[50%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex items-center justify-center">
-          <Image
-            src={active.icon}
-            alt={active.title}
-            width={180}
-            height={180}
-            className="object-contain"
-          />
-        </div>
+  // Try providers in order
+  const attempts = [];
+  const m = await tryMoralis(address);      attempts.push(m);
+  if (m.holders !== null) { cache.set(key, { value: m.holders, source: m.source, ts: Date.now() }); return NextResponse.json(debug ? { ...m, cached: false } : { holders: m.holders, source: m.source }); }
 
-        <button
-          onClick={next}
-          className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1"
-          aria-label="Next"
-        >
-          →
-        </button>
-      </div>
+  const c = await tryCovalent(address);     attempts.push(c);
+  if (c.holders !== null) { cache.set(key, { value: c.holders, source: c.source, ts: Date.now() }); return NextResponse.json(debug ? { ...c, cached: false } : { holders: c.holders, source: c.source }); }
 
-      <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
+  const bl = await tryBaseScanList(address); attempts.push(bl);
+  if (bl.holders !== null) { cache.set(key, { value: bl.holders, source: bl.source, ts: Date.now() }); return NextResponse.json(debug ? { ...bl, cached: false } : { holders: bl.holders, source: bl.source }); }
 
-      {/* Info section with slide-up animation */}
-      <div
-        className={`mt-5 w-full flex justify-center px-3 transition-all duration-500 transform ${
-          animating ? "opacity-0 translate-y-6" : "opacity-100 translate-y-0"
-        }`}
-      >
-        <div className="w-full max-w-[420px]">
-          {active.kind === "token" ? (
-            <TokenPanel address={active.address} title={active.title} icon={active.icon} />
-          ) : active.kind === "swapper" ? (
-            <SwapperPanel />
-          ) : (
-            <LinkPanel href={active.href} title={active.title} blurb={active.blurb} icon={active.icon} />
-          )}
-        </div>
-      </div>
-    </div>
+  const bc = await tryBaseScanChart(address); attempts.push(bc);
+  if (bc.holders !== null) { cache.set(key, { value: bc.holders, source: bc.source, ts: Date.now() }); return NextResponse.json(debug ? { ...bc, cached: false } : { holders: bc.holders, source: bc.source }); }
+
+  const d = await tryDexScreener(address);  attempts.push(d);
+  if (d.holders !== null) { cache.set(key, { value: d.holders, source: d.source, ts: Date.now() }); return NextResponse.json(debug ? { ...d, cached: false } : { holders: d.holders, source: d.source }); }
+
+  // Nothing worked
+  cache.set(key, { value: null, source: "none", ts: Date.now() });
+  return NextResponse.json(
+    debug ? { holders: null, source: "none", attempts } : { holders: null, source: "none" },
+    { status: 200 }
   );
 }
