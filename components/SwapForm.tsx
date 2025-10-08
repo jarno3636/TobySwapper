@@ -8,6 +8,8 @@ import {
   parseUnits,
   isAddress,
   maxUint256,
+  createPublicClient,
+  http,
 } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { base } from "viem/chains";
@@ -88,13 +90,11 @@ function useSafePublicClient() {
       ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
       : "https://mainnet.base.org");
 
-  // If wagmi client exists, use it; otherwise construct a lightweight fallback viem client.
   return (
     wagmiClient ??
-    // @ts-expect-error createPublicClient is available via viem's public import in your setup
-    new (require("viem").PublicClient)({
+    createPublicClient({
       chain: base,
-      transport: (require("viem").http)(rpcUrl),
+      transport: http(rpcUrl),
     })
   );
 }
