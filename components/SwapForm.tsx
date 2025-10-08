@@ -296,6 +296,7 @@ export default function SwapForm() {
   const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
   const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
   const [isReadingAllowance, setIsReadingAllowance] = useState(false);
+  const [approveError, setApproveError] = useState<string | undefined>(undefined);
 
   const readAllowance = async () => {
     if (!client || !needAllowance || !address) { setAllowance(undefined); return; }
@@ -335,7 +336,7 @@ export default function SwapForm() {
     !!quotePath &&
     hasEnoughBalance &&
     hasEnoughAllowance &&
-    allowanceLoaded; // block swap until allowance is actually checked
+    allowanceLoaded;
 
   const setMax = () => {
     if (!balInRaw.value) return;
@@ -344,23 +345,36 @@ export default function SwapForm() {
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
-  /* ---------- Approve (direct ERC20 → SWAPPER) ---------- */
+  /* ---------- Approve (USDC-safe: zero→max) ---------- */
   const [isApproving, setIsApproving] = useState(false);
   const doApprove = async () => {
     if (!needAllowance || !isConnected || !isAddress(tokenIn as string)) return;
     try {
+      setApproveError(undefined);
       setIsApproving(true);
-      const txHash = await writeContractAsync({
+
+      // Some ERC-20s (incl. USDC patterns) require zeroing before raising
+      if (allowanceValue > 0n) {
+        const tx0 = await writeContractAsync({
+          address: tokenIn as Address,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [SWAPPER as Address, 0n],
+        });
+        await client?.waitForTransactionReceipt({ hash: tx0 });
+      }
+
+      const tx1 = await writeContractAsync({
         address: tokenIn as Address,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [SWAPPER as Address, maxUint256],
       });
-      // wait for the approval to be mined, then refresh allowance
-      if (client) {
-        await client.waitForTransactionReceipt({ hash: txHash });
-      }
+      await client?.waitForTransactionReceipt({ hash: tx1 });
+
       await readAllowance();
+    } catch (e: any) {
+      setApproveError(e?.shortMessage || e?.message || String(e));
     } finally {
       setIsApproving(false);
     }
@@ -377,8 +391,6 @@ export default function SwapForm() {
   /* ---------- Swap ---------- */
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
-
-    // safety: if allowance not yet loaded or short, block and show Approve
     if (needAllowance && (!allowanceLoaded || !hasEnoughAllowance)) return;
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
@@ -422,6 +434,20 @@ export default function SwapForm() {
       });
     }
   };
+
+  /* ---------- UI helpers ---------- */
+  const approveLabel =
+    needAllowance
+      ? hasEnoughAllowance
+        ? `Approved ✓`
+        : `Approve ${byAddress(tokenIn).symbol}`
+      : `—`;
+
+  const swapTitle = !allowanceLoaded
+    ? "Waiting for allowance check…"
+    : (needAllowance && !hasEnoughAllowance)
+    ? "Approve first"
+    : undefined;
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -549,25 +575,33 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* Approve (ALWAYS rendered for ERC-20) */}
-        {tokenIn !== "ETH" && (
-          <div className="flex gap-2">
-            <button
-              onClick={doApprove}
-              className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApproving || !isConnected || isReadingAllowance}
-              title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
-            >
-              {isApproving ? "Approving…" : `Approve ${byAddress(tokenIn).symbol}`}
-            </button>
-            <button
-              onClick={() => readAllowance()}
-              className="pill px-3 py-1 text-xs"
-              disabled={isReadingAllowance}
-              title="Refresh allowance"
-            >
-              {isReadingAllowance ? "…" : "Refresh"}
-            </button>
+        {/* Approve (always visible for ERC-20 input, with status) */}
+        {needAllowance && (
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2">
+              <button
+                onClick={doApprove}
+                className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 ${hasEnoughAllowance ? "opacity-60" : ""}`}
+                disabled={isApproving || !isConnected || isReadingAllowance || hasEnoughAllowance}
+                title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
+              >
+                {isApproving ? "Approving…" : approveLabel}
+              </button>
+              <button
+                onClick={() => readAllowance()}
+                className="pill px-3 py-1 text-xs"
+                disabled={isReadingAllowance}
+                title="Refresh allowance"
+              >
+                {isReadingAllowance ? "…" : "Refresh"}
+              </button>
+            </div>
+            <div className="text-[11px] text-inkSub">
+              {allowanceLoaded
+                ? <>Allowance: <span className="font-mono">{allowanceValue.toString()}</span></>
+                : <>Checking allowance…</>}
+              {approveError && <div className="text-warn mt-1">Approve error: {approveError}</div>}
+            </div>
           </div>
         )}
 
@@ -576,7 +610,7 @@ export default function SwapForm() {
           onClick={doSwap}
           className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
           disabled={!canSwap}
-          title={!allowanceLoaded ? "Waiting for allowance check…" : (!hasEnoughAllowance && tokenIn !== "ETH") ? "Approve first" : undefined}
+          title={swapTitle}
         >
           <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
