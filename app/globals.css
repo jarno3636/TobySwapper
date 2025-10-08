@@ -29,8 +29,12 @@
 html, body { background: var(--bg); color: var(--ink); }
 body { min-height: 100dvh; }
 
-/* Utility text color bridges (so "text-inkSub" still works) */
+/* Utility text color bridges */
 .text-inkSub, .text-ink-sub { color: var(--ink-sub); }
+/* Extra helpers you use in components */
+.text-warn { color: var(--warn); }
+.text-danger { color: var(--danger); }
+.text-success { color: var(--success); }
 
 /* ---------- Shadows ---------- */
 .shadow-soft { box-shadow: var(--shadow-soft); }
@@ -59,6 +63,9 @@ body { min-height: 100dvh; }
   background: rgba(255,255,255,.10);
 }
 
+/* You use "rounded-pill" in inputs */
+.rounded-pill { border-radius: 9999px; }
+
 .pill {
   height: var(--pill-h);
   border-radius: 9999px;
@@ -82,6 +89,15 @@ body { min-height: 100dvh; }
 }
 .pill-nav:hover {
   background: rgba(255,255,255,.28);
+}
+
+/* Disabled pill look */
+.pill[disabled],
+button.pill:disabled,
+a.pill[aria-disabled="true"] {
+  opacity: .6;
+  cursor: not-allowed;
+  filter: grayscale(.15);
 }
 
 /* Focus ring for keyboard users */
@@ -176,12 +192,31 @@ a.link:hover, .link:hover {
   box-shadow: none !important;
   padding: 0 !important;
 }
-/* Spinning wheel */
+
+/* ---------- Pip dots used in Swap button ---------- */
+.pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: .45;
+  display: inline-block;
+}
+.pip + .pip { margin-left: 4px; }
+
+@keyframes pip-bounce {
+  0%, 80%, 100% { transform: scale(.6); opacity: .35; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.pip-a { animation: pip-bounce 1.2s infinite; }
+.pip-b { animation: pip-bounce 1.2s .15s infinite; }
+.pip-c { animation: pip-bounce 1.2s .30s infinite; }
+
+/* ---------- Wheel / misc animations ---------- */
 @keyframes wheel-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-
 .spin-slow { animation: wheel-spin 28s linear infinite; }
 .pause-on-hover:hover { animation-play-state: paused; }
 
@@ -189,6 +224,7 @@ a.link:hover, .link:hover {
 @media (prefers-reduced-motion: reduce) {
   .spin-slow { animation: none !important; }
 }
+
 /* --- Glow + pulse utilities --- */
 .hover-glow {
   transition: box-shadow .25s ease, transform .2s ease, background-color .2s ease, border-color .2s ease;
@@ -215,4 +251,10 @@ a.link:hover, .link:hover {
 @media (prefers-reduced-motion: reduce) {
   .hover-glow { transition: none; }
   .pulse-soft, .floaty-sm { animation: none !important; }
+}
+
+/* ---------- Slide-up + fade keyframes (used on hero) ---------- */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
