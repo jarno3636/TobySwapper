@@ -9,7 +9,6 @@ import Footer from "@/components/Footer";
 // Robust dynamic import: supports either default *or* named export
 const InfoCarousel = dynamic(async () => {
   const mod = await import("@/components/InfoCarousel");
-  // Return the component directly; TS is happy since we return a React component
   return (mod as any).default ?? (mod as any).InfoCarousel;
 }, {
   ssr: false,
@@ -97,19 +96,6 @@ export default function Page() {
       </div>
 
       <Footer />
-
-      <style jsx global>{`
-        @keyframes slideUpFade {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </>
   );
 }
