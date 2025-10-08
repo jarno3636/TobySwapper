@@ -7,7 +7,7 @@ export default function Footer() {
       </p>
       <p className="mb-2">
         <a
-          href="https://basescan.org/address/0x6da391f470a00a206dded0f5fc0f144cae776d7c#code"
+          href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d"
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-accent"
