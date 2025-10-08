@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -6,11 +5,8 @@ import dynamic from "next/dynamic";
 import SwapForm from "@/components/SwapForm";
 import Footer from "@/components/Footer";
 
-// Robust dynamic import: supports either default *or* named export
-const InfoCarousel = dynamic(async () => {
-  const mod = await import("@/components/InfoCarousel");
-  return (mod as any).default ?? (mod as any).InfoCarousel;
-}, {
+// Dynamic components (client-only)
+const InfoCarousel = dynamic(() => import("@/components/InfoCarousel"), {
   ssr: false,
   loading: () => (
     <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
@@ -24,8 +20,6 @@ const InfoCarousel = dynamic(async () => {
     </div>
   ),
 });
-
-// Lazy-load TokensBurned (assumes default export)
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ssr: false,
   loading: () => (
