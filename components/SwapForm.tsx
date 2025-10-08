@@ -80,13 +80,8 @@ function useSafePublicClient() {
   );
 }
 
-/** ---- IMPORTANT: who will pull the user's tokens? ----
- * If TobySwapper does `transferFrom(msg.sender, ...)`, spender must be SWAPPER.
- * If you call the V2 Router directly from the user, spender must be QUOTE_ROUTER_V2.
- */
+/** Spender MUST be the TobySwapper contract (your contract pulls with transferFrom). */
 const APPROVAL_SPENDER: Address = SWAPPER as Address;
-// To test the other model, flip this to:
-// const APPROVAL_SPENDER: Address = QUOTE_ROUTER_V2 as Address;
 
 export default function SwapForm() {
   const { address, chain, isConnected } = useAccount();
@@ -198,7 +193,7 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
-  /* ---------- Allowance ---------- */
+  /* ---------- Allowance (approve SWAPPER) ---------- */
   const isEthIn = tokenIn === "ETH";
   const needAllowance = !isEthIn && isAddress(tokenIn as string);
 
@@ -206,7 +201,6 @@ export default function SwapForm() {
   const [isReadingAllowance, setIsReadingAllowance] = useState(false);
   const [approveError, setApproveError] = useState<string | undefined>(undefined);
   const [preflightError, setPreflightError] = useState<string | undefined>(undefined);
-
   const allowanceValue = allowance ?? 0n;
 
   const readAllowance = async () => {
@@ -230,7 +224,6 @@ export default function SwapForm() {
     }
   };
 
-  // refresh allowance on relevant changes
   useEffect(() => {
     setAllowance(undefined);
     setPreflightError(undefined);
@@ -238,10 +231,9 @@ export default function SwapForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, address, tokenIn, needAllowance, chainId]);
 
-  // small retry
   useEffect(() => {
     if (!needAllowance || !address) return;
-    const t = setTimeout(() => readAllowance(), 600);
+    const t = setTimeout(() => readAllowance(), 600); // small retry after mount
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, address, tokenIn, needAllowance]);
@@ -261,7 +253,7 @@ export default function SwapForm() {
   const setMax = () => {
     if (!balInRaw.value) return;
     const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // native dust
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
@@ -274,7 +266,7 @@ export default function SwapForm() {
       setPreflightError(undefined);
       setIsApproving(true);
 
-      // Zero first if there is a non-zero allowance (USDC/USDT pattern)
+      // Zero first if there is an existing allowance (USDC/USDT pattern)
       if (allowanceValue > 0n) {
         const tx0 = await writeContractAsync({
           address: tokenIn as Address,
@@ -301,7 +293,7 @@ export default function SwapForm() {
     }
   };
 
-  /* ---------- Fee path ---------- */
+  /* ---------- Burn fee path ---------- */
   const buildFeePath = (inA: Address): Address[] => {
     const inL = lc(inA);
     if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
@@ -309,15 +301,13 @@ export default function SwapForm() {
     return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
-  /* ---------- Swap (with preflight allowance check) ---------- */
+  /* ---------- Swap (preflight allowance check) ---------- */
   const doSwap = async () => {
     setPreflightError(undefined);
-
     if (!quotePath || amountInBig === 0n) return;
 
-    // Always re-read right before swap to avoid “exceeds allowance” from wallet simulation
     if (needAllowance) {
-      await readAllowance();
+      // re-read at the moment of clicking swap to avoid wallet sim error
       const fresh = (await client.readContract({
         address: tokenIn as Address,
         abi: ERC20_ABI,
@@ -326,9 +316,7 @@ export default function SwapForm() {
       })) as bigint;
 
       if (fresh < amountInBig) {
-        setPreflightError(
-          `Allowance too low for spender ${APPROVAL_SPENDER}. Click Approve, then try again.`
-        );
+        setPreflightError(`Allowance too low for spender ${APPROVAL_SPENDER}. Tap Approve, then try again.`);
         return;
       }
     }
@@ -376,19 +364,18 @@ export default function SwapForm() {
   };
 
   /* ---------- Labels ---------- */
-  const approveLabel = needAllowance
+  const approveCtaText = needAllowance
     ? allowanceValue > 0n
       ? `Re-approve ${byAddress(tokenIn).symbol}`
       : `Approve ${byAddress(tokenIn).symbol}`
-    : `—`;
+    : `No approval needed`;
 
-  const swapTitle =
-    !isConnected ? "Connect wallet" :
-    amountInBig === 0n ? "Enter amount" :
-    !quotePath ? (quoteErr ? "No route" : "Fetching quote…") :
-    !hasEnoughBalance ? "Insufficient balance" :
-    needAllowance && allowanceValue < amountInBig ? "Approve first" :
-    undefined;
+  const swapDisabled =
+    !isConnected ||
+    amountInBig === 0n ||
+    !quotePath ||
+    !hasEnoughBalance ||
+    (needAllowance && allowanceValue < amountInBig);
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -406,7 +393,7 @@ export default function SwapForm() {
 
       {chain && chain.id !== base.id && (
         <div className="mb-3 text-xs text-warn">
-          Connected to {chain?.name}. Please switch to Base for balances & swaps.
+          Connected to {chain?.name}. Please switch to Base.
         </div>
       )}
       {!isConnected && (
@@ -460,7 +447,9 @@ export default function SwapForm() {
               <span className="font-mono">
                 {balInRaw.value !== undefined
                   ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
-                  : isConnected ? "—" : "Connect wallet"}
+                  : isConnected
+                  ? "—"
+                  : "Connect wallet"}
               </span>
               <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
                 MAX
@@ -478,6 +467,29 @@ export default function SwapForm() {
           <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
           {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
             <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
+          )}
+
+          {/* APPROVE lives here and is ALWAYS visible when ERC-20 is input */}
+          {!isEthIn && (
+            <div className="mt-3">
+              <button
+                onClick={doApprove}
+                className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
+                disabled={isApproving || !isConnected}
+                title={`Approve ${byAddress(tokenIn).symbol} for ${APPROVAL_SPENDER}`}
+              >
+                {isApproving ? "Approving…" : approveCtaText}
+              </button>
+              <div className="mt-1 text-[11px] text-inkSub">
+                Spender: <code className="break-all">{APPROVAL_SPENDER}</code>
+                {isReadingAllowance
+                  ? " · checking allowance…"
+                  : allowance !== undefined
+                  ? <> · Allowance: <span className="font-mono">{allowanceValue.toString()}</span></>
+                  : null}
+              </div>
+              {approveError && <div className="text-[11px] text-warn mt-1">Approve error: {approveError}</div>}
+            </div>
           )}
         </div>
 
@@ -505,52 +517,20 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* CTAs */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Approve */}
-          {!isEthIn ? (
-            <button
-              onClick={doApprove}
-              className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60`}
-              disabled={isApproving || !isConnected}
-              title={`Approve ${byAddress(tokenIn).symbol} for ${APPROVAL_SPENDER}`}
-            >
-              {isApproving ? "Approving…" : approveLabel}
-            </button>
-          ) : (
-            <div className="pill w-full justify-center opacity-60 pointer-events-none select-none text-center py-2">
-              No approval needed
-            </div>
-          )}
+        {/* Swap */}
+        <button
+          onClick={doSwap}
+          className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
+          disabled={swapDisabled}
+          title={!isConnected ? "Connect wallet" : undefined}
+        >
+          Swap &amp; Burn 1% 🔥
+        </button>
 
-          {/* Swap */}
-          <button
-            onClick={doSwap}
-            className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-            disabled={
-              !isConnected ||
-              amountInBig === 0n ||
-              !quotePath ||
-              !hasEnoughBalance ||
-              (needAllowance && allowanceValue < amountInBig)
-            }
-            title={(!isConnected && "Connect wallet") || undefined}
-          >
-            Swap &amp; Burn 1% 🔥
-          </button>
-        </div>
-
-        {/* Inline errors */}
-        {approveError && <div className="text-[11px] text-warn mt-1">Approve error: {approveError}</div>}
-        {preflightError && <div className="text-[11px] text-warn mt-1">{preflightError}</div>}
-        {needAllowance && (
-          <div className="text-[11px] text-inkSub">
-            Spender: <code className="break-all">{APPROVAL_SPENDER}</code>
-          </div>
-        )}
+        {preflightError && <div className="text-[11px] text-warn">{preflightError}</div>}
       </div>
 
-      {/* Slippage modal (kept, minimal) */}
+      {/* Slippage modal (simple) */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
