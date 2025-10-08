@@ -124,14 +124,8 @@ export default function InfoCarousel() {
   const [index, setIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
 
-  const prev = () => {
-    setAnimating(true);
-    setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length);
-  };
-  const next = () => {
-    setAnimating(true);
-    setIndex((i) => (i + 1) % ITEMS.length);
-  };
+  const prev = () => { setAnimating(true); setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length); };
+  const next = () => { setAnimating(true); setIndex((i) => (i + 1) % ITEMS.length); };
 
   useEffect(() => {
     const t = setTimeout(() => setAnimating(false), 300);
@@ -144,31 +138,13 @@ export default function InfoCarousel() {
     <div className="flex flex-col items-center w-full overflow-hidden">
       {/* Image carousel area */}
       <div className="relative flex items-center justify-center w-full max-w-[420px]">
-        <button
-          onClick={prev}
-          className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1"
-          aria-label="Previous"
-        >
-          ←
-        </button>
+        <button onClick={prev} className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1" aria-label="Previous">←</button>
 
         <div className="w-[50%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex items-center justify-center">
-          <Image
-            src={active.icon}
-            alt={active.title}
-            width={180}
-            height={180}
-            className="object-contain"
-          />
+          <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
         </div>
 
-        <button
-          onClick={next}
-          className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1"
-          aria-label="Next"
-        >
-          →
-        </button>
+        <button onClick={next} className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1" aria-label="Next">→</button>
       </div>
 
       <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
