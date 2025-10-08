@@ -3,7 +3,7 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import {
   RainbowKitProvider,
-  ConnectButton, // used only for .Custom
+  ConnectButton, // used in <PillButton />
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
@@ -48,24 +48,38 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 }
 
 /** Reusable pill renderer for both desktop + mobile */
-function PillButton({
-  fullWidth = false,
-}: {
-  fullWidth?: boolean;
-}) {
+function PillButton({ fullWidth = false }: { fullWidth?: boolean }) {
   return (
     <ConnectButton.Custom>
-      {({ mounted, account, chain, openConnectModal }) => {
+      {({
+        mounted,
+        account,
+        chain,
+        openConnectModal,
+        openAccountModal,
+        openChainModal,
+      }) => {
         const connected = mounted && !!account && !!chain;
+
+        // Click behavior:
+        // - Not connected: open connect modal
+        // - Connected: open account modal (has Disconnect option)
+        const onClick = () =>
+          connected ? openAccountModal() : openConnectModal();
+
+        const label = connected ? account.displayName : "Connect";
 
         return (
           <button
             type="button"
-            onClick={openConnectModal}
-            className={`pill pill-opaque ${fullWidth ? "w-full justify-center" : ""}`}
-            aria-label={connected ? "Wallet connected" : "Connect wallet"}
+            onClick={onClick}
+            className={`pill pill-opaque ${
+              fullWidth ? "w-full justify-center" : ""
+            }`}
+            aria-label={connected ? "Manage wallet" : "Connect wallet"}
+            title={connected ? "Manage / Disconnect" : "Connect wallet"}
           >
-            {connected ? account.displayName : "Connect"}
+            {label}
           </button>
         );
       }}
