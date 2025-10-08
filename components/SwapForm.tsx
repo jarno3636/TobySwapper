@@ -245,7 +245,7 @@ export default function SwapForm() {
       for (const p of candidates) {
         try {
           const amounts = (await client.readContract({
-            address: lc(ROUTER as Address),
+            address: lc(QUOTE_ROUTER_V2 as Address),
             abi: UniV2RouterAbi as any,
             functionName: "getAmountsOut",
             args: [amountInBig, p],
