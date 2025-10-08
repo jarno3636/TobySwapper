@@ -1,7 +1,7 @@
 // components/SwapForm.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Address,
   formatUnits,
@@ -72,7 +72,7 @@ const eq = (a?: string, b?: string) =>
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
-/* ---------------- Debug Panel ---------------- */
+/* ---------------- Debug Panel (unchanged aside from showing allowance) ---------------- */
 function DebugPanel({
   address,
   chain,
@@ -96,20 +96,8 @@ function DebugPanel({
   chain?: { id: number; name?: string };
   inMeta: { symbol: string; decimals: number; address?: Address };
   outMeta: { symbol: string; decimals: number; address?: Address };
-  balInRaw: {
-    value?: bigint;
-    decimals?: number;
-    isLoading?: boolean;
-    error?: unknown;
-    refetch?: () => void;
-  };
-  balOutRaw: {
-    value?: bigint;
-    decimals?: number;
-    isLoading?: boolean;
-    error?: unknown;
-    refetch?: () => void;
-  };
+  balInRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
+  balOutRaw: { value?: bigint; decimals?: number; isLoading?: boolean; error?: unknown; refetch?: () => void };
   amountInHuman: string;
   amountInBig: bigint;
   pathTried: Address[][];
@@ -123,11 +111,8 @@ function DebugPanel({
   allowanceValue?: bigint;
 }) {
   const fmt = (v?: bigint, d = 18) => {
-    try {
-      return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—";
-    } catch {
-      return "—";
-    }
+    try { return v !== undefined ? Number(formatUnits(v, d)).toFixed(6) : "—"; }
+    catch { return "—"; }
   };
   return (
     <div className="glass rounded-2xl p-4 border border-white/10 text-xs">
@@ -153,17 +138,13 @@ function DebugPanel({
       <div className="mt-2">
         <div className="mb-1">Paths tried (first success wins):</div>
         <div className="flex flex-col gap-1">
-          {pathTried.length ? (
-            pathTried.map((p, i) => (
-              <div key={i} className="flex flex-wrap gap-1">
-                <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
-                  {p.join(" → ")}
-                </code>
-              </div>
-            ))
-          ) : (
-            <span>—</span>
-          )}
+          {pathTried.length ? pathTried.map((p, i) => (
+            <div key={i} className="flex flex-wrap gap-1">
+              <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
+                {p.join(" → ")}
+              </code>
+            </div>
+          )) : <span>—</span>}
         </div>
         <div className="mt-2">
           Chosen path:{" "}
@@ -171,37 +152,13 @@ function DebugPanel({
             <code className="inline-block text-[10px] px-1 py-0.5 bg-white/5 rounded">
               {pathChosen.join(" → ")}
             </code>
-          ) : (
-            "—"
-          )}
+          ) : "—"}
         </div>
         {quoteError && (
           <div className="mt-2 text-[11px] text-warn">
             Quote error: <code>{quoteError}</code>
           </div>
         )}
-      </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="glass rounded-xl p-3">
-          <div className="font-semibold mb-1">Balance In</div>
-          <div>decimals: <code>{balInRaw.decimals ?? "—"}</code></div>
-          <div>raw: <code>{balInRaw.value?.toString() ?? "—"}</code></div>
-          <div>human: <code>{fmt(balInRaw.value, balInRaw.decimals ?? inMeta.decimals)}</code></div>
-          <div>loading: <code>{String(balInRaw.isLoading)}</code></div>
-          <div>error: <code>{balInRaw.error ? String(balInRaw.error) : "—"}</code></div>
-          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balInRaw.refetch?.()}>Refetch In</button>
-        </div>
-
-        <div className="glass rounded-xl p-3">
-          <div className="font-semibold mb-1">Balance Out</div>
-          <div>decimals: <code>{balOutRaw.decimals ?? "—"}</code></div>
-          <div>raw: <code>{balOutRaw.value?.toString() ?? "—"}</code></div>
-          <div>human: <code>{fmt(balOutRaw.value, balOutRaw.decimals ?? outMeta.decimals)}</code></div>
-          <div>loading: <code>{String(balOutRaw.isLoading)}</code></div>
-          <div>error: <code>{balOutRaw.error ? String(balOutRaw.error) : "—"}</code></div>
-          <button className="mt-2 pill pill-opaque px-2 py-1" onClick={() => balOutRaw.refetch?.()}>Refetch Out</button>
-        </div>
       </div>
 
       <div className="mt-3 glass rounded-xl p-3">
@@ -232,14 +189,14 @@ export default function SwapForm() {
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
 
-  // balances (no sticky)
+  // balances (non-sticky)
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
   const balInRaw = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
 
   // prices
-  const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
+  const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
 
   // amount (debounced)
@@ -256,7 +213,7 @@ export default function SwapForm() {
     try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
 
-  /* ---------- Multi-path quote ---------- */
+  /* ---------- Quote (multi-path) ---------- */
   const [quotePath, setQuotePath] = useState<Address[] | undefined>(undefined);
   const [quoteOut, setQuoteOut] = useState<bigint | undefined>(undefined);
   const [quoteErr, setQuoteErr] = useState<string | undefined>(undefined);
@@ -335,9 +292,8 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
-  /* ---------- Allowance (on-chain, no hooks) ---------- */
+  /* ---------- Allowance (explicit on-chain reads) ---------- */
   const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
-
   const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
   const [isReadingAllowance, setIsReadingAllowance] = useState(false);
 
@@ -359,25 +315,27 @@ export default function SwapForm() {
     }
   };
 
+  // refresh allowance on relevant changes
   useEffect(() => {
     setAllowance(undefined);
     if (needAllowance && address) readAllowance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, address, tokenIn, needAllowance, chainId]);
 
+  const allowanceLoaded = !needAllowance || allowance !== undefined;
   const allowanceValue = allowance ?? 0n;
   const hasEnoughAllowance = !needAllowance || allowanceValue >= amountInBig;
 
   /* ---------- Balance & CTA readiness ---------- */
-  const hasEnoughBalance =
-    (balInRaw.value ?? 0n) >= amountInBig;
+  const hasEnoughBalance = (balInRaw.value ?? 0n) >= amountInBig;
 
   const canSwap =
     isConnected &&
     amountInBig > 0n &&
     !!quotePath &&
     hasEnoughBalance &&
-    hasEnoughAllowance;
+    hasEnoughAllowance &&
+    allowanceLoaded; // block swap until allowance is actually checked
 
   const setMax = () => {
     if (!balInRaw.value) return;
@@ -386,18 +344,22 @@ export default function SwapForm() {
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
-  /* ---------- Approve (direct ERC20) ---------- */
+  /* ---------- Approve (direct ERC20 → SWAPPER) ---------- */
   const [isApproving, setIsApproving] = useState(false);
   const doApprove = async () => {
     if (!needAllowance || !isConnected || !isAddress(tokenIn as string)) return;
     try {
       setIsApproving(true);
-      await writeContractAsync({
+      const txHash = await writeContractAsync({
         address: tokenIn as Address,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [SWAPPER as Address, maxUint256],
       });
+      // wait for the approval to be mined, then refresh allowance
+      if (client) {
+        await client.waitForTransactionReceipt({ hash: txHash });
+      }
       await readAllowance();
     } finally {
       setIsApproving(false);
@@ -416,11 +378,8 @@ export default function SwapForm() {
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
 
-    // safety: if allowance short, force approve first
-    if (needAllowance && !hasEnoughAllowance) {
-      await doApprove();
-      return;
-    }
+    // safety: if allowance not yet loaded or short, block and show Approve
+    if (needAllowance && (!allowanceLoaded || !hasEnoughAllowance)) return;
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
@@ -590,22 +549,34 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* Approve (always visible when ERC-20 input & allowance < amount) */}
-        {tokenIn !== "ETH" && (!hasEnoughAllowance) && (
-          <button
-            onClick={doApprove}
-            className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-            disabled={isApproving || !isConnected || amountInBig === 0n || isReadingAllowance}
-          >
-            {isApproving ? "Approving…" : `Approve ${byAddress(tokenIn).symbol}`}
-          </button>
+        {/* Approve (ALWAYS rendered for ERC-20) */}
+        {tokenIn !== "ETH" && (
+          <div className="flex gap-2">
+            <button
+              onClick={doApprove}
+              className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
+              disabled={isApproving || !isConnected || isReadingAllowance}
+              title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
+            >
+              {isApproving ? "Approving…" : `Approve ${byAddress(tokenIn).symbol}`}
+            </button>
+            <button
+              onClick={() => readAllowance()}
+              className="pill px-3 py-1 text-xs"
+              disabled={isReadingAllowance}
+              title="Refresh allowance"
+            >
+              {isReadingAllowance ? "…" : "Refresh"}
+            </button>
+          </div>
         )}
 
-        {/* Swap */}
+        {/* Swap (disabled until allowance is loaded and sufficient) */}
         <button
           onClick={doSwap}
           className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
           disabled={!canSwap}
+          title={!allowanceLoaded ? "Waiting for allowance check…" : (!hasEnoughAllowance && tokenIn !== "ETH") ? "Approve first" : undefined}
         >
           <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
