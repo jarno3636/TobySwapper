@@ -83,6 +83,8 @@ function byAddress(addr?: Address | "ETH") {
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
+const fmtEth = (wei: bigint) => Number(formatUnits(wei, 18)).toFixed(6);
+
 function useSafePublicClient() {
   const wagmiClient = usePublicClient();
   const rpcUrl =
@@ -100,15 +102,20 @@ export default function SwapForm() {
 
   // UI state (start fresh — no sticky values)
   const [tokenIn, setTokenIn]   = useState<Address | "ETH">("ETH");
-  const [tokenOut, setTokenOut] = useState<Address>(TOKENS.find((t) => t.address !== USDC)!.address);
-  const [amt, setAmt]           = useState<string>(""); // ← empty by default
+  const [tokenOut, setTokenOut] = useState<Address>(TOBY as Address); // default to TOBY
+  const [amt, setAmt]           = useState<string>(""); // empty by default
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Reset amount on mount, wallet change, chain change, or token flip
-  useEffect(() => { setAmt(""); }, []); // first load
-  useEffect(() => { setAmt(""); }, [address, chain?.id]); // wallet/chain change
-  // When switching sides, we also clear the amount below.
+  // Force ETH -> TOBY once on mount; clear amount
+  useEffect(() => {
+    setTokenIn("ETH");
+    setTokenOut(TOBY as Address);
+    setAmt("");
+  }, []);
+
+  // Clear amount on wallet/chain change
+  useEffect(() => { setAmt(""); }, [address, chain?.id]);
 
   // balances & price
   const inMeta  = byAddress(tokenIn);
@@ -240,7 +247,7 @@ export default function SwapForm() {
     return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
-  /* ---------- simulate then send ---------- */
+  /* ---------- simulate then send (with ETH-balance check) ---------- */
   const [preflightError, setPreflightError] = useState<string | undefined>();
   async function doSwap() {
     setPreflightError(undefined);
@@ -264,7 +271,7 @@ export default function SwapForm() {
 
     try {
       if (!needsApproval) {
-        const simulation = await client.simulateContract({
+        const sim = await client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
@@ -280,9 +287,22 @@ export default function SwapForm() {
           account: address as Address,
           chain: base,
         });
-        await writeContractAsync(simulation.request);
+
+        // Preflight ETH balance check (value + gas)
+        const gas = sim.request.gas ?? 0n;
+        const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
+        const totalNeeded = (sim.request.value ?? 0n) + gas * feePerGas;
+        const bal = await client.getBalance({ address: address as Address });
+        if (bal < totalNeeded) {
+          setPreflightError(
+            `You have ${fmtEth(bal)} ETH, but need ~${fmtEth(totalNeeded)} ETH (value + gas).`
+          );
+          return;
+        }
+
+        await writeContractAsync(sim.request);
       } else {
-        const simulation = await client.simulateContract({
+        const sim = await client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
@@ -299,7 +319,20 @@ export default function SwapForm() {
           account: address as Address,
           chain: base,
         });
-        await writeContractAsync(simulation.request);
+
+        // Preflight ETH balance check (gas only)
+        const gas = sim.request.gas ?? 0n;
+        const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
+        const totalNeeded = gas * feePerGas;
+        const bal = await client.getBalance({ address: address as Address });
+        if (bal < totalNeeded) {
+          setPreflightError(
+            `You have ${fmtEth(bal)} ETH for gas, but need ~${fmtEth(totalNeeded)} ETH for gas.`
+          );
+          return;
+        }
+
+        await writeContractAsync(sim.request);
       }
     } catch (e: any) {
       setPreflightError(e?.shortMessage || e?.message || String(e));
@@ -311,9 +344,6 @@ export default function SwapForm() {
   const approveText = needsApproval
     ? allowanceValue > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`
     : `No approval needed`;
-  const swapDisabled =
-    !isConnected || amountInBig === 0n || !quotePath || !hasEnoughBalance ||
-    (needsApproval && allowanceValue < amountInBig);
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -338,7 +368,7 @@ export default function SwapForm() {
         />
       </div>
 
-      {/* swap sides */}
+      {/* Swap sides */}
       <div className="flex justify-center my-2">
         <button
           className="pill pill-opaque px-3 py-1 text-sm"
@@ -452,6 +482,7 @@ export default function SwapForm() {
           (balInRaw.value ?? 0n) < amountInBig ||
           (needsApproval && allowanceValue < amountInBig)
         }
+        title="Swap"
       >
         Swap &amp; Burn {Number(feeBps) / 100}% 🔥
       </button>
