@@ -1,6 +1,7 @@
+// components/InfoCarousel.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { Address, formatUnits } from "viem";
 import { base } from "viem/chains";
@@ -9,9 +10,9 @@ import { TOBY, PATIENCE, TABOSHI, SWAPPER } from "@/lib/addresses";
 
 /* ---------- ABIs ---------- */
 const erc20Abi = [
-  { type: "function", name: "name", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "symbol", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
-  { type: "function", name: "decimals", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  { type: "function", name: "name",        stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { type: "function", name: "symbol",      stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { type: "function", name: "decimals",    stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "totalSupply", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
@@ -21,21 +22,21 @@ type Item =
   | { kind: "link"; title: string; icon: string; href: string; blurb: string };
 
 const ITEMS: Item[] = [
-  { kind: "token", title: "TOBY", icon: "/tokens/toby.PNG", address: TOBY },
+  { kind: "token", title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
   { kind: "token", title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
-  { kind: "token", title: "TABOSHI", icon: "/tokens/taboshi.PNG", address: TABOSHI },
-  { kind: "swapper", title: "SWAPPER", icon: "/toby2.PNG", address: SWAPPER },
+  { kind: "token", title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
+  { kind: "swapper", title: "SWAPPER", icon: "/toby2.PNG",          address: SWAPPER },
   { kind: "link", title: "toadgod.xyz", icon: "/tobyworld.PNG", href: "https://toadgod.xyz", blurb: "Official site: lore, links, and updates." },
   { kind: "link", title: "Telegram", icon: "/toadlore.PNG", href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
   { kind: "link", title: "@toadgod1017", icon: "/twitter.PNG", href: "https://x.com/toadgod1017?s=21", blurb: "Follow on X for drops & news." },
 ];
 
-/* ---------- Helpers ---------- */
+/* ---------- Utils ---------- */
 function fmt(n?: number, max = 4) {
   if (n === undefined || !isFinite(n)) return "—";
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(2) + "K";
+  if (n >= 1_000_000)     return (n / 1_000_000).toFixed(2) + "M";
+  if (n >= 1_000)         return (n / 1_000).toFixed(2) + "K";
   return n.toLocaleString(undefined, { maximumFractionDigits: max });
 }
 
@@ -44,11 +45,12 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
     contracts: [
-      { address, abi: erc20Abi, functionName: "name", chainId: base.id },
-      { address, abi: erc20Abi, functionName: "symbol", chainId: base.id },
-      { address, abi: erc20Abi, functionName: "decimals", chainId: base.id },
+      { address, abi: erc20Abi, functionName: "name",        chainId: base.id },
+      { address, abi: erc20Abi, functionName: "symbol",      chainId: base.id },
+      { address, abi: erc20Abi, functionName: "decimals",    chainId: base.id },
       { address, abi: erc20Abi, functionName: "totalSupply", chainId: base.id },
     ],
+    query: { refetchOnWindowFocus: false, staleTime: 30_000, gcTime: 120_000 },
   });
 
   const name = data?.[0]?.result as string | undefined;
@@ -57,19 +59,40 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const supplyBig = data?.[3]?.result as bigint | undefined;
   const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
 
+  // Holders (robust): single load with timeout + abort + stable cache (via /api/holders)
   const [holders, setHolders] = useState<number | null>(null);
+  const [holdersLoaded, setHoldersLoaded] = useState(false);
+
   useEffect(() => {
+    let aborted = false;
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 10_000); // 10s timeout
+
     (async () => {
       try {
-        const r = await fetch(`/api/holders?address=${address}`);
-        if (r.ok) {
-          const { holders } = await r.json();
-          setHolders(typeof holders === "number" ? holders : null);
-        } else setHolders(null);
+        const res = await fetch(`/api/holders?address=${address}`, {
+          signal: ac.signal,
+          cache: "force-cache",
+        });
+        if (!res.ok) throw new Error(`http ${res.status}`);
+        const json = await res.json();
+        if (!aborted) {
+          setHolders(typeof json?.holders === "number" ? json.holders : null);
+          setHoldersLoaded(true);
+        }
       } catch {
-        setHolders(null);
+        if (!aborted) {
+          setHolders(null);
+          setHoldersLoaded(true);
+        }
       }
     })();
+
+    return () => {
+      aborted = true;
+      clearTimeout(timer);
+      ac.abort();
+    };
   }, [address]);
 
   const href = `https://basescan.org/address/${address}`;
@@ -87,7 +110,10 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
         <div><div className="text-[var(--ink-sub)]">Name</div><div>{isLoading ? "…" : name ?? "—"}</div></div>
         <div><div className="text-[var(--ink-sub)]">Symbol</div><div>{isLoading ? "…" : symbol ?? "—"}</div></div>
         <div><div className="text-[var(--ink-sub)]">Total Supply</div><div>{fmt(supply)}</div></div>
-        <div><div className="text-[var(--ink-sub)]">Holders</div><div>{holders === null ? "—" : fmt(holders, 0)}</div></div>
+        <div>
+          <div className="text-[var(--ink-sub)]">Holders</div>
+          <div>{holdersLoaded ? (holders === null ? "—" : fmt(holders, 0)) : "…"}</div>
+        </div>
       </div>
     </div>
   );
@@ -101,7 +127,9 @@ function SwapperPanel() {
         <h3 className="font-semibold">Toby Swapper</h3>
         <a href={href} className="link text-xs" target="_blank" rel="noreferrer">View ↗</a>
       </div>
-      <p className="text-[var(--ink-sub)]">Routes swaps on Base and buys-&-burns <span className="font-semibold">$TOBY</span> with a 1% fee.</p>
+      <p className="text-[var(--ink-sub)]">
+        Routes swaps on Base and buys-&-burns <span className="font-semibold">$TOBY</span> with a 1% fee.
+      </p>
     </div>
   );
 }
@@ -124,8 +152,14 @@ export default function InfoCarousel() {
   const [index, setIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
 
-  const prev = () => { setAnimating(true); setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length); };
-  const next = () => { setAnimating(true); setIndex((i) => (i + 1) % ITEMS.length); };
+  const prev = useCallback(() => {
+    setAnimating(true);
+    setIndex((i) => (i - 1 + ITEMS.length) % ITEMS.length);
+  }, []);
+  const next = useCallback(() => {
+    setAnimating(true);
+    setIndex((i) => (i + 1) % ITEMS.length);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setAnimating(false), 300);
@@ -133,18 +167,59 @@ export default function InfoCarousel() {
   }, [index]);
 
   const active = ITEMS[index];
+  const leftIdx = (index - 1 + ITEMS.length) % ITEMS.length;
+  const rightIdx = (index + 1) % ITEMS.length;
 
   return (
     <div className="flex flex-col items-center w-full overflow-hidden">
-      {/* Image carousel area */}
-      <div className="relative flex items-center justify-center w-full max-w-[420px]">
-        <button onClick={prev} className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1" aria-label="Previous">←</button>
+      {/* Window with peeking neighbors (fully mobile-safe) */}
+      <div className="relative flex items-center justify-center w-full max-w-[520px]">
+        <button
+          onClick={prev}
+          className="absolute left-0 z-10 pill pill-opaque text-lg px-3 py-1"
+          aria-label="Previous"
+        >
+          ←
+        </button>
 
-        <div className="w-[50%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex items-center justify-center">
-          <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
+        <div className="w-full px-10">
+          <div className="flex items-stretch gap-4">
+            {/* left peek */}
+            <div className="w-[16%] opacity-60 pointer-events-none">
+              <div className="glass rounded-2xl p-2 flex items-center justify-center">
+                <Mini item={ITEMS[leftIdx]} />
+              </div>
+            </div>
+
+            {/* center card image window */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-[50%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex items-center justify-center">
+                <Image
+                  src={active.icon}
+                  alt={active.title}
+                  width={180}
+                  height={180}
+                  className="object-contain"
+                />
+              </div>
+            </div>
+
+            {/* right peek */}
+            <div className="w-[16%] opacity-60 pointer-events-none">
+              <div className="glass rounded-2xl p-2 flex items-center justify-center">
+                <Mini item={ITEMS[rightIdx]} />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <button onClick={next} className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1" aria-label="Next">→</button>
+        <button
+          onClick={next}
+          className="absolute right-0 z-10 pill pill-opaque text-lg px-3 py-1"
+          aria-label="Next"
+        >
+          →
+        </button>
       </div>
 
       <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
@@ -157,14 +232,38 @@ export default function InfoCarousel() {
       >
         <div className="w-full max-w-[420px]">
           {active.kind === "token" ? (
-            <TokenPanel address={active.address} title={active.title} icon={active.icon} />
+            <TokenPanel address={active.address as Address} title={active.title} icon={active.icon} />
           ) : active.kind === "swapper" ? (
             <SwapperPanel />
           ) : (
-            <LinkPanel href={active.href} title={active.title} blurb={active.blurb} icon={active.icon} />
+            <LinkPanel href={(active as any).href} title={active.title} blurb={(active as any).blurb} icon={active.icon} />
           )}
         </div>
       </div>
+
+      {/* Dots */}
+      <div className="mt-3 flex gap-2 justify-center">
+        {ITEMS.map((_, i) => (
+          <button
+            key={i}
+            aria-label={`Go to ${i + 1}`}
+            onClick={() => setIndex(i)}
+            className={`h-2.5 w-2.5 rounded-full ${i === index ? "bg-[var(--accent)]" : "bg-white/20"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* tiny preview for peeks */
+function Mini({ item }: { item: Item }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="relative inline-block w-7 h-7 rounded-lg overflow-hidden">
+        <Image src={item.icon} alt={item.title} fill sizes="28px" className="object-cover" />
+      </span>
+      <span className="text-xs font-medium truncate max-w-[70px]">{item.title}</span>
     </div>
   );
 }
