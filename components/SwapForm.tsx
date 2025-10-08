@@ -5,8 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Address,
   formatUnits,
-  isAddress,
   parseUnits,
+  isAddress,
   maxUint256,
 } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
@@ -15,10 +15,9 @@ import TokenSelect from "./TokenSelect";
 import { TOKENS, USDC, ROUTER, WETH, SWAPPER, TOBY } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
-import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 
-/* ---------- ABIs ---------- */
+/* ---------- Minimal ABIs ---------- */
 const UniV2RouterAbi = [
   {
     type: "function",
@@ -32,8 +31,17 @@ const UniV2RouterAbi = [
   },
 ] as const;
 
-// tiny ERC20 approve ABI for fallback
-const ERC20_ABI_MIN = [
+const ERC20_ABI = [
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
   {
     type: "function",
     name: "approve",
@@ -207,27 +215,6 @@ function DebugPanel({
 }
 /* --------------- end Debug Panel --------------- */
 
-function useStickyBalance(
-  val?: { value?: bigint; decimals?: number },
-  resetKey?: string
-) {
-  const [sticky, setSticky] = useState<string | undefined>(undefined);
-  const last = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    last.current = undefined;
-    setSticky(undefined);
-  }, [resetKey]);
-  useEffect(() => {
-    if (!val?.value || val.decimals == null) return;
-    try {
-      const f = formatUnits(val.value, val.decimals);
-      last.current = f;
-      setSticky(f);
-    } catch {}
-  }, [val?.value, val?.decimals]);
-  return last.current ?? sticky;
-}
-
 export default function SwapForm() {
   const { address, chain, isConnected } = useAccount();
   const chainId = chain?.id ?? base.id;
@@ -245,25 +232,17 @@ export default function SwapForm() {
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
 
-  // balances
+  // balances (no sticky)
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
   const balInRaw = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
-  const balInSticky = useStickyBalance(
-    balInRaw,
-    `${chainId}-${address ?? "0x"}-${inMeta.address ?? "ETH"}`
-  );
-  const balOutSticky = useStickyBalance(
-    balOutRaw,
-    `${chainId}-${address ?? "0x"}-${outMeta.address ?? "ETH"}`
-  );
 
   // prices
   const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : inMeta.address!);
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : outMeta.address!);
 
-  // amount
+  // amount (debounced)
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
   useEffect(() => {
     const id = setTimeout(() => setDebouncedAmt(amt), 300);
@@ -271,20 +250,13 @@ export default function SwapForm() {
   }, [amt]);
 
   const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = useMemo(
-    () => (Number.isFinite(amtNum) ? amtNum * inUsd : 0),
-    [amtNum, inUsd]
-  );
+  const amtInUsd = useMemo(() => (Number.isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
 
   const amountInBig = useMemo(() => {
-    try {
-      return parseUnits(debouncedAmt || "0", inMeta.decimals);
-    } catch {
-      return 0n;
-    }
+    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
 
-  // ---------- Multi-path quote ----------
+  /* ---------- Multi-path quote ---------- */
   const [quotePath, setQuotePath] = useState<Address[] | undefined>(undefined);
   const [quoteOut, setQuoteOut] = useState<bigint | undefined>(undefined);
   const [quoteErr, setQuoteErr] = useState<string | undefined>(undefined);
@@ -346,21 +318,14 @@ export default function SwapForm() {
       }
     })();
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [client, tokenIn, tokenOut, amountInBig]);
 
   // expected & minOut
   const expectedOutBig = quoteOut;
   const expectedOutHuman = useMemo(() => {
-    try {
-      return expectedOutBig
-        ? Number(formatUnits(expectedOutBig, outMeta.decimals))
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
+    catch { return undefined; }
   }, [expectedOutBig, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
@@ -370,59 +335,76 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [expectedOutBig, slippage, outMeta.decimals]);
 
-  // ---------- Allowance ----------
+  /* ---------- Allowance (on-chain, no hooks) ---------- */
   const needAllowance = tokenIn !== "ETH" && isAddress(tokenIn as string);
-  const allowance = useStickyAllowance(
-    needAllowance ? (tokenIn as Address) : undefined,
-    needAllowance ? (address as Address) : undefined,
-    needAllowance ? (SWAPPER as Address) : undefined
-  );
 
-  const { approveMaxFlow, isPending: isApprovePending } = useApprove(
-    needAllowance ? (tokenIn as Address) : undefined,
-    needAllowance ? (SWAPPER as Address) : undefined
-  );
+  const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
+  const [isReadingAllowance, setIsReadingAllowance] = useState(false);
 
-  // Treat "undefined" as 0n so Approve renders until we know it's big enough
-  const allowanceValue = allowance.value ?? 0n;
+  const readAllowance = async () => {
+    if (!client || !needAllowance || !address) { setAllowance(undefined); return; }
+    try {
+      setIsReadingAllowance(true);
+      const a = (await client.readContract({
+        address: tokenIn as Address,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [address as Address, SWAPPER as Address],
+      })) as bigint;
+      setAllowance(a);
+    } catch {
+      setAllowance(undefined);
+    } finally {
+      setIsReadingAllowance(false);
+    }
+  };
+
+  useEffect(() => {
+    setAllowance(undefined);
+    if (needAllowance && address) readAllowance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, address, tokenIn, needAllowance, chainId]);
+
+  const allowanceValue = allowance ?? 0n;
   const hasEnoughAllowance = !needAllowance || allowanceValue >= amountInBig;
 
+  /* ---------- Balance & CTA readiness ---------- */
   const hasEnoughBalance =
-    balInSticky && Number(balInSticky) >= Number(debouncedAmt || "0");
+    (balInRaw.value ?? 0n) >= amountInBig;
 
   const canSwap =
-    isConnected && amountInBig > 0n && !!quotePath && hasEnoughBalance && hasEnoughAllowance;
+    isConnected &&
+    amountInBig > 0n &&
+    !!quotePath &&
+    hasEnoughBalance &&
+    hasEnoughAllowance;
 
   const setMax = () => {
-    if (!balInSticky) return;
-    const raw = parseFloat(balInSticky);
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // native gas dust
+    if (!balInRaw.value) return;
+    const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // native dust
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
-  // ---------- Approve (hook first, then direct fallback) ----------
-  const approveDirect = async () => {
-    if (tokenIn === "ETH" || !isAddress(tokenIn as string)) return;
-    await writeContractAsync({
-      address: tokenIn as Address,
-      abi: ERC20_ABI_MIN,
-      functionName: "approve",
-      args: [SWAPPER as Address, maxUint256],
-    });
-    await allowance.refetch();
-  };
-
+  /* ---------- Approve (direct ERC20) ---------- */
+  const [isApproving, setIsApproving] = useState(false);
   const doApprove = async () => {
-    if (!needAllowance) return;
+    if (!needAllowance || !isConnected || !isAddress(tokenIn as string)) return;
     try {
-      await approveMaxFlow(allowance.value);   // your hook's path to max
-    } catch {
-      await approveDirect();                   // hard fallback
+      setIsApproving(true);
+      await writeContractAsync({
+        address: tokenIn as Address,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [SWAPPER as Address, maxUint256],
+      });
+      await readAllowance();
+    } finally {
+      setIsApproving(false);
     }
-    await allowance.refetch();
   };
 
-  // fee path (TOBY burn), keep len ≥ 2, lowercase everything
+  /* ---------- Fee path ---------- */
   const buildFeePath = (inA: Address): Address[] => {
     const inL = lc(inA);
     if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
@@ -430,13 +412,14 @@ export default function SwapForm() {
     return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
+  /* ---------- Swap ---------- */
   const doSwap = async () => {
     if (!quotePath || amountInBig === 0n) return;
 
-    // last-chance safety: if allowance is still short (or unknown), try to approve now and exit
-    if (needAllowance && (!hasEnoughAllowance || allowance.value === undefined)) {
+    // safety: if allowance short, force approve first
+    if (needAllowance && !hasEnoughAllowance) {
       await doApprove();
-      return; // user clicks Swap again after approval confirms
+      return;
     }
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
@@ -510,9 +493,7 @@ export default function SwapForm() {
         </div>
       )}
       {!isConnected && (
-        <div className="mb-3 text-xs text-inkSub">
-          Connect your wallet to load balances.
-        </div>
+        <div className="mb-3 text-xs text-inkSub">Connect your wallet to load balances.</div>
       )}
 
       <div className="space-y-4">
@@ -523,8 +504,32 @@ export default function SwapForm() {
             value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
             onChange={(a) => setTokenIn(a)}
             exclude={tokenOut}
-            balance={balInSticky}
+            balance={
+              balInRaw.value !== undefined
+                ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
+                : undefined
+            }
           />
+        </div>
+
+        {/* Center swap-sides button */}
+        <div className="flex justify-center">
+          <button
+            className="pill pill-opaque px-3 py-1 text-sm"
+            type="button"
+            onClick={() => {
+              const prevIn = tokenIn;
+              const prevOut = tokenOut;
+              setTokenIn(prevOut as Address);
+              setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
+            }}
+            aria-label="Swap sides"
+            title="Swap sides"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v18M8 7l4-4 4 4M16 17l-4 4-4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
         </div>
 
         {/* Amount */}
@@ -536,16 +541,13 @@ export default function SwapForm() {
             <div className="text-xs text-inkSub">
               Bal:{" "}
               <span className="font-mono">
-                {balInSticky
-                  ? Number(balInSticky).toFixed(6)
+                {balInRaw.value !== undefined
+                  ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
                   : isConnected
                   ? "—"
                   : "Connect wallet"}
               </span>
-              <button
-                className="ml-2 underline opacity-90 hover:opacity-100"
-                onClick={setMax}
-              >
+              <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
                 MAX
               </button>
             </div>
@@ -558,13 +560,9 @@ export default function SwapForm() {
             placeholder="0.0"
             inputMode="decimal"
           />
-          <div className="mt-2 text-xs text-inkSub">
-            ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
-          </div>
-          {isConnected && !hasEnoughBalance && (
-            <div className="mt-1 text-xs text-warn">
-              Insufficient {inMeta.symbol} balance.
-            </div>
+          <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
+          {isConnected && balInRaw.value !== undefined && (balInRaw.value < amountInBig) && (
+            <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
           )}
         </div>
 
@@ -575,14 +573,15 @@ export default function SwapForm() {
             value={tokenOut}
             onChange={setTokenOut}
             exclude={tokenIn as Address}
-            balance={balOutSticky}
+            balance={
+              balOutRaw.value !== undefined
+                ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6)
+                : undefined
+            }
           />
           <div className="text-xs text-inkSub">
             {expectedOutHuman !== undefined ? (
-              <>
-                Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span>{" "}
-                {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              </>
+              <>Est: <span className="font-mono">{expectedOutHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
             ) : quoteErr ? (
               <>No route found on router.</>
             ) : (
@@ -591,14 +590,14 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* Approve (ERC-20 input & allowance unknown/short) */}
-        {tokenIn !== "ETH" && !hasEnoughAllowance && (
+        {/* Approve (always visible when ERC-20 input & allowance < amount) */}
+        {tokenIn !== "ETH" && (!hasEnoughAllowance) && (
           <button
             onClick={doApprove}
             className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-            disabled={isApprovePending || !isConnected || amountInBig === 0n}
+            disabled={isApproving || !isConnected || amountInBig === 0n || isReadingAllowance}
           >
-            {isApprovePending ? "Approving…" : `Approve ${inMeta.symbol}`}
+            {isApproving ? "Approving…" : `Approve ${byAddress(tokenIn).symbol}`}
           </button>
         )}
 
@@ -608,8 +607,7 @@ export default function SwapForm() {
           className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
           disabled={!canSwap}
         >
-          <span className="pip pip-a" /> <span className="pip pip-b" />{" "}
-          <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
+          <span className="pip pip-a" /> <span className="pip pip-b" /> <span className="pip pip-c" /> Swap &amp; Burn 1% to TOBY 🔥
         </button>
       </div>
 
@@ -633,7 +631,7 @@ export default function SwapForm() {
             minOutMainHuman={minOutMainHuman}
             allowanceOwner={address}
             allowanceSpender={SWAPPER as Address}
-            allowanceValue={allowance.value ?? 0n}
+            allowanceValue={allowance}
           />
         </div>
       )}
@@ -641,42 +639,21 @@ export default function SwapForm() {
       {/* Slippage modal */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setSlippageOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button
-                className="pill pill-opaque px-3 py-1 text-xs"
-                onClick={() => setSlippageOpen(false)}
-              >
-                Close
-              </button>
+              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0.1, 0.5, 1, 2].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSlippage(v)}
-                  className={`pill justify-center px-3 py-1 text-xs ${
-                    slippage === v ? "outline outline-1 outline-white/20" : ""
-                  }`}
-                >
+                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
                   {v}%
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={slippage}
-                onChange={(e) => setSlippage(Number(e.target.value))}
-                className="glass rounded-pill px-3 py-2 w-full"
-              />
+              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
