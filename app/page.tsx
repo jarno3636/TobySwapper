@@ -6,26 +6,27 @@ import dynamic from "next/dynamic";
 import SwapForm from "@/components/SwapForm";
 import Footer from "@/components/Footer";
 
-// If InfoCarousel is a *named* export (e.g. `export function InfoCarousel() {}`)
-const InfoCarousel = dynamic(
-  () => import("@/components/InfoCarousel").then((m) => m.InfoCarousel),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
-        <div className="h-5 w-44 bg-white/10 rounded mb-4" />
-        <div className="flex gap-4">
-          <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
-          <div className="flex-1 h-40 bg-white/10 rounded-3xl" />
-          <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
-        </div>
-        <div className="mt-3 h-2.5 w-24 bg-white/10 rounded-full" />
+// Robust dynamic import: supports either default *or* named export
+const InfoCarousel = dynamic(async () => {
+  const mod = await import("@/components/InfoCarousel");
+  // Return the component directly; TS is happy since we return a React component
+  return (mod as any).default ?? (mod as any).InfoCarousel;
+}, {
+  ssr: false,
+  loading: () => (
+    <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
+      <div className="h-5 w-44 bg-white/10 rounded mb-4" />
+      <div className="flex gap-4">
+        <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
+        <div className="flex-1 h-40 bg-white/10 rounded-3xl" />
+        <div className="w-[16%] h-24 bg-white/10 rounded-2xl" />
       </div>
-    ),
-  }
-);
+      <div className="mt-3 h-2.5 w-24 bg-white/10 rounded-full" />
+    </div>
+  ),
+});
 
-// Lazy-load TokensBurned (default export is fine)
+// Lazy-load TokensBurned (assumes default export)
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ssr: false,
   loading: () => (
@@ -37,6 +38,7 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
+// Micro blur placeholder
 const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
