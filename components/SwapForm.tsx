@@ -8,11 +8,21 @@ import {
   parseUnits,
   isAddress,
   maxUint256,
+  getAddress, // (optional) for checksummed display
 } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { base } from "viem/chains";
 import TokenSelect from "./TokenSelect";
-import { TOKENS, USDC, ROUTER, WETH, SWAPPER, TOBY } from "@/lib/addresses";
+import {
+  TOKENS,
+  USDC,
+  QUOTE_ROUTER_V2,   // 👈 use this for getAmountsOut
+  WETH,
+  SWAPPER,
+  TOBY,
+  // UNIVERSAL_ROUTER_V4, // available if/when you wire UR execution
+  // PERMIT2,             // available if/when you wire Permit2 approvals
+} from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
@@ -32,26 +42,12 @@ const UniV2RouterAbi = [
 ] as const;
 
 const ERC20_ABI = [
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
+  { type: "function", name: "allowance", stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "approve", stateMutability: "nonpayable",
+    inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }] },
 ] as const;
 
 /* ---------- helpers ---------- */
@@ -60,19 +56,13 @@ function byAddress(addr?: Address | "ETH") {
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase());
   return t
-    ? {
-        symbol: t.symbol,
-        decimals: (t.decimals ?? 18) as 18 | 6,
-        address: t.address as Address,
-      }
+    ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
-const eq = (a?: string, b?: string) =>
-  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
-/* ---------------- Debug Panel (unchanged aside from showing allowance) ---------------- */
 function DebugPanel({
   address,
   chain,
