@@ -41,26 +41,12 @@ const UniV2RouterAbi = [
 ] as const;
 
 const ERC20_ABI = [
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
+  { type: "function", name: "allowance", stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "approve", stateMutability: "nonpayable",
+    inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }] },
 ] as const;
 
 /* ---------- helpers ---------- */
@@ -69,18 +55,14 @@ function byAddress(addr?: Address | "ETH") {
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase());
   return t
-    ? {
-        symbol: t.symbol,
-        decimals: (t.decimals ?? 18) as 18 | 6,
-        address: t.address as Address,
-      }
+    ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 
-/** Public client with a fallback so on-chain reads never stall */
+/** Public client with fallback so reads never stall */
 function useSafePublicClient() {
   const wagmiClient = usePublicClient();
   const rpcUrl =
@@ -98,6 +80,14 @@ function useSafePublicClient() {
   );
 }
 
+/** ---- IMPORTANT: who will pull the user's tokens? ----
+ * If TobySwapper does `transferFrom(msg.sender, ...)`, spender must be SWAPPER.
+ * If you call the V2 Router directly from the user, spender must be QUOTE_ROUTER_V2.
+ */
+const APPROVAL_SPENDER: Address = SWAPPER as Address;
+// To test the other model, flip this to:
+// const APPROVAL_SPENDER: Address = QUOTE_ROUTER_V2 as Address;
+
 export default function SwapForm() {
   const { address, chain, isConnected } = useAccount();
   const chainId = chain?.id ?? base.id;
@@ -109,7 +99,7 @@ export default function SwapForm() {
   const [tokenOut, setTokenOut] = useState<Address>(
     TOKENS.find((t) => t.address !== USDC)!.address
   );
-  const [amt, setAmt] = useState("5"); // default for quick testing
+  const [amt, setAmt] = useState("5");
   const [slippageOpen, setSlippageOpen] = useState(false);
   const [slippage, setSlippage] = useState<number>(0.5);
 
@@ -120,7 +110,7 @@ export default function SwapForm() {
   const balOutRaw = useTokenBalance(address, outMeta.address);
 
   // prices
-  const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address));
+  const inUsd  = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address));
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address));
 
   // amount (debounced)
@@ -131,20 +121,13 @@ export default function SwapForm() {
   }, [amt]);
 
   const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = useMemo(
-    () => (Number.isFinite(amtNum) ? amtNum * inUsd : 0),
-    [amtNum, inUsd]
-  );
+  const amtInUsd = useMemo(() => (Number.isFinite(amtNum) ? amtNum * inUsd : 0), [amtNum, inUsd]);
 
   const amountInBig = useMemo(() => {
-    try {
-      return parseUnits(debouncedAmt || "0", inMeta.decimals);
-    } catch {
-      return 0n;
-    }
+    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
 
-  /* ---------- Quote (multi-path via V2) ---------- */
+  /* ---------- Quote (V2) ---------- */
   const [quotePath, setQuotePath] = useState<Address[] | undefined>(undefined);
   const [quoteOut, setQuoteOut] = useState<bigint | undefined>(undefined);
   const [quoteErr, setQuoteErr] = useState<string | undefined>(undefined);
@@ -198,19 +181,14 @@ export default function SwapForm() {
         }
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [client, tokenIn, tokenOut, amountInBig]);
 
   // expected & minOut
   const expectedOutBig = quoteOut;
   const expectedOutHuman = useMemo(() => {
-    try {
-      return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined;
-    } catch {
-      return undefined;
-    }
+    try { return expectedOutBig ? Number(formatUnits(expectedOutBig, outMeta.decimals)) : undefined; }
+    catch { return undefined; }
   }, [expectedOutBig, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
@@ -227,6 +205,8 @@ export default function SwapForm() {
   const [allowance, setAllowance] = useState<bigint | undefined>(undefined);
   const [isReadingAllowance, setIsReadingAllowance] = useState(false);
   const [approveError, setApproveError] = useState<string | undefined>(undefined);
+  const [preflightError, setPreflightError] = useState<string | undefined>(undefined);
+
   const allowanceValue = allowance ?? 0n;
 
   const readAllowance = async () => {
@@ -240,7 +220,7 @@ export default function SwapForm() {
         address: tokenIn as Address,
         abi: ERC20_ABI,
         functionName: "allowance",
-        args: [address as Address, SWAPPER as Address],
+        args: [address as Address, APPROVAL_SPENDER],
       })) as bigint;
       setAllowance(a);
     } catch {
@@ -250,13 +230,15 @@ export default function SwapForm() {
     }
   };
 
+  // refresh allowance on relevant changes
   useEffect(() => {
     setAllowance(undefined);
+    setPreflightError(undefined);
     if (needAllowance && address) readAllowance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, address, tokenIn, needAllowance, chainId]);
 
-  // tiny retry to smooth over initial mount
+  // small retry
   useEffect(() => {
     if (!needAllowance || !address) return;
     const t = setTimeout(() => readAllowance(), 600);
@@ -279,7 +261,7 @@ export default function SwapForm() {
   const setMax = () => {
     if (!balInRaw.value) return;
     const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005); // native dust
+    const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
     setAmt((safe > 0 ? safe : 0).toString());
   };
 
@@ -289,15 +271,16 @@ export default function SwapForm() {
     if (!needAllowance || !isConnected || !isAddress(tokenIn as string)) return;
     try {
       setApproveError(undefined);
+      setPreflightError(undefined);
       setIsApproving(true);
 
-      // USDC/USDT pattern: zero, then set new.
+      // Zero first if there is a non-zero allowance (USDC/USDT pattern)
       if (allowanceValue > 0n) {
         const tx0 = await writeContractAsync({
           address: tokenIn as Address,
           abi: ERC20_ABI,
           functionName: "approve",
-          args: [SWAPPER as Address, 0n],
+          args: [APPROVAL_SPENDER, 0n],
         });
         await client?.waitForTransactionReceipt({ hash: tx0 });
       }
@@ -306,7 +289,7 @@ export default function SwapForm() {
         address: tokenIn as Address,
         abi: ERC20_ABI,
         functionName: "approve",
-        args: [SWAPPER as Address, maxUint256],
+        args: [APPROVAL_SPENDER, maxUint256],
       });
       await client?.waitForTransactionReceipt({ hash: tx1 });
 
@@ -318,7 +301,7 @@ export default function SwapForm() {
     }
   };
 
-  /* ---------- Fee path (for your burn path) ---------- */
+  /* ---------- Fee path ---------- */
   const buildFeePath = (inA: Address): Address[] => {
     const inL = lc(inA);
     if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
@@ -326,10 +309,29 @@ export default function SwapForm() {
     return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
-  /* ---------- Swap ---------- */
+  /* ---------- Swap (with preflight allowance check) ---------- */
   const doSwap = async () => {
+    setPreflightError(undefined);
+
     if (!quotePath || amountInBig === 0n) return;
-    if (needAllowance && !hasEnoughAllowance) return;
+
+    // Always re-read right before swap to avoid “exceeds allowance” from wallet simulation
+    if (needAllowance) {
+      await readAllowance();
+      const fresh = (await client.readContract({
+        address: tokenIn as Address,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [address as Address, APPROVAL_SPENDER],
+      })) as bigint;
+
+      if (fresh < amountInBig) {
+        setPreflightError(
+          `Allowance too low for spender ${APPROVAL_SPENDER}. Click Approve, then try again.`
+        );
+        return;
+      }
+    }
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
@@ -375,8 +377,8 @@ export default function SwapForm() {
 
   /* ---------- Labels ---------- */
   const approveLabel = needAllowance
-    ? hasEnoughAllowance
-      ? `Approved ✓`
+    ? allowanceValue > 0n
+      ? `Re-approve ${byAddress(tokenIn).symbol}`
       : `Approve ${byAddress(tokenIn).symbol}`
     : `—`;
 
@@ -385,7 +387,7 @@ export default function SwapForm() {
     amountInBig === 0n ? "Enter amount" :
     !quotePath ? (quoteErr ? "No route" : "Fetching quote…") :
     !hasEnoughBalance ? "Insufficient balance" :
-    needAllowance && !hasEnoughAllowance ? "Approve first" :
+    needAllowance && allowanceValue < amountInBig ? "Approve first" :
     undefined;
 
   return (
@@ -458,9 +460,7 @@ export default function SwapForm() {
               <span className="font-mono">
                 {balInRaw.value !== undefined
                   ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
-                  : isConnected
-                  ? "—"
-                  : "Connect wallet"}
+                  : isConnected ? "—" : "Connect wallet"}
               </span>
               <button className="ml-2 underline opacity-90 hover:opacity-100" onClick={setMax}>
                 MAX
@@ -505,17 +505,15 @@ export default function SwapForm() {
           </div>
         </div>
 
-        {/* Primary CTAs: Approve (always visible for ERC20) + Swap */}
+        {/* CTAs */}
         <div className="grid grid-cols-2 gap-2">
           {/* Approve */}
           {!isEthIn ? (
             <button
               onClick={doApprove}
-              className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 ${
-                hasEnoughAllowance ? "opacity-60" : ""
-              }`}
+              className={`pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60`}
               disabled={isApproving || !isConnected}
-              title={`Approve ${byAddress(tokenIn).symbol} for the swapper`}
+              title={`Approve ${byAddress(tokenIn).symbol} for ${APPROVAL_SPENDER}`}
             >
               {isApproving ? "Approving…" : approveLabel}
             </button>
@@ -529,16 +527,26 @@ export default function SwapForm() {
           <button
             onClick={doSwap}
             className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-            disabled={!canSwap}
-            title={swapTitle}
+            disabled={
+              !isConnected ||
+              amountInBig === 0n ||
+              !quotePath ||
+              !hasEnoughBalance ||
+              (needAllowance && allowanceValue < amountInBig)
+            }
+            title={(!isConnected && "Connect wallet") || undefined}
           >
             Swap &amp; Burn 1% 🔥
           </button>
         </div>
 
-        {/* Approval error inline */}
-        {approveError && (
-          <div className="text-[11px] text-warn mt-1">Approve error: {approveError}</div>
+        {/* Inline errors */}
+        {approveError && <div className="text-[11px] text-warn mt-1">Approve error: {approveError}</div>}
+        {preflightError && <div className="text-[11px] text-warn mt-1">{preflightError}</div>}
+        {needAllowance && (
+          <div className="text-[11px] text-inkSub">
+            Spender: <code className="break-all">{APPROVAL_SPENDER}</code>
+          </div>
         )}
       </div>
 
