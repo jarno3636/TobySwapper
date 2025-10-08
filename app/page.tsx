@@ -1,9 +1,10 @@
+// app/page.tsx
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import SwapForm from "@/components/SwapForm";
 import Footer from "@/components/Footer";
 
-// Defer heavy, data-fetching UI to the client
+// Lazy-load heavier client components
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ssr: false,
   loading: () => (
@@ -15,8 +16,8 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
-// Use the new carousel (window) instead of the wheel
-const InfoCarousel = dynamic(() => import("@/components/InfoCarousel"), {
+// ✅ Fixed: must return default export for dynamic import
+const InfoCarousel = dynamic(() => import("@/components/InfoCarousel").then((m) => m.default), {
   ssr: false,
   loading: () => (
     <div className="glass rounded-3xl p-5 shadow-soft w-full" style={{ maxWidth: 520 }}>
@@ -31,7 +32,7 @@ const InfoCarousel = dynamic(() => import("@/components/InfoCarousel"), {
   ),
 });
 
-// super-tiny blur (1×1) to avoid pulling large placeholder assets
+// Micro blur placeholder to avoid heavy preview loads
 const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
@@ -42,13 +43,17 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
           {/* LEFT */}
           <div className="flex flex-col items-center md:items-start">
-            {/* Hero image */}
-            <div className="glass rounded-3xl overflow-hidden mb-6 relative aspect-[4/3] w-full max-w-full sm:max-w-[520px]">
+            {/* Hero image with slide-up + fade-in animation */}
+            <div
+              className="glass rounded-3xl overflow-hidden mb-6 relative w-[70%] max-w-[360px] sm:max-w-[420px] md:max-w-[480px]
+              animate-[slideUpFade_0.8s_ease-out]"
+              style={{ aspectRatio: "4 / 3" }}
+            >
               <Image
                 src="/toby-hero.PNG"
                 alt="Toby hero"
                 fill
-                sizes="(max-width: 640px) 90vw, (max-width: 1024px) 50vw, 520px"
+                sizes="(max-width: 640px) 90vw, (max-width: 1024px) 50vw, 480px"
                 className="object-contain"
                 priority
                 placeholder="blur"
@@ -63,8 +68,12 @@ export default function Page() {
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-6 w-full">
               <span className="pill bg-[var(--glass)] text-sm">1% auto-burn to $TOBY 🔥</span>
-              <span className="pill bg-[var(--glass)] text-sm">Swap USDC, WETH, Patience, Taboshi</span>
-              <span className="pill bg-[var(--glass)] text-sm">Fuel the meme · Join the lore 🐸</span>
+              <span className="pill bg-[var(--glass)] text-sm">
+                Swap USDC, WETH, Patience, Taboshi
+              </span>
+              <span className="pill bg-[var(--glass)] text-sm">
+                Fuel the meme · Join the lore 🐸
+              </span>
             </div>
 
             <div className="w-full max-w-full sm:max-w-[520px]">
@@ -73,7 +82,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* RIGHT: windowed carousel */}
+          {/* RIGHT: Carousel section */}
           <div className="flex w-full justify-center">
             <div className="w-full" style={{ maxWidth: 520 }}>
               <InfoCarousel />
@@ -83,6 +92,20 @@ export default function Page() {
       </div>
 
       <Footer />
+
+      {/* slideUp + fade keyframes */}
+      <style jsx global>{`
+        @keyframes slideUpFade {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </>
   );
 }
