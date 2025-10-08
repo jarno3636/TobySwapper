@@ -1,4 +1,3 @@
-// hooks/useTobySwapper.ts
 "use client";
 
 import { useCallback } from "react";
@@ -14,22 +13,13 @@ const getDecimals = (addr: Address) =>
 export type SwapPaths = {
   pathForMainSwap: Address[];
   pathForFeeSwap: Address[];
-  isIdentity: boolean; // tokenIn (normalized) == tokenOut (no hop)
+  isIdentity: boolean;
 };
 
-/**
- * Build paths for main swap & fee swap.
- * - Normalizes ETH -> WETH for routing.
- * - Ensures each path has length ≥ 2 (some routers choke on single-hop identity).
- * - Flags identity routes so UI/caller can short-circuit quotes if desired.
- */
 export function buildPaths(tokenIn: Address | "ETH", tokenOut: Address): SwapPaths {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-
-  // Identity detection
   const isIdentity = inAddr.toLowerCase() === tokenOut.toLowerCase();
 
-  // Fee path: convert fee to TOBY. Always length ≥ 2.
   const pathForFeeSwap =
     inAddr.toLowerCase() === TOBY.toLowerCase()
       ? [inAddr as Address, TOBY as Address]
@@ -37,15 +27,13 @@ export function buildPaths(tokenIn: Address | "ETH", tokenOut: Address): SwapPat
       ? [WETH as Address, TOBY as Address]
       : [inAddr as Address, WETH as Address, TOBY as Address];
 
-  // Main path (length ≥ 2)
   let pathForMainSwap: Address[];
   if (isIdentity) {
-    // Router-safe identity (still 2 addresses)
     pathForMainSwap = [inAddr, tokenOut];
   } else if (tokenIn === "ETH") {
     pathForMainSwap =
       tokenOut.toLowerCase() === WETH.toLowerCase()
-        ? [WETH as Address, WETH as Address] // ETH→WETH (1:1 but length 2)
+        ? [WETH as Address, WETH as Address]
         : [WETH as Address, tokenOut];
   } else if (
     inAddr.toLowerCase() === WETH.toLowerCase() ||
@@ -63,12 +51,6 @@ export function useDoSwap() {
   const { writeContractAsync, data: hash, isPending } = useWriteContract();
   const wait = useWaitForTransactionReceipt({ hash });
 
-  /**
-   * Token -> Token
-   * amountInHuman: human units of tokenIn
-   * minOutMainHuman: human units of tokenOut (‼️ parsed with tokenOut decimals)
-   * minOutFeeHuman: human units in TOBY (assumed 18)
-   */
   const swapTokensForTokens = useCallback(
     async (
       tokenIn: Address,
@@ -84,11 +66,11 @@ export function useDoSwap() {
       const args = [
         tokenIn,
         tokenOut,
-        parseUnits(amountInHuman || "0", decIn),    // amountIn: tokenIn decimals
-        parseUnits(minOutMainHuman || "0", decOut), // minOutMain: tokenOut decimals ✅
+        parseUnits(amountInHuman || "0", decIn),
+        parseUnits(minOutMainHuman || "0", decOut),
         pathForMainSwap,
         pathForFeeSwap,
-        parseUnits(minOutFeeHuman || "0", 18),      // minOutFee: TOBY(18)
+        parseUnits(minOutFeeHuman || "0", 18),
         BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
       ] as const;
 
@@ -102,12 +84,6 @@ export function useDoSwap() {
     [writeContractAsync]
   );
 
-  /**
-   * ETH -> Token
-   * ethInHuman: human ETH
-   * minOutMainHuman: human units of tokenOut (‼️ parsed with tokenOut decimals)
-   * minOutFeeHuman: human TOBY (18)
-   */
   const swapETHForTokens = useCallback(
     async (
       tokenOut: Address,
@@ -120,10 +96,10 @@ export function useDoSwap() {
 
       const args = [
         tokenOut,
-        parseUnits(minOutMainHuman || "0", decOut), // minOutMain: tokenOut decimals ✅
+        parseUnits(minOutMainHuman || "0", decOut),
         pathForMainSwap,
         pathForFeeSwap,
-        parseUnits(minOutFeeHuman || "0", 18),      // minOutFee: TOBY(18)
+        parseUnits(minOutFeeHuman || "0", 18),
         BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
       ] as const;
 
