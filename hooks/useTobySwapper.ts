@@ -1,3 +1,4 @@
+// hooks/useTobySwapper.ts
 "use client";
 
 import { useCallback } from "react";
@@ -9,6 +10,8 @@ import { SWAPPER, WETH, TOBY, TOKENS } from "@/lib/addresses";
 const getDecimals = (addr: Address) =>
   TOKENS.find((t) => t.address.toLowerCase() === addr.toLowerCase())?.decimals ?? 18;
 
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+
 export type SwapPaths = {
   pathForMainSwap: Address[];
   pathForFeeSwap: Address[];
@@ -17,20 +20,19 @@ export type SwapPaths = {
 
 export function buildPaths(tokenIn: Address | "ETH", tokenOut: Address): SwapPaths {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-  const isIdentity = inAddr.toLowerCase() === tokenOut.toLowerCase();
+  const isIdentity = eq(inAddr, tokenOut);
 
-  const pathForFeeSwap =
-    inAddr.toLowerCase() === TOBY.toLowerCase()
-      ? [inAddr as Address, TOBY as Address]
-      : inAddr.toLowerCase() === WETH.toLowerCase()
-      ? [WETH as Address, TOBY as Address]
-      : [inAddr as Address, WETH as Address, TOBY as Address];
+  const pathForFeeSwap = eq(inAddr, TOBY)
+    ? [inAddr, TOBY as Address]
+    : eq(inAddr, WETH)
+    ? [WETH as Address, TOBY as Address]
+    : [inAddr, WETH as Address, TOBY as Address];
 
   let pathForMainSwap: Address[];
   if (isIdentity) pathForMainSwap = [inAddr, tokenOut];
   else if (tokenIn === "ETH")
-    pathForMainSwap = tokenOut.toLowerCase() === WETH.toLowerCase() ? [WETH as Address, WETH as Address] : [WETH as Address, tokenOut];
-  else if (inAddr.toLowerCase() === WETH.toLowerCase() || tokenOut.toLowerCase() === WETH.toLowerCase())
+    pathForMainSwap = eq(tokenOut, WETH) ? [WETH as Address, WETH as Address] : [WETH as Address, tokenOut];
+  else if (eq(inAddr, WETH) || eq(tokenOut, WETH))
     pathForMainSwap = [inAddr, tokenOut];
   else pathForMainSwap = [inAddr, WETH as Address, tokenOut];
 
@@ -47,22 +49,20 @@ export function useDoSwap() {
       const decIn = getDecimals(tokenIn);
       const decOut = getDecimals(tokenOut);
 
-      const args = [
-        tokenIn,
-        tokenOut,
-        parseUnits(amountInHuman || "0", decIn),
-        parseUnits(minOutMainHuman || "0", decOut),
-        pathForMainSwap,
-        pathForFeeSwap,
-        parseUnits(minOutFeeHuman || "0", 18),
-        BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
-      ] as const;
-
       return writeContractAsync({
         address: SWAPPER,
         abi: TobySwapperAbi as any,
         functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
-        args,
+        args: [
+          tokenIn,
+          tokenOut,
+          parseUnits(amountInHuman || "0", decIn),
+          parseUnits(minOutMainHuman || "0", decOut),
+          pathForMainSwap,
+          pathForFeeSwap,
+          parseUnits(minOutFeeHuman || "0", 18),
+          BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
+        ],
       });
     },
     [writeContractAsync]
@@ -73,20 +73,18 @@ export function useDoSwap() {
       const { pathForMainSwap, pathForFeeSwap } = buildPaths("ETH", tokenOut);
       const decOut = getDecimals(tokenOut);
 
-      const args = [
-        tokenOut,
-        parseUnits(minOutMainHuman || "0", decOut),
-        pathForMainSwap,
-        pathForFeeSwap,
-        parseUnits(minOutFeeHuman || "0", 18),
-        BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
-      ] as const;
-
       return writeContractAsync({
         address: SWAPPER,
         abi: TobySwapperAbi as any,
         functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
-        args,
+        args: [
+          tokenOut,
+          parseUnits(minOutMainHuman || "0", decOut),
+          pathForMainSwap,
+          pathForFeeSwap,
+          parseUnits(minOutFeeHuman || "0", 18),
+          BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
+        ],
         value: parseUnits(ethInHuman || "0", 18),
       });
     },
