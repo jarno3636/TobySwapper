@@ -15,12 +15,12 @@ export const PATIENCE: Address = "0x6D96f18F00B815B2109A3766E79F6A7aD7785624";
 export const TABOSHI: Address  = "0x3a1a33cf4553db61f0db2c1e1721cd480b02789f";
 
 // Routers / burn / swapper
-// Keep V2 router for *quoting only* (getAmountsOut)
-export const QUOTE_ROUTER_V2: Address = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24";
-
-// Your swapper (spender for approvals) — NEW
+export const QUOTE_ROUTER_V2: Address = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24"; // Uniswap V2 router (Base)
 export const SWAPPER: Address = "0xfC098D8d13CD4583715ECc2eFC1894F39947599d";
 export const DEAD: Address    = "0x000000000000000000000000000000000000dEaD";
+
+// NEW: Uniswap v3 QuoterV2 (Base mainnet)
+export const QUOTER_V3: Address = "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a";
 
 // Token list for selects
 export type TokenInfo = { symbol: string; address: Address; decimals: number };
