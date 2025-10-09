@@ -1,43 +1,76 @@
 // lib/wallet.ts
 "use client";
 
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { http, fallback } from "viem";
+import { http, createConfig } from "wagmi";
 import { base } from "viem/chains";
+import {
+  connectorsForWallets,
+  metaMaskWallet,
+  coinbaseWallet,
+  walletConnectWallet,
+  injectedWallet,
+  okxWallet,
+  rabbyWallet,
+  rainbowWallet,
+  trustWallet,
+  imTokenWallet,
+  zerionWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 
-/**
- * RainbowKit/Wagmi config for TobySwapper (Base mainnet)
- *
- * Env you should set in Vercel:
- * - NEXT_PUBLIC_PROJECT_NAME=TobySwapper
- * - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=3e438566e70a1cb70e52acebf3625cf8
- * - NEXT_PUBLIC_RPC_BASE=https://base-mainnet.g.alchemy.com/v2/CMZxEWtahlNfTGTNOdO0f
- */
-
-const projectId =
-  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "demo";
-
-if (typeof window !== "undefined" && projectId === "demo") {
-  // eslint-disable-next-line no-console
+const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID!;
+if (!WC_ID) {
+  // You can remove this throw in prod, but it's very helpful during setup:
+  // Create a WalletConnect Cloud project and set NEXT_PUBLIC_WC_PROJECT_ID.
   console.warn(
-    "[Wallet] NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is missing. WalletConnect modal may not work."
+    "⚠ NEXT_PUBLIC_WC_PROJECT_ID is missing. WalletConnect-based wallets may not appear."
   );
 }
 
-const alchemyRpc = process.env.NEXT_PUBLIC_RPC_BASE;
-const publicRpc = "https://mainnet.base.org";
+// Optional: your own Base RPC (recommended for Vercel reliability)
+const BASE_RPC =
+  process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
 
-// viem’s fallback() will round-robin / failover between transports
-const transport = alchemyRpc
-  ? fallback([http(alchemyRpc), http(publicRpc)])
-  : http(publicRpc);
+// —— Wallet groups (feel free to reorder) ——
+const popular = [
+  injectedWallet,    // shows "Injected" in in-app browsers (Trust, MetaMask in-app, etc.)
+  metaMaskWallet,
+  coinbaseWallet,
+  walletConnectWallet,
+];
 
-export const wagmiConfig = getDefaultConfig({
-  appName: process.env.NEXT_PUBLIC_PROJECT_NAME || "TobySwapper",
-  projectId,
-  ssr: true, // smoother hydration with Next.js 14
+const moreWallets = [
+  okxWallet,
+  rabbyWallet,
+  rainbowWallet,
+  trustWallet,
+  imTokenWallet,
+  zerionWallet,
+];
+
+// Build connectors
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: "Popular",
+      wallets: popular,
+    },
+    {
+      groupName: "More",
+      wallets: moreWallets,
+    },
+  ],
+  {
+    appName: "Toby Swapper",
+    projectId: WC_ID || "missing-project-id",
+  }
+);
+
+// Final wagmi config
+export const wagmiConfig = createConfig({
   chains: [base],
+  connectors,
   transports: {
-    [base.id]: transport,
+    [base.id]: http(BASE_RPC),
   },
+  ssr: true, // recommended with Next.js App Router
 });
