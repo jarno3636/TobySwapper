@@ -1,4 +1,3 @@
-// hooks/useTokenBalance.ts
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -49,7 +48,7 @@ export function useTokenBalance(
     error,
   } = useBalance({
     address: userLC,
-    token: tokenLC,          // <- lowercase avoids checksum complaint
+    token: tokenLC,
     chainId,
     scopeKey,
     query: {
@@ -76,27 +75,25 @@ export function useTokenBalance(
 
       try {
         if (!tokenLC) {
-          // native ETH
           const raw = await client.getBalance({ address: userLC });
           if (!cancelled) setFallback({ value: raw, decimals: 18 });
         } else {
-          // ERC-20
           const [raw, dec] = await Promise.all([
             client.readContract({
-              address: tokenLC,          // <- lowercase
+              address: tokenLC,
               abi: erc20Abi,
               functionName: "balanceOf",
-              args: [userLC],            // <- lowercase
+              args: [userLC],
             }) as Promise<bigint>,
             client.readContract({
-              address: tokenLC,          // <- lowercase
+              address: tokenLC,
               abi: erc20Abi,
               functionName: "decimals",
             }) as Promise<number>,
           ]);
           if (!cancelled) setFallback({ value: raw, decimals: dec });
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) setFallback({});
       }
     })();
