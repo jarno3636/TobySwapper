@@ -16,11 +16,12 @@ export const TABOSHI: Address  = "0x3a1a33cf4553db61f0db2c1e1721cd480b02789f";
 
 // Routers / burn / swapper
 export const QUOTE_ROUTER_V2: Address = "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24"; // Uniswap V2 router (Base)
-export const SWAPPER: Address = "0xfC098D8d13CD4583715ECc2eFC1894F39947599d";
-export const DEAD: Address    = "0x000000000000000000000000000000000000dEaD";
+export const SWAPPER: Address         = "0xfC098D8d13CD4583715ECc2eFC1894F39947599d";
+export const DEAD: Address            = "0x000000000000000000000000000000000000dEaD";
 
-// NEW: Uniswap v3 QuoterV2 (Base mainnet)
-export const QUOTER_V3: Address = "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a";
+// Uniswap v3 on Base mainnet
+export const QUOTER_V3: Address      = "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a"; // QuoterV2
+export const SWAP_ROUTER_V3: Address = "0x2626664c2603336E57B271c5C0b26F421741e481"; // SwapRouter02
 
 // Token list for selects
 export type TokenInfo = { symbol: string; address: Address; decimals: number };
