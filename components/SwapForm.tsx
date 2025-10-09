@@ -1,4 +1,4 @@
-// components/SwapForm.tsx
+//// components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +34,7 @@ import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 /* ---------- Config ---------- */
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
+const GAS_BUFFER_ETH = 0.0005;
 
 /* ---------- Minimal ABIs ---------- */
 const UniV2RouterAbi = [
@@ -88,27 +89,70 @@ function useSafePublicClient() {
   return wagmiClient ?? createPublicClient({ chain: base, transport: http(rpcUrl) });
 }
 
+/* ---------- path building (broadened with USDC) ---------- */
+function buildCandidatePaths(
+  tokenIn: Address | "ETH",
+  tokenOut: Address
+): Address[][] {
+  const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+  const outAddr = tokenOut as Address;
+
+  const mids: Address[] = [
+    WETH as Address,
+    USDC as Address,
+    // We can include TOBY as a mid for some pairs
+    TOBY as Address,
+  ].map(lc);
+
+  const baseSet: Address[][] = [
+    [inAddr, outAddr],                  // direct
+    [inAddr, WETH as Address, outAddr], // via WETH
+    [inAddr, USDC as Address, outAddr], // via USDC
+  ];
+
+  // 2-hop chains in both orders: WETH->USDC and USDC->WETH (helps many edge pairs)
+  baseSet.push([inAddr, WETH as Address, USDC as Address, outAddr]);
+  baseSet.push([inAddr, USDC as Address, WETH as Address, outAddr]);
+
+  // Avoid silly routes like repeating same addr adjacently; lower-case & unique
+  const uniq = new Set<string>();
+  const cleaned = baseSet
+    .map(lcPath)
+    .filter((p) => {
+      // filter duplicates
+      const key = p.join();
+      if (uniq.has(key)) return false;
+      uniq.add(key);
+      // filter adjacent duplicates
+      for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) return false;
+      // sanity: start != end or length>1
+      return p.length >= 2;
+    });
+
+  return cleaned as Address[][];
+}
+
 export default function SwapForm() {
   const { address, chainId, isConnected } = useAccount();
   const { isOnBase, ensureBase } = useNetworkGuard();
   const client = useSafePublicClient();
   const { writeContractAsync } = useWriteContract();
 
-  // UI state (clean each time account/chain changes)
+  // UI state
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<Address>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Force ETH->TOBY on mount & whenever account/chain changes
+  // Reset to ETH->TOBY on account/chain change
   useEffect(() => {
     setTokenIn("ETH");
     setTokenOut(TOBY as Address);
     setAmt("");
   }, [address, chainId]);
 
-  // Make sure we’re on Base once connected
+  // Ensure Base when connected
   useEffect(() => {
     if (isConnected) void ensureBase();
   }, [isConnected, ensureBase]);
@@ -121,7 +165,7 @@ export default function SwapForm() {
   const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address));
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address));
 
-  // debounced amount for quotes
+  // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
   useEffect(() => {
     const id = setTimeout(() => setDebouncedAmt(amt.trim()), 280);
@@ -135,8 +179,8 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ---------- feeBps (view from swapper) ---------- */
-  const [feeBps, setFeeBps] = useState<bigint>(100n); // 1% default
+  /* ---------- feeBps ---------- */
+  const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
       try {
@@ -150,7 +194,7 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  /* ---------- quote (use POST-FEE amount) ---------- */
+  /* ---------- quote (V2 getAmountsOut; broadened paths) ---------- */
   const mainAmountIn = useMemo(
     () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
     [amountInBig, feeBps]
@@ -159,6 +203,7 @@ export default function SwapForm() {
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
+  const [debugPath, setDebugPath] = useState<string | undefined>(); // tiny helper
 
   useEffect(() => {
     let alive = true;
@@ -166,6 +211,7 @@ export default function SwapForm() {
       setQuoteErr(undefined);
       setQuoteOutMain(undefined);
       setQuotePath(undefined);
+      setDebugPath(undefined);
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) {
         setQuoteState("idle");
@@ -173,18 +219,10 @@ export default function SwapForm() {
       }
 
       setQuoteState("loading");
-      const inAddr = tokenIn === "ETH" ? WETH : (tokenIn as Address);
-
-      const candidates: Address[][] = [
-        [inAddr as Address, tokenOut as Address],
-        [inAddr as Address, WETH as Address, tokenOut as Address],
-        [inAddr as Address, tokenOut as Address, WETH as Address],
-      ]
-        .map(lcPath)
-        .filter((p, i, arr) => arr.findIndex((q) => q.join() === p.join()) === i);
+      const paths = buildCandidatePaths(tokenIn, tokenOut);
 
       let found = false;
-      for (const p of candidates) {
+      for (const p of paths) {
         try {
           const amounts = (await client.readContract({
             address: lc(QUOTE_ROUTER_V2 as Address),
@@ -198,12 +236,14 @@ export default function SwapForm() {
             setQuotePath(p);
             setQuoteOutMain(out);
             setQuoteState("ok");
+            setDebugPath(p.join(" → "));
             found = true;
             break;
           }
         } catch (e: any) {
           if (!alive) return;
-          setQuoteErr(String(e?.shortMessage || e?.message || e));
+          // save one representative error (helps confirm router compatibility)
+          setQuoteErr((prev) => prev ?? String(e?.shortMessage || e?.message || e));
         }
       }
       if (!found && alive) setQuoteState("noroute");
@@ -236,11 +276,8 @@ export default function SwapForm() {
     if (!needsApproval || !isConnected || !tokenInAddr) return;
     try {
       await approveMaxFlow(allowanceValue);
-      // tiny pause then refetch to reflect wallet state
       setTimeout(() => refetchAllowance(), 1000);
-    } catch (e) {
-      // handled via wallet UI; we keep UI quiet here
-    }
+    } catch {}
   }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
 
   /* ---------- fee path ---------- */
@@ -251,7 +288,7 @@ export default function SwapForm() {
     return lcPath([inL as Address, WETH as Address, TOBY as Address]);
   };
 
-  /* ---------- simulate then send (with human preflight) ---------- */
+  /* ---------- simulate then send ---------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
 
@@ -284,7 +321,7 @@ export default function SwapForm() {
             parseUnits(minOutMainHuman, decOut),
             mainPath,
             feePath,
-            0n, // minOut for fee path (fee gets burned → safe to 0)
+            0n,
             deadline,
           ],
           value: parseUnits(amt || "0", 18),
@@ -292,7 +329,7 @@ export default function SwapForm() {
           chain: base,
         });
 
-        // Preflight ETH check (value + gas)
+        // Preflight ETH (value + gas)
         const gas = sim.request.gas ?? 0n;
         const feePerGas =
           (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
@@ -309,7 +346,6 @@ export default function SwapForm() {
 
         await writeContractAsync(sim.request);
       } else {
-        // Ensure allowance covers amount
         if (allowanceValue < amountInBig) {
           setPreflightMsg(`Approve ${inMeta.symbol} for the swap first.`);
           setSending(false);
@@ -327,14 +363,14 @@ export default function SwapForm() {
             parseUnits(minOutMainHuman, decOut),
             mainPath,
             feePath,
-            0n, // minOut for fee path
+            0n,
             deadline,
           ],
           account: address as Address,
           chain: base,
         });
 
-        // Preflight gas check (no msg.value)
+        // Preflight gas only
         const gas = sim.request.gas ?? 0n;
         const feePerGas =
           (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
@@ -444,7 +480,7 @@ export default function SwapForm() {
               onClick={() => {
                 if (!balInRaw.value) return;
                 const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-                const safe = inMeta.address ? raw : Math.max(0, raw - 0.0005);
+                const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
                 setAmt((safe > 0 ? safe : 0).toString());
               }}
             >
@@ -511,7 +547,12 @@ export default function SwapForm() {
         />
         <div className="text-xs text-inkSub">
           {quoteState === "loading" && <>Finding the best route…</>}
-          {quoteState === "noroute" && <>No route found on the router for this pair/size.</>}
+          {quoteState === "noroute" && (
+            <>
+              No V2 route found for this pair/size on the configured router.
+              {quoteErr && <> <span className="text-warn">({quoteErr})</span></>}
+            </>
+          )}
           {quoteState === "ok" && expectedOutMainHuman !== undefined && (
             <>
               Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span>{" "}
@@ -520,6 +561,10 @@ export default function SwapForm() {
           )}
           {quoteState === "idle" && <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>}
         </div>
+        {/* tiny debug: shows the exact discovered path */}
+        {debugPath && (
+          <div className="text-[11px] text-inkSub">Path: <code className="break-all">{debugPath}</code></div>
+        )}
       </div>
 
       {/* Swap */}
