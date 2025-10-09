@@ -53,6 +53,7 @@ const QuoterV2Abi = [
   },
 ] as const;
 
+/* ---------- helpers ---------- */
 function byAddress(addr?: Address | "ETH") {
   if (!addr || addr === "ETH") return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === String(addr).toLowerCase());
@@ -90,7 +91,7 @@ function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
   let packed = encodePacked(["address"], [tokens[0]]);
   for (let i = 0; i < fees.length; i++) {
-    // IMPORTANT: uint24 expects a number, not bigint
+    // uint24 expects a number, not bigint
     packed = encodePacked(["bytes", "uint24", "address"], [packed, fees[i], tokens[i + 1]]) as `0x${string}`;
   }
   return packed;
@@ -267,7 +268,7 @@ export default function SwapForm() {
 
     try {
       if (tokenIn === "ETH") {
-        // ETH -> token uses your existing V2 path (contract doesn’t accept ETH for v3)
+        // ETH -> token: still uses V2 path (contract’s v3 method is ERC20->ERC20)
         const sim = await client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
@@ -298,7 +299,7 @@ export default function SwapForm() {
       if (bestV3) {
         if (allowanceValue < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
 
-        // Build v3 ExactInputParams bytes = abi.encode((bytes path,address recipient,uint256 deadline,uint256 amountIn,uint256 amountOutMinimum))
+        // v3 ExactInput params (bytes-encoded struct)
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [
@@ -341,7 +342,6 @@ export default function SwapForm() {
           chain: base,
         });
 
-        // Gas preflight
         const gas = sim.request.gas ?? 0n;
         const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
         const totalNeeded = gas * feePerGas;
