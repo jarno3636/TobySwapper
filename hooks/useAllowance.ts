@@ -1,4 +1,3 @@
-// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -9,6 +8,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 
+/** Sticky, low-churn allowance reader */
 export function useStickyAllowance(
   token?: Address,
   owner?: Address,
@@ -46,6 +46,7 @@ export function useStickyAllowance(
   return { value, isLoading: isFetching, error, refetch };
 }
 
+/** Robust “max” approve flow (zero first if nonzero, then set max) */
 export function useApprove(token?: Address, spender?: Address) {
   const { writeContractAsync, data: writeHash, isPending: isWritePending } = useWriteContract();
   const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash: writeHash });
@@ -54,11 +55,20 @@ export function useApprove(token?: Address, spender?: Address) {
     async (currentAllowance?: bigint) => {
       if (!token || !spender) throw new Error("Missing token/spender");
       if (currentAllowance && currentAllowance > 0n) {
-        await writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [spender, 0n] });
-        // small pause; Base confirms fast
-        await new Promise((r) => setTimeout(r, 1200));
+        await writeContractAsync({
+          address: token,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [spender, 0n],
+        });
+        await new Promise((r) => setTimeout(r, 1200)); // Base confirms fast
       }
-      return writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [spender, maxUint256] });
+      return writeContractAsync({
+        address: token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender, maxUint256],
+      });
     },
     [token, spender, writeContractAsync]
   );
