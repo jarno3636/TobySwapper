@@ -1,15 +1,14 @@
+// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Address, erc20Abi, maxUint256 } from "viem";
 import {
-  useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
 
-/** Sticky, low-churn allowance reader */
 export function useStickyAllowance(
   token?: Address,
   owner?: Address,
@@ -47,7 +46,6 @@ export function useStickyAllowance(
   return { value, isLoading: isFetching, error, refetch };
 }
 
-/** Robust “max” approve flow (zero first if nonzero, then set max) */
 export function useApprove(token?: Address, spender?: Address) {
   const { writeContractAsync, data: writeHash, isPending: isWritePending } = useWriteContract();
   const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash: writeHash });
@@ -56,22 +54,11 @@ export function useApprove(token?: Address, spender?: Address) {
     async (currentAllowance?: bigint) => {
       if (!token || !spender) throw new Error("Missing token/spender");
       if (currentAllowance && currentAllowance > 0n) {
-        const tx0 = await writeContractAsync({
-          address: token,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [spender, 0n],
-        });
-        // Wait via wallet UI or an explicit small delay; basescan confirms fast on Base.
+        await writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [spender, 0n] });
+        // small pause; Base confirms fast
         await new Promise((r) => setTimeout(r, 1200));
       }
-      const tx1 = await writeContractAsync({
-        address: token,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [spender, maxUint256],
-      });
-      return tx1;
+      return writeContractAsync({ address: token, abi: erc20Abi, functionName: "approve", args: [spender, maxUint256] });
     },
     [token, spender, writeContractAsync]
   );
