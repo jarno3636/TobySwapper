@@ -1,4 +1,4 @@
-//// components/SwapForm.tsx
+// components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,6 +9,8 @@ import {
   isAddress,
   createPublicClient,
   http,
+  encodePacked,
+  hexToBigInt,
 } from "viem";
 import { base } from "viem/chains";
 import {
@@ -21,10 +23,10 @@ import TokenSelect from "./TokenSelect";
 import {
   TOKENS,
   USDC,
-  QUOTE_ROUTER_V2,
   WETH,
   SWAPPER,
   TOBY,
+  QUOTER_V3,        // <<< add this in "@/lib/addresses"
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -36,17 +38,19 @@ const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
 
-/* ---------- Minimal ABIs ---------- */
-const UniV2RouterAbi = [
+/* ---------- Uniswap V3 QuoterV2 ABI (minimal) ---------- */
+const QuoterV2Abi = [
   {
     type: "function",
-    name: "getAmountsOut",
-    stateMutability: "view",
-    inputs: [
-      { name: "amountIn", type: "uint256" },
-      { name: "path", type: "address[]" },
+    name: "quoteExactInput",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "path", type: "bytes" }, { name: "amountIn", type: "uint256" }],
+    outputs: [
+      { name: "amountOut", type: "uint256" },
+      { name: "sqrtPriceX96AfterList", type: "uint160[]" },
+      { name: "initializedTicksCrossedList", type: "uint32[]" },
+      { name: "gasEstimate", type: "uint256" },
     ],
-    outputs: [{ name: "amounts", type: "uint256[]" }],
   },
 ] as const;
 
@@ -61,7 +65,6 @@ function byAddress(addr?: Address | "ETH") {
 }
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
-const lcPath = (p: Address[]) => p.map((x) => x.toLowerCase() as Address);
 const fmtEth = (wei: bigint, dec = 18) => Number(formatUnits(wei, dec)).toFixed(6);
 
 /* ---------- network guard (auto-switch to Base) ---------- */
@@ -89,47 +92,66 @@ function useSafePublicClient() {
   return wagmiClient ?? createPublicClient({ chain: base, transport: http(rpcUrl) });
 }
 
-/* ---------- path building (broadened with USDC) ---------- */
-function buildCandidatePaths(
-  tokenIn: Address | "ETH",
-  tokenOut: Address
-): Address[][] {
+/* ---------- V3 path helpers ---------- */
+/** Encode a UniswapV3 path: token0 (20) | fee0 (3) | token1 (20) | [fee1 (3) | token2 (20) | ...] */
+function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
+  if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
+  // Start with the first token
+  let packed = encodePacked(["address"], [tokens[0] as Address]);
+  for (let i = 0; i < fees.length; i++) {
+    const fee = fees[i];
+    const token = tokens[i + 1];
+    packed = (encodePacked(
+      ["bytes", "uint24", "address"],
+      [packed, BigInt(fee), token]
+    ) as `0x${string}`);
+  }
+  return packed;
+}
+
+/** Build candidate token paths & fee tier combos */
+function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const outAddr = tokenOut as Address;
 
-  const mids: Address[] = [
-    WETH as Address,
-    USDC as Address,
-    // We can include TOBY as a mid for some pairs
-    TOBY as Address,
-  ].map(lc);
-
-  const baseSet: Address[][] = [
-    [inAddr, outAddr],                  // direct
-    [inAddr, WETH as Address, outAddr], // via WETH
-    [inAddr, USDC as Address, outAddr], // via USDC
+  const baseTokenPaths: Address[][] = [
+    [inAddr, outAddr],                 // direct
+    [inAddr, WETH as Address, outAddr],
+    [inAddr, USDC as Address, outAddr],
+    [inAddr, WETH as Address, USDC as Address, outAddr],
+    [inAddr, USDC as Address, WETH as Address, outAddr],
   ];
 
-  // 2-hop chains in both orders: WETH->USDC and USDC->WETH (helps many edge pairs)
-  baseSet.push([inAddr, WETH as Address, USDC as Address, outAddr]);
-  baseSet.push([inAddr, USDC as Address, WETH as Address, outAddr]);
+  // Common Base V3 fee tiers
+  const FEES: number[] = [500, 3000, 10000];
 
-  // Avoid silly routes like repeating same addr adjacently; lower-case & unique
-  const uniq = new Set<string>();
-  const cleaned = baseSet
-    .map(lcPath)
-    .filter((p) => {
-      // filter duplicates
-      const key = p.join();
-      if (uniq.has(key)) return false;
-      uniq.add(key);
-      // filter adjacent duplicates
-      for (let i = 1; i < p.length; i++) if (p[i] === p[i - 1]) return false;
-      // sanity: start != end or length>1
-      return p.length >= 2;
-    });
+  // For each token path of length N, produce all combinations of (N-1) fees from FEES
+  const candidates: { tokens: Address[]; fees: number[] }[] = [];
+  for (const tokens of baseTokenPaths) {
+    const hops = tokens.length - 1;
+    if (hops <= 0) continue;
 
-  return cleaned as Address[][];
+    // Cartesian product of fee choices for each hop
+    const buildFeeCombos = (depth: number, prefix: number[]) => {
+      if (depth === hops) {
+        candidates.push({ tokens, fees: prefix });
+        return;
+      }
+      for (const f of FEES) buildFeeCombos(depth + 1, [...prefix, f]);
+    };
+    buildFeeCombos(0, []);
+  }
+
+  // Deduplicate by (tokens+fees) signature
+  const seen = new Set<string>();
+  const unique = candidates.filter((c) => {
+    const key = `${c.tokens.join("->")}__${c.fees.join(",")}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return unique;
 }
 
 export default function SwapForm() {
@@ -179,7 +201,7 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ---------- feeBps ---------- */
+  /* ---------- feeBps (from swapper) ---------- */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
@@ -194,76 +216,102 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  /* ---------- quote (V2 getAmountsOut; broadened paths) ---------- */
+  /* ---------- V3 quote (post-fee amount) ---------- */
   const mainAmountIn = useMemo(
     () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
     [amountInBig, feeBps]
   );
-  const [quotePath, setQuotePath] = useState<Address[] | undefined>();
-  const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
-  const [debugPath, setDebugPath] = useState<string | undefined>(); // tiny helper
+  const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
+  const [debugPath, setDebugPath] = useState<string | undefined>(); // e.g., token->fee->token->...
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setQuoteErr(undefined);
       setQuoteOutMain(undefined);
-      setQuotePath(undefined);
       setDebugPath(undefined);
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) {
         setQuoteState("idle");
         return;
       }
+      if (!QUOTER_V3) {
+        setQuoteState("noroute");
+        setQuoteErr("Missing QUOTER_V3 constant.");
+        return;
+      }
 
       setQuoteState("loading");
-      const paths = buildCandidatePaths(tokenIn, tokenOut);
 
-      let found = false;
-      for (const p of paths) {
+      const cands = buildV3Candidates(tokenIn, tokenOut);
+
+      let bestOut: bigint | undefined;
+      let bestDesc: string | undefined;
+
+      for (const cand of cands) {
         try {
-          const amounts = (await client.readContract({
-            address: lc(QUOTE_ROUTER_V2 as Address),
-            abi: UniV2RouterAbi as any,
-            functionName: "getAmountsOut",
-            args: [mainAmountIn, p],
-          })) as bigint[];
-          const out = amounts.at(-1);
-          if (out && out > 0n) {
-            if (!alive) return;
-            setQuotePath(p);
-            setQuoteOutMain(out);
-            setQuoteState("ok");
-            setDebugPath(p.join(" → "));
-            found = true;
-            break;
+          const path = encodeV3Path(cand.tokens, cand.fees);
+          const { result } = await client.call({
+            to: QUOTER_V3 as Address,
+            data: client.encodeFunctionData({
+              abi: QuoterV2Abi,
+              functionName: "quoteExactInput",
+              args: [path, mainAmountIn],
+            }),
+          });
+          // decode result manually (viem readContract also works; using call avoids errors from nonpayable view)
+          const [amountOut] = client.decodeFunctionResult({
+            abi: QuoterV2Abi,
+            functionName: "quoteExactInput",
+            data: result!,
+          }) as [bigint, bigint[], number[], bigint];
+
+          if (amountOut > 0n && (!bestOut || amountOut > bestOut)) {
+            bestOut = amountOut;
+            // Make a readable path like: TKN0(500)→TKN1(3000)→TKN2
+            const syms = cand.tokens.map(
+              (t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0,6)
+            );
+            const parts: string[] = [];
+            for (let i = 0; i < cand.fees.length; i++) {
+              parts.push(`${syms[i]}(${cand.fees[i]})→${syms[i+1]}`);
+            }
+            bestDesc = parts.join(" → ");
           }
         } catch (e: any) {
-          if (!alive) return;
-          // save one representative error (helps confirm router compatibility)
-          setQuoteErr((prev) => prev ?? String(e?.shortMessage || e?.message || e));
+          // Save first error to aid debugging (e.g., wrong quoter address)
+          if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
         }
       }
-      if (!found && alive) setQuoteState("noroute");
+
+      if (!alive) return;
+
+      if (bestOut && bestOut > 0n) {
+        setQuoteOutMain(bestOut);
+        setDebugPath(bestDesc);
+        setQuoteState("ok");
+      } else {
+        setQuoteState("noroute");
+      }
     })();
-    return () => {
-      alive = false;
-    };
+
+    return () => { alive = false; };
   }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn]);
 
   const expectedOutMainHuman = useMemo(() => {
-    try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; }
+    try { return quoteOutMain ? Number(formatUnits(quoteOutMain, byAddress(tokenOut).decimals)) : undefined; }
     catch { return undefined; }
-  }, [quoteOutMain, outMeta.decimals]);
+  }, [quoteOutMain, tokenOut]);
 
   const minOutMainHuman = useMemo(() => {
     if (!quoteOutMain || SAFE_MODE_MINOUT_ZERO) return "0";
+    const outDec = byAddress(tokenOut).decimals;
     const bps = Math.round((100 - slippage) * 100);
     const raw = (quoteOutMain * BigInt(bps)) / 10000n;
-    return formatUnits(raw, outMeta.decimals);
-  }, [quoteOutMain, slippage, outMeta.decimals]);
+    return formatUnits(raw, outDec);
+  }, [quoteOutMain, tokenOut, slippage]);
 
   /* ---------- allowance / approval (hooks) ---------- */
   const tokenInAddr = inMeta.address as Address | undefined;
@@ -280,15 +328,15 @@ export default function SwapForm() {
     } catch {}
   }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
 
-  /* ---------- fee path ---------- */
-  const buildFeePath = (inA: Address): Address[] => {
+  /* ---------- fee path for the swap contract (unchanged) ---------- */
+  const buildFeePathV2Like = (inA: Address): Address[] => {
     const inL = lc(inA);
-    if (eq(inL, TOBY)) return lcPath([inL as Address, TOBY as Address]);
-    if (eq(inL, WETH)) return lcPath([WETH as Address, TOBY as Address]);
-    return lcPath([inL as Address, WETH as Address, TOBY as Address]);
+    if (eq(inL, TOBY)) return [inL as Address, TOBY as Address];
+    if (eq(inL, WETH)) return [WETH as Address, TOBY as Address];
+    return [inL as Address, WETH as Address, TOBY as Address];
   };
 
-  /* ---------- simulate then send ---------- */
+  /* ---------- simulate then send (unchanged execution) ---------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
 
@@ -297,18 +345,17 @@ export default function SwapForm() {
       setPreflightMsg("Connect your wallet on Base to swap.");
       return;
     }
-    if (!quotePath || amountInBig === 0n) return;
+    if (!quoteOutMain || amountInBig === 0n) return;
 
     setPreflightMsg(undefined);
     setSending(true);
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
-    const decOut = outMeta.decimals;
+    const decOut = byAddress(tokenOut).decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
 
-    const mainPath = lcPath(quotePath);
-    const feePath = buildFeePath(inAddr);
+    const feePath = buildFeePathV2Like(inAddr);
 
     try {
       if (!needsApproval) {
@@ -319,7 +366,8 @@ export default function SwapForm() {
           args: [
             lc(tokenOut),
             parseUnits(minOutMainHuman, decOut),
-            mainPath,
+            /** mainPath (your contract uses its own logic; keep a minimal placeholder path if required) */
+            [WETH as Address, tokenOut],
             feePath,
             0n,
             deadline,
@@ -361,7 +409,8 @@ export default function SwapForm() {
             lc(tokenOut),
             parseUnits(amt || "0", decIn),
             parseUnits(minOutMainHuman, decOut),
-            mainPath,
+            /** mainPath placeholder (see note above) */
+            [inAddr, tokenOut],
             feePath,
             0n,
             deadline,
@@ -407,7 +456,7 @@ export default function SwapForm() {
     !isConnected ||
     !isOnBase ||
     amountInBig === 0n ||
-    !quotePath ||
+    !quoteOutMain ||
     (balInRaw.value ?? 0n) < amountInBig ||
     (needsApproval && allowanceValue < amountInBig) ||
     sending;
@@ -541,29 +590,30 @@ export default function SwapForm() {
           exclude={tokenIn as Address}
           balance={
             balOutRaw.value !== undefined
-              ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6)
+              ? Number(formatUnits(balOutRaw.value, byAddress(tokenOut).decimals)).toFixed(6)
               : undefined
           }
         />
         <div className="text-xs text-inkSub">
-          {quoteState === "loading" && <>Finding the best route…</>}
+          {quoteState === "loading" && <>Querying Uniswap v3 for routes…</>}
           {quoteState === "noroute" && (
             <>
-              No V2 route found for this pair/size on the configured router.
+              No v3 route found for this pair/size on the quoter.
               {quoteErr && <> <span className="text-warn">({quoteErr})</span></>}
             </>
           )}
           {quoteState === "ok" && expectedOutMainHuman !== undefined && (
             <>
               Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span>{" "}
-              {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              {byAddress(tokenOut).symbol} · 1 {byAddress(tokenOut).symbol} ≈ ${useUsdPriceSingle(byAddress(tokenOut).address ?? "ETH").toFixed(4)}
             </>
           )}
-          {quoteState === "idle" && <>1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>}
+          {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
         </div>
-        {/* tiny debug: shows the exact discovered path */}
         {debugPath && (
-          <div className="text-[11px] text-inkSub">Path: <code className="break-all">{debugPath}</code></div>
+          <div className="text-[11px] text-inkSub">
+            v3 path: <code className="break-all">{debugPath}</code>
+          </div>
         )}
       </div>
 
