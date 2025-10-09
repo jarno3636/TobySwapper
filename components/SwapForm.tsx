@@ -1,4 +1,3 @@
-// components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,11 +22,10 @@ import TokenSelect from "./TokenSelect";
 import {
   TOKENS,
   USDC,
-  QUOTE_ROUTER_V2,
   WETH,
   SWAPPER,
   TOBY,
-  QUOTER_V3,         // NEW
+  QUOTER_V3, // v3 quoter for estimates
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -92,7 +90,8 @@ function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
   let packed = encodePacked(["address"], [tokens[0]]);
   for (let i = 0; i < fees.length; i++) {
-    packed = encodePacked(["bytes", "uint24", "address"], [packed, BigInt(fees[i]), tokens[i + 1]]) as `0x${string}`;
+    // IMPORTANT: uint24 expects a number, not bigint
+    packed = encodePacked(["bytes", "uint24", "address"], [packed, fees[i], tokens[i + 1]]) as `0x${string}`;
   }
   return packed;
 }
@@ -276,7 +275,7 @@ export default function SwapForm() {
           args: [
             lc(tokenOut),
             parseUnits(minOutMainHuman, decOut),
-            [WETH as Address, tokenOut],  // minimal path placeholder (your contract routes via routerV2)
+            [WETH as Address, tokenOut],
             feePath,
             0n,
             deadline,
@@ -353,7 +352,7 @@ export default function SwapForm() {
         return;
       }
 
-      // Fallback: no v3 path found -> let V2 handle it (if you keep liquidity there)
+      // Fallback: no v3 path found -> V2
       const sim = await client.simulateContract({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
