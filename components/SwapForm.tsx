@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Address,
   formatUnits,
@@ -10,6 +10,7 @@ import {
   http,
   encodePacked,
   encodeAbiParameters,
+  getAddress,                 // ✅ for checksum normalization
 } from "viem";
 import { base } from "viem/chains";
 import {
@@ -25,7 +26,8 @@ import {
   WETH,
   SWAPPER,
   TOBY,
-  QUOTER_V3, // v3 quoter for estimates
+  QUOTER_V3,
+  QUOTE_ROUTER_V2,           // ✅ v2 quoter
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -50,6 +52,17 @@ const QuoterV2Abi = [
       { name: "initializedTicksCrossedList", type: "uint32[]" },
       { name: "gasEstimate", type: "uint256" },
     ],
+  },
+] as const;
+
+// tiny v2 router ABI for quoting
+const UniV2RouterAbi = [
+  {
+    type: "function",
+    name: "getAmountsOut",
+    stateMutability: "view",
+    inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],
+    outputs: [{ name: "amounts", type: "uint256[]" }],
   },
 ] as const;
 
@@ -88,16 +101,21 @@ function useSafePublicClient() {
   return wagmiClient ?? createPublicClient({ chain: base, transport: http(rpcUrl) });
 }
 
-/* ---------- v3 path helpers ---------- */
+/* ---------- v3 path helpers (fixed) ---------- */
 function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
-  let packed = encodePacked(["address"], [tokens[0]]);
+
+  // ✅ normalize to checksummed addresses so viem's encoder never rejects
+  const norm = tokens.map((t) => getAddress(t) as Address);
+
+  let packed = encodePacked(["address"], [norm[0]]);
   for (let i = 0; i < fees.length; i++) {
-    // uint24 expects a number, not bigint
-    packed = encodePacked(["bytes", "uint24", "address"], [packed, fees[i], tokens[i + 1]]) as `0x${string}`;
+    const fee = Number(fees[i]); // uint24 must be number
+    packed = encodePacked(["bytes", "uint24", "address"], [packed, fee, norm[i + 1]]) as `0x${string}`;
   }
   return packed;
 }
+
 function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const outAddr = tokenOut as Address;
@@ -179,7 +197,7 @@ export default function SwapForm() {
     } catch {}
   })(); }, [client]);
 
-  /* ---------- v3 quoting (post-fee amount) ---------- */
+  /* ---------- Quote (v3 first, v2 fallback) ---------- */
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
@@ -187,40 +205,78 @@ export default function SwapForm() {
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [debugPath, setDebugPath] = useState<string | undefined>();
 
+  // small guard to avoid spamming client during re-renders
+  const quoteLatch = useRef<number>(0);
+
   useEffect(() => {
     let alive = true;
     (async () => {
       setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setDebugPath(undefined);
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
-      if (!QUOTER_V3) { setQuoteState("noroute"); setQuoteErr("Missing QUOTER_V3"); return; }
       setQuoteState("loading");
+      const myLatch = ++quoteLatch.current;
 
+      // v3 attempt
       let bestOut: bigint | undefined;
       let best: { tokens: Address[]; fees: number[] } | undefined;
-      for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
-        try {
-          const path = encodeV3Path(cand.tokens, cand.fees);
-          const res = (await client.readContract({
-            address: QUOTER_V3 as Address,
-            abi: QuoterV2Abi as any,
-            functionName: "quoteExactInput",
-            args: [path, mainAmountIn],
-          })) as [bigint];
-          const amountOut = res[0];
-          if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
-        } catch (e: any) {
-          if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
+
+      try {
+        for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
+          try {
+            const path = encodeV3Path(cand.tokens, cand.fees);
+            const res = (await client.readContract({
+              address: QUOTER_V3 as Address,
+              abi: QuoterV2Abi as any,
+              functionName: "quoteExactInput",
+              args: [path, mainAmountIn],
+            })) as [bigint];
+            const amountOut = res[0];
+            if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
+          } catch (e: any) {
+            // continue trying other paths
+            if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
+            continue;
+          }
+        }
+      } catch {}
+
+      // if no v3, try v2 paths
+      if (!bestOut) {
+        const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+        const v2Paths: Address[][] = [
+          [inAddr, tokenOut as Address],
+          [inAddr, WETH as Address, tokenOut as Address],
+          [inAddr, USDC as Address, tokenOut as Address],
+        ];
+        for (const p of v2Paths) {
+          try {
+            const amounts = (await client.readContract({
+              address: QUOTE_ROUTER_V2 as Address,
+              abi: UniV2RouterAbi as any,
+              functionName: "getAmountsOut",
+              args: [mainAmountIn, p],
+            })) as bigint[];
+            const out = amounts[amounts.length - 1];
+            if (out > 0n && (!bestOut || out > bestOut)) {
+              bestOut = out;
+              best = undefined; // this is v2
+              setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`);
+            }
+          } catch { /* keep trying */ }
         }
       }
-      if (!alive) return;
 
-      if (bestOut && best) {
+      if (!alive || myLatch !== quoteLatch.current) return;
+
+      if (bestOut) {
         setQuoteOutMain(bestOut);
-        setBestV3(best);
-        const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
-        const parts: string[] = [];
-        for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
-        setDebugPath(parts.join(" → "));
+        setBestV3(best); // undefined => v2 fallback used
+        if (best) {
+          const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
+          const parts: string[] = [];
+          for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
+          setDebugPath(`v3: ${parts.join(" → ")}`);
+        }
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
@@ -239,17 +295,37 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [quoteOutMain, slippage, outMeta.decimals]);
 
-  /* ---------- allowance / approval ---------- */
+  /* ---------- allowance / approval (no flicker) ---------- */
   const tokenInAddr = inMeta.address as Address | undefined;
   const needsApproval = !!tokenInAddr;
-  const { value: allowanceValue = 0n, isLoading: isAllowanceLoading, refetch: refetchAllowance } =
+  const { value: allowanceValue, isLoading: isAllowanceLoading, refetch: refetchAllowance } =
     useStickyAllowance(tokenInAddr, address as Address | undefined, SWAPPER as Address);
   const { approveMaxFlow, isPending: isApproving } = useApprove(tokenInAddr, SWAPPER as Address);
 
+  // after sending approve, pause re-checks briefly to avoid button flipping
+  const [approveCooldown, setApproveCooldown] = useState(false);
+
   const onApprove = useCallback(async () => {
     if (!needsApproval || !isConnected || !tokenInAddr) return;
-    try { await approveMaxFlow(allowanceValue); setTimeout(() => refetchAllowance(), 1000); } catch {}
+    setApproveCooldown(true);
+    try {
+      await approveMaxFlow(allowanceValue);
+      // give the node/indexer a second to catch up, then refetch
+      setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
+    } catch {
+      setApproveCooldown(false);
+    }
   }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
+
+  const showApproveButton =
+    needsApproval &&
+    amountInBig > 0n &&
+    (allowanceValue ?? 0n) < amountInBig;
+
+  const approveText =
+    isApproving ? "Approving…" :
+    isAllowanceLoading && !approveCooldown ? "Checking allowance…" :
+    (allowanceValue ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
 
   /* ---------- simulate + send ---------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
@@ -270,7 +346,7 @@ export default function SwapForm() {
 
     try {
       if (tokenIn === "ETH") {
-        // ETH -> token: still uses V2 path (contract’s v3 method is ERC20->ERC20)
+        // ETH -> token via V2 function in your swapper
         const sim = await client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
@@ -299,9 +375,8 @@ export default function SwapForm() {
 
       // ERC20 -> token: prefer v3 execution if we found a v3 quote
       if (bestV3) {
-        if (allowanceValue < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
+        if ((allowanceValue ?? 0n) < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
 
-        // v3 ExactInput params (bytes-encoded struct)
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [
@@ -354,7 +429,7 @@ export default function SwapForm() {
         return;
       }
 
-      // Fallback: no v3 path found -> V2
+      // Fallback: no v3 path found -> V2 swap
       const sim = await client.simulateContract({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
@@ -386,16 +461,12 @@ export default function SwapForm() {
   }
 
   /* ---------- UI ---------- */
-  const approveText = needsApproval
-    ? isAllowanceLoading ? "Checking allowance…" : allowanceValue > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`
-    : `No approval needed`;
-
   const disableSwap =
     !isConnected ||
     !isOnBase ||
     amountInBig === 0n ||
     (balInRaw.value ?? 0n) < amountInBig ||
-    (needsApproval && allowanceValue < amountInBig) ||
+    (needsApproval && (allowanceValue ?? 0n) < amountInBig) ||
     sending;
 
   return (
@@ -490,19 +561,19 @@ export default function SwapForm() {
         )}
 
         {/* Approve (only for ERC-20 inputs) */}
-        {needsApproval && (
+        {showApproveButton && (
           <div className="mt-3">
             <button
               onClick={onApprove}
               className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApproving || !isConnected || !isOnBase}
+              disabled={isApproving || !isConnected || !isOnBase || approveCooldown}
               title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
             >
-              {isApproving ? "Approving…" : approveText}
+              {approveText}
             </button>
             <div className="mt-1 text-[11px] text-inkSub">
               Spender: <code className="break-all">{SWAPPER as Address}</code>
-              {allowanceValue !== undefined && <> · Allowance: <span className="font-mono">{allowanceValue.toString()}</span></>}
+              {(allowanceValue !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceValue).toString()}</span></>}
             </div>
           </div>
         )}
@@ -520,14 +591,14 @@ export default function SwapForm() {
           balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
         />
         <div className="text-xs text-inkSub">
-          {quoteState === "loading" && <>Querying Uniswap v3 for routes…</>}
-          {quoteState === "noroute" && <>No v3 route found for this pair/size.{quoteErr && <> <span className="text-warn">({quoteErr})</span></>}</>}
+          {quoteState === "loading" && <>Querying routes…</>}
+          {quoteState === "noroute" && <>No route found for this pair/size.{quoteErr && <> <span className="text-warn"> ({quoteErr})</span></>}</>}
           {quoteState === "ok" && expectedOutMainHuman !== undefined && (
             <>Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}</>
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
         </div>
-        {debugPath && <div className="text-[11px] text-inkSub">v3 path: <code className="break-all">{debugPath}</code></div>}
+        {debugPath && <div className="text-[11px] text-inkSub">path: <code className="break-all">{debugPath}</code></div>}
       </div>
 
       {/* Swap */}
