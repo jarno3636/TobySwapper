@@ -27,7 +27,7 @@ export const SWAP_ROUTER_V3: Address = "0x2626664c2603336E57B271c5C0b26F421741e4
 export type TokenInfo = { symbol: string; address: Address; decimals: number };
 export const TOKENS: readonly TokenInfo[] = [
   { symbol: "USDC",     address: USDC,     decimals: 6  },
-  { symbol: "WETH",     address: WETH,     decimals: 18 },
+  { symbol: "WETH",     address: WETH,     decimals: 18 }, // rendered as ETH (Base) in UI
   { symbol: "TOBY",     address: TOBY,     decimals: 18 },
   { symbol: "PATIENCE", address: PATIENCE, decimals: 18 },
   { symbol: "TABOSHI",  address: TABOSHI,  decimals: 18 },
