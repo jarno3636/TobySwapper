@@ -1,39 +1,34 @@
 // lib/wallet.ts
 "use client";
 
-import { http, createConfig, createStorage, cookieStorage } from "wagmi";
+import { http, createStorage, cookieStorage } from "wagmi";
 import { base } from "viem/chains";
-import { injected, coinbaseWallet, walletConnect } from "wagmi/connectors";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
-// ---- ENV ----
-const WC_ID =
+// WalletConnect Cloud project id (required for WC option to render)
+const projectId =
+  process.env.NEXT_PUBLIC_WC_PROJECT_ID ||
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
-  process.env.NEXT_PUBLIC_WALLETCONNECT_ID || // optional fallback key name
   "";
 
-if (!WC_ID) {
-  console.warn(
-    "WalletConnect disabled: set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID"
-  );
-}
+// Optional dedicated Base RPC (recommended)
+const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
 
-const BASE_RPC =
-  process.env.NEXT_PUBLIC_BASE_RPC_URL ||
-  process.env.NEXT_PUBLIC_BASE_RPC ||
-  "https://mainnet.base.org";
-
-// ---- Connectors (same recipe as your other project) ----
-export const connectors = [
-  injected({ shimDisconnect: true }),
-  coinbaseWallet({ appName: "Toby Swapper", preference: "all" }),
-  ...(WC_ID ? [walletConnect({ projectId: WC_ID })] : []),
-];
-
-// ---- wagmi config (v2) ----
-export const wagmiConfig = createConfig({
+/**
+ * RainbowKit v2 “default” config builds the right wagmi connectors for:
+ * - Injected (MetaMask, Rabby, Trust, OKX, in-app browsers)
+ * - Coinbase Wallet (SDK)
+ * - WalletConnect (QR / deep-link)
+ *
+ * It also plays nicely with SSR when you pass cookieStorage.
+ */
+export const wagmiConfig = getDefaultConfig({
+  appName: "Toby Swapper",
+  projectId,                 // if empty, WalletConnect will be hidden (expected)
   chains: [base],
-  transports: { [base.id]: http(BASE_RPC) },
-  connectors,
-  storage: createStorage({ storage: cookieStorage }), // SSR-safe persistence
+  transports: {
+    [base.id]: http(rpcUrl),
+  },
   ssr: true,
+  storage: createStorage({ storage: cookieStorage }),
 });
