@@ -50,12 +50,12 @@ function useMounted() {
   return m;
 }
 
-/* ───────── Injected-only Pill (one-click connect) + <details> popover ─────────
-   - No global listeners (stable in wallet browsers)
-   - One-click connect when disconnected
-   - Always shows "Not Connected" when disconnected
-   - Soft-switch to Base after connection
---------------------------------------------------------------------------- */
+/* ───────── Injected-first Pill + <details> popover ─────────
+   - One-click connect (no auto-connect)
+   - Always shows "Not Connected" when not connected
+   - Popover: Copy / Switch to Base / Disconnect
+   - Catches all connector errors to avoid client-side exception
+---------------------------------------------------------------- */
 export function WalletPill() {
   const mounted = useMounted();
 
@@ -63,30 +63,37 @@ export function WalletPill() {
   const chainId = useChainId();
 
   const {
-    connectors = [],
+    connectors,
     connect,
     status: connectStatus, // 'idle' | 'pending' | 'success' | 'error'
     error,
     reset,
   } = useConnect();
+
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
-  // Prefer the injected connector; otherwise fall back to first available
+  // Prefer injected, otherwise fall back to the first connector (if any)
   const injected = useMemo(
-    () => connectors.find((c) => c.id === "injected"),
+    () => connectors?.find?.((c) => c.id === "injected") ?? null,
     [connectors]
   );
   const fallback = useMemo(
-    () => injected ?? connectors[0] ?? null,
+    () => injected ?? (connectors && connectors[0]) ?? null,
     [injected, connectors]
   );
 
-  // Soft switch to Base after connect (best-effort)
+  // Soft switch to Base once connected (best-effort)
   useEffect(() => {
-    if (!isConnected) return;
-    if (chainId === base.id) return;
-    switchChainAsync({ chainId: base.id }).catch(() => {});
+    (async () => {
+      if (!isConnected) return;
+      if (chainId === base.id) return;
+      try {
+        await switchChainAsync({ chainId: base.id });
+      } catch {
+        // ignored – user stays on current chain, UI still works
+      }
+    })();
   }, [isConnected, chainId, switchChainAsync]);
 
   // Avoid SSR/CSR mismatch flash
@@ -115,22 +122,39 @@ export function WalletPill() {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const closeMenu = () => detailsRef.current?.removeAttribute("open");
 
-  const onConnect = () => {
-    if (error) reset(); // clear stale errors
-    if (fallback) connect({ connector: fallback });
-    // if no connectors at all, do nothing (UI still shows Not Connected)
+  const safeConnect = async () => {
+    try {
+      if (error) reset(); // clear stale errors
+      if (!fallback) return;
+      await connect({ connector: fallback });
+    } catch (e) {
+      // fully swallow to avoid "Application error"
+      // (optional) console.debug("connect error", e);
+    }
   };
+
+  const onConnect = () => {
+    if (connecting) return;
+    void safeConnect();
+  };
+
   const onDisconnect = () => {
-    disconnect();
+    try {
+      disconnect();
+    } catch {}
     closeMenu();
   };
-  const onSwitchBase = () => {
-    switchChainAsync({ chainId: base.id }).finally(closeMenu);
+
+  const onSwitchBase = async () => {
+    try {
+      await switchChainAsync({ chainId: base.id });
+    } catch {}
+    closeMenu();
   };
 
   // One-click behavior:
-  // - If not connected -> clicking the pill attempts connect and does NOT open menu
-  // - If connected -> clicking toggles the menu
+  // - Not connected → click attempts connect (does NOT open menu)
+  // - Connected → click toggles the <details> menu
   const onSummaryClick: React.MouseEventHandler<HTMLElement> = (e) => {
     if (!isConnected) {
       e.preventDefault(); // stop <details> from toggling
@@ -147,66 +171,4 @@ export function WalletPill() {
           isConnected ? "pill-nav" : "pill-opaque",
         ].join(" ")}
         onClick={onSummaryClick}
-        aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
-      >
-        <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
-        <span className="ml-1.5">{label}</span>
-      </summary>
-
-      {/* Popover panel (only useful when connected) */}
-      <div
-        className="absolute right-0 mt-2 min-w-[220px] rounded-2xl glass shadow-soft p-2 z-50"
-        onKeyDown={(e) => {
-          if (e.key === "Escape") closeMenu();
-        }}
-      >
-        {isConnected && address ? (
-          <>
-            <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
-
-            <button
-              className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-              onClick={async () => {
-                try { await navigator.clipboard.writeText(address); } catch {}
-                closeMenu();
-              }}
-            >
-              Copy Address
-            </button>
-
-            {chainId !== base.id && (
-              <button
-                className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-                onClick={onSwitchBase}
-                disabled={switching}
-                aria-busy={switching}
-              >
-                {switching ? "Switching…" : "Switch to Base"}
-              </button>
-            )}
-
-            <button
-              className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1 text-danger"
-              onClick={onDisconnect}
-            >
-              Disconnect
-            </button>
-          </>
-        ) : (
-          // If a user manually opens via keyboard while disconnected, offer connect again
-          <>
-            <div className="px-2 py-1.5 text-xs text-inkSub">Wallet</div>
-            <button
-              className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-              onClick={() => { onConnect(); closeMenu(); }}
-              disabled={connecting}
-              aria-busy={connecting}
-            >
-              {connecting ? "Connecting…" : "Connect (Injected)"}
-            </button>
-          </>
-        )}
-      </div>
-    </details>
-  );
-}
+        aria-label={isConnected ? "
