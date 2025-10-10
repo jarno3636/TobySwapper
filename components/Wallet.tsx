@@ -3,21 +3,54 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  WagmiProvider,
   useAccount,
   useChainId,
   useConnect,
   useDisconnect,
   useSwitchChain,
 } from "wagmi";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { base } from "viem/chains";
+import { wagmiConfig } from "@/lib/wallet";
 
-/** Simple mounted flag to avoid SSR/CSR mismatch */
+/* ---------- Providers ---------- */
+
+let _qc: QueryClient | null = null;
+function getQueryClient() {
+  if (_qc) return _qc;
+  _qc = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 15_000,
+        gcTime: 60 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+      mutations: { retry: 0 },
+    },
+  });
+  return _qc;
+}
+
+/** Wrap app with Wagmi + React Query (client only). */
+export function WalletProvider({ children }: { children: React.ReactNode }) {
+  const qc = getQueryClient();
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+
+/* ---------- Small helpers ---------- */
 function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
 }
 
+/* ---------- Injected-only, auto-connect pill ---------- */
 export function WalletPill() {
   const mounted = useMounted();
 
@@ -32,12 +65,11 @@ export function WalletPill() {
     [connectors]
   );
 
-  // 1) Auto-connect to Injected when available & not already connected
+  // Auto-connect to injected if available
   useEffect(() => {
     if (!mounted) return;
     if (!injected || !(injected as any).ready) return;
     if (isConnected || isReconnecting) return;
-
     try {
       connect({ connector: injected });
     } catch {
@@ -46,23 +78,22 @@ export function WalletPill() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, injected, isConnected, isReconnecting]);
 
-  // 2) Auto-switch to Base once connected (silent best-effort)
+  // After connect, quietly switch to Base if needed (best effort)
   useEffect(() => {
     if (!isConnected) return;
     if (chainId === base.id) return;
-    // ignore failures quietly; some wallets block auto-switch
     switchChainAsync({ chainId: base.id }).catch(() => {});
   }, [isConnected, chainId, switchChainAsync]);
 
   if (!mounted) return null;
 
-  // Not detecting a wallet provider at all
+  // No wallet detected
   if (!injected || !(injected as any).ready) {
     return (
       <button
         type="button"
         className="pill pill-opaque opacity-70 cursor-not-allowed"
-        title="Open in your wallet's in-app browser or install a wallet extension"
+        title="Open this site in your wallet’s in-app browser or install a wallet extension"
         aria-disabled="true"
       >
         No Wallet Detected
@@ -70,10 +101,9 @@ export function WalletPill() {
     );
   }
 
-  // Connected state
+  // Connected
   if (isConnected) {
-    const short =
-      address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Wallet";
+    const short = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Wallet";
     return (
       <button
         type="button"
@@ -86,9 +116,8 @@ export function WalletPill() {
     );
   }
 
-  // Disconnected state — use isPending only (no status === "pending")
+  // Disconnected
   const label = isPending ? "Connecting…" : "Connect";
-
   return (
     <button
       type="button"
@@ -103,10 +132,4 @@ export function WalletPill() {
       {label}
     </button>
   );
-}
-
-/** Provider wrapper (unchanged) */
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  // Provider is in your layout: WagmiProvider + QueryClientProvider already set there
-  return <>{children}</>;
 }
