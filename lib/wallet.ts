@@ -3,28 +3,21 @@
 
 import { createConfig, http } from "wagmi";
 import { base } from "viem/chains";
-
-// Use wagmi's first-party connectors (RainbowKit v2 is happy with these)
 import { injected } from "wagmi/connectors";
 import { walletConnect } from "wagmi/connectors";
 import { coinbaseWallet } from "wagmi/connectors";
 
-// ENV
-const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || ""; // REQUIRED for WalletConnect wallets to appear
+const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "";
 const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
 
-// Build a stable, explicit connector list.
-// - Injected: shows up whenever window.ethereum exists (MetaMask, Brave, Rabby, OKX ext, in-app browsers).
-// - Coinbase: deep-links to CB/Base Wallet (works even without WalletConnect).
-// - WalletConnect: shows *if and only if* WC_ID is present; supports dozens of wallets.
 const connectors = [
   injected({
-    shimDisconnect: true,           // keeps Disconnect state reliable across reloads
-    target: "metaMask",             // prefer MetaMask if multiple injecteds; still falls back gracefully
+    shimDisconnect: true,
+    target: "metaMask", // prefers MM if multiple injecteds; falls back automatically
   }),
   coinbaseWallet({
     appName: "Toby Swapper",
-    preference: "all",              // show QR + deep link options
+    preference: "all", // QR + deep-link
   }),
   ...(WC_ID
     ? [
@@ -37,17 +30,18 @@ const connectors = [
             url: "https://tobyswap.vercel.app",
             icons: ["https://tobyswap.vercel.app/og.png"],
           },
+          // Recommended on mobile to keep the WC modal in-app
+          qrModalOptions: {
+            themeMode: "dark",
+          },
         }),
       ]
     : []),
 ];
 
-// Final wagmi config (RainbowKit will infer wallets from these connectors)
 export const wagmiConfig = createConfig({
   chains: [base],
   connectors,
-  transports: {
-    [base.id]: http(BASE_RPC),
-  },
+  transports: { [base.id]: http(BASE_RPC) },
   ssr: true,
 });
