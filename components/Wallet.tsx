@@ -2,117 +2,172 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import type { ReactNode } from "react";
-import { useMemo } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider } from "wagmi";
 import {
   RainbowKitProvider,
   darkTheme,
-  useChainModal,
+  ConnectButton,
   useConnectModal,
+  useChainModal,
 } from "@rainbow-me/rainbowkit";
-import { base } from "viem/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  WagmiProvider,
+  useAccount,
+  useChainId,
+  useReconnect,
+} from "wagmi";
 import { wagmiConfig } from "@/lib/wallet";
-import { useAccount, useChainId } from "wagmi";
+import { base } from "viem/chains";
+import { useEffect, useMemo } from "react";
 
-// ✅ Import Connect for local use in this file
-import Connect from "./Connect";
-
-// (re-)export for other files to import if they want
-export { default as Connect } from "./Connect";
-
-/* React Query */
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 10_000,
-      gcTime: 60 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-    mutations: { retry: 0 },
-  },
-});
-
-/* RainbowKit theme */
-const rkTheme = darkTheme({
-  accentColor: "var(--accent)",
-  accentColorForeground: "var(--ink)",
-  borderRadius: "large",
-  overlayBlur: "small",
-});
-
-/* Soft chain gate helper */
-function ChainGate({ children }: { children: ReactNode }) {
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
-  const { openConnectModal } = useConnectModal();
-  const { openChainModal } = useChainModal();
-  const onBase = chainId === base.id;
-
-  return (
-    <>
-      {children}
-      <div
-        aria-live="polite"
-        className={[
-          "pointer-events-none fixed inset-x-0 bottom-2 z-[9999] flex justify-center px-2",
-          onBase ? "hidden" : "",
-        ].join(" ")}
-      >
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-amber-400/40 bg-black/70 px-3 py-1.5 text-xs text-amber-200 backdrop-blur">
-          <span className="inline-block h-2 w-2 rounded-full bg-amber-400" aria-hidden />
-          {isConnected ? (
-            <>
-              <span>Wrong network — switch to Base</span>
-              <button
-                onClick={openChainModal}
-                className="rounded-full border border-amber-400/50 px-2 py-0.5 text-amber-100 hover:bg-amber-400/10 focus:outline-none focus:ring-1 focus:ring-amber-400/60"
-              >
-                Switch
-              </button>
-            </>
-          ) : (
-            <>
-              <span>Connect your wallet to continue</span>
-              <button
-                onClick={openConnectModal}
-                className="rounded-full border border-amber-400/50 px-2 py-0.5 text-amber-100 hover:bg-amber-400/10 focus:outline-none focus:ring-1 focus:ring-amber-400/60"
-              >
-                Connect
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </>
-  );
+/* ---------------- Reconnector (wagmi v2) ----------------
+   Restores the last session so RainbowKit shows options
+   AND re-enables a clean “Reconnect” after disconnect. */
+function Reconnector() {
+  const { reconnect } = useReconnect();
+  useEffect(() => {
+    reconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
 }
 
-/* Providers root */
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const theme = useMemo(() => rkTheme, []);
+/* ---------------- Providers root ---------------- */
+export function WalletProvider({ children }: { children: React.ReactNode }) {
+  const qc = useMemo(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 10_000,
+            gcTime: 60 * 60 * 1000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
+          mutations: { retry: 0 },
+        },
+      }),
+    []
+  );
+
+  const theme = useMemo(
+    () =>
+      darkTheme({
+        accentColor: "var(--accent)",
+        accentColorForeground: "var(--ink)",
+        borderRadius: "large",
+        overlayBlur: "large",
+      }),
+    []
+  );
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={qc}>
         <RainbowKitProvider
           theme={theme}
           initialChain={base}
           modalSize="compact"
           appInfo={{ appName: "Toby Swapper" }}
         >
-          <ChainGate>{children}</ChainGate>
+          <Reconnector />
+          {children}
         </RainbowKitProvider>
-      </WagmiProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 
-/* Header buttons */
+/* ---------------- Minimal, reliable Connect pill ----------------
+   - When disconnected: opens full RK modal (Injected + CB + WC)
+   - When connected & wrong chain: opens Switch modal
+   - When connected & on Base: opens Account modal (has Disconnect)
+*/
+function truncate(addr?: string, left = 4, right = 4) {
+  if (!addr) return "";
+  return `${addr.slice(0, left)}…${addr.slice(-right)}`;
+}
+
+export default function Connect({ compact = false }: { compact?: boolean }) {
+  return (
+    <ConnectButton.Custom>
+      {({
+        openConnectModal,
+        openAccountModal,
+        openChainModal,
+        mounted,
+        account,
+        chain,
+      }) => {
+        const ready = mounted; // hydrate-safe
+        const connected = ready && !!account?.address;
+        const onBase = connected && chain?.id === base.id && !chain?.unsupported;
+
+        const showSwitch = connected && !onBase;
+        const onClick = showSwitch
+          ? openChainModal
+          : connected
+          ? openAccountModal
+          : openConnectModal;
+
+        const addr = account?.address;
+        const label = connected ? truncate(addr) : "Connect";
+
+        const text = showSwitch
+          ? "Switch to Base"
+          : connected
+          ? compact
+            ? (
+              <>
+                <span className="sm:hidden">Acct</span>
+                <span className="hidden sm:inline">{label}</span>
+              </>
+            )
+            : label
+          : "Connect";
+
+        const styleGuard: React.CSSProperties = ready
+          ? {}
+          : { opacity: 0, pointerEvents: "none" };
+
+        const title = showSwitch
+          ? "Wrong network — switch to Base"
+          : connected
+          ? addr
+          : "Connect wallet";
+
+        return (
+          <button
+            type="button"
+            onClick={onClick}
+            aria-hidden={!ready}
+            aria-busy={!ready}
+            title={title}
+            aria-label={
+              showSwitch
+                ? "Switch to Base network"
+                : connected
+                ? `Wallet ${label}`
+                : "Connect wallet"
+            }
+            style={styleGuard}
+            className={[
+              "pill pill-opaque",
+              compact ? "px-3 py-1 text-xs" : "px-4 py-2 text-sm",
+            ].join(" ")}
+          >
+            {text}
+          </button>
+        );
+      }}
+    </ConnectButton.Custom>
+  );
+}
+
 export function WalletPill() {
   return <Connect />;
 }
+
 export function ConnectPill() {
   return <Connect compact />;
 }
