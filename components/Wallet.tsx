@@ -16,6 +16,12 @@ import { base } from "viem/chains";
 import { wagmiConfig } from "@/lib/wallet";
 import { useAccount, useChainId } from "wagmi";
 
+// ✅ Import Connect for local use in this file
+import Connect from "./Connect";
+
+// (re-)export for other files to import if they want
+export { default as Connect } from "./Connect";
+
 /* React Query */
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +43,7 @@ const rkTheme = darkTheme({
   overlayBlur: "small",
 });
 
-/* Soft chain gate helper like your other app (bottom toast) */
+/* Soft chain gate helper */
 function ChainGate({ children }: { children: ReactNode }) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -103,8 +109,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/* Small wrapper pills if you need them elsewhere */
-export { default as Connect } from "./Connect";
+/* Header buttons */
 export function WalletPill() {
   return <Connect />;
 }
