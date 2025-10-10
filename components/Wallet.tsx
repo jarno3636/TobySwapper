@@ -51,11 +51,11 @@ function useMounted() {
   return m;
 }
 
-/* ───────── Injected-first Pill + popover ─────────
+/* ───────── Injected-first Pill + safe popover ─────────
    - One-click connect (no auto-connect)
    - Disconnected label: "Not Connected"
-   - Popover (only when connected): Copy / Switch to Base / Disconnect
-   - Catches errors from wagmi to avoid client-side exceptions
+   - Popover (connected): Copy / Switch to Base / Disconnect
+   - All actions wrapped in try/catch to avoid client exceptions
 ---------------------------------------------------------------- */
 export function WalletPill() {
   const mounted = useMounted();
@@ -63,16 +63,12 @@ export function WalletPill() {
   const { address, isConnected, status: accountStatus } = useAccount();
   const chainId = useChainId();
 
-  const {
-    connectors = [],
-    connect,
-    status: connectStatus, // 'idle' | 'pending' | 'success' | 'error'
-    error,
-    reset,
-  } = useConnect();
+  const connectApi = useConnect();
+  const { connectors = [], connect, status: connectStatus, error, reset } = connectApi;
 
   const { disconnect } = useDisconnect();
-  const { switchChainAsync, isPending: switching } = useSwitchChain();
+  const switchApi = useSwitchChain();
+  const { switchChainAsync, isPending: switching } = switchApi;
 
   // Prefer injected; else first connector if present
   const injected = useMemo(
@@ -84,7 +80,7 @@ export function WalletPill() {
     [injected, connectors]
   );
 
-  // Soft switch to Base once connected (best-effort)
+  // Soft-switch to Base after connect (best-effort)
   useEffect(() => {
     if (!isConnected || chainId === base.id) return;
     (async () => {
@@ -118,87 +114,99 @@ export function WalletPill() {
 
   const dotClass = isConnected ? "bg-[var(--accent)]" : "bg-[var(--danger)]";
 
-  // Popover helpers
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-  const closeMenu = () => detailsRef.current?.removeAttribute("open");
+  /* ───────── Popover (React state, no <details>) ───────── */
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      const target = e.target as Node | null;
+      if (!menuRef.current.contains(target)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   const safeConnect = async () => {
     try {
       if (error) reset(); // clear stale errors
-      if (!fallback) return;
+      if (!fallback) return; // nothing to do, but don't throw
       await connect({ connector: fallback });
     } catch {
       // swallow errors so they never bubble to the app
     }
   };
 
-  const onConnect = () => {
-    if (!connecting) void safeConnect();
+  const onMainClick = async () => {
+    if (!isConnected) {
+      if (!connecting) await safeConnect();
+      return; // do not open a menu when disconnected
+    }
+    setOpen((v) => !v);
   };
 
-  const onDisconnect = () => {
+  const onCopy = async () => {
     try {
-      disconnect();
+      if (address) await navigator.clipboard.writeText(address);
     } catch {}
-    closeMenu();
+    setOpen(false);
   };
 
   const onSwitchBase = async () => {
     try {
       await switchChainAsync({ chainId: base.id });
     } catch {}
-    closeMenu();
+    setOpen(false);
   };
 
-  // One-click behavior:
-  // - Not connected → clicking the pill attempts connect (does NOT open menu)
-  // - Connected → click toggles the <details> menu
-  const onSummaryClick = (e: React.MouseEvent<HTMLElement>) => {
-    if (!isConnected) {
-      e.preventDefault(); // stop <details> from toggling
-      onConnect();
-    }
+  const onDisconnect = () => {
+    try {
+      disconnect();
+    } catch {}
+    setOpen(false);
   };
 
   return (
-    <details ref={detailsRef} className="relative group">
-      <summary
-        className={[
-          "list-none inline-flex items-center gap-1 cursor-pointer select-none",
-          "pill",
-          isConnected ? "pill-nav" : "pill-opaque",
-        ].join(" ")}
-        onClick={onSummaryClick}
+    <div className="relative inline-block" ref={menuRef}>
+      <button
+        type="button"
+        onClick={onMainClick}
+        className={["pill", isConnected ? "pill-nav" : "pill-opaque"].join(" ")}
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
+        disabled={connecting}
       >
         <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
         <span className="ml-1.5">{label}</span>
-      </summary>
+      </button>
 
-      {/* Popover panel (rendered only when connected) */}
-      {isConnected && address ? (
+      {open && isConnected && (
         <div
+          role="menu"
           className="absolute right-0 mt-2 min-w-[220px] rounded-2xl glass shadow-soft p-2 z-50"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") closeMenu();
-          }}
         >
           <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
 
           <button
+            role="menuitem"
             className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(address);
-              } catch {}
-              closeMenu();
-            }}
+            onClick={onCopy}
           >
             Copy Address
           </button>
 
           {chainId !== base.id && (
             <button
+              role="menuitem"
               className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
               onClick={onSwitchBase}
               disabled={switching}
@@ -209,13 +217,14 @@ export function WalletPill() {
           )}
 
           <button
+            role="menuitem"
             className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1 text-danger"
             onClick={onDisconnect}
           >
             Disconnect
           </button>
         </div>
-      ) : null}
-    </details>
+      )}
+    </div>
   );
 }
