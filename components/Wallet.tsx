@@ -1,6 +1,7 @@
 // components/Wallet.tsx
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   WagmiProvider,
@@ -50,11 +51,11 @@ function useMounted() {
   return m;
 }
 
-/* ───────── Injected-first Pill + <details> popover ─────────
+/* ───────── Injected-first Pill + popover ─────────
    - One-click connect (no auto-connect)
-   - Always shows "Not Connected" when not connected
-   - Popover: Copy / Switch to Base / Disconnect
-   - Catches all connector errors to avoid client-side exception
+   - Disconnected label: "Not Connected"
+   - Popover (only when connected): Copy / Switch to Base / Disconnect
+   - Catches errors from wagmi to avoid client-side exceptions
 ---------------------------------------------------------------- */
 export function WalletPill() {
   const mounted = useMounted();
@@ -63,7 +64,7 @@ export function WalletPill() {
   const chainId = useChainId();
 
   const {
-    connectors,
+    connectors = [],
     connect,
     status: connectStatus, // 'idle' | 'pending' | 'success' | 'error'
     error,
@@ -73,25 +74,24 @@ export function WalletPill() {
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
-  // Prefer injected, otherwise fall back to the first connector (if any)
+  // Prefer injected; else first connector if present
   const injected = useMemo(
-    () => connectors?.find?.((c) => c.id === "injected") ?? null,
+    () => connectors.find((c) => c.id === "injected") ?? null,
     [connectors]
   );
   const fallback = useMemo(
-    () => injected ?? (connectors && connectors[0]) ?? null,
+    () => injected ?? (connectors.length ? connectors[0] : null),
     [injected, connectors]
   );
 
   // Soft switch to Base once connected (best-effort)
   useEffect(() => {
+    if (!isConnected || chainId === base.id) return;
     (async () => {
-      if (!isConnected) return;
-      if (chainId === base.id) return;
       try {
         await switchChainAsync({ chainId: base.id });
       } catch {
-        // ignored – user stays on current chain, UI still works
+        /* ignore */
       }
     })();
   }, [isConnected, chainId, switchChainAsync]);
@@ -127,15 +127,13 @@ export function WalletPill() {
       if (error) reset(); // clear stale errors
       if (!fallback) return;
       await connect({ connector: fallback });
-    } catch (e) {
-      // fully swallow to avoid "Application error"
-      // (optional) console.debug("connect error", e);
+    } catch {
+      // swallow errors so they never bubble to the app
     }
   };
 
   const onConnect = () => {
-    if (connecting) return;
-    void safeConnect();
+    if (!connecting) void safeConnect();
   };
 
   const onDisconnect = () => {
@@ -153,12 +151,12 @@ export function WalletPill() {
   };
 
   // One-click behavior:
-  // - Not connected → click attempts connect (does NOT open menu)
+  // - Not connected → clicking the pill attempts connect (does NOT open menu)
   // - Connected → click toggles the <details> menu
-  const onSummaryClick: React.MouseEventHandler<HTMLElement> = (e) => {
+  const onSummaryClick = (e: React.MouseEvent<HTMLElement>) => {
     if (!isConnected) {
       e.preventDefault(); // stop <details> from toggling
-      if (!connecting) onConnect();
+      onConnect();
     }
   };
 
@@ -171,4 +169,53 @@ export function WalletPill() {
           isConnected ? "pill-nav" : "pill-opaque",
         ].join(" ")}
         onClick={onSummaryClick}
-        aria-label={isConnected ? "
+        aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
+      >
+        <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
+        <span className="ml-1.5">{label}</span>
+      </summary>
+
+      {/* Popover panel (rendered only when connected) */}
+      {isConnected && address ? (
+        <div
+          className="absolute right-0 mt-2 min-w-[220px] rounded-2xl glass shadow-soft p-2 z-50"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeMenu();
+          }}
+        >
+          <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
+
+          <button
+            className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(address);
+              } catch {}
+              closeMenu();
+            }}
+          >
+            Copy Address
+          </button>
+
+          {chainId !== base.id && (
+            <button
+              className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
+              onClick={onSwitchBase}
+              disabled={switching}
+              aria-busy={switching}
+            >
+              {switching ? "Switching…" : "Switch to Base"}
+            </button>
+          )}
+
+          <button
+            className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1 text-danger"
+            onClick={onDisconnect}
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : null}
+    </details>
+  );
+}
