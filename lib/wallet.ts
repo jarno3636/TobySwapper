@@ -1,21 +1,26 @@
-// lib/wallet.ts
+// /lib/wallet.ts
 "use client";
 
-import { createConfig, http, cookieStorage, createStorage } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { http, createStorage, cookieStorage } from "wagmi";
 import { base } from "viem/chains";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
-const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
+const projectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_WALLETCONNECT_ID ||
+  "";
 
-export const wagmiConfig = createConfig({
+if (!projectId) {
+  console.warn("⚠️ WalletConnect disabled: missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID");
+}
+
+export const wagmiConfig = getDefaultConfig({
+  appName: "TobySwapper",
+  projectId,
   chains: [base],
-  transports: { [base.id]: http(BASE_RPC) },
-  connectors: [
-    injected({
-      shimDisconnect: true,  // reliable re-connect state
-      // no target => supports MetaMask, Rabby, OKX, Coinbase in-app
-    }),
-  ],
-  storage: createStorage({ storage: cookieStorage }), // safe for App Router SSR
+  transports: {
+    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
+  },
   ssr: true,
+  storage: createStorage({ storage: cookieStorage }), // SSR-safe
 });
