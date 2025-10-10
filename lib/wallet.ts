@@ -1,25 +1,25 @@
 // lib/wallet.ts
 "use client";
 
-import { http, cookieStorage, createStorage } from "wagmi";
+import { createConfig, http, cookieStorage, createStorage } from "wagmi";
 import { base } from "viem/chains";
-import { createConfig } from "wagmi";
 import { injected } from "wagmi/connectors";
 
-/**
- * This config connects automatically to the injected provider
- * (e.g. MetaMask, Coinbase, Base Wallet). It skips all WalletConnect options.
- */
+// Optional dedicated RPC (recommended on Vercel)
+const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
+
 export const wagmiConfig = createConfig({
   chains: [base],
   connectors: [
     injected({
-      shimDisconnect: true, // keeps state consistent after reload
+      shimDisconnect: true, // stable disconnect across reloads
     }),
   ],
   transports: {
-    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://mainnet.base.org"),
+    [base.id]: http(BASE_RPC),
   },
+  // Persist to cookies so SSR hydration never flips state
   storage: createStorage({ storage: cookieStorage }),
   ssr: true,
+  autoConnect: true, // 🔥 restores an injected session automatically
 });
