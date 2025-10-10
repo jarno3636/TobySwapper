@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 /**
- * Serves the OG image as the frame preview.
- * Adds caching headers for faster load.
+ * Serves the OG image with long cache for instant loads.
  */
 export async function GET() {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
