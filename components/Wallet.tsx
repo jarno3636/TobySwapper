@@ -3,112 +3,95 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  WagmiProvider,
   useAccount,
   useChainId,
   useConnect,
   useDisconnect,
   useSwitchChain,
 } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { wagmiConfig } from "@/lib/wallet";
 import { base } from "viem/chains";
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
-});
-
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </WagmiProvider>
-  );
-}
-
-const pretty = (a?: `0x${string}`) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
-const useMounted = () => {
+/** Simple mounted flag to avoid SSR/CSR mismatch */
+function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
-};
-const isWalletBrowser = () => {
-  if (typeof window === "undefined") return false;
-  const eth: any = (window as any).ethereum;
-  // any injected EIP-1193 provider counts
-  return !!eth || /MetaMask|Rabby|OKX|CoinbaseWallet/i.test(navigator.userAgent);
-};
+}
 
 export function WalletPill() {
   const mounted = useMounted();
-  const inWalletUa = isWalletBrowser();
 
-  const { connectors, connect, status, isPending, error, reset } = useConnect();
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { address, isConnected, isReconnecting } = useAccount();
   const chainId = useChainId();
-  const { switchChain, isPending: switching } = useSwitchChain();
+  const { connect, connectors, isPending, error, reset } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
 
   const injected = useMemo(
     () => connectors.find((c) => c.id === "injected"),
     [connectors]
   );
 
-  // 1) Auto-connect in wallet UAs (once)
+  // 1) Auto-connect to Injected when available & not already connected
   useEffect(() => {
-    if (!mounted || !injected?.ready || !inWalletUa) return;
-    if (isConnected) return;
+    if (!mounted) return;
+    if (!injected || !(injected as any).ready) return;
+    if (isConnected || isReconnecting) return;
+
     try {
       connect({ connector: injected });
     } catch {
-      /* some wallets require user gesture; button below remains */
+      /* some wallets require user gesture; ignore */
     }
-  }, [mounted, injected, inWalletUa, isConnected, connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, injected, isConnected, isReconnecting]);
 
-  // 2) Auto-switch to Base once connected
+  // 2) Auto-switch to Base once connected (silent best-effort)
   useEffect(() => {
     if (!isConnected) return;
-    if (chainId !== base.id) {
-      try {
-        switchChain({ chainId: base.id });
-      } catch {}
-    }
-  }, [isConnected, chainId, switchChain]);
+    if (chainId === base.id) return;
+    // ignore failures quietly; some wallets block auto-switch
+    switchChainAsync({ chainId: base.id }).catch(() => {});
+  }, [isConnected, chainId, switchChainAsync]);
 
   if (!mounted) return null;
 
-  // connected state
-  if (isConnected) {
-    const wrong = chainId !== base.id;
+  // Not detecting a wallet provider at all
+  if (!injected || !(injected as any).ready) {
     return (
       <button
-        className={`pill ${wrong ? "pill-nav" : "pill-opaque"}`}
-        onClick={() => (wrong ? switchChain({ chainId: base.id }) : disconnect())}
-        disabled={isPending || switching}
-        title={wrong ? "Switch to Base" : "Disconnect"}
+        type="button"
+        className="pill pill-opaque opacity-70 cursor-not-allowed"
+        title="Open in your wallet's in-app browser or install a wallet extension"
+        aria-disabled="true"
       >
-        {wrong ? "Switch to Base" : `${pretty(address)} · Disconnect`}
+        No Wallet Detected
       </button>
     );
   }
 
-  // not connected — show a clear instruction based on environment
-  if (!injected?.ready) {
-    // no injected provider => tell user how to open the dapp
+  // Connected state
+  if (isConnected) {
+    const short =
+      address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Wallet";
     return (
-      <a
-        className="pill pill-opaque"
-        href={typeof window !== "undefined" ? window.location.href : "/"}
-        title="Open this link inside your wallet’s in-app browser (MetaMask, Coinbase, Rabby)"
+      <button
+        type="button"
+        className="pill pill-nav"
+        onClick={() => disconnect()}
+        title="Disconnect wallet"
       >
-        Open in Wallet App
-      </a>
+        {short} (Disconnect)
+      </button>
     );
   }
 
-  const label = isPending || status === "pending" ? "Connecting…" : "Connect";
+  // Disconnected state — use isPending only (no status === "pending")
+  const label = isPending ? "Connecting…" : "Connect";
+
   return (
     <button
+      type="button"
       className="pill pill-opaque"
       disabled={isPending}
       onClick={() => {
@@ -120,4 +103,10 @@ export function WalletPill() {
       {label}
     </button>
   );
+}
+
+/** Provider wrapper (unchanged) */
+export function WalletProvider({ children }: { children: React.ReactNode }) {
+  // Provider is in your layout: WagmiProvider + QueryClientProvider already set there
+  return <>{children}</>;
 }
