@@ -51,15 +51,15 @@ function useMounted() {
 }
 
 /* ───────── Injected-only Pill (one-click connect) + <details> popover ─────────
-   - No global listeners (very stable in wallet browsers)
-   - One-click on the pill connects when disconnected
-   - Always shows "Not Connected" when disconnected (no "No Wallet Detected")
-   - Softly switches to Base after connection
+   - No global listeners (stable in wallet browsers)
+   - One-click connect when disconnected
+   - Always shows "Not Connected" when disconnected
+   - Soft-switch to Base after connection
 --------------------------------------------------------------------------- */
 export function WalletPill() {
   const mounted = useMounted();
 
-  const { address, isConnected, status: accountStatus } = useAccount(); // 'connected' | 'reconnecting' | 'connecting' | 'disconnected'
+  const { address, isConnected, status: accountStatus } = useAccount();
   const chainId = useChainId();
 
   const {
@@ -72,10 +72,14 @@ export function WalletPill() {
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
-  // Injected connector (MetaMask, Coinbase in-app, Rabby, OKX, etc.)
+  // Prefer the injected connector; otherwise fall back to first available
   const injected = useMemo(
     () => connectors.find((c) => c.id === "injected"),
     [connectors]
+  );
+  const fallback = useMemo(
+    () => injected ?? connectors[0] ?? null,
+    [injected, connectors]
   );
 
   // Soft switch to Base after connect (best-effort)
@@ -113,8 +117,8 @@ export function WalletPill() {
 
   const onConnect = () => {
     if (error) reset(); // clear stale errors
-    if (injected) connect({ connector: injected });
-    else connect(); // attempt default if no injected surfaced yet
+    if (fallback) connect({ connector: fallback });
+    // if no connectors at all, do nothing (UI still shows Not Connected)
   };
   const onDisconnect = () => {
     disconnect();
@@ -125,7 +129,7 @@ export function WalletPill() {
   };
 
   // One-click behavior:
-  // - If not connected -> clicking the pill attempts connect and DOES NOT open menu
+  // - If not connected -> clicking the pill attempts connect and does NOT open menu
   // - If connected -> clicking toggles the menu
   const onSummaryClick: React.MouseEventHandler<HTMLElement> = (e) => {
     if (!isConnected) {
