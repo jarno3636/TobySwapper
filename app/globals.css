@@ -52,15 +52,8 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
   backdrop-filter: blur(10px);
 }
 
-/* Subtle hover lift for interactive glass blocks */
-.glass-hover {
-  transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
-}
-.glass-hover:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255,255,255,.14);
-  background: rgba(255,255,255,.10);
-}
+.glass-hover { transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+.glass-hover:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.10); }
 
 /* You use "rounded-pill" in inputs */
 .rounded-pill { border-radius: 9999px; }
@@ -75,173 +68,73 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
   box-shadow: var(--shadow-soft);
   transition: background-color .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
 }
-.pill-opaque {
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.12);
-}
+.pill-opaque { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.12); }
 .pill-opaque:hover { background: rgba(255,255,255,.14); }
-.pill-nav {
-  background: rgba(255,255,255,.22);
-  border: 1px solid rgba(255,255,255,.28);
-}
+.pill-nav { background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.28); }
 .pill-nav:hover { background: rgba(255,255,255,.28); }
 
 /* Disabled pill look */
-.pill[disabled],
-button.pill:disabled,
-a.pill[aria-disabled="true"] {
-  opacity: .6;
-  cursor: not-allowed;
-  filter: grayscale(.15);
-}
+.pill[disabled], button.pill:disabled, a.pill[aria-disabled="true"] { opacity: .6; cursor: not-allowed; filter: grayscale(.15); }
 
-/* Focus ring for keyboard users */
-.pill:focus-visible,
-a.pill:focus-visible,
-button.pill:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--ring);
-}
+/* Focus ring */
+.pill:focus-visible, a.pill:focus-visible, button.pill:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 
-/* Subtle link style for inline anchors */
-a.link, .link {
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px dashed rgba(121,255,225,.35);
-  transition: border-color .15s ease, opacity .15s ease;
-}
-a.link:hover, .link:hover {
-  border-bottom-color: rgba(121,255,225,.7);
-  opacity: .95;
-}
+/* Links */
+a.link, .link { color: var(--accent); text-decoration: none; border-bottom: 1px dashed rgba(121,255,225,.35); transition: border-color .15s ease, opacity .15s ease; }
+a.link:hover, .link:hover { border-bottom-color: rgba(121,255,225,.7); opacity: .95; }
 
-/* ---------- InfoWheel helpers ---------- */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Gives selected orbit icon a clean ring (used by InfoWheel) */
+/* ---------- Carousel/Scroll helpers ---------- */
+.no-scrollbar::-webkit-scrollbar{ display:none; }
+.no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
 .ring-accent { box-shadow: 0 0 0 2px var(--accent); }
 
-/* ---------- Background floaters ---------- */
-@keyframes floaty {
-  0%   { transform: translateY(0px) rotate(0deg); }
-  25%  { transform: translateY(-10px) rotate(2deg); }
-  50%  { transform: translateY(0px) rotate(0deg); }
-  75%  { transform: translateY(10px) rotate(-2deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
-}
+/* ---------- Animations ---------- */
+@keyframes floaty { 0%{transform:translateY(0) rotate(0)}25%{transform:translateY(-10px) rotate(2deg)}50%{transform:translateY(0) rotate(0)}75%{transform:translateY(10px) rotate(-2deg)}100%{transform:translateY(0) rotate(0)} }
 .floaty { animation: floaty 18s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce){ .floaty{animation:none!important} .glass-hover:hover{transform:none!important} }
 
-/* Respect user motion preference */
-@media (prefers-reduced-motion: reduce) {
-  .floaty { animation: none !important; }
-  .glass-hover:hover { transform: none !important; }
+@media (max-width:768px){
+  .glass, .glass-strong{ -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 }
 
-/* ---------- Mobile performance tweaks ---------- */
-@media (max-width: 768px) {
-  .glass, .glass-strong {
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-  }
-}
+/* ---------- Mobile sheet ---------- */
+.menu-sheet{ background:#0f1117; border-left:1px solid rgba(255,255,255,.10); box-shadow:0 24px 80px rgba(0,0,0,.7); }
+.menu-overlay{ background:rgba(0,0,0,.80); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+.menu-overlay{ pointer-events:none; }
+.menu-overlay.open, .menu-overlay[aria-hidden="false"]{ pointer-events:auto; }
+.menu-sheet[aria-hidden="true"], .menu-sheet:not(.open){ pointer-events:none; }
 
-/* ---------- Mobile menu sheet (opaque) ---------- */
-.menu-sheet {
-  background: #0f1117;
-  border-left: 1px solid rgba(255,255,255,.10);
-  box-shadow: 0 24px 80px rgba(0,0,0,.7);
-}
-.menu-overlay {
-  background: rgba(0,0,0,.80);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
+/* ---------- RainbowKit modal look (non-destructive) ---------- */
+[data-rk]{ z-index:60; }
+[data-rk] [role="dialog"]{ background:rgba(15,15,20,.98)!important; border:1px solid rgba(255,255,255,.08)!important; box-shadow:0 24px 80px rgba(0,0,0,.8)!important; border-radius:20px!important; }
+[data-rk]::backdrop, [data-rk] ._overlay{ background:rgba(0,0,0,.75)!important; }
+/* Do NOT override all [data-rk] buttons—this keeps wallet options visible */
 
-/* --- Safety: overlays are non-interactive unless opened --- */
-.menu-overlay { pointer-events: none; }
-.menu-overlay.open,
-.menu-overlay[aria-hidden="false"] { pointer-events: auto; }
+/* ---------- Swap "pip" dots ---------- */
+.pip{ width:6px; height:6px; border-radius:9999px; background:currentColor; opacity:.45; display:inline-block; }
+.pip + .pip{ margin-left:4px; }
+@keyframes pip-bounce{ 0%,80%,100%{ transform:scale(.6); opacity:.35 } 40%{ transform:scale(1); opacity:1 } }
+.pip-a{ animation:pip-bounce 1.2s infinite; }
+.pip-b{ animation:pip-bounce 1.2s .15s infinite; }
+.pip-c{ animation:pip-bounce 1.2s .30s infinite; }
 
-/* If a sheet can be offscreen, make it inert when closed */
-.menu-sheet[aria-hidden="true"],
-.menu-sheet:not(.open) { pointer-events: none; }
+/* Misc */
+@keyframes wheel-spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+.spin-slow{ animation: wheel-spin 28s linear infinite; }
+.pause-on-hover:hover{ animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce){ .spin-slow{animation:none!important} }
 
-/* ---------- RainbowKit overrides (non-destructive) ---------- */
-[data-rk] { z-index: 60; }
-[data-rk] [role="dialog"]{
-  background: rgba(15,15,20,0.98) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  box-shadow: 0 24px 80px rgba(0,0,0,.8) !important;
-  border-radius: 20px !important;
-}
-[data-rk]::backdrop,
-[data-rk] ._overlay { background: rgba(0,0,0,.75) !important; }
+.hover-glow{ transition: box-shadow .25s ease, transform .2s ease, background-color .2s ease, border-color .2s ease; box-shadow:0 0 0 rgba(121,255,225,0); }
+.hover-glow:hover{ box-shadow:0 0 24px rgba(121,255,225,.25), 0 8px 32px rgba(0,0,0,.35); }
 
-/* ⚠️ IMPORTANT: Do NOT restyle ALL [data-rk] buttons (it hides wallet options)
-   If you want a custom look for your header connect button, style your .pill only. */
+@keyframes pulse-soft{ 0%,100%{box-shadow:0 0 0 rgba(121,255,225,0)} 50%{box-shadow:0 0 18px rgba(121,255,225,.18)} }
+.pulse-soft{ animation:pulse-soft 2.2s ease-in-out infinite; }
 
-/* ---------- Pip dots used in Swap button ---------- */
-.pip {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: currentColor;
-  opacity: .45;
-  display: inline-block;
-}
-.pip + .pip { margin-left: 4px; }
+@keyframes floaty-sm{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+.floaty-sm{ animation: floaty-sm 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce){ .hover-glow{transition:none} .pulse-soft, .floaty-sm{animation:none!important} }
 
-@keyframes pip-bounce {
-  0%, 80%, 100% { transform: scale(.6); opacity: .35; }
-  40% { transform: scale(1); opacity: 1; }
-}
-.pip-a { animation: pip-bounce 1.2s infinite; }
-.pip-b { animation: pip-bounce 1.2s .15s infinite; }
-.pip-c { animation: pip-bounce 1.2s .30s infinite; }
+@keyframes slideUpFade{ from{opacity:0; transform:translateY(30px)} to{opacity:1; transform:translateY(0)} }
 
-/* ---------- Wheel / misc animations ---------- */
-@keyframes wheel-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.spin-slow { animation: wheel-spin 28s linear infinite; }
-.pause-on-hover:hover { animation-play-state: paused; }
-
-@media (prefers-reduced-motion: reduce) {
-  .spin-slow { animation: none !important; }
-}
-
-/* --- Glow + pulse utilities --- */
-.hover-glow {
-  transition: box-shadow .25s ease, transform .2s ease, background-color .2s ease, border-color .2s ease;
-  box-shadow: 0 0 0 rgba(121,255,225,0);
-}
-.hover-glow:hover {
-  box-shadow: 0 0 24px rgba(121,255,225,.25), 0 8px 32px rgba(0,0,0,.35);
-}
-
-/* Subtle pulse for "active" items */
-@keyframes pulse-soft {
-  0%,100% { box-shadow: 0 0 0 rgba(121,255,225,0); }
-  50% { box-shadow: 0 0 18px rgba(121,255,225,.18); }
-}
-.pulse-soft { animation: pulse-soft 2.2s ease-in-out infinite; }
-
-/* Tiny float for cards */
-@keyframes floaty-sm {
-  0%,100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-.floaty-sm { animation: floaty-sm 6s ease-in-out infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .hover-glow { transition: none; }
-  .pulse-soft, .floaty-sm { animation: none !important; }
-}
-
-/* ---------- Slide-up + fade keyframes (used on hero) ---------- */
-@keyframes slideUpFade {
-  from { opacity: 0; transform: translateY(30px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ---------- Small QoL ---------- */
+/* QoL */
 * { -webkit-tap-highlight-color: transparent; }
