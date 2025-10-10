@@ -1,30 +1,39 @@
 // lib/wallet.ts
 "use client";
 
-import { http } from "wagmi";
+import { http, createConfig, createStorage, cookieStorage } from "wagmi";
 import { base } from "viem/chains";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { injected, coinbaseWallet, walletConnect } from "wagmi/connectors";
 
-const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || ""; // must be set in prod
-const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
+// ---- ENV ----
+const WC_ID =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_WALLETCONNECT_ID || // optional fallback key name
+  "";
 
-/**
- * getDefaultConfig automatically wires:
- *  - Injected (browser/in-app wallets)
- *  - WalletConnect (deep links & QR)
- *  - Coinbase/Base Wallet
- * and selects the right UX per environment.
- */
-export const wagmiConfig = getDefaultConfig({
-  appName: "Toby Swapper",
-  projectId: WC_ID || "missing-project-id",
+if (!WC_ID) {
+  console.warn(
+    "WalletConnect disabled: set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID"
+  );
+}
+
+const BASE_RPC =
+  process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+  process.env.NEXT_PUBLIC_BASE_RPC ||
+  "https://mainnet.base.org";
+
+// ---- Connectors (same recipe as your other project) ----
+export const connectors = [
+  injected({ shimDisconnect: true }),
+  coinbaseWallet({ appName: "Toby Swapper", preference: "all" }),
+  ...(WC_ID ? [walletConnect({ projectId: WC_ID })] : []),
+];
+
+// ---- wagmi config (v2) ----
+export const wagmiConfig = createConfig({
   chains: [base],
-  /**
-   * Force our own RPC for stability on Vercel (RainbowKit will use wagmi transports).
-   * This also avoids rate limits from default providers.
-   */
-  transports: {
-    [base.id]: http(BASE_RPC),
-  },
+  transports: { [base.id]: http(BASE_RPC) },
+  connectors,
+  storage: createStorage({ storage: cookieStorage }), // SSR-safe persistence
   ssr: true,
 });
