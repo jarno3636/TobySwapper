@@ -1,34 +1,25 @@
 // lib/wallet.ts
 "use client";
 
-import { http, createStorage, cookieStorage } from "wagmi";
+import { http, cookieStorage, createStorage } from "wagmi";
 import { base } from "viem/chains";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-
-// WalletConnect Cloud project id (required for WC option to render)
-const projectId =
-  process.env.NEXT_PUBLIC_WC_PROJECT_ID ||
-  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
-  "";
-
-// Optional dedicated Base RPC (recommended)
-const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
+import { createConfig } from "wagmi";
+import { injected } from "wagmi/connectors";
 
 /**
- * RainbowKit v2 “default” config builds the right wagmi connectors for:
- * - Injected (MetaMask, Rabby, Trust, OKX, in-app browsers)
- * - Coinbase Wallet (SDK)
- * - WalletConnect (QR / deep-link)
- *
- * It also plays nicely with SSR when you pass cookieStorage.
+ * This config connects automatically to the injected provider
+ * (e.g. MetaMask, Coinbase, Base Wallet). It skips all WalletConnect options.
  */
-export const wagmiConfig = getDefaultConfig({
-  appName: "Toby Swapper",
-  projectId,                 // if empty, WalletConnect will be hidden (expected)
+export const wagmiConfig = createConfig({
   chains: [base],
+  connectors: [
+    injected({
+      shimDisconnect: true, // keeps state consistent after reload
+    }),
+  ],
   transports: {
-    [base.id]: http(rpcUrl),
+    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://mainnet.base.org"),
   },
-  ssr: true,
   storage: createStorage({ storage: cookieStorage }),
+  ssr: true,
 });
