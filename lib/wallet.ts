@@ -1,47 +1,30 @@
 // lib/wallet.ts
 "use client";
 
-import { createConfig, http } from "wagmi";
+import { http } from "wagmi";
 import { base } from "viem/chains";
-import { injected } from "wagmi/connectors";
-import { walletConnect } from "wagmi/connectors";
-import { coinbaseWallet } from "wagmi/connectors";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
-const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "";
+const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || ""; // must be set in prod
 const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC || "https://mainnet.base.org";
 
-const connectors = [
-  injected({
-    shimDisconnect: true,
-    target: "metaMask", // prefers MM if multiple injecteds; falls back automatically
-  }),
-  coinbaseWallet({
-    appName: "Toby Swapper",
-    preference: "all", // QR + deep-link
-  }),
-  ...(WC_ID
-    ? [
-        walletConnect({
-          projectId: WC_ID,
-          showQrModal: true,
-          metadata: {
-            name: "Toby Swapper",
-            description: "Swap on Base with 1% auto-burn to $TOBY",
-            url: "https://tobyswap.vercel.app",
-            icons: ["https://tobyswap.vercel.app/og.png"],
-          },
-          // Recommended on mobile to keep the WC modal in-app
-          qrModalOptions: {
-            themeMode: "dark",
-          },
-        }),
-      ]
-    : []),
-];
-
-export const wagmiConfig = createConfig({
+/**
+ * getDefaultConfig automatically wires:
+ *  - Injected (browser/in-app wallets)
+ *  - WalletConnect (deep links & QR)
+ *  - Coinbase/Base Wallet
+ * and selects the right UX per environment.
+ */
+export const wagmiConfig = getDefaultConfig({
+  appName: "Toby Swapper",
+  projectId: WC_ID || "missing-project-id",
   chains: [base],
-  connectors,
-  transports: { [base.id]: http(BASE_RPC) },
+  /**
+   * Force our own RPC for stability on Vercel (RainbowKit will use wagmi transports).
+   * This also avoids rate limits from default providers.
+   */
+  transports: {
+    [base.id]: http(BASE_RPC),
+  },
   ssr: true,
 });
