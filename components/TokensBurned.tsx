@@ -1,4 +1,3 @@
-// components/TokensBurned.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -6,10 +5,10 @@ import { useReadContract } from "wagmi";
 import { Address } from "viem";
 import { SWAPPER } from "@/lib/addresses";
 
-/** ---------- BigInt-safe helpers ---------- **/
 const DECIMALS = 18n;
 const SCALE = 10n ** DECIMALS;
 
+/* ---------- Helpers ---------- */
 const withThousands = (s: string) => s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 function formatAmount18(value: bigint, frac = 4) {
@@ -24,43 +23,34 @@ function formatAmount18(value: bigint, frac = 4) {
 }
 
 function formatCompact(value: bigint) {
-  const INT = value / SCALE; // whole tokens
-  const toFixed2 = (numTimes100n: bigint) => {
-    const neg = numTimes100n < 0n ? "-" : "";
-    const n = numTimes100n < 0n ? -numTimes100n : numTimes100n;
-    const whole = n / 100n;
-    const frac = (n % 100n).toString().padStart(2, "0");
-    return `${neg}${withThousands(whole.toString())}.${frac}`;
-  };
+  const INT = value / SCALE;
   const ONE_K = 1_000n, ONE_M = 1_000_000n, ONE_B = 1_000_000_000n, ONE_T = 1_000_000_000_000n;
-  if (INT >= ONE_T) return `${toFixed2((INT * 100n) / ONE_T)}T`;
-  if (INT >= ONE_B) return `${toFixed2((INT * 100n) / ONE_B)}B`;
-  if (INT >= ONE_M) return `${toFixed2((INT * 100n) / ONE_M)}M`;
-  if (INT >= ONE_K) return `${toFixed2((INT * 100n) / ONE_K)}K`;
+  const fmt = (n: bigint, d: bigint, suf: string) =>
+    `${(Number(n) / Number(d)).toFixed(2)}${suf}`;
+  if (INT >= ONE_T) return fmt(INT, ONE_T, "T");
+  if (INT >= ONE_B) return fmt(INT, ONE_B, "B");
+  if (INT >= ONE_M) return fmt(INT, ONE_M, "M");
+  if (INT >= ONE_K) return fmt(INT, ONE_K, "K");
   return formatAmount18(value, 4);
 }
 
-/** Only run expensive stuff if the page is visible */
-function usePageVisible() {
+const useMounted = () => {
+  const [m, setM] = useState(false);
+  useEffect(() => setM(true), []);
+  return m;
+};
+const usePageVisible = () => {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
     const onVis = () => setVisible(!document.hidden);
-    onVis();
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
   return visible;
-}
+};
 
-/** Avoid SSR/CSR mismatch */
-function useMounted() {
-  const [m, setM] = useState(false);
-  useEffect(() => setM(true), []);
-  return m;
-}
-
-/** Tiny odometer-like easing (display-only) */
-function useAnimatedBigint(target: bigint, duration = 600) {
+/* ---------- Animated easing ---------- */
+function useAnimatedBigint(target: bigint, duration = 700) {
   const [value, setValue] = useState<bigint>(target);
   const startRef = useRef<number | null>(null);
   const fromRef = useRef<bigint>(target);
@@ -72,19 +62,19 @@ function useAnimatedBigint(target: bigint, duration = 600) {
     const step = (ts: number) => {
       if (startRef.current === null) startRef.current = ts;
       const p = Math.min(1, (ts - startRef.current) / duration);
-      const e = 1 - Math.pow(1 - p, 3);
+      const eased = 1 - Math.pow(1 - p, 3);
       const diff = target - fromRef.current;
-      const add = BigInt(Math.round(Number(diff) * e));
+      const add = BigInt(Math.round(Number(diff) * eased));
       setValue(fromRef.current + add);
       if (p < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [target, duration, value]);
-
+  }, [target, duration]);
   return value;
 }
 
+/* ---------- Component ---------- */
 export default function TokensBurned() {
   const mounted = useMounted();
   const visible = usePageVisible();
@@ -93,53 +83,44 @@ export default function TokensBurned() {
   const { data, refetch, isFetching, isError } = useReadContract({
     address: SWAPPER as Address,
     abi: [
-      {
-        type: "function",
-        name: "totalTobyBurned",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [{ name: "", type: "uint256" }],
-      },
+      { type: "function", name: "totalTobyBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
     ] as const,
     functionName: "totalTobyBurned",
     query: {
-      enabled: mounted && visible,        // don’t fetch if not mounted/visible
+      enabled: mounted && visible,
       refetchOnMount: false,
-      refetchOnReconnect: false,
       refetchOnWindowFocus: false,
-      staleTime: 60_000,                  // 1 minute
-      gcTime: 5 * 60_000,
+      staleTime: 60_000,
     },
   });
 
   const burned18 = useMemo(() => (data ? (data as bigint) : 0n), [data]);
-  const anim18 = useAnimatedBigint(burned18, 700);
-  const pretty = (burned18 / SCALE) >= 1_000_000n ? formatCompact(anim18) : formatAmount18(anim18, 4);
+  const anim18 = useAnimatedBigint(burned18, 800);
+  const pretty = burned18 / SCALE >= 1_000_000n ? formatCompact(anim18) : formatAmount18(anim18, 4);
 
-  // Milestone display (every 1,000,000 tokens)
   const STEP = 1_000_000n;
   const burnedInt = burned18 / SCALE;
   const stepIdx = burnedInt / STEP;
   const base = stepIdx * STEP;
   const next = (stepIdx + 1n) * STEP;
-  const toNext = next > burnedInt ? next - burnedInt : 0n;
-
-  const progress =
-    Number(((burned18 - base * SCALE) * 10_000n) / (STEP * SCALE)) / 100;
+  const toNext = next - burnedInt;
+  const progress = Math.min(100, Number(((burned18 - base * SCALE) * 10_000n) / (STEP * SCALE)) / 100);
 
   const doRefresh = async () => {
     if (isFetching) return;
     setRot(true);
-    try { await refetch(); } finally {
-      setTimeout(() => setRot(false), 350);
+    try {
+      await refetch();
+    } finally {
+      setTimeout(() => setRot(false), 400);
     }
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="glass rounded-3xl p-6 shadow-soft mt-6 relative overflow-hidden">
-      {/* subtle flame aura */}
+    <div className="glass rounded-3xl p-6 shadow-soft mt-6 relative overflow-hidden content-visible">
+      {/* Subtle flame gradient */}
       <div
         className="pointer-events-none absolute -inset-8 opacity-20 blur-2xl"
         style={{
@@ -150,16 +131,15 @@ export default function TokensBurned() {
       <div className="relative">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xl font-bold">🔥 Tokens Burned</h3>
-          {/* Flame refresh */}
           <button
             type="button"
             onClick={doRefresh}
-            className="pill pill-opaque text-sm gap-2 select-none active:scale-[0.98]"
+            className="pill pill-opaque text-sm gap-2 select-none active:scale-[0.97]"
             aria-label="Refresh burned amount"
             disabled={isFetching}
           >
             <span
-              className="inline-block"
+              aria-hidden
               style={{
                 display: "inline-block",
                 transform: rot ? "rotate(360deg)" : "rotate(0deg)",
@@ -172,39 +152,30 @@ export default function TokensBurned() {
           </button>
         </div>
 
-        {/* Big number */}
+        {/* Animated number */}
         <div className="text-center my-2">
           <div className="text-4xl md:text-5xl font-extrabold tracking-tight font-mono">
             {isError ? "—" : pretty} <span className="text-lg align-top">TOBY</span>
           </div>
           <div className="text-inkSub text-xs mt-2">
-            Milestone: {withThousands((base).toString())} → {withThousands((next).toString())}
+            Milestone: {withThousands(base.toString())} → {withThousands(next.toString())}
           </div>
           <div className="text-inkSub text-[11px] mt-1">
             {withThousands(toNext.toString())} TOBY to next
           </div>
         </div>
 
-        {/* Flame progress */}
-        <div className="mt-4">
+        {/* Progress bar */}
+        <div className="mt-4 rounded-full h-3 overflow-hidden border border-white/10 bg-white/5">
           <div
-            className="rounded-full h-3 overflow-hidden"
+            className="h-full transition-all ease-out duration-500"
             style={{
-              background: "linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04))",
-              border: "1px solid rgba(255,255,255,.12)",
+              width: `${progress}%`,
+              background:
+                "linear-gradient(90deg, #ffa24d 0%, #ff6e40 35%, #ff3d00 70%, #ff9e80 100%)",
+              boxShadow: "0 0 18px rgba(255,110,64,.55)",
             }}
-          >
-            <div
-              className="h-full"
-              style={{
-                width: `${Math.max(0, Math.min(100, progress))}%`,
-                background:
-                  "linear-gradient(90deg, #ffa24d 0%, #ff6e40 35%, #ff3d00 70%, #ff9e80 100%)",
-                boxShadow: "0 0 18px rgba(255,110,64,.55)",
-                transition: "width 400ms ease",
-              }}
-            />
-          </div>
+          />
         </div>
       </div>
     </div>
