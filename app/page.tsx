@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import SwapForm from "@/components/SwapForm";
 import Footer from "@/components/Footer";
 
-// Dynamic components (client-only)
+// Client-only heavy components
+const SwapForm = dynamic(() => import("@/components/SwapForm"), { ssr: false });
 const InfoCarousel = dynamic(() => import("@/components/InfoCarousel"), {
   ssr: false,
   loading: () => (
@@ -30,6 +30,25 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
     </div>
   ),
 });
+
+// Quick Farcaster share (generic copy; TokensBurned already has a detailed one)
+function FarcasterShare() {
+  const text =
+    "🔥 Swap on TobySwap (Base) — 1% auto-burn to $TOBY. Join the lore 🐸 https://tobyswap.vercel.app";
+  const href = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="pill pill-opaque hover:opacity-90 text-xs"
+      title="Share on Farcaster"
+    >
+      Share on Farcaster
+    </a>
+  );
+}
 
 // Micro blur placeholder
 const BLUR =
@@ -66,16 +85,15 @@ export default function Page() {
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-6 w-full">
               <span className="pill bg-[var(--glass)] text-sm">1% auto-burn to $TOBY 🔥</span>
-              <span className="pill bg-[var(--glass)] text-sm">
-                Swap USDC, WETH, Patience, Taboshi
-              </span>
-              <span className="pill bg-[var(--glass)] text-sm">
-                Fuel the meme · Join the lore 🐸
-              </span>
+              <span className="pill bg-[var(--glass)] text-sm">Swap USDC, WETH, Patience, Taboshi</span>
+              <span className="pill bg-[var(--glass)] text-sm">Fuel the meme · Join the lore 🐸</span>
             </div>
 
-            <div className="w-full max-w-full sm:max-w-[520px]">
+            <div className="w-full max-w-full sm:max-w-[520px] content-visible">
               <SwapForm />
+              <div className="mt-3 flex gap-2 items-center">
+                <FarcasterShare />
+              </div>
               <TokensBurned />
             </div>
           </div>
