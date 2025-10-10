@@ -4,6 +4,7 @@
 
 /* ---------- Theme tokens ---------- */
 :root{
+  color-scheme: dark;
   --bg:#0a0b12;
   --glass:rgba(255,255,255,.08);
   --glass-strong:rgba(255,255,255,.12);
@@ -27,7 +28,13 @@
 }
 
 html, body { background: var(--bg); color: var(--ink); }
-body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
+body {
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
 
 /* Utility text color bridges */
 .text-inkSub, .text-ink-sub { color: var(--ink-sub); }
@@ -35,8 +42,10 @@ body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 .text-danger { color: var(--danger); }
 .text-success { color: var(--success); }
 
-/* ---------- Shadows ---------- */
+/* ---------- Layout helpers / perf ---------- */
 .shadow-soft { box-shadow: var(--shadow-soft); }
+.content-visible { content-visibility: auto; contain-intrinsic-size: 600px auto; } /* faster initial paint for big cards */
+.safe-pb { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
 
 /* ---------- Glass + Pills ---------- */
 .glass {
@@ -108,7 +117,7 @@ a.link:hover, .link:hover { border-bottom-color: rgba(121,255,225,.7); opacity: 
 [data-rk]{ z-index:60; }
 [data-rk] [role="dialog"]{ background:rgba(15,15,20,.98)!important; border:1px solid rgba(255,255,255,.08)!important; box-shadow:0 24px 80px rgba(0,0,0,.8)!important; border-radius:20px!important; }
 [data-rk]::backdrop, [data-rk] ._overlay{ background:rgba(0,0,0,.75)!important; }
-/* Do NOT override all [data-rk] buttons—this keeps wallet options visible */
+/* Do NOT override all [data-rk] buttons — keeps wallet options visible */
 
 /* ---------- Swap "pip" dots ---------- */
 .pip{ width:6px; height:6px; border-radius:9999px; background:currentColor; opacity:.45; display:inline-block; }
