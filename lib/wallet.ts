@@ -21,5 +21,4 @@ export const wagmiConfig = createConfig({
   // Persist to cookies so SSR hydration never flips state
   storage: createStorage({ storage: cookieStorage }),
   ssr: true,
-  autoConnect: true, // 🔥 restores an injected session automatically
 });
