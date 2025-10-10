@@ -1,3 +1,4 @@
+// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -8,7 +9,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 
-/** Sticky, low-churn allowance reader */
+/** Sticky reader that avoids UI flicker while queries revalidate */
 export function useStickyAllowance(
   token?: Address,
   owner?: Address,
@@ -23,8 +24,9 @@ export function useStickyAllowance(
     args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
     query: {
       enabled,
-      refetchInterval: 10_000,
-      staleTime: 8_000,
+      // less churn = less flicker
+      refetchInterval: 20_000,
+      staleTime: 15_000,
       refetchOnWindowFocus: false,
       retry: 2,
       placeholderData: (prev: unknown) => prev,
@@ -36,8 +38,10 @@ export function useStickyAllowance(
 
   useEffect(() => {
     if (typeof data === "bigint") {
-      lastGood.current = data;
-      setValue(data);
+      if (lastGood.current !== data) {
+        lastGood.current = data;
+        setValue(data);
+      }
     } else if (lastGood.current !== undefined) {
       setValue(lastGood.current);
     }
@@ -46,14 +50,17 @@ export function useStickyAllowance(
   return { value, isLoading: isFetching, error, refetch };
 }
 
-/** Robust “max” approve flow (zero first if nonzero, then set max) */
 export function useApprove(token?: Address, spender?: Address) {
-  const { writeContractAsync, data: writeHash, isPending: isWritePending } = useWriteContract();
-  const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash: writeHash });
+  const { writeContractAsync, data: writeHash, isPending: isWritePending } =
+    useWriteContract();
+  const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({
+    hash: writeHash,
+  });
 
   const approveMaxFlow = useCallback(
     async (currentAllowance?: bigint) => {
       if (!token || !spender) throw new Error("Missing token/spender");
+      // some wallets/erc20s require reset to 0 before max
       if (currentAllowance && currentAllowance > 0n) {
         await writeContractAsync({
           address: token,
@@ -61,7 +68,6 @@ export function useApprove(token?: Address, spender?: Address) {
           functionName: "approve",
           args: [spender, 0n],
         });
-        await new Promise((r) => setTimeout(r, 1200)); // Base confirms fast
       }
       return writeContractAsync({
         address: token,
@@ -73,5 +79,9 @@ export function useApprove(token?: Address, spender?: Address) {
     [token, spender, writeContractAsync]
   );
 
-  return { approveMaxFlow, isPending: isWritePending || isWaiting, txHash: writeHash };
+  return {
+    approveMaxFlow,
+    isPending: isWritePending || isWaiting,
+    txHash: writeHash,
+  };
 }
