@@ -1,3 +1,4 @@
+// components/Wallet.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -14,9 +15,7 @@ import { wagmiConfig } from "@/lib/wallet";
 import { base } from "viem/chains";
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { refetchOnWindowFocus: false, retry: 1, staleTime: 10_000 },
-  },
+  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
 });
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -27,81 +26,58 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* small helpers */
-function useMounted() {
+const pretty = (a?: `0x${string}`) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
+const useMounted = () => {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
-}
-const pretty = (a?: `0x${string}`) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
-
-/** Detect Coinbase Wallet in-app browser. */
-function isCoinbaseEnv() {
+};
+const isWalletBrowser = () => {
   if (typeof window === "undefined") return false;
-  const w = window as any;
-  return !!w.ethereum?.isCoinbaseWallet || /CoinbaseWallet/i.test(navigator.userAgent);
-}
+  const eth: any = (window as any).ethereum;
+  // any injected EIP-1193 provider counts
+  return !!eth || /MetaMask|Rabby|OKX|CoinbaseWallet/i.test(navigator.userAgent);
+};
 
 export function WalletPill() {
   const mounted = useMounted();
+  const inWalletUa = isWalletBrowser();
 
-  const { connectors, connect, isPending, status, error, reset } = useConnect();
-  const { address, isConnected, isReconnecting } = useAccount();
-  const chainId = useChainId();
+  const { connectors, connect, status, isPending, error, reset } = useConnect();
+  const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const chainId = useChainId();
   const { switchChain, isPending: switching } = useSwitchChain();
 
-  // pick best connector for this environment
-  const cb = useMemo(
-    () => connectors.find((c) => c.id === "coinbaseWalletSDK"),
-    [connectors]
-  );
   const injected = useMemo(
     () => connectors.find((c) => c.id === "injected"),
     [connectors]
   );
-  const preferred = isCoinbaseEnv() && cb?.ready ? cb : injected?.ready ? injected : undefined;
 
-  /* 1) Auto-connect only once when we have a ready connector. */
+  // 1) Auto-connect in wallet UAs (once)
   useEffect(() => {
-    if (!mounted || !preferred) return;
-    if (isConnected || isReconnecting) return;
-    // Some wallets require a user gesture; if this throws we simply show the button.
+    if (!mounted || !injected?.ready || !inWalletUa) return;
+    if (isConnected) return;
     try {
-      connect({ connector: preferred });
+      connect({ connector: injected });
     } catch {
-      /* ignored */
+      /* some wallets require user gesture; button below remains */
     }
-  }, [mounted, preferred, isConnected, isReconnecting, connect]);
+  }, [mounted, injected, inWalletUa, isConnected, connect]);
 
-  /* 2) Auto-switch to Base after connect. */
+  // 2) Auto-switch to Base once connected
   useEffect(() => {
     if (!isConnected) return;
     if (chainId !== base.id) {
       try {
         switchChain({ chainId: base.id });
-      } catch {
-        /* ignored */
-      }
+      } catch {}
     }
   }, [isConnected, chainId, switchChain]);
 
   if (!mounted) return null;
 
-  // No usable connector in this runtime
-  if (!preferred) {
-    return (
-      <button
-        className="pill pill-opaque opacity-70 cursor-not-allowed"
-        title="Open in your wallet’s in-app browser (MetaMask, Coinbase, Rabby) or install a wallet extension."
-        aria-disabled
-      >
-        No Wallet Detected
-      </button>
-    );
-  }
-
-  // Connected
+  // connected state
   if (isConnected) {
     const wrong = chainId !== base.id;
     return (
@@ -116,7 +92,20 @@ export function WalletPill() {
     );
   }
 
-  // Disconnected
+  // not connected — show a clear instruction based on environment
+  if (!injected?.ready) {
+    // no injected provider => tell user how to open the dapp
+    return (
+      <a
+        className="pill pill-opaque"
+        href={typeof window !== "undefined" ? window.location.href : "/"}
+        title="Open this link inside your wallet’s in-app browser (MetaMask, Coinbase, Rabby)"
+      >
+        Open in Wallet App
+      </a>
+    );
+  }
+
   const label = isPending || status === "pending" ? "Connecting…" : "Connect";
   return (
     <button
@@ -124,9 +113,9 @@ export function WalletPill() {
       disabled={isPending}
       onClick={() => {
         if (error) reset();
-        connect({ connector: preferred });
+        connect({ connector: injected });
       }}
-      title={isCoinbaseEnv() ? "Connect with Coinbase Wallet" : "Connect injected wallet"}
+      title="Connect injected wallet"
     >
       {label}
     </button>
