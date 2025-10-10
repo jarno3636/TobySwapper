@@ -25,20 +25,23 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
         const connected = ready && !!account?.address;
         const onBase = connected && chain?.id === base.id && !chain?.unsupported;
 
-        // STATUS
+        // Status
         const showSwitch = connected && !onBase;
         const label = connected ? truncate(account?.address) : "Not Connected";
-        const dot =
-          showSwitch ? "bg-amber-400" : connected ? "bg-[var(--accent)]" : "bg-[var(--danger)]";
+        const dot = showSwitch
+          ? "bg-amber-400"
+          : connected
+          ? "bg-[var(--accent)]"
+          : "bg-[var(--danger)]";
 
-        // ACTION
+        // Action
         const onClick = showSwitch
           ? openChainModal
           : connected
           ? openAccountModal
           : openConnectModal;
 
-        // TEXT
+        // Text
         const text = showSwitch
           ? "Switch to Base"
           : connected
@@ -48,7 +51,9 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
           : "Not Connected";
 
         // Hydration guard — avoid flicker
-        const hidden = ready ? {} : { opacity: 0, pointerEvents: "none" };
+        const hidden: React.CSSProperties = ready
+          ? {}
+          : { opacity: 0, pointerEvents: "none" };
 
         return (
           <button
