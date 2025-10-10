@@ -3,7 +3,7 @@
 import "@rainbow-me/rainbowkit/styles.css";
 import {
   RainbowKitProvider,
-  ConnectButton, // used in <PillButton />
+  ConnectButton,
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
@@ -57,13 +57,9 @@ function PillButton({ fullWidth = false }: { fullWidth?: boolean }) {
         chain,
         openConnectModal,
         openAccountModal,
-        openChainModal,
       }) => {
         const connected = mounted && !!account && !!chain;
 
-        // Click behavior:
-        // - Not connected: open connect modal
-        // - Connected: open account modal (has Disconnect option)
         const onClick = () =>
           connected ? openAccountModal() : openConnectModal();
 
@@ -87,12 +83,10 @@ function PillButton({ fullWidth = false }: { fullWidth?: boolean }) {
   );
 }
 
-/** ---- Desktop header button — clean single pill ---- */
 export function WalletPill() {
   return <PillButton />;
 }
 
-/** ---- Mobile pill — full width ---- */
 export function ConnectPill() {
   return (
     <div className="w-full flex justify-center">
