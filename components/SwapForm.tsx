@@ -71,7 +71,9 @@ function useNetworkGuard() {
   const { switchChainAsync, isPending } = useSwitchChain();
   const isOnBase = chainId === base.id;
   const ensureBase = useCallback(async () => {
-    if (!isOnBase && !isPending) { try { await switchChainAsync({ chainId: base.id }); } catch {} }
+    if (!isOnBase && !isPending) {
+      try { await switchChainAsync({ chainId: base.id }); } catch {}
+    }
   }, [isOnBase, isPending, switchChainAsync]);
   return { isOnBase, ensureBase };
 }
@@ -400,7 +402,13 @@ export default function SwapForm() {
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
-        <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(true)}>Slippage: {slippage}%</button>
+
+        {/* Network badge */}
+        <div className="inline-flex items-center gap-2 text-xs text-inkSub">
+          <span>Network</span>
+          <img src="/tokens/baseeth.PNG" alt="Base" className="w-4 h-4 rounded-full" />
+          <span>Base</span>
+        </div>
       </div>
 
       {!isOnBase && (
@@ -411,7 +419,9 @@ export default function SwapForm() {
 
       {/* Token In */}
       <div className="space-y-2">
-        <label className="text-sm text-inkSub">Token In</label>
+        <label className="text-sm text-inkSub">
+          Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
+        </label>
         <TokenSelect
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           onChange={(a) => { setTokenIn(a); setAmt(""); }}
@@ -440,7 +450,9 @@ export default function SwapForm() {
       {/* Amount */}
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-inkSub">Amount {inMeta.symbol === "ETH" ? "(ETH)" : `(${inMeta.symbol})`}</label>
+          <label className="text-sm text-inkSub">
+            Amount {inMeta.symbol === "ETH" ? "(ETH • Base)" : `(${inMeta.symbol})`}
+          </label>
           <div className="text-xs text-inkSub">
             Bal: <span className="font-mono">
               {balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : "—"}
@@ -474,7 +486,7 @@ export default function SwapForm() {
         <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
 
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
-          <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol} balance.</div>
+          <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
         )}
 
         {/* Approve (only for ERC-20 inputs) */}
@@ -498,7 +510,9 @@ export default function SwapForm() {
 
       {/* Token Out & estimate */}
       <div className="space-y-2 mt-4">
-        <label className="text-sm text-inkSub">Token Out</label>
+        <label className="text-sm text-inkSub">
+          Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
+        </label>
         <TokenSelect
           value={tokenOut}
           onChange={(v) => { setTokenOut(v); setAmt(""); }}
