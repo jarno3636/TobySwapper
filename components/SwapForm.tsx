@@ -1,50 +1,34 @@
+// components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Address,
-  formatUnits,
-  parseUnits,
-  isAddress,
-  createPublicClient,
-  http,
-  encodePacked,
-  encodeAbiParameters,
-  getAddress,                 // ✅ for checksum normalization
+  Address, formatUnits, parseUnits, isAddress,
+  encodePacked, encodeAbiParameters, getAddress,
 } from "viem";
 import { base } from "viem/chains";
 import {
-  useAccount,
-  usePublicClient,
-  useWriteContract,
-  useSwitchChain,
+  useAccount, usePublicClient, useWriteContract, useSwitchChain,
 } from "wagmi";
 import TokenSelect from "./TokenSelect";
 import {
-  TOKENS,
-  USDC,
-  WETH,
-  SWAPPER,
-  TOBY,
-  QUOTER_V3,
-  QUOTE_ROUTER_V2,           // ✅ v2 quoter
+  TOKENS, USDC, WETH, SWAPPER, TOBY, QUOTER_V3, QUOTE_ROUTER_V2,
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
+import { makeBaseClient } from "@/lib/rpc";
 
 /* ---------- Config ---------- */
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
+const QUOTE_TIMEOUT_MS = 5_000; // hard stop for snappy UX
 
 /* ---------- Minimal ABIs ---------- */
 const QuoterV2Abi = [
-  {
-    type: "function",
-    name: "quoteExactInput",
-    stateMutability: "nonpayable",
+  { type: "function", name: "quoteExactInput", stateMutability: "nonpayable",
     inputs: [{ name: "path", type: "bytes" }, { name: "amountIn", type: "uint256" }],
     outputs: [
       { name: "amountOut", type: "uint256" },
@@ -55,12 +39,8 @@ const QuoterV2Abi = [
   },
 ] as const;
 
-// tiny v2 router ABI for quoting
 const UniV2RouterAbi = [
-  {
-    type: "function",
-    name: "getAmountsOut",
-    stateMutability: "view",
+  { type: "function", name: "getAmountsOut", stateMutability: "view",
     inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],
     outputs: [{ name: "amounts", type: "uint256[]" }],
   },
@@ -78,36 +58,39 @@ const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLow
 const lc = (a: Address) => a.toLowerCase() as Address;
 const fmtEth = (wei: bigint, dec = 18) => Number(formatUnits(wei, dec)).toFixed(6);
 
-/* ---------- network guard (auto-switch to Base) ---------- */
+// small utility to timeout any promise
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error("Timeout")), ms);
+    p.then((v) => { clearTimeout(id); resolve(v); }).catch((e) => { clearTimeout(id); reject(e); });
+  });
+}
+
+/* ---------- network guard ---------- */
 function useNetworkGuard() {
   const { chainId } = useAccount();
   const { switchChainAsync, isPending } = useSwitchChain();
   const isOnBase = chainId === base.id;
   const ensureBase = useCallback(async () => {
-    if (!isOnBase && !isPending) {
-      try { await switchChainAsync({ chainId: base.id }); } catch {}
-    }
+    if (!isOnBase && !isPending) { try { await switchChainAsync({ chainId: base.id }); } catch {} }
   }, [isOnBase, isPending, switchChainAsync]);
   return { isOnBase, ensureBase };
 }
 
+/* ---------- resilient public client ---------- */
+let sharedClient: ReturnType<typeof makeBaseClient> | null = null;
 function useSafePublicClient() {
+  // prefer wagmi’s if present, else our resilient pool
   const wagmiClient = usePublicClient();
-  const rpcUrl =
-    process.env.NEXT_PUBLIC_RPC_BASE ||
-    (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
-      ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
-      : "https://mainnet.base.org");
-  return wagmiClient ?? createPublicClient({ chain: base, transport: http(rpcUrl) });
+  if (wagmiClient) return wagmiClient;
+  if (!sharedClient) sharedClient = makeBaseClient();
+  return sharedClient;
 }
 
 /* ---------- v3 path helpers (fixed) ---------- */
 function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
-
-  // ✅ normalize to checksummed addresses so viem's encoder never rejects
   const norm = tokens.map((t) => getAddress(t) as Address);
-
   let packed = encodePacked(["address"], [norm[0]]);
   for (let i = 0; i < fees.length; i++) {
     const fee = Number(fees[i]); // uint24 must be number
@@ -115,7 +98,6 @@ function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   }
   return packed;
 }
-
 function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const outAddr = tokenOut as Address;
@@ -141,7 +123,7 @@ function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
   return out.filter(c => { const k = `${c.tokens.join("->")}__${c.fees.join(",")}`; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-/* ---------- fee path (V2-style) ---------- */
+/* ---------- fee path for burn ---------- */
 function buildFeePathV2Like(inA: Address): Address[] {
   const inL = lc(inA);
   if (eq(inL, TOBY)) return [inL as Address, TOBY as Address];
@@ -162,7 +144,7 @@ export default function SwapForm() {
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Reset ETH->TOBY on account/chain change
+  // Reset default on account/chain change
   useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
 
   // Ensure Base when connected
@@ -178,13 +160,13 @@ export default function SwapForm() {
 
   // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
-  useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt.trim()), 280); return () => clearTimeout(id); }, [amt]);
+  useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt.trim()), 240); return () => clearTimeout(id); }, [amt]);
 
   const amountInBig = useMemo(() => { try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }}, [debouncedAmt, inMeta.decimals]);
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ---------- feeBps from swapper ---------- */
+  /* ---------- feeBps ---------- */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => { (async () => {
     try {
@@ -205,7 +187,6 @@ export default function SwapForm() {
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [debugPath, setDebugPath] = useState<string | undefined>();
 
-  // small guard to avoid spamming client during re-renders
   const quoteLatch = useRef<number>(0);
 
   useEffect(() => {
@@ -216,54 +197,59 @@ export default function SwapForm() {
       setQuoteState("loading");
       const myLatch = ++quoteLatch.current;
 
-      // v3 attempt
+      // v3 attempt with timeout
       let bestOut: bigint | undefined;
       let best: { tokens: Address[]; fees: number[] } | undefined;
 
       try {
-        for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
-          try {
-            const path = encodeV3Path(cand.tokens, cand.fees);
-            const res = (await client.readContract({
-              address: QUOTER_V3 as Address,
-              abi: QuoterV2Abi as any,
-              functionName: "quoteExactInput",
-              args: [path, mainAmountIn],
-            })) as [bigint];
-            const amountOut = res[0];
-            if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
-          } catch (e: any) {
-            // continue trying other paths
-            if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
-            continue;
+        const tryAllV3 = (async () => {
+          for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
+            try {
+              const path = encodeV3Path(cand.tokens, cand.fees);
+              const [amountOut] = (await client.readContract({
+                address: QUOTER_V3 as Address,
+                abi: QuoterV2Abi as any,
+                functionName: "quoteExactInput",
+                args: [path, mainAmountIn],
+              })) as [bigint];
+              if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
+            } catch { /* keep trying other paths */ }
           }
-        }
-      } catch {}
+        })();
+        await withTimeout(tryAllV3, QUOTE_TIMEOUT_MS);
+      } catch {
+        // timed out – we'll fall back to v2
+      }
 
-      // if no v3, try v2 paths
+      // if no v3, try a couple v2 paths (also with timeout)
       if (!bestOut) {
-        const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-        const v2Paths: Address[][] = [
-          [inAddr, tokenOut as Address],
-          [inAddr, WETH as Address, tokenOut as Address],
-          [inAddr, USDC as Address, tokenOut as Address],
-        ];
-        for (const p of v2Paths) {
-          try {
-            const amounts = (await client.readContract({
-              address: QUOTE_ROUTER_V2 as Address,
-              abi: UniV2RouterAbi as any,
-              functionName: "getAmountsOut",
-              args: [mainAmountIn, p],
-            })) as bigint[];
-            const out = amounts[amounts.length - 1];
-            if (out > 0n && (!bestOut || out > bestOut)) {
-              bestOut = out;
-              best = undefined; // this is v2
-              setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`);
+        try {
+          const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+          const v2Paths: Address[][] = [
+            [inAddr, tokenOut as Address],
+            [inAddr, WETH as Address, tokenOut as Address],
+            [inAddr, USDC as Address, tokenOut as Address],
+          ];
+          const tryAllV2 = (async () => {
+            for (const p of v2Paths) {
+              try {
+                const amounts = (await client.readContract({
+                  address: QUOTE_ROUTER_V2 as Address,
+                  abi: UniV2RouterAbi as any,
+                  functionName: "getAmountsOut",
+                  args: [mainAmountIn, p],
+                })) as bigint[];
+                const out = amounts[amounts.length - 1];
+                if (out > 0n && (!bestOut || out > bestOut)) {
+                  bestOut = out;
+                  best = undefined; // v2
+                  setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`);
+                }
+              } catch {}
             }
-          } catch { /* keep trying */ }
-        }
+          })();
+          await withTimeout(tryAllV2, QUOTE_TIMEOUT_MS);
+        } catch {}
       }
 
       if (!alive || myLatch !== quoteLatch.current) return;
@@ -280,6 +266,7 @@ export default function SwapForm() {
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
+        setQuoteErr("All routers timed out or returned 0 liquidity.");
       }
     })();
     return () => { alive = false; };
@@ -295,14 +282,12 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [quoteOutMain, slippage, outMeta.decimals]);
 
-  /* ---------- allowance / approval (no flicker) ---------- */
+  /* ---------- allowance / approval (stable) ---------- */
   const tokenInAddr = inMeta.address as Address | undefined;
   const needsApproval = !!tokenInAddr;
   const { value: allowanceValue, isLoading: isAllowanceLoading, refetch: refetchAllowance } =
     useStickyAllowance(tokenInAddr, address as Address | undefined, SWAPPER as Address);
   const { approveMaxFlow, isPending: isApproving } = useApprove(tokenInAddr, SWAPPER as Address);
-
-  // after sending approve, pause re-checks briefly to avoid button flipping
   const [approveCooldown, setApproveCooldown] = useState(false);
 
   const onApprove = useCallback(async () => {
@@ -310,7 +295,6 @@ export default function SwapForm() {
     setApproveCooldown(true);
     try {
       await approveMaxFlow(allowanceValue);
-      // give the node/indexer a second to catch up, then refetch
       setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
     } catch {
       setApproveCooldown(false);
@@ -318,9 +302,7 @@ export default function SwapForm() {
   }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
 
   const showApproveButton =
-    needsApproval &&
-    amountInBig > 0n &&
-    (allowanceValue ?? 0n) < amountInBig;
+    needsApproval && amountInBig > 0n && (allowanceValue ?? 0n) < amountInBig;
 
   const approveText =
     isApproving ? "Approving…" :
@@ -346,115 +328,72 @@ export default function SwapForm() {
 
     try {
       if (tokenIn === "ETH") {
-        // ETH -> token via V2 function in your swapper
-        const sim = await client.simulateContract({
+        const sim = await withTimeout(client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
-          args: [
-            lc(tokenOut),
-            parseUnits(minOutMainHuman, decOut),
-            [WETH as Address, tokenOut],
-            feePath,
-            0n,
-            deadline,
-          ],
+          args: [ lc(tokenOut), parseUnits(minOutMainHuman, decOut), [WETH as Address, tokenOut], feePath, 0n, deadline ],
           value: parseUnits(amt || "0", 18),
           account: address as Address,
           chain: base,
-        });
-        const gas = sim.request.gas ?? 0n;
-        const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
-        const totalNeeded = (sim.request.value ?? 0n) + gas * feePerGas;
-        const bal = await client.getBalance({ address: address as Address });
-        if (bal < totalNeeded) { setPreflightMsg(`Not enough ETH. You have ${fmtEth(bal)}; need ~${fmtEth(totalNeeded)} incl. gas.`); setSending(false); return; }
+        }), 10_000);
         await writeContractAsync(sim.request);
         setSending(false);
         return;
       }
 
-      // ERC20 -> token: prefer v3 execution if we found a v3 quote
       if (bestV3) {
         if ((allowanceValue ?? 0n) < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
-
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
-          [
-            {
-              type: "tuple",
-              components: [
-                { name: "path", type: "bytes" },
-                { name: "recipient", type: "address" },
-                { name: "deadline", type: "uint256" },
-                { name: "amountIn", type: "uint256" },
-                { name: "amountOutMinimum", type: "uint256" },
-              ],
-            },
-          ],
-          [
-            {
-              path: v3Path,
-              recipient: address as Address,
-              deadline,
-              amountIn: parseUnits(amt || "0", decIn),
-              amountOutMinimum: parseUnits(minOutMainHuman, decOut),
-            },
-          ]
-        );
-
-        const sim = await client.simulateContract({
+          [{
+            type: "tuple",
+            components: [
+              { name: "path", type: "bytes" },
+              { name: "recipient", type: "address" },
+              { name: "deadline", type: "uint256" },
+              { name: "amountIn", type: "uint256" },
+              { name: "amountOutMinimum", type: "uint256" },
+            ],
+          }],
+          [{ path: v3Path, recipient: address as Address, deadline,
+             amountIn: parseUnits(amt || "0", decIn),
+             amountOutMinimum: parseUnits(minOutMainHuman, decOut) }]);
+        const sim = await withTimeout(client.simulateContract({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "swapTokensForTokensV3ExactInput",
-          args: [
-            lc(inAddr),
-            lc(tokenOut),
-            address as Address,
-            parseUnits(amt || "0", decIn),
-            paramsBytes,
-            feePath,
-            0n,
-          ],
+          args: [ lc(inAddr), lc(tokenOut), address as Address,
+                  parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
           account: address as Address,
           chain: base,
-        });
-
-        const gas = sim.request.gas ?? 0n;
-        const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
-        const totalNeeded = gas * feePerGas;
-        const bal = await client.getBalance({ address: address as Address });
-        if (bal < totalNeeded) { setPreflightMsg(`You need ~${fmtEth(totalNeeded)} ETH for gas, but only have ${fmtEth(bal)}.`); setSending(false); return; }
+        }), 10_000);
         await writeContractAsync(sim.request);
         setSending(false);
         return;
       }
 
-      // Fallback: no v3 path found -> V2 swap
-      const sim = await client.simulateContract({
+      // v2 fallback
+      const sim = await withTimeout(client.simulateContract({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
         functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
         args: [
-          lc(inAddr),
-          lc(tokenOut),
+          lc(inAddr), lc(tokenOut),
           parseUnits(amt || "0", decIn),
           parseUnits(minOutMainHuman, decOut),
-          [inAddr, tokenOut],
-          feePath,
-          0n,
-          deadline,
+          [inAddr, tokenOut], feePath, 0n, deadline,
         ],
         account: address as Address,
         chain: base,
-      });
-      const gas = sim.request.gas ?? 0n;
-      const feePerGas = (sim.request as any).maxFeePerGas ?? (await client.getGasPrice());
-      const totalNeeded = gas * feePerGas;
-      const bal = await client.getBalance({ address: address as Address });
-      if (bal < totalNeeded) { setPreflightMsg(`You need ~${fmtEth(totalNeeded)} ETH for gas, but only have ${fmtEth(bal)}.`); setSending(false); return; }
+      }), 10_000);
       await writeContractAsync(sim.request);
     } catch (e: any) {
-      setPreflightMsg(e?.shortMessage || e?.message || String(e));
+      const msg = e?.shortMessage || e?.message || String(e);
+      // friendlier surface
+      if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
+      else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Swapped to a backup—try again.");
+      else setPreflightMsg(msg);
     } finally {
       setSending(false);
     }
@@ -462,9 +401,7 @@ export default function SwapForm() {
 
   /* ---------- UI ---------- */
   const disableSwap =
-    !isConnected ||
-    !isOnBase ||
-    amountInBig === 0n ||
+    !isConnected || !isOnBase || amountInBig === 0n ||
     (balInRaw.value ?? 0n) < amountInBig ||
     (needsApproval && (allowanceValue ?? 0n) < amountInBig) ||
     sending;
@@ -549,7 +486,6 @@ export default function SwapForm() {
           placeholder="0.0"
           inputMode="decimal"
           autoComplete="off"
-          autoCorrect="off"
           spellCheck={false}
           name="swap-amount"
         />
