@@ -1,5 +1,4 @@
-// components/Wallet.tsx
-"use client";
+/"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -14,6 +13,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/lib/wallet";
 import { base } from "viem/chains";
 
+/* -------------------- Query client (cache tuning) -------------------- */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
   },
 });
 
+/* -------------------- Root provider -------------------- */
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -33,17 +34,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ————— Helpers ————— */
+/* -------------------- Helpers -------------------- */
 function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
 }
+
 function pretty(addr?: `0x${string}`) {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "";
 }
 
-/* ————— Auto-injected Connect Pill ————— */
+/* -------------------- Wallet Pill -------------------- */
 export function WalletPill() {
   const mounted = useMounted();
 
@@ -53,18 +55,17 @@ export function WalletPill() {
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: switching } = useSwitchChain();
 
-  // Prefer the injected connector (MetaMask, CB Wallet in-app, Rabby, etc.)
+  // Prefer the injected connector (MetaMask, Rabby, Coinbase in-app, etc.)
   const injected = useMemo(
     () => connectors.find((c) => c.id === "injected"),
     [connectors]
   );
 
-  // 1) Auto-connect when injected is ready and we’re not connected
+  /* ---------- 1. Auto-connect injected ---------- */
   useEffect(() => {
     if (!mounted) return;
-    if (!injected?.ready) return;           // no injected provider at runtime
+    if (!injected?.ready) return; // no provider in runtime
     if (isConnected || isReconnecting) return;
-    // Trigger the mutation; errors will be reflected in hook state
     try {
       connect({ connector: injected });
     } catch {
@@ -72,7 +73,7 @@ export function WalletPill() {
     }
   }, [mounted, injected, isConnected, isReconnecting, connect]);
 
-  // 2) Auto-switch to Base once connected
+  /* ---------- 2. Auto-switch to Base ---------- */
   useEffect(() => {
     if (!isConnected) return;
     if (chainId !== base.id) {
@@ -84,8 +85,10 @@ export function WalletPill() {
     }
   }, [isConnected, chainId, switchChain]);
 
+  /* ---------- 3. Render states ---------- */
   if (!mounted) return null;
 
+  // No injected wallet found (plain browser)
   if (!injected?.ready) {
     return (
       <button
@@ -98,6 +101,7 @@ export function WalletPill() {
     );
   }
 
+  // Connected
   if (isConnected) {
     const wrongNet = chainId !== base.id;
     return (
@@ -116,8 +120,8 @@ export function WalletPill() {
     );
   }
 
-  const label =
-    status === "connecting" || isPending ? "Connecting…" : "Connect Wallet";
+  // Disconnected – show connect button
+  const label = isPending ? "Connecting…" : "Connect Wallet";
 
   return (
     <button
