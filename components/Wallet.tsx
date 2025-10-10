@@ -1,7 +1,7 @@
 // components/Wallet.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   WagmiProvider,
   useAccount,
@@ -50,11 +50,12 @@ function useMounted() {
   return m;
 }
 
-/* ───────── Injected-only Pill with <details> popover ─────────
-   - No document listeners (stable in wallet browsers)
-   - Auto-connect (best-effort) + soft switch to Base
-   - Status dot + Not Connected label
----------------------------------------------------------------- */
+/* ───────── Injected-only Pill (one-click connect) + <details> popover ─────────
+   - No global listeners (very stable in wallet browsers)
+   - One-click on the pill connects when disconnected
+   - Always shows "Not Connected" when disconnected (no "No Wallet Detected")
+   - Softly switches to Base after connection
+--------------------------------------------------------------------------- */
 export function WalletPill() {
   const mounted = useMounted();
 
@@ -71,32 +72,20 @@ export function WalletPill() {
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
+  // Injected connector (MetaMask, Coinbase in-app, Rabby, OKX, etc.)
   const injected = useMemo(
     () => connectors.find((c) => c.id === "injected"),
     [connectors]
   );
 
-  // Auto-connect to injected if available (DApp browsers); safe best-effort
-  useEffect(() => {
-    if (!mounted) return;
-    if (!injected || !(injected as any).ready) return;
-    if (isConnected || accountStatus === "reconnecting" || accountStatus === "connecting") return;
-    try {
-      connect({ connector: injected });
-    } catch {
-      /* some wallets block programmatic connect; user can click Connect */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, injected, isConnected, accountStatus]);
-
-  // Soft switch to Base after connect
+  // Soft switch to Base after connect (best-effort)
   useEffect(() => {
     if (!isConnected) return;
     if (chainId === base.id) return;
     switchChainAsync({ chainId: base.id }).catch(() => {});
   }, [isConnected, chainId, switchChainAsync]);
 
-  // Prevent SSR/CSR mismatch
+  // Avoid SSR/CSR mismatch flash
   if (!mounted) {
     return (
       <button className="pill pill-opaque" style={{ opacity: 0, pointerEvents: "none" }}>
@@ -105,7 +94,6 @@ export function WalletPill() {
     );
   }
 
-  const notDetected = !injected || !(injected as any).ready;
   const connecting =
     connectStatus === "pending" ||
     accountStatus === "connecting" ||
@@ -115,104 +103,103 @@ export function WalletPill() {
     ? `${address?.slice(0, 6)}…${address?.slice(-4)}`
     : connecting
     ? "Connecting…"
-    : notDetected
-    ? "No Wallet Detected"
     : "Not Connected";
 
   const dotClass = isConnected ? "bg-[var(--accent)]" : "bg-[var(--danger)]";
 
-  // Popover actions
-  const onConnect = () => {
-    if (!injected) return;
-    if (error) reset();
-    connect({ connector: injected });
-  };
-  const onDisconnect = () => disconnect();
-  const onSwitchBase = () => switchChainAsync({ chainId: base.id });
+  // Popover helpers
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const closeMenu = () => detailsRef.current?.removeAttribute("open");
 
-  // Native <details> avoids global listeners and is keyboard accessible
+  const onConnect = () => {
+    if (error) reset(); // clear stale errors
+    if (injected) connect({ connector: injected });
+    else connect(); // attempt default if no injected surfaced yet
+  };
+  const onDisconnect = () => {
+    disconnect();
+    closeMenu();
+  };
+  const onSwitchBase = () => {
+    switchChainAsync({ chainId: base.id }).finally(closeMenu);
+  };
+
+  // One-click behavior:
+  // - If not connected -> clicking the pill attempts connect and DOES NOT open menu
+  // - If connected -> clicking toggles the menu
+  const onSummaryClick: React.MouseEventHandler<HTMLElement> = (e) => {
+    if (!isConnected) {
+      e.preventDefault(); // stop <details> from toggling
+      if (!connecting) onConnect();
+    }
+  };
+
   return (
-    <details className="relative group">
+    <details ref={detailsRef} className="relative group">
       <summary
         className={[
           "list-none inline-flex items-center gap-1 cursor-pointer select-none",
           "pill",
           isConnected ? "pill-nav" : "pill-opaque",
-          notDetected ? "opacity-70 cursor-not-allowed" : "",
         ].join(" ")}
-        // prevent opening when no wallet is detected
-        onClick={(e) => {
-          if (notDetected) e.preventDefault();
-        }}
-        aria-label="Wallet menu"
+        onClick={onSummaryClick}
+        aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
       >
         <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
         <span className="ml-1.5">{label}</span>
       </summary>
 
-      {/* Popover panel */}
+      {/* Popover panel (only useful when connected) */}
       <div
         className="absolute right-0 mt-2 min-w-[220px] rounded-2xl glass shadow-soft p-2 z-50"
-        // close the popover when it loses focus
         onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            (e.currentTarget.parentElement as HTMLDetailsElement)?.removeAttribute("open");
-          }
-        }}
-        // click on any button should close afterwards (native behavior on summary click only)
-        onClick={() => {
-          // close only if the click is not on the summary (which toggles)
-          const d = (event?.currentTarget as HTMLElement)?.closest("details") as HTMLDetailsElement | null;
-          d?.removeAttribute("open");
+          if (e.key === "Escape") closeMenu();
         }}
       >
         {isConnected && address ? (
           <>
             <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
+
             <button
               className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-              onClick={async (e) => {
-                e.stopPropagation();
+              onClick={async () => {
                 try { await navigator.clipboard.writeText(address); } catch {}
+                closeMenu();
               }}
             >
               Copy Address
             </button>
+
             {chainId !== base.id && (
               <button
                 className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-                onClick={(e) => { e.stopPropagation(); onSwitchBase(); }}
+                onClick={onSwitchBase}
                 disabled={switching}
                 aria-busy={switching}
               >
                 {switching ? "Switching…" : "Switch to Base"}
               </button>
             )}
+
             <button
               className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1 text-danger"
-              onClick={(e) => { e.stopPropagation(); onDisconnect(); }}
+              onClick={onDisconnect}
             >
               Disconnect
             </button>
           </>
-        ) : notDetected ? (
-          <div className="px-2 py-1.5 text-xs text-inkSub">
-            No injected wallet detected. Open in a wallet’s in-app browser (MetaMask, Coinbase, Rabby, OKX, etc.) or install an extension.
-          </div>
         ) : (
+          // If a user manually opens via keyboard while disconnected, offer connect again
           <>
-            <div className="px-2 py-1.5 text-xs text-inkSub">Injected wallet available.</div>
+            <div className="px-2 py-1.5 text-xs text-inkSub">Wallet</div>
             <button
               className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
-              onClick={(e) => { e.stopPropagation(); onConnect(); }}
+              onClick={() => { onConnect(); closeMenu(); }}
               disabled={connecting}
               aria-busy={connecting}
             >
               {connecting ? "Connecting…" : "Connect (Injected)"}
             </button>
-            <div className="px-2 py-1.5 text-[11px] text-inkSub">
-              Tip: if nothing happens, your wallet may require a tap inside its browser.
-            </div>
           </>
         )}
       </div>
