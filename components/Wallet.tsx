@@ -39,7 +39,6 @@ function useMounted() {
   useEffect(() => setM(true), []);
   return m;
 }
-
 function pretty(addr?: `0x${string}`) {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "";
 }
@@ -65,23 +64,28 @@ export function WalletPill() {
     if (!mounted) return;
     if (!injected?.ready) return;           // no injected provider at runtime
     if (isConnected || isReconnecting) return;
-    // Some wallet UAs block programmatic connect unless user gestures; ignore errors
-    connect({ connector: injected }).catch(() => void 0);
+    // Trigger the mutation; errors will be reflected in hook state
+    try {
+      connect({ connector: injected });
+    } catch {
+      /* ignore */
+    }
   }, [mounted, injected, isConnected, isReconnecting, connect]);
 
   // 2) Auto-switch to Base once connected
   useEffect(() => {
     if (!isConnected) return;
     if (chainId !== base.id) {
-      // If wallet blocks auto-switch, the user can still tap the pill to try again
-      switchChain({ chainId: base.id }).catch(() => void 0);
+      try {
+        switchChain({ chainId: base.id });
+      } catch {
+        /* ignore */
+      }
     }
   }, [isConnected, chainId, switchChain]);
 
-  // Render nothing until mounted to avoid hydration flicker
   if (!mounted) return null;
 
-  // No injected wallet detected at all (regular mobile/desktop browser with no extension)
   if (!injected?.ready) {
     return (
       <button
@@ -94,7 +98,6 @@ export function WalletPill() {
     );
   }
 
-  // Connected state
   if (isConnected) {
     const wrongNet = chainId !== base.id;
     return (
@@ -113,7 +116,6 @@ export function WalletPill() {
     );
   }
 
-  // Disconnected – show Connect (retry-friendly)
   const label =
     status === "connecting" || isPending ? "Connecting…" : "Connect Wallet";
 
@@ -122,9 +124,12 @@ export function WalletPill() {
       className="pill pill-opaque"
       disabled={isPending}
       onClick={() => {
-        // If a previous attempt errored, reset wagmi connect state first
         if (error) reset();
-        connect({ connector: injected }).catch(() => void 0);
+        try {
+          connect({ connector: injected });
+        } catch {
+          /* ignore */
+        }
       }}
       title="Connect injected wallet"
     >
