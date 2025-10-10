@@ -27,11 +27,10 @@
 }
 
 html, body { background: var(--bg); color: var(--ink); }
-body { min-height: 100dvh; }
+body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
 
 /* Utility text color bridges */
 .text-inkSub, .text-ink-sub { color: var(--ink-sub); }
-/* Extra helpers you use in components */
 .text-warn { color: var(--warn); }
 .text-danger { color: var(--danger); }
 .text-success { color: var(--success); }
@@ -76,20 +75,16 @@ body { min-height: 100dvh; }
   box-shadow: var(--shadow-soft);
   transition: background-color .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
 }
-/* Opaque pill (general header/menu) */
 .pill-opaque {
   background: rgba(255,255,255,.10);
   border: 1px solid rgba(255,255,255,.12);
 }
 .pill-opaque:hover { background: rgba(255,255,255,.14); }
-/* Stronger accent pill for selected states */
 .pill-nav {
   background: rgba(255,255,255,.22);
   border: 1px solid rgba(255,255,255,.28);
 }
-.pill-nav:hover {
-  background: rgba(255,255,255,.28);
-}
+.pill-nav:hover { background: rgba(255,255,255,.28); }
 
 /* Disabled pill look */
 .pill[disabled],
@@ -153,11 +148,10 @@ a.link:hover, .link:hover {
 
 /* ---------- Mobile menu sheet (opaque) ---------- */
 .menu-sheet {
-  background: #0f1117; /* opaque dark */
+  background: #0f1117;
   border-left: 1px solid rgba(255,255,255,.10);
   box-shadow: 0 24px 80px rgba(0,0,0,.7);
 }
-/* Overlay matches Brand.tsx now: dark + blurred */
 .menu-overlay {
   background: rgba(0,0,0,.80);
   -webkit-backdrop-filter: blur(4px);
@@ -173,7 +167,7 @@ a.link:hover, .link:hover {
 .menu-sheet[aria-hidden="true"],
 .menu-sheet:not(.open) { pointer-events: none; }
 
-/* ---------- RainbowKit overrides ---------- */
+/* ---------- RainbowKit overrides (non-destructive) ---------- */
 [data-rk] { z-index: 60; }
 [data-rk] [role="dialog"]{
   background: rgba(15,15,20,0.98) !important;
@@ -184,14 +178,8 @@ a.link:hover, .link:hover {
 [data-rk]::backdrop,
 [data-rk] ._overlay { background: rgba(0,0,0,.75) !important; }
 
-/* Ensure RainbowKit’s default button styles don’t peek through
-   when using ConnectButton.Custom with your own .pill */
-[data-rk] button {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
+/* ⚠️ IMPORTANT: Do NOT restyle ALL [data-rk] buttons (it hides wallet options)
+   If you want a custom look for your header connect button, style your .pill only. */
 
 /* ---------- Pip dots used in Swap button ---------- */
 .pip {
@@ -213,14 +201,10 @@ a.link:hover, .link:hover {
 .pip-c { animation: pip-bounce 1.2s .30s infinite; }
 
 /* ---------- Wheel / misc animations ---------- */
-@keyframes wheel-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
+@keyframes wheel-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .spin-slow { animation: wheel-spin 28s linear infinite; }
 .pause-on-hover:hover { animation-play-state: paused; }
 
-/* keep it accessible */
 @media (prefers-reduced-motion: reduce) {
   .spin-slow { animation: none !important; }
 }
@@ -258,3 +242,6 @@ a.link:hover, .link:hover {
   from { opacity: 0; transform: translateY(30px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ---------- Small QoL ---------- */
+* { -webkit-tap-highlight-color: transparent; }
