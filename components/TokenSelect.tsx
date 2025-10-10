@@ -5,8 +5,9 @@ import type { Address } from "viem";
 import { useMemo } from "react";
 
 const iconMap: Record<string, string> = {
+  ETH: "/tokens/baseeth.PNG",       // 👈 Base ETH icon
+  WETH: "/tokens/baseeth.PNG",      // show ETH icon for WETH in UI
   USDC: "/tokens/usdc.PNG",
-  WETH: "/tokens/weth.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
   TABOSHI: "/tokens/taboshi.PNG",
@@ -26,11 +27,13 @@ export default function TokenSelect({
   exclude?: Address | string;
   balance?: string; // human readable
 }) {
-  // Determine selected token metadata
   const selected = useMemo(
     () => TOKENS.find((t) => eq(t.address, value)),
     [value]
   );
+
+  // For UI: display WETH as ETH and use Base icon
+  const displaySymbol = selected?.symbol === "WETH" ? "ETH" : (selected?.symbol ?? "Unknown");
 
   // Safe numeric balance
   const numBal = useMemo(() => {
@@ -57,15 +60,13 @@ export default function TokenSelect({
       >
         {availableTokens.map((t) => (
           <option key={t.address} value={t.address}>
-            {t.symbol}
+            {t.symbol === "WETH" ? "ETH" : t.symbol}
           </option>
         ))}
-        {/* Show excluded token as disabled option (visual only) */}
         {exclude &&
           !availableTokens.some((t) => eq(t.address, String(exclude))) && (
             <option disabled>
-              {TOKENS.find((t) => eq(t.address, String(exclude)))?.symbol ??
-                "—"}
+              {TOKENS.find((t) => eq(t.address, String(exclude)))?.symbol ?? "—"}
             </option>
           )}
       </select>
@@ -75,8 +76,8 @@ export default function TokenSelect({
         <span className="inline-flex items-center gap-2">
           <span className="relative inline-block w-5 h-5 rounded-full overflow-hidden border border-white/10">
             <Image
-              src={iconMap[selected?.symbol ?? ""] ?? "/tokens/toby.PNG"}
-              alt={selected?.symbol ?? "token"}
+              src={iconMap[displaySymbol] ?? "/tokens/toby.PNG"}
+              alt={displaySymbol}
               fill
               sizes="20px"
               className="object-cover"
@@ -86,7 +87,7 @@ export default function TokenSelect({
               }}
             />
           </span>
-          {selected?.symbol ?? "Unknown"}
+          {displaySymbol}
         </span>
         <span className="font-mono text-right">{balText}</span>
       </div>
