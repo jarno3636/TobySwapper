@@ -9,7 +9,6 @@ type ShareCalloutProps = {
 };
 
 function formatCompact(n: number): string {
-  // 12,345,678 -> 12.35M etc.
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.00$/, "") + "B";
   if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
@@ -20,17 +19,17 @@ function formatCompact(n: number): string {
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
   const [burn, setBurn] = useState<string | null>(null);
 
-  // Fetch live burned total from our API (human float string)
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const r = await fetch("/api/burn/total", { next: { revalidate: 300 } });
+        // ❌ remove Next.js { next: { revalidate } } — client fetch doesn't support it
+        // ✅ either disable cache via RequestInit or add a timestamp to bust cache
+        const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
         const j = await r.json();
         if (mounted && j?.ok) {
           const floatVal = parseFloat(j.totalHuman);
-          const pretty =
-            Number.isFinite(floatVal) ? formatCompact(floatVal) : undefined;
+          const pretty = Number.isFinite(floatVal) ? formatCompact(floatVal) : undefined;
           setBurn(pretty ?? j.totalHuman);
         }
       } catch {
@@ -56,9 +55,9 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   const textEncoded = encodeURIComponent(line);
   const urlEncoded = encodeURIComponent(site);
 
-  // Warpcast compose (deep link w/ embeds[] so link previews your site)
+  // Farcaster compose (deep link; includes embeds[] for link preview)
   const farcasterHref = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
-  // Some users prefer a plain composer URL; keep as a visible fallback:
+  // Plain composer as web fallback
   const farcasterWebHref = `https://warpcast.com/~/compose?text=${textEncoded}`;
 
   // X / Twitter intent
@@ -112,7 +111,6 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         Warpcast Web
       </a>
 
-      {/* Tiny status */}
       {burn && (
         <span className="text-[10px] opacity-70 ml-1">
           live burned: {burn}
