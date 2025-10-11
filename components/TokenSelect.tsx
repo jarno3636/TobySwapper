@@ -6,7 +6,7 @@ import { useMemo } from "react";
 
 const iconMap: Record<string, string> = {
   ETH: "/tokens/baseeth.PNG",       // 👈 Base ETH icon
-  WETH: "/tokens/baseeth.PNG",      // show ETH icon for WETH in UI
+  WETH: "/tokens/weth.PNG",      // show ETH icon for WETH in UI
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
