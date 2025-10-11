@@ -1,20 +1,26 @@
 // app/api/burn/total/route.ts
 import { NextResponse } from "next/server";
-import {
-  createPublicClient,
-  http,
-  type Address,
-  parseAbi,
-} from "viem";
+import { createPublicClient, http, type Address, parseAbi } from "viem";
 import { base } from "viem/chains";
 
-// === CONFIG ===
-// Required: your burn-tracker contract address and ABI JSON.
-// Example assumes you add your ABI as "@/abi/BurnTracker.json"
-// and that it has a view like: totalBurned() returns (uint256)
-import BurnTrackerAbi from "@/abi/BurnTracker.json";
+// 👉 Your ABI (drop the JSON file at abi/TobySwapper.json)
+import TobySwapperAbi from "@/abi/TobySwapper.json";
 
-// Optional: read ERC20 decimals from the TOBY token for scaling
+// If you already export SWAPPER / TOBY in "@/lib/addresses", we’ll use those.
+// Otherwise, set env vars SWAPPER_ADDRESS and NEXT_PUBLIC_TOBY.
+let SWAPPER_FROM_LIB: Address | undefined;
+let TOBY_FROM_LIB: Address | undefined;
+try {
+  // Optional import; ignore if you don't have it.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const ADDR = require("@/lib/addresses");
+  SWAPPER_FROM_LIB = (ADDR.SWAPPER ?? ADDR.TOBY_SWAPPER) as Address | undefined;
+  TOBY_FROM_LIB = (ADDR.TOBY as Address) ?? undefined;
+} catch {
+  // no-op
+}
+
+// Minimal ERC20 ABI to read decimals()
 const ERC20_DECIMALS_ABI = parseAbi([
   "function decimals() view returns (uint8)"
 ]);
@@ -26,66 +32,64 @@ export async function GET() {
     const rpc = process.env.BASE_RPC_URL || "https://mainnet.base.org";
     const client = createPublicClient({ chain: base, transport: http(rpc) });
 
-    // REQUIRED: set these in your env
-    const tracker = process.env.BURN_TRACKER_ADDRESS as Address; // your contract
-    if (!tracker) {
+    // Resolve contract addresses
+    const swapper =
+      (SWAPPER_FROM_LIB as Address) ||
+      (process.env.SWAPPER_ADDRESS as Address) ||
+      (process.env.NEXT_PUBLIC_SWAPPER as Address);
+
+    if (!swapper) {
       return NextResponse.json(
-        { ok: false, error: "Missing BURN_TRACKER_ADDRESS env var" },
+        { ok: false, error: "Missing SWAPPER address (set SWAPPER_ADDRESS or NEXT_PUBLIC_SWAPPER, or export SWAPPER in lib/addresses)." },
         { status: 500 }
       );
     }
 
-    // If your function name is different, set BURN_TRACKER_FN (default: "totalBurned")
-    const fn = (process.env.BURN_TRACKER_FN || "totalBurned") as any;
+    const toby =
+      (TOBY_FROM_LIB as Address) ||
+      (process.env.NEXT_PUBLIC_TOBY as Address);
 
-    // If your function takes arguments, you can JSON it in BURN_TRACKER_ARGS (e.g., '["0x..."]')
-    const argsEnv = process.env.BURN_TRACKER_ARGS;
-    const args = argsEnv ? (JSON.parse(argsEnv) as any[]) : undefined;
+    if (!toby) {
+      return NextResponse.json(
+        { ok: false, error: "Missing TOBY token address (set NEXT_PUBLIC_TOBY or export TOBY in lib/addresses)." },
+        { status: 500 }
+      );
+    }
 
-    // 1) Read raw burned (assumed uint256 in token base units)
+    // 1) Read raw burned total from your TobySwapper
     const totalRaw = (await client.readContract({
-      address: tracker,
-      abi: BurnTrackerAbi as any,
-      functionName: fn,
-      args,
+      address: swapper,
+      abi: TobySwapperAbi as any,
+      functionName: "totalTobyBurned",
     })) as bigint;
 
-    // 2) Scale to human using token decimals:
-    // Prefer reading from NEXT_PUBLIC_TOBY (ERC20), else use BURN_DECIMALS, else default 18
+    // 2) Read decimals from the TOBY ERC-20 for scaling (fallback 18)
     let decimals = 18;
-    const tokenAddr = process.env.NEXT_PUBLIC_TOBY as Address | undefined;
-
-    if (tokenAddr) {
-      try {
-        const d = (await client.readContract({
-          address: tokenAddr,
-          abi: ERC20_DECIMALS_ABI,
-          functionName: "decimals",
-        })) as number;
-        if (Number.isFinite(d)) decimals = d;
-      } catch {
-        // ignore, keep fallback
-      }
-    } else if (process.env.BURN_DECIMALS) {
-      const parsed = Number(process.env.BURN_DECIMALS);
-      if (Number.isFinite(parsed) && parsed > 0 && parsed <= 36) decimals = parsed;
+    try {
+      const d = (await client.readContract({
+        address: toby,
+        abi: ERC20_DECIMALS_ABI,
+        functionName: "decimals",
+      })) as number;
+      if (Number.isFinite(d)) decimals = d;
+    } catch {
+      // keep fallback 18
     }
 
     const denom = BigInt(10) ** BigInt(decimals);
     const whole = totalRaw / denom;
     const frac = totalRaw % denom;
-    const human = (Number(whole) + Number(frac) / Number(denom)).toString();
+    const totalHuman = (Number(whole) + Number(frac) / Number(denom)).toString();
 
     return NextResponse.json(
       {
         ok: true,
-        source: "tracker",
-        tracker,
-        fn,
-        args: args ?? [],
+        source: "tobySwapper.totalTobyBurned",
+        swapper,
+        toby,
         decimals,
         totalRaw: totalRaw.toString(),
-        totalHuman: human,
+        totalHuman,
       },
       {
         headers: {
