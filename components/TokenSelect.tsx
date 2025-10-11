@@ -1,20 +1,20 @@
 "use client";
 import Image from "next/image";
-import { TOKENS } from "@/lib/addresses";
-import type { Address } from "viem";
+import { TOKENS, NATIVE_ETH, TokenAddress, isNative } from "@/lib/addresses";
 import { useMemo } from "react";
 
 const iconMap: Record<string, string> = {
-  ETH: "/tokens/baseeth.PNG",       // Base ETH icon
-  WETH: "/tokens/weth.PNG",         // Wrapped ETH icon
+  ETH: "/tokens/baseeth.PNG",  // Native ETH icon
+  WETH: "/tokens/weth.PNG",    // Wrapped ETH icon
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
   TABOSHI: "/tokens/taboshi.PNG",
 };
 
-const eq = (a?: string, b?: string) =>
-  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eqToken = (a?: TokenAddress, b?: TokenAddress) =>
+  (isNative(a) && isNative(b)) ||
+  (!!a && !!b && !isNative(a) && !isNative(b) && String(a).toLowerCase() === String(b).toLowerCase());
 
 export default function TokenSelect({
   value,
@@ -22,51 +22,54 @@ export default function TokenSelect({
   exclude,
   balance,
 }: {
-  value: Address;
-  onChange: (a: Address) => void;
-  exclude?: Address | string;
+  value: TokenAddress;
+  onChange: (a: TokenAddress) => void;
+  exclude?: TokenAddress | string;
   balance?: string; // human readable
 }) {
-  // Determine the selected token
+  // find selected token
   const selected = useMemo(
-    () => TOKENS.find((t) => eq(t.address, value)),
+    () => TOKENS.find((t) => eqToken(t.address as TokenAddress, value)),
     [value]
   );
 
-  // Display the actual token symbol (WETH included)
   const displaySymbol = selected?.symbol ?? "Unknown";
 
-  // Safe numeric balance display
+  // Safe numeric balance
   const numBal = useMemo(() => {
     const n = balance != null ? Number(balance) : NaN;
     return Number.isFinite(n) ? n : undefined;
   }, [balance]);
   const balText = numBal !== undefined ? numBal.toFixed(6) : "—";
 
-  // Filter out excluded tokens
+  // Filter out excluded token
   const availableTokens = useMemo(
-    () => TOKENS.filter((t) => !exclude || !eq(t.address, String(exclude))),
+    () => TOKENS.filter((t) => !exclude || !eqToken(t.address as TokenAddress, exclude as TokenAddress)),
     [exclude]
   );
+
+  // DOM select values must be strings; serialize our TokenAddress
+  const toOptionValue = (addr: TokenAddress) => (isNative(addr) ? NATIVE_ETH : String(addr));
+  const fromOptionValue = (raw: string): TokenAddress => (raw === NATIVE_ETH ? NATIVE_ETH : (raw as unknown as TokenAddress));
 
   return (
     <div className="glass rounded-2xl px-3 py-2">
       {/* Dropdown */}
       <select
         className="bg-transparent w-full rounded-pill px-2 py-2 focus:outline-none text-sm font-medium"
-        value={value}
-        onChange={(e) => onChange(e.target.value as Address)}
+        value={toOptionValue(value)}
+        onChange={(e) => onChange(fromOptionValue(e.target.value))}
       >
         {availableTokens.map((t) => (
-          <option key={t.address} value={t.address}>
+          <option key={t.symbol} value={toOptionValue(t.address)}>
             {t.symbol}
           </option>
         ))}
 
         {exclude &&
-          !availableTokens.some((t) => eq(t.address, String(exclude))) && (
+          !availableTokens.some((t) => eqToken(t.address as TokenAddress, exclude as TokenAddress)) && (
             <option disabled>
-              {TOKENS.find((t) => eq(t.address, String(exclude)))?.symbol ?? "—"}
+              {TOKENS.find((t) => eqToken(t.address as TokenAddress, exclude as TokenAddress))?.symbol ?? "—"}
             </option>
           )}
       </select>
