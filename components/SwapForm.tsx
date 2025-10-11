@@ -21,7 +21,6 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 
-import TobySwapperAbi from "@/abi/TobySwapper.json";
 import SwapDebug from "./SwapDebug";
 import type { DebugInfo } from "./debugTypes";
 
@@ -29,10 +28,10 @@ import type { DebugInfo } from "./debugTypes";
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
-const QUOTE_TIMEOUT_MS = 12_000; // we parallelize + prune, so 12s is safe
+const QUOTE_TIMEOUT_MS = 12_000;
 
 /* ------------------------------- Minimal ABIs ------------------------------- */
-// Uniswap V3 Quoter (a.k.a. QuoterV2 in Uniswap docs)
+// Uniswap V3 Quoter (a.k.a. QuoterV2)
 const QuoterV3Abi = [
   {
     type: "function",
@@ -48,7 +47,7 @@ const QuoterV3Abi = [
   },
 ] as const;
 
-// Uniswap V3 Factory (pool existence)
+// V3 Factory (pool existence)
 const V3_FACTORY = "0x33128a8fC17869897dcE68Ed026d694621f6FDfD" as Address;
 const V3FactoryAbi = [
   { type: "function", name: "getPool", stateMutability: "view",
@@ -56,49 +55,74 @@ const V3FactoryAbi = [
     outputs: [{type:"address"}] },
 ] as const;
 
-// Uniswap V2 Router (Base official)
+// Uniswap V2 Router (for quoting ONLY — execution always via SWAPPER)
 const V2_ROUTER = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24" as Address;
 const UniV2RouterAbi = [
   { type: "function", name: "getAmountsOut", stateMutability: "view",
     inputs: [{type:"uint256"}, {type:"address[]"}],
     outputs: [{type:"uint256[]"}] },
-  { type: "function", name: "swapExactETHForTokens", stateMutability: "payable",
-    inputs: [
-      {name:"amountOutMin", type:"uint256"},
-      {name:"path", type:"address[]"},
-      {name:"to", type:"address"},
-      {name:"deadline", type:"uint256"},
-    ],
-    outputs: [{type:"uint256[]"}] },
-  { type: "function", name: "swapExactTokensForETH", stateMutability: "nonpayable",
-    inputs: [
-      {name:"amountIn", type:"uint256"},
-      {name:"amountOutMin", type:"uint256"},
-      {name:"path", type:"address[]"},
-      {name:"to", type:"address"},
-      {name:"deadline", type:"uint256"},
-    ],
-    outputs: [{type:"uint256[]"}] },
-  { type: "function", name: "swapExactTokensForTokens", stateMutability: "nonpayable",
-    inputs: [
-      {name:"amountIn", type:"uint256"},
-      {name:"amountOutMin", type:"uint256"},
-      {name:"path", type:"address[]"},
-      {name:"to", type:"address"},
-      {name:"deadline", type:"uint256"},
-    ],
-    outputs: [{type:"uint256[]"}] },
 ] as const;
 
-// WETH deposit (only used if we ever need to wrap)
-const WethAbi = [
-  { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
+/* ------------------------------ SWAPPER ABI ------------------------------ */
+// Only the entrypoints we call from your ABI
+const TobySwapperAbi = [
+  { type:"function", name:"feeBps", stateMutability:"view", inputs:[], outputs:[{type:"uint256"}] },
+
+  { type:"function", name:"swapETHForTokensSupportingFeeOnTransferTokensTo", stateMutability:"payable",
+    inputs:[
+      {name:"tokenOut", type:"address"},
+      {name:"recipient", type:"address"},
+      {name:"minOutMain", type:"uint256"},
+      {name:"pathForMainSwap", type:"address[]"},
+      {name:"pathForFeeSwap", type:"address[]"},
+      {name:"minOutFee", type:"uint256"},
+      {name:"deadline", type:"uint256"},
+    ],
+    outputs:[] },
+
+  { type:"function", name:"swapTokensForETHSupportingFeeOnTransferTokensTo", stateMutability:"nonpayable",
+    inputs:[
+      {name:"tokenIn", type:"address"},
+      {name:"recipient", type:"address"},
+      {name:"amountIn", type:"uint256"},
+      {name:"minOutMain", type:"uint256"},
+      {name:"pathForMainSwap", type:"address[]"},
+      {name:"pathForFeeSwap", type:"address[]"},
+      {name:"minOutFee", type:"uint256"},
+      {name:"deadline", type:"uint256"},
+    ],
+    outputs:[] },
+
+  { type:"function", name:"swapTokensForTokensSupportingFeeOnTransferTokensTo", stateMutability:"nonpayable",
+    inputs:[
+      {name:"tokenIn", type:"address"},
+      {name:"tokenOut", type:"address"},
+      {name:"recipient", type:"address"},
+      {name:"amountIn", type:"uint256"},
+      {name:"minOutMain", type:"uint256"},
+      {name:"pathForMainSwap", type:"address[]"},
+      {name:"pathForFeeSwap", type:"address[]"},
+      {name:"minOutFee", type:"uint256"},
+      {name:"deadline", type:"uint256"},
+    ],
+    outputs:[] },
+
+  { type:"function", name:"swapTokensForTokensV3ExactInput", stateMutability:"nonpayable",
+    inputs:[
+      {name:"tokenIn", type:"address"},
+      {name:"tokenOut", type:"address"},
+      {name:"recipient", type:"address"},
+      {name:"amountIn", type:"uint256"},
+      {name:"v3Params", type:"bytes"},
+      {name:"pathForFeeSwap", type:"address[]"},
+      {name:"minOutFee", type:"uint256"},
+    ],
+    outputs:[] },
 ] as const;
 
 /* --------------------------------- helpers --------------------------------- */
 const V3_FEES = [500, 3000, 10000] as const;
-
-function eq(a?: string, b?: string) { return !!a && !!b && a.toLowerCase() === b.toLowerCase(); }
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
 
 function byAddress(addr?: Address | "ETH") {
@@ -120,7 +144,6 @@ function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
   return packed;
 }
 
-// timeout wrapper
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("Timeout")), ms);
@@ -158,7 +181,6 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const hubs = [inAddr, WETH as Address, USDC as Address, tokenOut] as Address[];
 
-  // find which edges exist
   const key = (a: Address,b: Address) => `${a.toLowerCase()}->${b.toLowerCase()}`;
   const edgeFees = new Map<string, number[]>();
 
@@ -170,7 +192,6 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
     if (fees.length) { edgeFees.set(key(a,b), fees); edgeFees.set(key(b,a), fees); }
   }));
 
-  // DFS up to 3 hops
   const results: { tokens: Address[]; fees: number[] }[] = [];
   const maxHops = 3;
   const dfs = (path: Address[], feePath: number[]) => {
@@ -192,13 +213,14 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 }
 
 /* ------------------------------ V2 helpers --------------------------------- */
-// Attempt V2 getAmountsOut for [in,out] or [in,WETH,out]
+// Quote [in,out] and [in,WETH,out] on V2 to decide a path; execution is via SWAPPER.
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const tryPaths: Address[][] = [
     [inAddr, tokenOut],
     [inAddr, WETH as Address, tokenOut],
   ];
+  let best: { out: bigint; path: Address[] } | undefined;
   for (const path of tryPaths) {
     try {
       const amounts: bigint[] = await client.readContract({
@@ -208,19 +230,20 @@ async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", to
         args: [amountIn, path],
       }) as any;
       if (amounts?.length === path.length && amounts[amounts.length-1] > 0n) {
-        return { out: amounts[amounts.length-1] as bigint, path };
+        const out = amounts[amounts.length-1] as bigint;
+        if (!best || out > best.out) best = { out, path };
       }
-    } catch {/* keep trying */}
+    } catch {/* continue */}
   }
-  return undefined;
+  return best;
 }
 
-/* -------------------------- Fee/burn helper (V3) --------------------------- */
-function buildFeePath(inA: Address): Address[] {
-  const inL = lc(inA);
-  if (eq(inL, TOBY)) return [inL as Address, TOBY as Address];
-  if (eq(inL, WETH)) return [WETH as Address, TOBY as Address];
-  return [inL as Address, WETH as Address, TOBY as Address];
+/* -------------------------- Fee/burn helper path --------------------------- */
+function buildFeePathFor(tokenInAddr: Address): Address[] {
+  const t = lc(tokenInAddr);
+  if (eq(t, TOBY)) return [t as Address, TOBY as Address];
+  if (eq(t, WETH)) return [WETH as Address, TOBY as Address];
+  return [t as Address, WETH as Address, TOBY as Address];
 }
 
 /* ---------------------------------- View ----------------------------------- */
@@ -231,8 +254,7 @@ export default function SwapForm() {
   const { writeContractAsync } = useWriteContract();
 
   // UI state
-  // Keep internal ETH sentinel so we can treat WETH selection as ETH when desired.
-  const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
+  const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH"); // sentinel ETH
   const [tokenOut, setTokenOut] = useState<Address>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const [slippage, setSlippage] = useState<number>(0.5);
@@ -271,7 +293,7 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ------------------------------ feeBps (V3) ------------------------------ */
+  /* ------------------------------ feeBps (read) ------------------------------ */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
@@ -279,7 +301,7 @@ export default function SwapForm() {
       try {
         const bps = (await client.readContract({
           address: lc(SWAPPER as Address),
-          abi: [{ type: "function", name: "feeBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const,
+          abi: TobySwapperAbi as any,
           functionName: "feeBps",
         })) as bigint;
         if (bps >= 0n && bps <= 500n) { setFeeBps(bps); setDebug((d)=>({ ...d, feeBps: bps })); }
@@ -314,7 +336,7 @@ export default function SwapForm() {
       let v2Out: bigint | undefined;
 
       try {
-        // 1) V3 pruned candidates → parallel quote
+        // V3 candidates
         const cands = await buildV3CandidatesPruned(client, tokenIn, tokenOut);
         if (cands.length) {
           const results = await withTimeout(
@@ -332,41 +354,30 @@ export default function SwapForm() {
               return { cand, amountOut };
             })), QUOTE_TIMEOUT_MS
           );
-
           for (const r of results) if (r.status === "fulfilled") {
             const { cand, amountOut } = r.value as any;
             if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
           }
         }
 
-        // 2) Always attempt a V2 quote as well (to let ETH-in prefer V2 even if V3 exists)
+        // V2 quote (for path discovery)
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
-        if (v2 && v2.out > 0n) {
-          v2Out = v2.out; v2Path = v2.path;
-          setDebug(d => ({ ...d, attempts: [...d.attempts, { kind: "v2", pathTokens: v2.path, ok: true, amountOut: v2.out, ms: 0 }]}));
-        }
+        if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
-        // 3) Selection rule:
-        //    - If tokenIn is native ETH and we have a V2 path, PREFER V2 (avoid pre-wrap + revert risk)
-        //    - Else prefer the higher out among available quotes
-        if (tokenIn === "ETH" && v2Path && v2Out && v2Out > 0n) {
-          best = undefined;            // disable V3 usage for ETH-in when V2 is available
-          bestOut = v2Out;
+        // Selection:
+        // - If ETH-in and V2 exists, prefer V2 (lets SWAPPER handle ETH natively + fee)
+        // - Else pick higher output among V2/V3
+        if (tokenIn === "ETH" && v2Path && v2Out) {
+          best = undefined; bestOut = v2Out;
+          setDebugPath(`v2: ${v2Path.map(a => TOKENS.find(x=>eq(x.address,a))?.symbol ?? (eq(a,WETH)?"WETH":a.slice(0,6))).join(" → ")}`);
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
-          // If V2 was simply better, use it
-          best = undefined;
-          bestOut = v2Out;
-        }
-
-        // Set debug path text now that we've decided
-        if (best) {
+          best = undefined; bestOut = v2Out;
+          setDebugPath(`v2: ${v2Path?.map(a => TOKENS.find(x=>eq(x.address,a))?.symbol ?? (eq(a,WETH)?"WETH":a.slice(0,6))).join(" → ")}`);
+        } else if (best) {
           const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
           const parts: string[] = [];
           for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
           setDebugPath(`v3: ${parts.join(" → ")}`);
-        } else if (v2Path) {
-          const sym = (addr: Address) => TOKENS.find(x => eq(x.address, addr))?.symbol ?? (eq(addr, WETH) ? "WETH" : addr.slice(0,6));
-          setDebugPath(`v2: ${v2Path.map(sym).join(" → ")}`);
         }
       } catch (e:any) {
         setQuoteErr(e?.shortMessage || e?.message || String(e));
@@ -377,7 +388,7 @@ export default function SwapForm() {
       if (bestOut) {
         setQuoteOutMain(bestOut);
         setBestV3(best);
-        setBestV2Path(best ? undefined : (v2Path || undefined)); // if best is V3 -> clear V2, else set chosen V2
+        setBestV2Path(best ? undefined : v2Path);
         setDebug((d)=>({ ...d, state: "ok", bestOut: bestOut, bestKind: best ? "v3" : "v2" }));
         setQuoteState("ok");
       } else {
@@ -397,71 +408,42 @@ export default function SwapForm() {
     if (!quoteOutMain || SAFE_MODE_MINOUT_ZERO) return 0n;
     return (quoteOutMain * BigInt(Math.round((100 - slippage) * 100))) / 10000n;
   }, [quoteOutMain, slippage]);
-
   const minOutMainHuman = useMemo(() => formatUnits(minOutMain, outMeta.decimals), [minOutMain, outMeta.decimals]);
 
-  /* -------------------- Allowances (SWAPPER/V3 & V2 router) -------------------- */
+  /* -------------------- Allowances (ONLY to SWAPPER) -------------------- */
   const tokenInAddr = inMeta.address as Address | undefined;
 
-  // For V3 (your SWAPPER)
-  const needsApprovalV3 = !!tokenInAddr;
-  const { value: allowanceV3, isLoading: isAllowLoadV3, refetch: refetchAllowV3 } =
+  const needsApproval = !!tokenInAddr && tokenIn !== "ETH";
+  const { value: allowanceToSwapper, isLoading: isAllowLoad, refetch: refetchAllowance } =
     useStickyAllowance(tokenInAddr, address as Address | undefined, SWAPPER as Address);
-  const { approveMaxFlow: approveMaxV3, isPending: isApprovingV3 } =
+  const { approveMaxFlow: approveMaxToSwapper, isPending: isApproving } =
     useApprove(tokenInAddr, SWAPPER as Address);
 
-  // For V3 with ETH, we actually spend WETH
-  const { value: wethAllowanceV3, refetch: refetchWethV3 } =
-    useStickyAllowance(WETH as Address, address as Address | undefined, SWAPPER as Address);
-  const { approveMaxFlow: approveWethMaxV3 } =
-    useApprove(WETH as Address, SWAPPER as Address);
-
-  // For V2 fallback (spender is V2 router)
-  const { value: allowanceV2, refetch: refetchAllowV2 } =
-    useStickyAllowance(tokenInAddr, address as Address | undefined, V2_ROUTER);
-  const { approveMaxFlow: approveMaxV2, isPending: isApprovingV2 } =
-    useApprove(tokenInAddr, V2_ROUTER);
-
   const [approveCooldown, setApproveCooldown] = useState(false);
-
-  const onApproveV3 = useCallback(async () => {
-    if (!needsApprovalV3 || !isConnected || !tokenInAddr) return;
+  const onApprove = useCallback(async () => {
+    if (!needsApproval || !isConnected || !tokenInAddr) return;
     setApproveCooldown(true);
     try {
-      await approveMaxV3(allowanceV3);
-      setTimeout(() => { refetchAllowV3(); setApproveCooldown(false); }, 2000);
+      await approveMaxToSwapper(allowanceToSwapper);
+      setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
     } catch { setApproveCooldown(false); }
-  }, [needsApprovalV3, isConnected, tokenInAddr, approveMaxV3, allowanceV3, refetchAllowV3]);
+  }, [needsApproval, isConnected, tokenInAddr, approveMaxToSwapper, allowanceToSwapper, refetchAllowance]);
 
-  const onApproveV2 = useCallback(async () => {
-    if (!isConnected || !tokenInAddr) return;
-    setApproveCooldown(true);
-    try {
-      await approveMaxV2(allowanceV2);
-      setTimeout(() => { refetchAllowV2(); setApproveCooldown(false); }, 2000);
-    } catch { setApproveCooldown(false); }
-  }, [isConnected, tokenInAddr, approveMaxV2, allowanceV2, refetchAllowV2]);
+  const showApproveButton =
+    needsApproval && amountInBig > 0n && (allowanceToSwapper ?? 0n) < amountInBig;
 
-  // Only show V3 approval if we're actually using V3
-  const showApproveV3 =
-    !!bestV3 && !!tokenInAddr && amountInBig > 0n && (allowanceV3 ?? 0n) < amountInBig;
+  const approveText =
+    isApproving ? "Approving…" :
+    isAllowLoad && !approveCooldown ? "Checking allowance…" :
+    (allowanceToSwapper ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
 
-  // Show V2 approval only when using V2 AND input is ERC-20 (not ETH)
-  const showApproveV2 =
-    !bestV3 && tokenIn !== "ETH" && !!tokenInAddr && amountInBig > 0n && (allowanceV2 ?? 0n) < amountInBig;
-
-  const approveTextV3 =
-    isApprovingV3 ? "Approving (V3)…" :
-    isAllowLoadV3 && !approveCooldown ? "Checking allowance…" :
-    (allowanceV3 ?? 0n) > 0n ? `Re-approve ${inMeta.symbol} (V3)` : `Approve ${inMeta.symbol} (V3)`;
-
-  const approveTextV2 =
-    isApprovingV2 ? "Approving (V2)…" :
-    (allowanceV2 ?? 0n) > 0n ? `Re-approve ${inMeta.symbol} (V2)` : `Approve ${inMeta.symbol} (V2)`;
-
-  /* ----------------------------- Execute the swap ---------------------------- */
+  /* ----------------------------- Execute (via SWAPPER) ---------------------------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
+
+  function feePathForExecution(actualIn: Address) {
+    return buildFeePathFor(actualIn);
+  }
 
   async function doSwap() {
     if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
@@ -475,68 +457,58 @@ export default function SwapForm() {
     const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
-    const feePath = buildFeePath(inAddr);
+    const pathForFeeSwap = feePathForExecution(inAddr);
+    const minOutFee = 0n; // allow flexible fee conversion to TOBY
 
     setDebug((d)=>({ ...d, preflight: {
-      allowance: tokenIn === "ETH"
-        ? wethAllowanceV3
-        : bestV3 ? allowanceV3 : allowanceV2,
-      needApproval:
-        tokenIn === "ETH"
-          ? (bestV3 ? ((wethAllowanceV3 ?? 0n) < amountInBig) : false)
-          : (bestV3 ? ((allowanceV3 ?? 0n) < amountInBig) : ((allowanceV2 ?? 0n) < amountInBig)),
+      allowance: tokenIn === "ETH" ? 0n : allowanceToSwapper,
+      needApproval: tokenIn !== "ETH" && ((allowanceToSwapper ?? 0n) < amountInBig),
       inBalance: balInRaw.value, outBalance: balOutRaw.value,
-      minOut: minOutMainHuman, deadline
+      minOut: minOutMainHuman, deadline, feePath: pathForFeeSwap
     }, tx: { stage: "simulating" }}));
 
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
-      const minOut = SAFE_MODE_MINOUT_ZERO ? 0n : minOutMain;
       const isEthIn = tokenIn === "ETH";
       const isEthOut = outMeta.symbol === "ETH";
 
-      // If ETH-in and we have a V2 path (quote chose V2), ALWAYS use V2 native flow first.
-      if (isEthIn && bestV2Path) {
+      // Guard approvals for ERC-20 inputs
+      if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
+        setPreflightMsg(`Approve ${inMeta.symbol} first.`);
+        setSending(false);
+        return;
+      }
+
+      // ----------- Route selection decided during quoting -----------
+      if (isEthIn) {
+        // Always go through SWAPPER with ETH-native entry
+        const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address]; // fallback
         const sim = await (client as any).simulateContract({
-          address: V2_ROUTER,
-          abi: UniV2RouterAbi,
-          functionName: "swapExactETHForTokens",
-          args: [ minOut, bestV2Path, address as Address, deadline ],
+          address: SWAPPER as Address,
+          abi: TobySwapperAbi,
+          functionName: "swapETHForTokensSupportingFeeOnTransferTokensTo",
+          args: [
+            tokenOut as Address,
+            address as Address,
+            minOutMain,
+            mainPath,
+            pathForFeeSwap,
+            minOutFee,
+            deadline,
+          ],
           account: address as Address,
           chain: base,
           value: parseUnits(amt || "0", 18),
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "v2:ETH->TOKEN" } }));
+        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:ETH->TOKEN(V2 path)" } }));
         setSending(false);
         return;
       }
 
-      /* ---------- Branch A: V3 route via your SWAPPER ---------- */
       if (bestV3) {
-        // If input is ETH → wrap to WETH and ensure allowance to SWAPPER
-        if (isEthIn) {
-          await writeContractAsync({
-            address: WETH as Address,
-            abi: WethAbi,
-            functionName: "deposit",
-            value: parseUnits(amt || "0", 18),
-            chain: base,
-            account: address as Address,
-          });
-          if ((wethAllowanceV3 ?? 0n) < amountInBig) {
-            await approveWethMaxV3(wethAllowanceV3);
-            await refetchWethV3();
-          }
-        } else {
-          if ((allowanceV3 ?? 0n) < amountInBig) {
-            setPreflightMsg(`Approve ${inMeta.symbol} (V3) first.`);
-            setSending(false);
-            return;
-          }
-        }
-
+        // ERC-20 -> ERC-20 via V3 inside SWAPPER
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [{
@@ -554,66 +526,77 @@ export default function SwapForm() {
             recipient: address as Address,
             deadline,
             amountIn: parseUnits(amt || "0", decIn),
-            amountOutMinimum: parseUnits(minOutMainHuman, decOut),
+            amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
 
         const sim = await withTimeout<any>((client.simulateContract as any)({
-          address: lc(SWAPPER as Address),
-          abi: TobySwapperAbi as any,
+          address: SWAPPER as Address,
+          abi: TobySwapperAbi,
           functionName: "swapTokensForTokensV3ExactInput",
-          args: [ lc(inAddr), lc(tokenOut), address as Address,
-                  parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
+          args: [
+            inAddr,
+            tokenOut as Address,
+            address as Address,
+            parseUnits(amt || "0", decIn),
+            paramsBytes,
+            pathForFeeSwap,
+            minOutFee,
+          ],
           account: address as Address,
           chain: base,
         }), 10_000);
 
         const tx = await writeContractAsync(sim.request);
-        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any, used: "v3" }}));
+        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V3" }}));
         setSending(false);
         return;
       }
 
-      /* ---------- Branch B: V2 fallback (ERC20 paths) ---------- */
-      // Determine path (bestV2Path was set by the quote if V2 was chosen)
-      const path = bestV2Path ?? (isEthIn ? [WETH as Address, tokenOut as Address] :
-                                   isEthOut ? [inAddr, WETH as Address] :
-                                   [inAddr, tokenOut as Address]);
-
+      // Otherwise use V2 supporting-fee paths via SWAPPER
       if (isEthOut) {
-        // Token -> ETH
-        if ((allowanceV2 ?? 0n) < amountInBig) {
-          setPreflightMsg(`Approve ${inMeta.symbol} (V2) first.`);
-          setSending(false);
-          return;
-        }
+        const mainPath = bestV2Path ?? [inAddr, WETH as Address];
         const sim = await (client as any).simulateContract({
-          address: V2_ROUTER,
-          abi: UniV2RouterAbi,
-          functionName: "swapExactTokensForETH",
-          args: [ parseUnits(amt || "0", decIn), minOut, path, address as Address, deadline ],
+          address: SWAPPER as Address,
+          abi: TobySwapperAbi,
+          functionName: "swapTokensForETHSupportingFeeOnTransferTokensTo",
+          args: [
+            inAddr,
+            address as Address,
+            parseUnits(amt || "0", decIn),
+            minOutMain,
+            mainPath,
+            pathForFeeSwap,
+            minOutFee,
+            deadline,
+          ],
           account: address as Address,
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "v2:TOKEN->ETH" } }));
+        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V2 TOKEN->ETH" } }));
       } else {
-        // Token -> Token
-        if ((allowanceV2 ?? 0n) < amountInBig) {
-          setPreflightMsg(`Approve ${inMeta.symbol} (V2) first.`);
-          setSending(false);
-          return;
-        }
+        const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (client as any).simulateContract({
-          address: V2_ROUTER,
-          abi: UniV2RouterAbi,
-          functionName: "swapExactTokensForTokens",
-          args: [ parseUnits(amt || "0", decIn), minOut, path, address as Address, deadline ],
+          address: SWAPPER as Address,
+          abi: TobySwapperAbi,
+          functionName: "swapTokensForTokensSupportingFeeOnTransferTokensTo",
+          args: [
+            inAddr,
+            tokenOut as Address,
+            address as Address,
+            parseUnits(amt || "0", decIn),
+            minOutMain,
+            mainPath,
+            pathForFeeSwap,
+            minOutFee,
+            deadline,
+          ],
           account: address as Address,
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "v2:TOKEN->TOKEN" } }));
+        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V2 TOKEN->TOKEN" } }));
       }
     } catch (e: any) {
       const msg = e?.shortMessage || e?.message || String(e);
@@ -656,11 +639,7 @@ export default function SwapForm() {
         </label>
         <TokenSelect
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          onChange={(a) => { 
-            // If user selects WETH, we keep ETH sentinel to enable native mode by default.
-            setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); 
-            setAmt(""); 
-          }}
+          onChange={(a) => { setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); setAmt(""); }}
           exclude={tokenOut}
           balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
         />
@@ -672,7 +651,6 @@ export default function SwapForm() {
           className="pill pill-opaque px-3 py-1 text-sm"
           onClick={() => {
             const prevIn = tokenIn, prevOut = tokenOut;
-            // If input was ETH sentinel, flipping makes output become ETH (so set output to WETH address)
             setTokenIn(prevOut as Address);
             setTokenOut(prevIn === "ETH" ? (WETH as Address) : (prevIn as Address));
             setAmt("");
@@ -725,37 +703,20 @@ export default function SwapForm() {
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
         )}
 
-        {/* Approve buttons (contextual) */}
-        {showApproveV3 && (
+        {/* Approve (SWAPPER) */}
+        {showApproveButton && (
           <div className="mt-3">
             <button
-              onClick={onApproveV3}
+              onClick={onApprove}
               className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApprovingV3 || !isConnected || !isOnBase || approveCooldown}
-              title={`Approve ${inMeta.symbol} for SWAPPER (V3)`}
+              disabled={isApproving || !isConnected || !isOnBase || approveCooldown}
+              title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
             >
-              {approveTextV3}
+              {approveText}
             </button>
             <div className="mt-1 text-[11px] text-inkSub">
               Spender: <code className="break-all">{SWAPPER as Address}</code>
-              {(allowanceV3 !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceV3).toString()}</span></>}
-            </div>
-          </div>
-        )}
-
-        {showApproveV2 && (
-          <div className="mt-3">
-            <button
-              onClick={onApproveV2}
-              className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApprovingV2 || !isConnected || !isOnBase || approveCooldown}
-              title={`Approve ${inMeta.symbol} for Uniswap V2 Router`}
-            >
-              {approveTextV2}
-            </button>
-            <div className="mt-1 text-[11px] text-inkSub">
-              Spender: <code className="break-all">{V2_ROUTER}</code>
-              {(allowanceV2 !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceV2).toString()}</span></>}
+              {(allowanceToSwapper !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceToSwapper).toString()}</span></>}
             </div>
           </div>
         )}
@@ -793,7 +754,7 @@ export default function SwapForm() {
         disabled={disableSwap}
         title="Swap"
       >
-        {sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3)` : "Swap (V2)"}
+        {sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)"}
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
