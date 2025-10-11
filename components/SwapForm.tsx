@@ -52,6 +52,11 @@ const UniV2RouterAbi = [
   },
 ] as const;
 
+/* NEW: WETH deposit ABI for wrapping */
+const WethAbi = [
+  { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
+] as const;
+
 /* ---------- helpers ---------- */
 function byAddress(addr?: Address | "ETH") {
   if (!addr || addr === "ETH") return { symbol: "ETH", decimals: 18 as const, address: undefined };
@@ -314,6 +319,12 @@ export default function SwapForm() {
   const { approveMaxFlow, isPending: isApproving } = useApprove(tokenInAddr, SWAPPER as Address);
   const [approveCooldown, setApproveCooldown] = useState(false);
 
+  // Extra: when tokenIn is ETH and we’ll use v3, the actual spender is WETH -> SWAPPER.
+  const { value: wethAllowance, refetch: refetchWethAllowance } =
+    useStickyAllowance(WETH as Address, address as Address | undefined, SWAPPER as Address);
+  const { approveMaxFlow: approveWethMax, isPending: isApprovingWeth } =
+    useApprove(WETH as Address, SWAPPER as Address);
+
   const onApprove = useCallback(async () => {
     if (!needsApproval || !isConnected || !tokenInAddr) return;
     setApproveCooldown(true);
@@ -348,14 +359,72 @@ export default function SwapForm() {
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
     const feePath = buildFeePathV2Like(inAddr);
+
     setDebug((d)=>({ ...d, preflight: {
-      allowance: allowanceValue,
-      needApproval: needsApproval && (allowanceValue ?? 0n) < amountInBig,
+      allowance: tokenIn === "ETH" ? wethAllowance : allowanceValue,
+      needApproval: tokenIn === "ETH" ? ((wethAllowance ?? 0n) < amountInBig) : (needsApproval && (allowanceValue ?? 0n) < amountInBig),
       inBalance: balInRaw.value, outBalance: balOutRaw.value,
       minOut: minOutMainHuman, deadline
     }, tx: { stage: "simulating" }}));
 
     try {
+      // ETH in + v3 best route: wrap + approve WETH (if needed) + call v3 function
+      if (tokenIn === "ETH" && bestV3) {
+        // 1) Wrap ETH -> WETH
+        await writeContractAsync({
+          address: WETH as Address,
+          abi: WethAbi,
+          functionName: "deposit",
+          value: parseUnits(amt || "0", 18),
+          chain: base,
+          account: address as Address,
+        });
+
+        // 2) Approve WETH → SWAPPER if needed
+        if ((wethAllowance ?? 0n) < amountInBig) {
+          await approveWethMax(wethAllowance);
+          await refetchWethAllowance();
+        }
+
+        // 3) Execute the same v3 path
+        const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
+        const paramsBytes = encodeAbiParameters(
+          [{
+            type: "tuple",
+            components: [
+              { name: "path", type: "bytes" },
+              { name: "recipient", type: "address" },
+              { name: "deadline", type: "uint256" },
+              { name: "amountIn", type: "uint256" },
+              { name: "amountOutMinimum", type: "uint256" },
+            ],
+          }],
+          [{
+            path: v3Path,
+            recipient: address as Address,
+            deadline,
+            amountIn: parseUnits(amt || "0", decIn),
+            amountOutMinimum: parseUnits(minOutMainHuman, decOut),
+          }]
+        );
+
+        const sim = await withTimeout<any>((client.simulateContract as any)({
+          address: lc(SWAPPER as Address),
+          abi: TobySwapperAbi as any,
+          functionName: "swapTokensForTokensV3ExactInput",
+          args: [ lc(inAddr), lc(tokenOut), address as Address,
+                  parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
+          account: address as Address,
+          chain: base,
+        }), 10_000);
+
+        const tx = await writeContractAsync(sim.request);
+        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any }}));
+        setSending(false);
+        return;
+      }
+
+      // ETH in + NO v3: use the contract’s ETH (v2-style) entrypoint
       if (tokenIn === "ETH") {
         const sim = await withTimeout<any>((client.simulateContract as any)({
           address: lc(SWAPPER as Address),
@@ -372,6 +441,7 @@ export default function SwapForm() {
         return;
       }
 
+      // ERC20 in + v3
       if (bestV3) {
         if ((allowanceValue ?? 0n) < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
@@ -405,7 +475,7 @@ export default function SwapForm() {
         return;
       }
 
-      // v2 execution fallback
+      // ERC20 in + v2 fallback
       const sim = await withTimeout<any>((client.simulateContract as any)({
         address: lc(SWAPPER as Address),
         abi: TobySwapperAbi as any,
