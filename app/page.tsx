@@ -32,53 +32,124 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
-/** Share callout: Spread the Lore (Warpcast) + Share to X */
+/** Share callout: Farcaster + X with live burn and robust app/web handling */
+import { useEffect, useMemo, useState } from "react";
+
+function formatCompact(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.00$/, "") + "B";
+  if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
+  if (abs >= 1_000) return (n / 1_000).toFixed(2).replace(/\.00$/, "") + "K";
+  return String(n);
+}
+
 function ShareCallout({
-  amount,
   token = "$TOBY",
   siteUrl,
 }: {
-  amount?: string;
   token?: string;
   siteUrl?: string;
 }) {
+  const [burn, setBurn] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
+        const j = await r.json();
+        if (mounted && j?.ok) {
+          const n = parseFloat(j.totalHuman);
+          setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const site =
     siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "https://tobyswap.vercel.app");
 
-  const line = amount
-    ? `🔥 I just helped burn ${amount} ${token}. Swap → burn → spread the lore 🐸`
-    : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
+  const line = useMemo(
+    () =>
+      burn
+        ? `🔥 I just helped burn ${burn} ${token}. Swap → burn → spread the lore 🐸`
+        : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`,
+    [burn, token]
+  );
 
-  const textEncoded = encodeURIComponent(line);
-  const urlEncoded = encodeURIComponent(site);
+  // --- Farcaster (Warpcast) ---
+  const composerWebUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
 
-  // Warpcast compose (with embeds[] for link preview)
-  const farcasterHref = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
-  // X / Twitter intent
-  const xHref = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
+  const handleFarcasterShare = async () => {
+    try {
+      // If running inside a Farcaster Mini App host, use the official SDK if present
+      const fcSdk =
+        (window as any)?.farcaster?.miniapp?.sdk ||
+        (window as any)?.sdk ||
+        undefined;
+
+      if (fcSdk?.actions?.composeCast) {
+        await fcSdk.actions.composeCast({ text: line, embeds: [site] });
+        return;
+      }
+    } catch {
+      // fall through to web
+    }
+    // Outside a Mini App: open web composer in a new tab to avoid app-store loops
+    window.open(composerWebUrl, "_blank", "noopener,noreferrer");
+  };
+
+  // --- X / Twitter ---
+  const xWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
+
+  const handleXShare = () => {
+    const message = `${line} ${site}`;
+    const xAppUrl = `twitter://post?message=${encodeURIComponent(message)}`;
+
+    // Try native app; fallback to web after a short delay
+    const fallback = setTimeout(() => {
+      window.open(xWebUrl, "_blank", "noopener,noreferrer");
+    }, 600);
+
+    const win = window.open(xAppUrl, "_blank");
+    setTimeout(() => {
+      try {
+        if (!win || win.closed) {
+          clearTimeout(fallback);
+          window.open(xWebUrl, "_blank", "noopener,noreferrer");
+        }
+      } catch {
+        // ignore
+      }
+    }, 150);
+  };
 
   return (
     <div className="flex flex-wrap gap-2">
-      <a
-        href={farcasterHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pill pill-opaque hover:opacity-90 text-xs"
+      <button
+        onClick={handleFarcasterShare}
+        className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on Farcaster"
+        type="button"
       >
+        <span className="text-[#8A63D2]">🌀</span>
         Spread the Lore
-      </a>
-      <a
-        href={xHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pill pill-opaque hover:opacity-90 text-xs"
+      </button>
+
+      <button
+        onClick={handleXShare}
+        className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on X"
+        type="button"
       >
+        <span>𝕏</span>
         Share to X
-      </a>
+      </button>
     </div>
   );
 }
@@ -125,7 +196,6 @@ export default function Page() {
             <div className="w-full max-w-full sm:max-w-[520px] content-visible">
               <SwapForm />
               <div className="mt-3 flex gap-2 items-center">
-                {/* Optional: pass live amount like amount="12,345" once wired */}
                 <ShareCallout token="$TOBY" />
               </div>
               <TokensBurned />
