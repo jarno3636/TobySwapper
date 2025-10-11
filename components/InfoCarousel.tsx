@@ -89,17 +89,17 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
         ]);
         if (!cancelled) setFallback({ name: nm, symbol: sym, decimals: dec, supply: sup });
       } catch {
-        /* swallow – UI will keep placeholders */
+        /* keep placeholders */
       }
     })();
     return () => { cancelled = true; };
   }, [publicClient, data, address]);
 
-  const name    = (data?.[0]?.result as string | undefined) ?? fallback.name;
-  const symbol  = (data?.[1]?.result as string | undefined) ?? fallback.symbol;
-  const decimals = (data?.[2]?.result as number | undefined) ?? fallback.decimals ?? 18;
+  const name      = (data?.[0]?.result as string | undefined) ?? fallback.name;
+  const symbol    = (data?.[1]?.result as string | undefined) ?? fallback.symbol;
+  const decimals  = (data?.[2]?.result as number | undefined) ?? fallback.decimals ?? 18;
   const supplyBig = (data?.[3]?.result as bigint | undefined) ?? fallback.supply;
-  const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
+  const supply    = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
 
   const href = `https://basescan.org/address/${address}`;
 
@@ -213,17 +213,8 @@ export default function InfoCarousel() {
 
   return (
     <div className="flex flex-col items-center w-full overflow-hidden content-visible">
-      {/* Window with peeking neighbors */}
-      <div className="relative flex items-center justify-center w-full max-w-[560px] px-6 sm:px-8">
-        {/* left arrow – pulled inward & below neighboring peeks */}
-        <button
-          onClick={prev}
-          className="absolute top-[58%] -translate-y-1/2 left-3 sm:left-4 md:left-5 z-20 pill pill-opaque px-3 py-1"
-          aria-label="Prev"
-        >
-          ←
-        </button>
-
+      {/* Window with peeking neighbors (no arrows here) */}
+      <div className="flex items-center justify-center w-full max-w-[560px] px-6 sm:px-8">
         <div className="w-full px-8 sm:px-10 md:px-12">
           <div className="flex items-stretch gap-4">
             {/* left peek */}
@@ -248,15 +239,12 @@ export default function InfoCarousel() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* right arrow – pulled inward & below neighboring peeks */}
-        <button
-          onClick={next}
-          className="absolute top-[58%] -translate-y-1/2 right-3 sm:right-4 md:right-5 z-20 pill pill-opaque px-3 py-1"
-          aria-label="Next"
-        >
-          →
-        </button>
+      {/* Controls row for arrows (below the window, never overlaps/extends off-screen) */}
+      <div className="mt-3 w-full max-w-[560px] px-10 sm:px-12 md:px-16 flex items-center justify-between">
+        <button onClick={prev} className="pill pill-opaque px-4 py-2" aria-label="Prev">←</button>
+        <button onClick={next} className="pill pill-opaque px-4 py-2" aria-label="Next">→</button>
       </div>
 
       <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
