@@ -7,6 +7,9 @@ import { base } from "viem/chains";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 import { SWAPPER, TOBY } from "@/lib/addresses";
 
+// Make ABI literal so viem infers signatures nicely
+const TobySwapper = TobySwapperAbi as const;
+
 // Minimal ERC20 to read decimals()
 const ERC20_DECIMALS_ABI = parseAbi([
   "function decimals() view returns (uint8)"
@@ -25,8 +28,9 @@ export async function GET() {
     // 1) Read raw burned total directly from your TobySwapper
     const totalRaw = (await client.readContract({
       address: swapper,
-      abi: TobySwapperAbi as any,
+      abi: TobySwapper,
       functionName: "totalTobyBurned",
+      args: [], // 👈 required by your viem type setup
     })) as bigint;
 
     // 2) Scale using TOBY decimals (fallback 18 if anything fails)
@@ -36,6 +40,7 @@ export async function GET() {
         address: toby,
         abi: ERC20_DECIMALS_ABI,
         functionName: "decimals",
+        args: [], // 👈 some setups also want this present
       })) as number;
       if (Number.isFinite(d)) decimals = d;
     } catch {
