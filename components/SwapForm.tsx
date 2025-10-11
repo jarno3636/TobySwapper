@@ -293,7 +293,7 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ------------------------------ feeBps (read) ------------------------------ */
+    /* ------------------------------ feeBps (read) ------------------------------ */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
@@ -303,12 +303,15 @@ export default function SwapForm() {
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "feeBps",
+          args: [],                // 👈 required even for no-arg views
         })) as bigint;
-        if (bps >= 0n && bps <= 500n) { setFeeBps(bps); setDebug((d)=>({ ...d, feeBps: bps })); }
+        if (bps >= 0n && bps <= 500n) {
+          setFeeBps(bps);
+          setDebug((d)=>({ ...d, feeBps: bps }));
+        }
       } catch {}
     })();
   }, [client]);
-
   /* ----------------------------- Quote (V3+V2) ----------------------------- */
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
