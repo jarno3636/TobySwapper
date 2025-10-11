@@ -732,7 +732,12 @@ export default function SwapForm() {
         </label>
         <TokenSelect
           value={tokenOut}
-          onChange={(v) => { setTokenOut(v); setAmt(""); }}
+          onChange={(v) => {
+            // v can be a TokenAddress union like "NATIVE_ETH" | Address
+            const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
+            setTokenOut(next);
+            setAmt("");
+          }}
           exclude={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
         />
