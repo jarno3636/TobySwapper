@@ -28,7 +28,7 @@ const preferredAddressForSymbol: Partial<Record<string, Address>> = {
 };
 
 /** Optional custom order for nicer UX. Unknown symbols go last alphabetically. */
-const symbolOrder = ["ETH", "USDC", "TOBY", "PATIENCE", "TABOSHI"];
+const symbolOrder = ["ETH", "TOBY", "PATIENCE", "TABOSHI"]; // 👈 USDC REMOVED
 
 export default function TokenSelect({
   user,           // 👈 add user so we can self-fetch balances
@@ -80,10 +80,12 @@ export default function TokenSelect({
     return Number.isFinite(n) ? n.toFixed(6) : src; // keep string if not numeric
   }, [balance, autoBal]);
 
-  /** Build list: exclude, collapse WETH→ETH, sort for UX */
+  /** Build list: exclude, collapse WETH→ETH, remove USDC, sort for UX */
   const availableTokens = useMemo(() => {
-    // Step 1: filter out excluded
-    const filtered = TOKENS.filter((t) => !exclude || !eq(t.address, String(exclude)));
+    // Step 1: filter out excluded AND remove USDC
+    const filtered = TOKENS.filter(
+      (t) => t.symbol !== "USDC" && (!exclude || !eq(t.address, String(exclude)))
+    );
 
     // Step 2: collapse dupes by display label if asked
     const deduped: (typeof TOKENS)[number][] = [];
@@ -145,7 +147,7 @@ export default function TokenSelect({
           const val =
             label === "ETH" && preferredAddressForSymbol.ETH
               ? preferredAddressForSymbol.ETH
-              : t.address as Address;
+              : (t.address as Address);
           return (
             <option key={t.address as string} value={val}>
               {label}
