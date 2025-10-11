@@ -293,7 +293,7 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-    /* ------------------------------ feeBps (read) ------------------------------ */
+  /* ------------------------------ feeBps (read) ------------------------------ */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
@@ -312,6 +312,7 @@ export default function SwapForm() {
       } catch {}
     })();
   }, [client]);
+
   /* ----------------------------- Quote (V3+V2) ----------------------------- */
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
@@ -367,9 +368,7 @@ export default function SwapForm() {
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
-        // Selection:
-        // - If ETH-in and V2 exists, prefer V2 (lets SWAPPER handle ETH natively + fee)
-        // - Else pick higher output among V2/V3
+        // Selection
         if (tokenIn === "ETH" && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
           setDebugPath(`v2: ${v2Path.map(a => TOKENS.find(x=>eq(x.address,a))?.symbol ?? (eq(a,WETH)?"WETH":a.slice(0,6))).join(" → ")}`);
@@ -641,6 +640,7 @@ export default function SwapForm() {
           Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
         </label>
         <TokenSelect
+          user={address as Address | undefined}  {/* 👈 pass user so balances (incl. USDC) show */}
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           onChange={(a) => { setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); setAmt(""); }}
           exclude={tokenOut}
@@ -731,6 +731,7 @@ export default function SwapForm() {
           Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
         </label>
         <TokenSelect
+          user={address as Address | undefined}  {/* 👈 pass user here as well */}
           value={tokenOut}
           onChange={(v) => {
             // v can be a TokenAddress union like "NATIVE_ETH" | Address
