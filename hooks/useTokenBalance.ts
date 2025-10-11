@@ -1,19 +1,21 @@
+// hooks/useTokenBalance.ts
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
-import { erc20Abi } from "viem";
+import { erc20Abi, getAddress } from "viem";        // 👈 add getAddress
 import { useBalance, usePublicClient } from "wagmi";
 import { TOKENS, USDC, NATIVE_ETH, TokenAddress, isNative } from "@/lib/addresses";
 
 function knownDecimals(token?: TokenAddress) {
   if (!token || isNative(token)) return 18;
-  if ((token as Address).toLowerCase() === USDC.toLowerCase()) return 6;
-  const hit = TOKENS.find((t) => t.address !== NATIVE_ETH && (t.address as Address).toLowerCase() === (token as Address).toLowerCase());
+  // compare checksummed to be robust
+  try {
+    if (getAddress(token as Address) === getAddress(USDC)) return 6;
+  } catch {}
+  const hit = TOKENS.find((t) => t.address !== NATIVE_ETH && String(t.address).toLowerCase() === String(token).toLowerCase());
   return hit?.decimals ?? 18;
 }
-
-const lc = (a?: Address) => (a ? (a.toLowerCase() as Address) : undefined);
 
 export type UseTokenBalanceResult = {
   value?: bigint;
@@ -33,12 +35,19 @@ export function useTokenBalance(
   const chainId = opts?.chainId ?? 8453;
   const client = usePublicClient({ chainId });
 
-  const userLC = lc(user);
-  const tokenKey = isNative(token) ? "native" : (token as Address | undefined)?.toLowerCase();
+  // ✅ Normalize everything to checksum once
+  const userCS = useMemo(
+    () => (user ? getAddress(user as Address) : undefined),
+    [user]
+  );
+  const tokenCS = useMemo(
+    () => (isNative(token) || !token ? undefined : getAddress(token as Address)),
+    [token]
+  );
 
   const scopeKey = useMemo(
-    () => `bal-${chainId}-${(userLC ?? "0x")}-${(tokenKey ?? "native")}`,
-    [userLC, tokenKey, chainId]
+    () => `bal-${chainId}-${(userCS ?? "0x")}-${(tokenCS ?? "native")}`,
+    [userCS, tokenCS, chainId]
   );
 
   const {
@@ -47,12 +56,12 @@ export function useTokenBalance(
     refetch,
     error,
   } = useBalance({
-    address: userLC,
-    token: isNative(token) ? undefined : ((token as Address | undefined) ?? undefined),
+    address: userCS,
+    token: tokenCS,            // 👈 checksummed
     chainId,
     scopeKey,
     query: {
-      enabled: Boolean(userLC),
+      enabled: Boolean(userCS),
       refetchInterval: 15_000,
       staleTime: 10_000,
       refetchOnWindowFocus: false,
@@ -66,28 +75,30 @@ export function useTokenBalance(
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!userLC || !client) return;
+      if (!userCS || !client) return;
 
+      // If wagmi gave us both value & decimals, no fallback needed
       if (data?.value !== undefined && data?.decimals !== undefined) {
         if (!cancelled) setFallback({});
         return;
       }
 
       try {
-        if (isNative(token) || !token) {
-          const raw = await client.getBalance({ address: userLC });
+        if (!tokenCS) {
+          // native ETH
+          const raw = await client.getBalance({ address: userCS });
           if (!cancelled) setFallback({ value: raw, decimals: 18 });
         } else {
-          const tokenAddr = token as Address;
+          // ERC-20
           const [raw, dec] = await Promise.all([
             client.readContract({
-              address: tokenAddr,
+              address: tokenCS,        // 👈 checksummed
               abi: erc20Abi,
               functionName: "balanceOf",
-              args: [userLC],
+              args: [userCS],
             }) as Promise<bigint>,
             client.readContract({
-              address: tokenAddr,
+              address: tokenCS,        // 👈 checksummed
               abi: erc20Abi,
               functionName: "decimals",
             }) as Promise<number>,
@@ -99,7 +110,7 @@ export function useTokenBalance(
       }
     })();
     return () => { cancelled = true; };
-  }, [client, userLC, tokenKey, chainId, data?.value, data?.decimals, scopeKey, token]);
+  }, [client, userCS, tokenCS, chainId, data?.value, data?.decimals, scopeKey]);
 
   const decimals = data?.decimals ?? fallback.decimals ?? knownDecimals(token);
 
