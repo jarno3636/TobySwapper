@@ -62,34 +62,6 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
   const supplyBig = data?.[3]?.result as bigint | undefined;
   const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
 
-  // Holders (uses the simplified API route)
-  const [holders, setHolders] = useState<number | null>(null);
-  const [holdersLoaded, setHoldersLoaded] = useState(false);
-
-  useEffect(() => {
-    let aborted = false;
-    const ac = new AbortController();
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/holders?address=${address}`, { signal: ac.signal, cache: "no-store" });
-        if (!res.ok) throw new Error(String(res.status));
-        const json = await res.json();
-        if (!aborted) {
-          setHolders(typeof json?.holders === "number" ? json.holders : null);
-          setHoldersLoaded(true);
-        }
-      } catch {
-        if (!aborted) {
-          setHolders(null);
-          setHoldersLoaded(true);
-        }
-      }
-    })();
-
-    return () => { aborted = true; ac.abort(); };
-  }, [address]);
-
   const href = `https://basescan.org/address/${address}`;
 
   return (
@@ -115,10 +87,7 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
           <div className="text-[var(--ink-sub)]">Total Supply</div>
           <div>{fmt(supply)}</div>
         </div>
-        <div>
-          <div className="text-[var(--ink-sub)]">Holders</div>
-          <div>{holdersLoaded ? (holders === null ? "—" : fmt(holders, 0)) : "…"}</div>
-        </div>
+        {/* holders removed */}
       </div>
     </div>
   );
@@ -207,49 +176,47 @@ export default function InfoCarousel() {
   return (
     <div className="flex flex-col items-center w-full overflow-hidden content-visible">
       {/* Window with peeking neighbors */}
-      <div className="relative flex items-center justify-center w-full max-w-[560px] px-6 sm:px-8">
-        {/* left arrow — moved OUTSIDE and centered vertically */}
-        <button
-          onClick={prev}
-          className="absolute top-1/2 -translate-y-1/2 -left-4 sm:-left-6 md:-left-8 z-20 pill pill-opaque px-3 py-1"
-          aria-label="Prev"
-        >
-          ←
-        </button>
-
-        <div className="w-full px-8 sm:px-10 md:px-12">
-          <div className="flex items-stretch gap-4">
-            {/* left peek */}
-            <div className="w-[18%] opacity-50 pointer-events-none">
-              <div className="glass rounded-2xl p-2 flex justify-center">
-                <Mini item={ITEMS[leftIdx]} />
-              </div>
+      <div className="w-full max-w-[560px] px-6 sm:px-8">
+        <div className="flex items-stretch gap-4">
+          {/* left peek */}
+          <div className="w-[18%] opacity-50 pointer-events-none">
+            <div className="glass rounded-2xl p-2 flex justify-center">
+              <Mini item={ITEMS[leftIdx]} />
             </div>
+          </div>
 
-            {/* center image */}
-            <div className="flex-1 flex justify-center">
-              <div className="w-[52%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex justify-center items-center">
-                <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
-              </div>
+          {/* center image */}
+          <div className="flex-1 flex justify-center">
+            <div className="w-[52%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex justify-center items-center">
+              <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
             </div>
+          </div>
 
-            {/* right peek */}
-            <div className="w-[18%] opacity-50 pointer-events-none">
-              <div className="glass rounded-2xl p-2 flex justify-center">
-                <Mini item={ITEMS[rightIdx]} />
-              </div>
+          {/* right peek */}
+          <div className="w-[18%] opacity-50 pointer-events-none">
+            <div className="glass rounded-2xl p-2 flex justify-center">
+              <Mini item={ITEMS[rightIdx]} />
             </div>
           </div>
         </div>
 
-        {/* right arrow — moved OUTSIDE and centered vertically */}
-        <button
-          onClick={next}
-          className="absolute top-1/2 -translate-y-1/2 -right-4 sm:-right-6 md:-right-8 z-20 pill pill-opaque px-3 py-1"
-          aria-label="Next"
-        >
-          →
-        </button>
+        {/* arrows row — inside & below the peeks so they don't overlap or go off-screen */}
+        <div className="mt-3 flex items-center justify-between px-2">
+          <button
+            onClick={prev}
+            className="pill pill-opaque px-4 py-1.5 text-sm"
+            aria-label="Prev"
+          >
+            ←
+          </button>
+          <button
+            onClick={next}
+            className="pill pill-opaque px-4 py-1.5 text-sm"
+            aria-label="Next"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
