@@ -3,42 +3,31 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Address,
-  formatUnits,
-  parseUnits,
-  isAddress,
-  encodePacked,
-  encodeAbiParameters,
-  getAddress,
+  Address, formatUnits, parseUnits, isAddress,
+  encodePacked, encodeAbiParameters, getAddress,
 } from "viem";
 import { base } from "viem/chains";
 import {
-  useAccount,
-  usePublicClient,
-  useWriteContract,
-  useSwitchChain,
+  useAccount, usePublicClient, useWriteContract, useSwitchChain,
 } from "wagmi";
 import TokenSelect from "./TokenSelect";
 import {
-  TOKENS,
-  USDC,
-  WETH,
-  SWAPPER,
-  TOBY,
-  QUOTER_V3,
-  QUOTE_ROUTER_V2, // 👈 v2 router for fallback quoting
+  TOKENS, USDC, WETH, SWAPPER, TOBY, QUOTER_V3, QUOTE_ROUTER_V2,
 } from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 
+import SwapDebug from "./SwapDebug";
+import type { DebugInfo } from "./debugTypes";
+
 /* ---------- Config ---------- */
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
-const QUOTE_TIMEOUT_MS = 5_000; // v3 quote time budget
-const QUOTE_V2_TIMEOUT_MS = 3_000; // v2 fallback time budget
+const QUOTE_TIMEOUT_MS = 5_000;      // v3 time budget
+const QUOTE_V2_TIMEOUT_MS = 3_000;   // slow v2 fallback budget
 
 /* ---------- Minimal ABIs ---------- */
 const QuoterV3Abi = [
@@ -56,12 +45,8 @@ const QuoterV3Abi = [
   },
 ] as const;
 
-// tiny v2 router ABI for quoting
 const UniV2RouterAbi = [
-  {
-    type: "function",
-    name: "getAmountsOut",
-    stateMutability: "view",
+  { type: "function", name: "getAmountsOut", stateMutability: "view",
     inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],
     outputs: [{ name: "amounts", type: "uint256[]" }],
   },
@@ -69,8 +54,7 @@ const UniV2RouterAbi = [
 
 /* ---------- helpers ---------- */
 function byAddress(addr?: Address | "ETH") {
-  if (!addr || addr === "ETH")
-    return { symbol: "ETH", decimals: 18 as const, address: undefined };
+  if (!addr || addr === "ETH") return { symbol: "ETH", decimals: 18 as const, address: undefined };
   const t = TOKENS.find((t) => t.address.toLowerCase() === String(addr).toLowerCase());
   return t
     ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
@@ -80,7 +64,7 @@ const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLow
 const lc = (a: Address) => a.toLowerCase() as Address;
 const fmtEth = (wei: bigint, dec = 18) => Number(formatUnits(wei, dec)).toFixed(6);
 
-// hard timeout wrapper
+// timeout wrapper
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("Timeout")), ms);
@@ -89,31 +73,25 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/* ---------- network guard (auto-switch to Base) ---------- */
+/* ---------- network guard ---------- */
 function useNetworkGuard() {
   const { chainId } = useAccount();
   const { switchChainAsync, isPending } = useSwitchChain();
   const isOnBase = chainId === base.id;
   const ensureBase = useCallback(async () => {
-    if (!isOnBase && !isPending) {
-      try { await switchChainAsync({ chainId: base.id }); } catch {}
-    }
+    if (!isOnBase && !isPending) { try { await switchChainAsync({ chainId: base.id }); } catch {} }
   }, [isOnBase, isPending, switchChainAsync]);
   return { isOnBase, ensureBase };
 }
 
-/* ---------- v3 path helpers (normalized + fees as uint24) ---------- */
+/* ---------- v3 path helpers ---------- */
 function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
-  if (fees.length !== tokens.length - 1)
-    throw new Error("fees length must be tokens.length - 1");
+  if (fees.length !== tokens.length - 1) throw new Error("fees length must be tokens.length - 1");
   const norm = tokens.map((t) => getAddress(t) as Address);
   let packed = encodePacked(["address"], [norm[0]]);
   for (let i = 0; i < fees.length; i++) {
     const fee = Number(fees[i]);
-    packed = encodePacked(
-      ["bytes", "uint24", "address"],
-      [packed, fee, norm[i + 1]]
-    ) as `0x${string}`;
+    packed = encodePacked(["bytes", "uint24", "address"], [packed, fee, norm[i + 1]]) as `0x${string}`;
   }
   return packed;
 }
@@ -138,15 +116,10 @@ function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
     backtrack(0, []);
   }
   const seen = new Set<string>();
-  return out.filter((c) => {
-    const k = `${c.tokens.join("->")}__${c.fees.join(",")}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  return out.filter(c => { const k = `${c.tokens.join("->")}__${c.fees.join(",")}`; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-/* ---------- fee/burn path (contract expects V2-style addresses[]) ---------- */
+/* ---------- fee/burn path (V2-like) ---------- */
 function buildFeePathV2Like(inA: Address): Address[] {
   const inL = lc(inA);
   if (eq(inL, TOBY)) return [inL as Address, TOBY as Address];
@@ -157,7 +130,7 @@ function buildFeePathV2Like(inA: Address): Address[] {
 export default function SwapForm() {
   const { address, chainId, isConnected } = useAccount();
   const { isOnBase, ensureBase } = useNetworkGuard();
-  const client = usePublicClient(); // wagmi manages transports
+  const client = usePublicClient({ chainId: base.id }); // pin to Base
   const { writeContractAsync } = useWriteContract();
 
   // UI state
@@ -167,12 +140,19 @@ export default function SwapForm() {
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Reset default on account/chain change
+  // Debug snapshot
+  const [debug, setDebug] = useState<DebugInfo>({
+    isOnBase, chainId, account: address as any,
+    tokenIn, tokenOut, amountInHuman: amt, slippage, feeBps: 100n,
+    state: "idle", attempts: [],
+    addresses: { SWAPPER: SWAPPER as any, QUOTER_V3: QUOTER_V3 as any, QUOTE_ROUTER_V2: QUOTE_ROUTER_V2 as any, WETH: WETH as any, USDC: USDC as any, TOBY: TOBY as any },
+  });
   useEffect(() => {
-    setTokenIn("ETH");
-    setTokenOut(TOBY as Address);
-    setAmt("");
-  }, [address, chainId]);
+    setDebug((d) => ({ ...d, isOnBase, chainId, account: address as any, tokenIn, tokenOut, amountInHuman: amt, slippage }));
+  }, [isOnBase, chainId, address, tokenIn, tokenOut, amt, slippage]);
+
+  // Reset defaults on account/chain change
+  useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
 
   // Ensure Base when connected
   useEffect(() => { if (isConnected) void ensureBase(); }, [isConnected, ensureBase]);
@@ -187,49 +167,30 @@ export default function SwapForm() {
 
   // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedAmt(amt.trim()), 240);
-    return () => clearTimeout(id);
-  }, [amt]);
+  useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt.trim()), 240); return () => clearTimeout(id); }, [amt]);
 
-  const amountInBig = useMemo(() => {
-    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); }
-    catch { return 0n; }
-  }, [debouncedAmt, inMeta.decimals]);
-
+  const amountInBig = useMemo(() => { try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }}, [debouncedAmt, inMeta.decimals]);
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ---------- feeBps from swapper ---------- */
+  /* ---------- feeBps ---------- */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
       if (!client) return;
-      const c = client;
       try {
-        const bps = (await c.readContract({
+        const bps = (await client.readContract({
           address: lc(SWAPPER as Address),
-          abi: [
-            {
-              type: "function",
-              name: "feeBps",
-              stateMutability: "view",
-              inputs: [],
-              outputs: [{ type: "uint256" }],
-            },
-          ] as const,
+          abi: [{ type: "function", name: "feeBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const,
           functionName: "feeBps",
         })) as bigint;
-        if (bps >= 0n && bps <= 500n) setFeeBps(bps);
+        if (bps >= 0n && bps <= 500n) { setFeeBps(bps); setDebug((d)=>({ ...d, feeBps: bps })); }
       } catch {}
     })();
   }, [client]);
 
-  /* ---------- Quote (v3 first; delayed v2 fallback) ---------- */
-  const mainAmountIn = useMemo(
-    () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
-    [amountInBig, feeBps]
-  );
+  /* ---------- Quote (v3 first; slow v2 fallback) ---------- */
+  const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -241,49 +202,44 @@ export default function SwapForm() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      setQuoteErr(undefined);
-      setQuoteOutMain(undefined);
-      setBestV3(undefined);
-      setUsedV2(false);
-      setDebugPath(undefined);
+      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setUsedV2(false); setDebugPath(undefined);
+      setDebug((d)=>({ ...d, state: "idle", attempts: [], bestOut: undefined, bestKind: undefined, quoteError: undefined }));
 
-      if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) {
-        setQuoteState("idle");
-        return;
-      }
-      const c = client;
+      if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
       setQuoteState("loading");
+      setDebug((d)=>({ ...d, state: "loading" }));
       const myLatch = ++quoteLatch.current;
 
       let bestOut: bigint | undefined;
       let best: { tokens: Address[]; fees: number[] } | undefined;
 
-      // --- v3 attempt with hard timeout ---
+      // --- v3 candidates ---
       try {
         const tryAllV3 = (async () => {
           for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
+            const t0 = performance.now();
             try {
               const path = encodeV3Path(cand.tokens, cand.fees);
-              const [amountOut] = (await c.readContract({
+              const [amountOut] = (await client.readContract({
                 address: QUOTER_V3 as Address,
                 abi: QuoterV3Abi as any,
                 functionName: "quoteExactInput",
                 args: [path, mainAmountIn],
               })) as [bigint];
-              if (amountOut > 0n && (!bestOut || amountOut > bestOut)) {
-                bestOut = amountOut; best = cand;
-              }
-            } catch (e: any) {
+              const ms = Math.round(performance.now() - t0);
+              setDebug((d)=>({ ...d, attempts: [...d.attempts, { kind: "v3", pathTokens: cand.tokens, fees: cand.fees, ok: true, amountOut, ms }] }));
+              if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
+            } catch (e:any) {
+              const ms = Math.round(performance.now() - t0);
+              setDebug((d)=>({ ...d, attempts: [...d.attempts, { kind: "v3", pathTokens: cand.tokens, fees: cand.fees, ok: false, ms, error: e?.shortMessage || e?.message || String(e) }] }));
               if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
             }
           }
         })();
         await withTimeout(tryAllV3, QUOTE_TIMEOUT_MS);
-      } catch {
-        // v3 timed out – we'll try v2 below
-      }
+      } catch {/* v3 timeout */}
 
-      // --- v2 fallback if no v3 route found ---
+      // --- v2 fallback (slow) ---
       if (!bestOut) {
         try {
           const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
@@ -294,23 +250,26 @@ export default function SwapForm() {
           ];
           const tryAllV2 = (async () => {
             for (const p of v2Paths) {
+              const t0 = performance.now();
               try {
-                const amounts = (await c.readContract({
+                const amounts = (await client.readContract({
                   address: QUOTE_ROUTER_V2 as Address,
                   abi: UniV2RouterAbi as any,
                   functionName: "getAmountsOut",
                   args: [mainAmountIn, p],
                 })) as bigint[];
                 const out = amounts[amounts.length - 1];
-                if (out > 0n && (!bestOut || out > bestOut)) {
-                  bestOut = out; best = undefined; setUsedV2(true);
-                  setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`);
-                }
-              } catch {/* keep trying */}
+                const ms = Math.round(performance.now() - t0);
+                setDebug((d)=>({ ...d, attempts: [...d.attempts, { kind: "v2", pathTokens: p, ok: true, amountOut: out, ms }] }));
+                if (out > 0n && (!bestOut || out > bestOut)) { bestOut = out; best = undefined; setUsedV2(true); setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`); }
+              } catch (e:any) {
+                const ms = Math.round(performance.now() - t0);
+                setDebug((d)=>({ ...d, attempts: [...d.attempts, { kind: "v2", pathTokens: p, ok: false, ms, error: e?.shortMessage || e?.message || String(e) }] }));
+              }
             }
           })();
           await withTimeout(tryAllV2, QUOTE_V2_TIMEOUT_MS);
-        } catch {/* ignore */}
+        } catch {/* v2 timeout */}
       }
 
       if (!alive || myLatch !== quoteLatch.current) return;
@@ -323,19 +282,22 @@ export default function SwapForm() {
           const parts: string[] = [];
           for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
           setDebugPath(`v3: ${parts.join(" → ")}`);
+          setDebug((d)=>({ ...d, state: "ok", bestOut: bestOut, bestKind: "v3" }));
+        } else {
+          setDebug((d)=>({ ...d, state: "ok", bestOut: bestOut, bestKind: "v2" }));
         }
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
         setQuoteErr("No v3/v2 route found or routers timed out.");
+        setDebug((d)=>({ ...d, state: "noroute", quoteError: "No route or timeout" }));
       }
     })();
     return () => { alive = false; };
   }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn]); // eslint-disable-line
 
   const expectedOutMainHuman = useMemo(() => {
-    try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; }
-    catch { return undefined; }
+    try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; } catch { return undefined; }
   }, [quoteOutMain, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
@@ -344,7 +306,7 @@ export default function SwapForm() {
     return formatUnits(raw, outMeta.decimals);
   }, [quoteOutMain, slippage, outMeta.decimals]);
 
-  /* ---------- allowance / approval (stable & no flicker) ---------- */
+  /* ---------- allowance / approval ---------- */
   const tokenInAddr = inMeta.address as Address | undefined;
   const needsApproval = !!tokenInAddr;
   const { value: allowanceValue, isLoading: isAllowanceLoading, refetch: refetchAllowance } =
@@ -358,9 +320,7 @@ export default function SwapForm() {
     try {
       await approveMaxFlow(allowanceValue);
       setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
-    } catch {
-      setApproveCooldown(false);
-    }
+    } catch { setApproveCooldown(false); }
   }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
 
   const showApproveButton =
@@ -382,37 +342,37 @@ export default function SwapForm() {
 
     setPreflightMsg(undefined);
     setSending(true);
-    const c = client;
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
     const feePath = buildFeePathV2Like(inAddr);
+    setDebug((d)=>({ ...d, preflight: {
+      allowance: allowanceValue,
+      needApproval: needsApproval && (allowanceValue ?? 0n) < amountInBig,
+      inBalance: balInRaw.value, outBalance: balOutRaw.value,
+      minOut: minOutMainHuman, deadline
+    }, tx: { stage: "simulating" }}));
 
     try {
       if (tokenIn === "ETH") {
-        // ETH -> token via your contract’s ETH entrypoint
-        const sim = await withTimeout<any>(
-          (c.simulateContract as any)({
-            address: lc(SWAPPER as Address),
-            abi: TobySwapperAbi as any,
-            functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
-            args: [ lc(tokenOut), parseUnits(minOutMainHuman, decOut), [WETH as Address, tokenOut], feePath, 0n, deadline ],
-            value: parseUnits(amt || "0", 18),
-            account: address as Address,
-            chain: base,
-          }),
-          10_000
-        );
-        await writeContractAsync(sim.request);
+        const sim = await withTimeout<any>((client.simulateContract as any)({
+          address: lc(SWAPPER as Address),
+          abi: TobySwapperAbi as any,
+          functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
+          args: [ lc(tokenOut), parseUnits(minOutMainHuman, decOut), [WETH as Address, tokenOut], feePath, 0n, deadline ],
+          value: parseUnits(amt || "0", 18),
+          account: address as Address,
+          chain: base,
+        }), 10_000);
+        const tx = await writeContractAsync(sim.request);
+        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any }}));
         setSending(false);
         return;
       }
 
-      // ERC20 -> token
       if (bestV3) {
-        // v3 path found
         if ((allowanceValue ?? 0n) < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
@@ -426,57 +386,47 @@ export default function SwapForm() {
               { name: "amountOutMinimum", type: "uint256" },
             ],
           }],
-          [{
-            path: v3Path,
-            recipient: address as Address,
-            deadline,
-            amountIn: parseUnits(amt || "0", decIn),
-            amountOutMinimum: parseUnits(minOutMainHuman, decOut),
-          }]
+          [{ path: v3Path, recipient: address as Address, deadline,
+             amountIn: parseUnits(amt || "0", decIn),
+             amountOutMinimum: parseUnits(minOutMainHuman, decOut) }]
         );
-        const sim = await withTimeout<any>(
-          (c.simulateContract as any)({
-            address: lc(SWAPPER as Address),
-            abi: TobySwapperAbi as any,
-            functionName: "swapTokensForTokensV3ExactInput",
-            args: [ lc(inAddr), lc(tokenOut), address as Address, parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
-            account: address as Address,
-            chain: base,
-          }),
-          10_000
-        );
-        await writeContractAsync(sim.request);
+        const sim = await withTimeout<any>((client.simulateContract as any)({
+          address: lc(SWAPPER as Address),
+          abi: TobySwapperAbi as any,
+          functionName: "swapTokensForTokensV3ExactInput",
+          args: [ lc(inAddr), lc(tokenOut), address as Address,
+                  parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
+          account: address as Address,
+          chain: base,
+        }), 10_000);
+        const tx = await writeContractAsync(sim.request);
+        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any }}));
         setSending(false);
         return;
       }
 
-      // v2 fallback execution (only reached if no v3 route)
-      const sim = await withTimeout<any>(
-        (c.simulateContract as any)({
-          address: lc(SWAPPER as Address),
-          abi: TobySwapperAbi as any,
-          functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
-          args: [
-            lc(inAddr),
-            lc(tokenOut),
-            parseUnits(amt || "0", decIn),
-            parseUnits(minOutMainHuman, decOut),
-            [inAddr, tokenOut], // main swap path
-            feePath,            // burn/fee path
-            0n,
-            deadline,
-          ],
-          account: address as Address,
-          chain: base,
-        }),
-        10_000
-      );
-      await writeContractAsync(sim.request);
+      // v2 execution fallback
+      const sim = await withTimeout<any>((client.simulateContract as any)({
+        address: lc(SWAPPER as Address),
+        abi: TobySwapperAbi as any,
+        functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
+        args: [
+          lc(inAddr), lc(tokenOut),
+          parseUnits(amt || "0", decIn),
+          parseUnits(minOutMainHuman, decOut),
+          [inAddr, tokenOut], feePath, 0n, deadline,
+        ],
+        account: address as Address,
+        chain: base,
+      }), 10_000);
+      const tx = await writeContractAsync(sim.request);
+      setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any }}));
     } catch (e: any) {
       const msg = e?.shortMessage || e?.message || String(e);
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
       else setPreflightMsg(msg);
+      setDebug((d)=>({ ...d, tx: { stage: "error", msg }}));
     } finally {
       setSending(false);
     }
@@ -492,8 +442,6 @@ export default function SwapForm() {
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Swap</h2>
-
-        {/* Network badge */}
         <div className="inline-flex items-center gap-2 text-xs text-inkSub">
           <span>Network</span>
           <img src="/tokens/baseeth.PNG" alt="Base" className="w-4 h-4 rounded-full" />
@@ -572,7 +520,7 @@ export default function SwapForm() {
           name="swap-amount"
         />
 
-        <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
+        <div className="mt-2 text-xs text-inkSub">≈ ${Number.isFinite(amtInUsd) ? amtInUsd.toFixed(2) : "0.00"} USD</div>
 
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
@@ -609,7 +557,7 @@ export default function SwapForm() {
           balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
         />
         <div className="text-xs text-inkSub">
-          {quoteState === "loading" && <>Querying v3 routes…</>}
+          {quoteState === "loading" && <>Querying routes…</>}
           {quoteState === "noroute" && <>No route found for this pair/size.{quoteErr && <> <span className="text-warn"> ({quoteErr})</span></>}</>}
           {quoteState === "ok" && expectedOutMainHuman !== undefined && (
             <>
@@ -634,6 +582,9 @@ export default function SwapForm() {
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
+
+      {/* Debug panel (collapsible, separate component) */}
+      <SwapDebug info={debug} />
 
       {/* Slippage modal */}
       {slippageOpen && (
