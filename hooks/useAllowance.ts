@@ -1,4 +1,3 @@
-// hooks/useAllowance.ts
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -8,23 +7,28 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
+import { NATIVE_ETH, TokenAddress, isNative } from "@/lib/addresses";
 
 /** Sticky reader that avoids UI flicker while queries revalidate */
 export function useStickyAllowance(
-  token?: Address,
+  token?: TokenAddress,
   owner?: Address,
   spender?: Address
 ) {
+  // Native ETH has no allowance/approve concept
+  if (isNative(token)) {
+    return { value: undefined as bigint | undefined, isLoading: false, error: undefined as unknown, refetch: () => {} };
+  }
+
   const enabled = Boolean(token && owner && spender);
 
   const { data, refetch, isFetching, error } = useReadContract({
-    address: enabled ? token : undefined,
+    address: enabled ? (token as Address) : undefined,
     abi: erc20Abi,
     functionName: "allowance",
     args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
     query: {
       enabled,
-      // less churn = less flicker
       refetchInterval: 20_000,
       staleTime: 15_000,
       refetchOnWindowFocus: false,
@@ -50,27 +54,31 @@ export function useStickyAllowance(
   return { value, isLoading: isFetching, error, refetch };
 }
 
-export function useApprove(token?: Address, spender?: Address) {
+export function useApprove(token?: TokenAddress, spender?: Address) {
   const { writeContractAsync, data: writeHash, isPending: isWritePending } =
     useWriteContract();
-  const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({
-    hash: writeHash,
-  });
+  const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash: writeHash });
 
   const approveMaxFlow = useCallback(
     async (currentAllowance?: bigint) => {
       if (!token || !spender) throw new Error("Missing token/spender");
+
+      if (isNative(token)) {
+        // Native ETH cannot be approved
+        throw new Error("ETH (native) does not support approvals");
+      }
+
       // some wallets/erc20s require reset to 0 before max
       if (currentAllowance && currentAllowance > 0n) {
         await writeContractAsync({
-          address: token,
+          address: token as Address,
           abi: erc20Abi,
           functionName: "approve",
           args: [spender, 0n],
         });
       }
       return writeContractAsync({
-        address: token,
+        address: token as Address,
         abi: erc20Abi,
         functionName: "approve",
         args: [spender, maxUint256],
