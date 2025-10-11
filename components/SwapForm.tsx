@@ -551,7 +551,7 @@ export default function SwapForm() {
         const tx = await writeContractAsync(sim.request);
       }
     } catch (e: any) {
-      const msg = e?.shortMessage || e?.message || String(e));
+      const msg = e?.shortMessage || e?.message || String(e);
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
       else setPreflightMsg(msg);
