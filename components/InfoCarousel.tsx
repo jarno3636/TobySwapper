@@ -1,3 +1,4 @@
+// components/InfoCarousel.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -5,7 +6,7 @@ import Image from "next/image";
 import type { Address } from "viem";
 import { formatUnits } from "viem";
 import { base } from "viem/chains";
-import { useReadContracts } from "wagmi";
+import { useReadContracts, usePublicClient } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI, SWAPPER } from "@/lib/addresses";
 
 /* ---------- ABIs ---------- */
@@ -22,13 +23,13 @@ type Item =
   | { kind: "link"; title: string; icon: string; href: string; blurb: string };
 
 const ITEMS: Item[] = [
-  { kind: "token", title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
-  { kind: "token", title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
-  { kind: "token", title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
-  { kind: "swapper", title: "SWAPPER", icon: "/toby2.PNG",          address: SWAPPER },
-  { kind: "link", title: "toadgod.xyz",  icon: "/tobyworld.PNG", href: "https://toadgod.xyz", blurb: "Official site: lore, links, and updates." },
-  { kind: "link", title: "Telegram",     icon: "/toadlore.PNG",  href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
-  { kind: "link", title: "@toadgod1017", icon: "/twitter.PNG",   href: "https://x.com/toadgod1017?s=21", blurb: "Follow on X for drops & news." },
+  { kind: "token",   title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
+  { kind: "token",   title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
+  { kind: "token",   title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
+  { kind: "swapper", title: "SWAPPER",  icon: "/toby2.PNG",           address: SWAPPER },
+  { kind: "link",    title: "toadgod.xyz",  icon: "/tobyworld.PNG", href: "https://toadgod.xyz",         blurb: "Official site: lore, links, and updates." },
+  { kind: "link",    title: "Telegram",     icon: "/toadlore.PNG",  href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
+  { kind: "link",    title: "@toadgod1017", icon: "/twitter.PNG",   href: "https://x.com/toadgod1017?s=21", blurb: "Follow on X for drops & news." },
 ];
 
 /* ---------- Utils ---------- */
@@ -45,6 +46,7 @@ const fmt = (n?: number, max = 4) =>
 
 /* ---------- Panels ---------- */
 function TokenPanel({ address, title, icon }: { address: Address; title: string; icon: string }) {
+  // Primary (fast) reads via multicall
   const { data, isLoading } = useReadContracts({
     allowFailure: true,
     contracts: [
@@ -56,10 +58,47 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
     query: { refetchOnWindowFocus: false, staleTime: 30_000, gcTime: 120_000 },
   });
 
-  const name = data?.[0]?.result as string | undefined;
-  const symbol = data?.[1]?.result as string | undefined;
-  const decimals = (data?.[2]?.result as number | undefined) ?? 18;
-  const supplyBig = data?.[3]?.result as bigint | undefined;
+  // Fallback single-call reads if any field is missing
+  const publicClient = usePublicClient({ chainId: base.id });
+  const [fallback, setFallback] = useState<{
+    name?: string; symbol?: string; decimals?: number; supply?: bigint;
+  }>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!publicClient) return;
+
+      const haveName = typeof data?.[0]?.result === "string";
+      const haveSym  = typeof data?.[1]?.result === "string";
+      const haveDec  = typeof data?.[2]?.result === "number";
+      const haveSup  = typeof data?.[3]?.result === "bigint";
+
+      if (haveName && haveSym && haveDec && haveSup) return;
+
+      try {
+        const [dec, nm, sym, sup] = await Promise.all([
+          haveDec ? (data?.[2]?.result as number) :
+            publicClient.readContract({ address, abi: erc20Abi, functionName: "decimals" }).catch(() => 18),
+          haveName ? (data?.[0]?.result as string) :
+            publicClient.readContract({ address, abi: erc20Abi, functionName: "name" }).catch(() => undefined),
+          haveSym ? (data?.[1]?.result as string) :
+            publicClient.readContract({ address, abi: erc20Abi, functionName: "symbol" }).catch(() => undefined),
+          haveSup ? (data?.[3]?.result as bigint) :
+            publicClient.readContract({ address, abi: erc20Abi, functionName: "totalSupply" }).catch(() => undefined),
+        ]);
+        if (!cancelled) setFallback({ name: nm, symbol: sym, decimals: dec, supply: sup });
+      } catch {
+        /* swallow – UI will keep placeholders */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [publicClient, data, address]);
+
+  const name    = (data?.[0]?.result as string | undefined) ?? fallback.name;
+  const symbol  = (data?.[1]?.result as string | undefined) ?? fallback.symbol;
+  const decimals = (data?.[2]?.result as number | undefined) ?? fallback.decimals ?? 18;
+  const supplyBig = (data?.[3]?.result as bigint | undefined) ?? fallback.supply;
   const supply = supplyBig ? Number(formatUnits(supplyBig, decimals)) : undefined;
 
   const href = `https://basescan.org/address/${address}`;
@@ -77,17 +116,16 @@ function TokenPanel({ address, title, icon }: { address: Address; title: string;
       <div className="grid grid-cols-2 gap-4">
         <div>
           <div className="text-[var(--ink-sub)]">Name</div>
-          <div>{isLoading ? "…" : name ?? "—"}</div>
+          <div>{isLoading && !name ? "…" : (name ?? "—")}</div>
         </div>
         <div>
           <div className="text-[var(--ink-sub)]">Symbol</div>
-          <div>{isLoading ? "…" : symbol ?? "—"}</div>
+          <div>{isLoading && !symbol ? "…" : (symbol ?? "—")}</div>
         </div>
         <div>
           <div className="text-[var(--ink-sub)]">Total Supply</div>
-          <div>{fmt(supply)}</div>
+          <div>{isLoading && supply === undefined ? "…" : fmt(supply)}</div>
         </div>
-        {/* holders removed */}
       </div>
     </div>
   );
@@ -176,47 +214,49 @@ export default function InfoCarousel() {
   return (
     <div className="flex flex-col items-center w-full overflow-hidden content-visible">
       {/* Window with peeking neighbors */}
-      <div className="w-full max-w-[560px] px-6 sm:px-8">
-        <div className="flex items-stretch gap-4">
-          {/* left peek */}
-          <div className="w-[18%] opacity-50 pointer-events-none">
-            <div className="glass rounded-2xl p-2 flex justify-center">
-              <Mini item={ITEMS[leftIdx]} />
-            </div>
-          </div>
+      <div className="relative flex items-center justify-center w-full max-w-[560px] px-6 sm:px-8">
+        {/* left arrow – pulled inward & below neighboring peeks */}
+        <button
+          onClick={prev}
+          className="absolute top-[58%] -translate-y-1/2 left-3 sm:left-4 md:left-5 z-20 pill pill-opaque px-3 py-1"
+          aria-label="Prev"
+        >
+          ←
+        </button>
 
-          {/* center image */}
-          <div className="flex-1 flex justify-center">
-            <div className="w-[52%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex justify-center items-center">
-              <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
+        <div className="w-full px-8 sm:px-10 md:px-12">
+          <div className="flex items-stretch gap-4">
+            {/* left peek */}
+            <div className="w-[18%] opacity-50 pointer-events-none">
+              <div className="glass rounded-2xl p-2 flex justify-center">
+                <Mini item={ITEMS[leftIdx]} />
+              </div>
             </div>
-          </div>
 
-          {/* right peek */}
-          <div className="w-[18%] opacity-50 pointer-events-none">
-            <div className="glass rounded-2xl p-2 flex justify-center">
-              <Mini item={ITEMS[rightIdx]} />
+            {/* center image */}
+            <div className="flex-1 flex justify-center">
+              <div className="w-[52%] aspect-square glass rounded-3xl overflow-hidden shadow-soft flex justify-center items-center">
+                <Image src={active.icon} alt={active.title} width={180} height={180} className="object-contain" />
+              </div>
+            </div>
+
+            {/* right peek */}
+            <div className="w-[18%] opacity-50 pointer-events-none">
+              <div className="glass rounded-2xl p-2 flex justify-center">
+                <Mini item={ITEMS[rightIdx]} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* arrows row — inside & below the peeks so they don't overlap or go off-screen */}
-        <div className="mt-3 flex items-center justify-between px-2">
-          <button
-            onClick={prev}
-            className="pill pill-opaque px-4 py-1.5 text-sm"
-            aria-label="Prev"
-          >
-            ←
-          </button>
-          <button
-            onClick={next}
-            className="pill pill-opaque px-4 py-1.5 text-sm"
-            aria-label="Next"
-          >
-            →
-          </button>
-        </div>
+        {/* right arrow – pulled inward & below neighboring peeks */}
+        <button
+          onClick={next}
+          className="absolute top-[58%] -translate-y-1/2 right-3 sm:right-4 md:right-5 z-20 pill pill-opaque px-3 py-1"
+          aria-label="Next"
+        >
+          →
+        </button>
       </div>
 
       <h3 className="text-lg font-semibold mt-3">{active.title}</h3>
@@ -233,7 +273,12 @@ export default function InfoCarousel() {
           ) : active.kind === "swapper" ? (
             <SwapperPanel />
           ) : (
-            <LinkPanel href={(active as any).href} title={active.title} blurb={(active as any).blurb} icon={active.icon} />
+            <LinkPanel
+              href={(active as any).href}
+              title={active.title}
+              blurb={(active as any).blurb}
+              icon={active.icon}
+            />
           )}
         </div>
       </div>
