@@ -1,11 +1,10 @@
-// components/ShareCallout.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 
 type ShareCalloutProps = {
-  token?: string;    // "$TOBY"
-  siteUrl?: string;  // override destination URL
+  token?: string;   // "$TOBY"
+  siteUrl?: string; // override destination URL
 };
 
 function formatCompact(n: number): string {
@@ -23,8 +22,6 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     let mounted = true;
     (async () => {
       try {
-        // ❌ remove Next.js { next: { revalidate } } — client fetch doesn't support it
-        // ✅ either disable cache via RequestInit or add a timestamp to bust cache
         const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
         const j = await r.json();
         if (mounted && j?.ok) {
@@ -32,13 +29,9 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
           const pretty = Number.isFinite(floatVal) ? formatCompact(floatVal) : undefined;
           setBurn(pretty ?? j.totalHuman);
         }
-      } catch {
-        // ignore; we’ll just omit amount
-      }
+      } catch {}
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const site =
@@ -55,33 +48,41 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   const textEncoded = encodeURIComponent(line);
   const urlEncoded = encodeURIComponent(site);
 
-  // Farcaster compose (deep link; includes embeds[] for link preview)
-  const farcasterHref = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
-  // Plain composer as web fallback
-  const farcasterWebHref = `https://warpcast.com/~/compose?text=${textEncoded}`;
-
-  // X / Twitter intent
+  // Use the *web* composer as primary to avoid app-store redirects
+  const farcasterWeb = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
   const xHref = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
 
+  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
+    // For some mobile UAs, even the web composer may try to bounce to the store.
+    // If that happens, open the web composer again in a separate tab shortly after.
+    // This gives users a visible, working web composer even without the app.
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) return; // desktop is fine
+
+    // open once via default <a>, then force-open a second time after a short delay
+    setTimeout(() => {
+      // if the browser navigated away (store), give them a clean web tab too
+      window.open(farcasterWeb, "_blank", "noopener,noreferrer");
+    }, 700);
+  };
+
   const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(`${line} ${site}`);
-    } catch {
-      // noop
-    }
+    try { await navigator.clipboard.writeText(`${line} ${site}`); } catch {}
   };
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
-        href={farcasterHref}
+        href={farcasterWeb}
+        onClick={onFarcasterClick}
         target="_blank"
         rel="noopener noreferrer"
         className="pill pill-opaque hover:opacity-90 text-xs"
-        title="Share on Farcaster"
+        title="Share on Farcaster (web composer)"
       >
         Spread the Lore
       </a>
+
       <a
         href={xHref}
         target="_blank"
@@ -92,7 +93,6 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         Share to X
       </a>
 
-      {/* Fallbacks */}
       <button
         onClick={copyToClipboard}
         className="pill pill-opaque hover:opacity-90 text-xs"
@@ -101,21 +101,8 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
       >
         Copy Text
       </button>
-      <a
-        href={farcasterWebHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pill pill-ghost hover:opacity-90 text-[10px]"
-        title="Open Warpcast Web Composer"
-      >
-        Warpcast Web
-      </a>
 
-      {burn && (
-        <span className="text-[10px] opacity-70 ml-1">
-          live burned: {burn}
-        </span>
-      )}
+      {burn && <span className="text-[10px] opacity-70 ml-1">live burned: {burn}</span>}
     </div>
   );
 }
