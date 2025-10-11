@@ -3,6 +3,8 @@ import Image from "next/image";
 import { TOKENS } from "@/lib/addresses";
 import type { Address } from "viem";
 import { useMemo } from "react";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { formatUnits } from "viem";
 
 const iconMap: Record<string, string> = {
   ETH: "/tokens/baseeth.PNG",   // Base ETH icon for ETH/WETH
@@ -21,19 +23,22 @@ const eq = (a?: string, b?: string) =>
  * For "ETH", we use the WETH address under the hood.
  */
 const preferredAddressForSymbol: Partial<Record<string, Address>> = {
-  ETH: (TOKENS.find(t => t.symbol === "WETH")?.address ?? "0x0000000000000000000000000000000000000000") as Address,
+  ETH: (TOKENS.find(t => t.symbol === "WETH")?.address ??
+    "0x0000000000000000000000000000000000000000") as Address,
 };
 
 /** Optional custom order for nicer UX. Unknown symbols go last alphabetically. */
 const symbolOrder = ["ETH", "USDC", "TOBY", "PATIENCE", "TABOSHI"];
 
 export default function TokenSelect({
+  user,           // 👈 add user so we can self-fetch balances
   value,
   onChange,
   exclude,
-  balance,
+  balance,        // optional preformatted balance string (still supported)
   collapseETH = true,
 }: {
+  user?: Address;                // 👈 NEW (use useAccount().address)
   value: Address;
   onChange: (a: Address) => void;
   exclude?: Address | string;
@@ -56,12 +61,20 @@ export default function TokenSelect({
   /** UI label: display WETH as ETH */
   const displaySymbol = selected.symbol === "WETH" ? "ETH" : (selected.symbol ?? "Unknown");
 
-  /** Safe balance text */
-  const numBal = useMemo(() => {
-    const n = balance != null ? Number(balance) : NaN;
-    return Number.isFinite(n) ? n : undefined;
-  }, [balance]);
-  const balText = numBal !== undefined ? numBal.toFixed(6) : "—";
+  /** Self-fetch balance if not provided */
+  const { value: hookBal, decimals: hookDec } = useTokenBalance(user, selected.address as Address);
+  const autoBal =
+    hookBal !== undefined && hookDec !== undefined
+      ? formatUnits(hookBal, hookDec)
+      : undefined;
+
+  /** Final balance text: prefer prop if provided; else hook; else dash */
+  const balText = useMemo(() => {
+    const src = balance ?? autoBal;
+    if (src == null) return "—";
+    const n = Number(src);
+    return Number.isFinite(n) ? n.toFixed(6) : src; // keep string if not numeric
+  }, [balance, autoBal]);
 
   /** Build list: exclude, collapse WETH→ETH, sort for UX */
   const availableTokens = useMemo(() => {
