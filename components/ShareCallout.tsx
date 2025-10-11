@@ -29,7 +29,7 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
           const n = parseFloat(j.totalHuman);
           setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
         }
-      } catch {}
+      } catch { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
@@ -47,29 +47,49 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  const textEncoded = encodeURIComponent(line);
-  const urlEncoded  = encodeURIComponent(site);
+  // ---- Farcaster (Warpcast) ----
+  const farcasterWeb = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
 
-  // Web composer (what we want to force)
-  const composerWebUrl = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
-
-  // X / Twitter
-  const xUrl = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
-
-  // If inside Farcaster Mini App, prefer SDK action; otherwise open web composer in a new tab.
   const handleFarcasterShare = async () => {
+    // Prefer official Mini App action if available (inside Farcaster app)
     try {
-      // Mini App SDK is injected by Farcaster clients
       const sdk = (window as any)?.farcaster?.miniapp?.sdk || (window as any)?.sdk;
       if (sdk?.actions?.composeCast) {
-        await sdk.actions.composeCast({ text: line, embeds: [site] }); // preferred path in-app
+        await sdk.actions.composeCast({ text: line, embeds: [site] }); // best path in-app
         return;
       }
-    } catch {
-      // fall through to web
-    }
-    // Force open the WEB composer (new window) to dodge universal-link -> App Store
-    window.open(composerWebUrl, "_blank", "noopener,noreferrer");
+    } catch { /* fall through */ }
+
+    // Outside a Mini App: force open the WEB composer in a new tab to avoid app-store bounces
+    window.open(farcasterWeb, "_blank", "noopener,noreferrer");
+  };
+
+  // ---- X / Twitter ----
+  // Try native scheme first (app), then fallback to the web intent if not handled
+  const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
+
+  const handleXShare = () => {
+    const message = `${line} ${site}`;
+    const xAppUrl = `twitter://post?message=${encodeURIComponent(message)}`;
+
+    // Attempt to open the app. If it fails (no handler), open the web intent after a short delay.
+    const timer = setTimeout(() => {
+      window.open(xWeb, "_blank", "noopener,noreferrer");
+    }, 600);
+
+    // Opening in the same tab can be blocked; use a new tab to keep user on your site.
+    const win = window.open(xAppUrl, "_blank");
+    // If the browser blocked the popup or immediately closed, go straight to web.
+    setTimeout(() => {
+      try {
+        if (!win || win.closed) {
+          clearTimeout(timer);
+          window.open(xWeb, "_blank", "noopener,noreferrer");
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 150);
   };
 
   const copyToClipboard = async () => {
@@ -87,15 +107,14 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         Spread the Lore
       </button>
 
-      <a
-        href={xUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handleXShare}
         className="pill pill-opaque hover:opacity-90 text-xs"
         title="Share on X"
+        type="button"
       >
         Share to X
-      </a>
+      </button>
 
       <button
         onClick={copyToClipboard}
