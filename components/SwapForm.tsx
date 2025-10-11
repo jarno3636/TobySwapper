@@ -90,7 +90,7 @@ const UniV2RouterAbi = [
     outputs: [{type:"uint256[]"}] },
 ] as const;
 
-// WETH deposit
+// WETH deposit (only used if we ever need to wrap)
 const WethAbi = [
   { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
 ] as const;
@@ -311,6 +311,7 @@ export default function SwapForm() {
       let bestOut: bigint | undefined;
       let best: { tokens: Address[]; fees: number[] } | undefined;
       let v2Path: Address[] | undefined;
+      let v2Out: bigint | undefined;
 
       try {
         // 1) V3 pruned candidates → parallel quote
@@ -338,15 +339,34 @@ export default function SwapForm() {
           }
         }
 
-        // 2) V2 fallback if no V3 best
-        if (!bestOut) {
-          const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
-          if (v2 && v2.out > 0n) {
-            bestOut = v2.out; v2Path = v2.path;
-            setDebug(d => ({ ...d, attempts: [...d.attempts, { kind: "v2", pathTokens: v2.path, ok: true, amountOut: v2.out, ms: 0 }]}));
-            const sym = (addr: Address) => TOKENS.find(x => eq(x.address, addr))?.symbol ?? (eq(addr, WETH) ? "WETH" : addr.slice(0,6));
-            setDebugPath(`v2: ${v2.path.map(sym).join(" → ")}`);
-          }
+        // 2) Always attempt a V2 quote as well (to let ETH-in prefer V2 even if V3 exists)
+        const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
+        if (v2 && v2.out > 0n) {
+          v2Out = v2.out; v2Path = v2.path;
+          setDebug(d => ({ ...d, attempts: [...d.attempts, { kind: "v2", pathTokens: v2.path, ok: true, amountOut: v2.out, ms: 0 }]}));
+        }
+
+        // 3) Selection rule:
+        //    - If tokenIn is native ETH and we have a V2 path, PREFER V2 (avoid pre-wrap + revert risk)
+        //    - Else prefer the higher out among available quotes
+        if (tokenIn === "ETH" && v2Path && v2Out && v2Out > 0n) {
+          best = undefined;            // disable V3 usage for ETH-in when V2 is available
+          bestOut = v2Out;
+        } else if (v2Out && (!bestOut || v2Out > bestOut)) {
+          // If V2 was simply better, use it
+          best = undefined;
+          bestOut = v2Out;
+        }
+
+        // Set debug path text now that we've decided
+        if (best) {
+          const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
+          const parts: string[] = [];
+          for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
+          setDebugPath(`v3: ${parts.join(" → ")}`);
+        } else if (v2Path) {
+          const sym = (addr: Address) => TOKENS.find(x => eq(x.address, addr))?.symbol ?? (eq(addr, WETH) ? "WETH" : addr.slice(0,6));
+          setDebugPath(`v2: ${v2Path.map(sym).join(" → ")}`);
         }
       } catch (e:any) {
         setQuoteErr(e?.shortMessage || e?.message || String(e));
@@ -357,13 +377,7 @@ export default function SwapForm() {
       if (bestOut) {
         setQuoteOutMain(bestOut);
         setBestV3(best);
-        setBestV2Path(v2Path);
-        const syms = best?.tokens?.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
-        if (best && syms) {
-          const parts: string[] = [];
-          for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
-          setDebugPath(`v3: ${parts.join(" → ")}`);
-        }
+        setBestV2Path(best ? undefined : (v2Path || undefined)); // if best is V3 -> clear V2, else set chosen V2
         setDebug((d)=>({ ...d, state: "ok", bestOut: bestOut, bestKind: best ? "v3" : "v2" }));
         setQuoteState("ok");
       } else {
@@ -428,11 +442,13 @@ export default function SwapForm() {
     } catch { setApproveCooldown(false); }
   }, [isConnected, tokenInAddr, approveMaxV2, allowanceV2, refetchAllowV2]);
 
+  // Only show V3 approval if we're actually using V3
   const showApproveV3 =
     !!bestV3 && !!tokenInAddr && amountInBig > 0n && (allowanceV3 ?? 0n) < amountInBig;
 
+  // Show V2 approval only when using V2 AND input is ERC-20 (not ETH)
   const showApproveV2 =
-    !bestV3 && !!tokenInAddr && amountInBig > 0n && (allowanceV2 ?? 0n) < amountInBig;
+    !bestV3 && tokenIn !== "ETH" && !!tokenInAddr && amountInBig > 0n && (allowanceV2 ?? 0n) < amountInBig;
 
   const approveTextV3 =
     isApprovingV3 ? "Approving (V3)…" :
@@ -476,10 +492,31 @@ export default function SwapForm() {
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
+      const minOut = SAFE_MODE_MINOUT_ZERO ? 0n : minOutMain;
+      const isEthIn = tokenIn === "ETH";
+      const isEthOut = outMeta.symbol === "ETH";
+
+      // If ETH-in and we have a V2 path (quote chose V2), ALWAYS use V2 native flow first.
+      if (isEthIn && bestV2Path) {
+        const sim = await (client as any).simulateContract({
+          address: V2_ROUTER,
+          abi: UniV2RouterAbi,
+          functionName: "swapExactETHForTokens",
+          args: [ minOut, bestV2Path, address as Address, deadline ],
+          account: address as Address,
+          chain: base,
+          value: parseUnits(amt || "0", 18),
+        });
+        const tx = await writeContractAsync(sim.request);
+        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "v2:ETH->TOKEN" } }));
+        setSending(false);
+        return;
+      }
+
       /* ---------- Branch A: V3 route via your SWAPPER ---------- */
       if (bestV3) {
         // If input is ETH → wrap to WETH and ensure allowance to SWAPPER
-        if (tokenIn === "ETH") {
+        if (isEthIn) {
           await writeContractAsync({
             address: WETH as Address,
             abi: WethAbi,
@@ -537,31 +574,13 @@ export default function SwapForm() {
         return;
       }
 
-      /* ---------- Branch B: V2 fallback ---------- */
-      // Compute minOut
-      const minOut = SAFE_MODE_MINOUT_ZERO ? 0n : minOutMain;
-      const isEthIn = tokenIn === "ETH";
-      const isEthOut = outMeta.symbol === "ETH";
-
-      // Determine path
+      /* ---------- Branch B: V2 fallback (ERC20 paths) ---------- */
+      // Determine path (bestV2Path was set by the quote if V2 was chosen)
       const path = bestV2Path ?? (isEthIn ? [WETH as Address, tokenOut as Address] :
                                    isEthOut ? [inAddr, WETH as Address] :
                                    [inAddr, tokenOut as Address]);
 
-      if (isEthIn) {
-        // ETH -> Token
-        const sim = await (client as any).simulateContract({
-          address: V2_ROUTER,
-          abi: UniV2RouterAbi,
-          functionName: "swapExactETHForTokens",
-          args: [ minOut, path, address as Address, deadline ],
-          account: address as Address,
-          chain: base,
-          value: parseUnits(amt || "0", 18),
-        });
-        const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "v2:ETH->TOKEN" } }));
-      } else if (isEthOut) {
+      if (isEthOut) {
         // Token -> ETH
         if ((allowanceV2 ?? 0n) < amountInBig) {
           setPreflightMsg(`Approve ${inMeta.symbol} (V2) first.`);
@@ -774,7 +793,7 @@ export default function SwapForm() {
         disabled={disableSwap}
         title="Swap"
       >
-        {sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3)` : "Swap (V2 fallback)"}
+        {sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3)` : "Swap (V2)"}
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
