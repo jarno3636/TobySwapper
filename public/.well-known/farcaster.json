@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "REPLACE_WITH_BASE64_HEADER",
+    "payload": "REPLACE_WITH_BASE64_PAYLOAD",
+    "signature": "REPLACE_WITH_BASE64_SIGNATURE"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Toby Swapper",
+    "homeUrl": "https://tobyswap.vercel.app/",
+    "iconUrl": "https://tobyswap.vercel.app/icons/toby-1024.png",
+    "splashImageUrl": "https://tobyswap.vercel.app/icons/toby-200.png",
+    "splashBackgroundColor": "#0b0b0b",
+    "subtitle": "Swap. Burn. Spread the lore.",
+    "description": "TobySwap on Base — 1% auto-burn to $TOBY. Join the lore 🐸"
+  }
+}
