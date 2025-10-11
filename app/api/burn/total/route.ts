@@ -3,24 +3,11 @@ import { NextResponse } from "next/server";
 import { createPublicClient, http, type Address, parseAbi } from "viem";
 import { base } from "viem/chains";
 
-// 👉 Your ABI (drop the JSON file at abi/TobySwapper.json)
+// ✅ Your contract ABI & addresses
 import TobySwapperAbi from "@/abi/TobySwapper.json";
+import { SWAPPER, TOBY } from "@/lib/addresses";
 
-// If you already export SWAPPER / TOBY in "@/lib/addresses", we’ll use those.
-// Otherwise, set env vars SWAPPER_ADDRESS and NEXT_PUBLIC_TOBY.
-let SWAPPER_FROM_LIB: Address | undefined;
-let TOBY_FROM_LIB: Address | undefined;
-try {
-  // Optional import; ignore if you don't have it.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ADDR = require("@/lib/addresses");
-  SWAPPER_FROM_LIB = (ADDR.SWAPPER ?? ADDR.TOBY_SWAPPER) as Address | undefined;
-  TOBY_FROM_LIB = (ADDR.TOBY as Address) ?? undefined;
-} catch {
-  // no-op
-}
-
-// Minimal ERC20 ABI to read decimals()
+// Minimal ERC20 to read decimals()
 const ERC20_DECIMALS_ABI = parseAbi([
   "function decimals() view returns (uint8)"
 ]);
@@ -32,38 +19,17 @@ export async function GET() {
     const rpc = process.env.BASE_RPC_URL || "https://mainnet.base.org";
     const client = createPublicClient({ chain: base, transport: http(rpc) });
 
-    // Resolve contract addresses
-    const swapper =
-      (SWAPPER_FROM_LIB as Address) ||
-      (process.env.SWAPPER_ADDRESS as Address) ||
-      (process.env.NEXT_PUBLIC_SWAPPER as Address);
+    const swapper = SWAPPER as Address;
+    const toby = TOBY as Address;
 
-    if (!swapper) {
-      return NextResponse.json(
-        { ok: false, error: "Missing SWAPPER address (set SWAPPER_ADDRESS or NEXT_PUBLIC_SWAPPER, or export SWAPPER in lib/addresses)." },
-        { status: 500 }
-      );
-    }
-
-    const toby =
-      (TOBY_FROM_LIB as Address) ||
-      (process.env.NEXT_PUBLIC_TOBY as Address);
-
-    if (!toby) {
-      return NextResponse.json(
-        { ok: false, error: "Missing TOBY token address (set NEXT_PUBLIC_TOBY or export TOBY in lib/addresses)." },
-        { status: 500 }
-      );
-    }
-
-    // 1) Read raw burned total from your TobySwapper
+    // 1) Read raw burned total directly from your TobySwapper
     const totalRaw = (await client.readContract({
       address: swapper,
       abi: TobySwapperAbi as any,
       functionName: "totalTobyBurned",
     })) as bigint;
 
-    // 2) Read decimals from the TOBY ERC-20 for scaling (fallback 18)
+    // 2) Scale using TOBY decimals (fallback 18 if anything fails)
     let decimals = 18;
     try {
       const d = (await client.readContract({
@@ -73,7 +39,7 @@ export async function GET() {
       })) as number;
       if (Number.isFinite(d)) decimals = d;
     } catch {
-      // keep fallback 18
+      // keep fallback
     }
 
     const denom = BigInt(10) ** BigInt(decimals);
@@ -84,7 +50,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: true,
-        source: "tobySwapper.totalTobyBurned",
+        source: "TobySwapper.totalTobyBurned",
         swapper,
         toby,
         decimals,
