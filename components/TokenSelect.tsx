@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { TOKENS } from "@/lib/addresses";
+import { TOKENS, type TokenAddress } from "@/lib/addresses";
 import type { Address } from "viem";
 import { useMemo } from "react";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
@@ -62,7 +62,11 @@ export default function TokenSelect({
   const displaySymbol = selected.symbol === "WETH" ? "ETH" : (selected.symbol ?? "Unknown");
 
   /** Self-fetch balance if not provided */
-  const { value: hookBal, decimals: hookDec } = useTokenBalance(user, selected.address as Address);
+  const { value: hookBal, decimals: hookDec } = useTokenBalance(
+    user,
+    selected.address as TokenAddress,
+    { chainId: 8453 } // Base mainnet
+  );
   const autoBal =
     hookBal !== undefined && hookDec !== undefined
       ? formatUnits(hookBal, hookDec)
@@ -141,9 +145,9 @@ export default function TokenSelect({
           const val =
             label === "ETH" && preferredAddressForSymbol.ETH
               ? preferredAddressForSymbol.ETH
-              : t.address;
+              : t.address as Address;
           return (
-            <option key={t.address} value={val}>
+            <option key={t.address as string} value={val}>
               {label}
             </option>
           );
