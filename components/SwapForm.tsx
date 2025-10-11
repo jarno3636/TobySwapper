@@ -10,8 +10,6 @@ import {
   encodePacked,
   encodeAbiParameters,
   getAddress,
-  createPublicClient,
-  http,
 } from "viem";
 import { base } from "viem/chains";
 import {
@@ -21,7 +19,15 @@ import {
   useSwitchChain,
 } from "wagmi";
 import TokenSelect from "./TokenSelect";
-import { TOKENS, USDC, WETH, SWAPPER, TOBY, QUOTER_V3 } from "@/lib/addresses";
+import {
+  TOKENS,
+  USDC,
+  WETH,
+  SWAPPER,
+  TOBY,
+  QUOTER_V3,
+  QUOTE_ROUTER_V2, // 👈 v2 router for fallback quoting
+} from "@/lib/addresses";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import TobySwapperAbi from "@/abi/TobySwapper.json";
@@ -31,18 +37,16 @@ import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
-const QUOTE_TIMEOUT_MS = 5_000;
+const QUOTE_TIMEOUT_MS = 5_000; // v3 quote time budget
+const QUOTE_V2_TIMEOUT_MS = 3_000; // v2 fallback time budget
 
-/* ---------- Minimal ABIs (Uniswap v3 Quoter) ---------- */
-const QuoterV2Abi = [
+/* ---------- Minimal ABIs ---------- */
+const QuoterV3Abi = [
   {
     type: "function",
     name: "quoteExactInput",
     stateMutability: "nonpayable",
-    inputs: [
-      { name: "path", type: "bytes" },
-      { name: "amountIn", type: "uint256" },
-    ],
+    inputs: [{ name: "path", type: "bytes" }, { name: "amountIn", type: "uint256" }],
     outputs: [
       { name: "amountOut", type: "uint256" },
       { name: "sqrtPriceX96AfterList", type: "uint160[]" },
@@ -52,38 +56,36 @@ const QuoterV2Abi = [
   },
 ] as const;
 
+// tiny v2 router ABI for quoting
+const UniV2RouterAbi = [
+  {
+    type: "function",
+    name: "getAmountsOut",
+    stateMutability: "view",
+    inputs: [{ name: "amountIn", type: "uint256" }, { name: "path", type: "address[]" }],
+    outputs: [{ name: "amounts", type: "uint256[]" }],
+  },
+] as const;
+
 /* ---------- helpers ---------- */
 function byAddress(addr?: Address | "ETH") {
   if (!addr || addr === "ETH")
     return { symbol: "ETH", decimals: 18 as const, address: undefined };
-  const t = TOKENS.find(
-    (t) => t.address.toLowerCase() === String(addr).toLowerCase()
-  );
+  const t = TOKENS.find((t) => t.address.toLowerCase() === String(addr).toLowerCase());
   return t
-    ? {
-        symbol: t.symbol,
-        decimals: (t.decimals ?? 18) as 18 | 6,
-        address: t.address as Address,
-      }
+    ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
 }
-const eq = (a?: string, b?: string) =>
-  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 const lc = (a: Address) => a.toLowerCase() as Address;
-const fmtEth = (wei: bigint, dec = 18) =>
-  Number(formatUnits(wei, dec)).toFixed(6);
+const fmtEth = (wei: bigint, dec = 18) => Number(formatUnits(wei, dec)).toFixed(6);
 
-// hard timeout wrapper (prevents “forever loading”)
+// hard timeout wrapper
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("Timeout")), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p.then((v) => { clearTimeout(id); resolve(v); })
+     .catch((e) => { clearTimeout(id); reject(e); });
   });
 }
 
@@ -94,24 +96,10 @@ function useNetworkGuard() {
   const isOnBase = chainId === base.id;
   const ensureBase = useCallback(async () => {
     if (!isOnBase && !isPending) {
-      try {
-        await switchChainAsync({ chainId: base.id });
-      } catch {}
+      try { await switchChainAsync({ chainId: base.id }); } catch {}
     }
   }, [isOnBase, isPending, switchChainAsync]);
   return { isOnBase, ensureBase };
-}
-
-/* ---------- safe public client (never undefined) ---------- */
-function useSafePublicClient() {
-  const wagmiClient = usePublicClient();
-  if (wagmiClient) return wagmiClient;
-  const rpcUrl =
-    process.env.NEXT_PUBLIC_RPC_BASE ||
-    (process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
-      ? `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
-      : "https://mainnet.base.org");
-  return createPublicClient({ chain: base, transport: http(rpcUrl) });
 }
 
 /* ---------- v3 path helpers (normalized + fees as uint24) ---------- */
@@ -144,10 +132,7 @@ function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
     const hops = tokens.length - 1;
     if (hops < 1) continue;
     const backtrack = (i: number, cur: number[]) => {
-      if (i === hops) {
-        out.push({ tokens, fees: cur });
-        return;
-      }
+      if (i === hops) { out.push({ tokens, fees: cur }); return; }
       for (const f of FEES) backtrack(i + 1, [...cur, f]);
     };
     backtrack(0, []);
@@ -161,7 +146,7 @@ function buildV3Candidates(tokenIn: Address | "ETH", tokenOut: Address) {
   });
 }
 
-/* ---------- fee/burn path (V2-style; contract expects this) ---------- */
+/* ---------- fee/burn path (contract expects V2-style addresses[]) ---------- */
 function buildFeePathV2Like(inA: Address): Address[] {
   const inL = lc(inA);
   if (eq(inL, TOBY)) return [inL as Address, TOBY as Address];
@@ -172,7 +157,7 @@ function buildFeePathV2Like(inA: Address): Address[] {
 export default function SwapForm() {
   const { address, chainId, isConnected } = useAccount();
   const { isOnBase, ensureBase } = useNetworkGuard();
-  const client = useSafePublicClient();
+  const client = usePublicClient(); // wagmi manages transports
   const { writeContractAsync } = useWriteContract();
 
   // UI state
@@ -182,7 +167,7 @@ export default function SwapForm() {
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Reset default route on account/chain change
+  // Reset default on account/chain change
   useEffect(() => {
     setTokenIn("ETH");
     setTokenOut(TOBY as Address);
@@ -190,21 +175,15 @@ export default function SwapForm() {
   }, [address, chainId]);
 
   // Ensure Base when connected
-  useEffect(() => {
-    if (isConnected) void ensureBase();
-  }, [isConnected, ensureBase]);
+  useEffect(() => { if (isConnected) void ensureBase(); }, [isConnected, ensureBase]);
 
   // balances & price
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
   const balInRaw = useTokenBalance(address, inMeta.address);
   const balOutRaw = useTokenBalance(address, outMeta.address);
-  const inUsd = useUsdPriceSingle(
-    inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address)
-  );
-  const outUsd = useUsdPriceSingle(
-    outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address)
-  );
+  const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address));
+  const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address));
 
   // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
@@ -214,12 +193,10 @@ export default function SwapForm() {
   }, [amt]);
 
   const amountInBig = useMemo(() => {
-    try {
-      return parseUnits(debouncedAmt || "0", inMeta.decimals);
-    } catch {
-      return 0n;
-    }
+    try { return parseUnits(debouncedAmt || "0", inMeta.decimals); }
+    catch { return 0n; }
   }, [debouncedAmt, inMeta.decimals]);
+
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
@@ -227,8 +204,10 @@ export default function SwapForm() {
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
+      if (!client) return;
+      const c = client;
       try {
-        const bps = (await client.readContract({
+        const bps = (await c.readContract({
           address: lc(SWAPPER as Address),
           abi: [
             {
@@ -246,22 +225,16 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  /* ---------- v3 Quote (ONLY) ---------- */
+  /* ---------- Quote (v3 first; delayed v2 fallback) ---------- */
   const mainAmountIn = useMemo(
-    () =>
-      amountInBig === 0n
-        ? 0n
-        : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM,
+    () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
     [amountInBig, feeBps]
   );
-  const [quoteState, setQuoteState] = useState<
-    "idle" | "loading" | "noroute" | "ok"
-  >("idle");
+  const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
-  const [bestV3, setBestV3] = useState<
-    { tokens: Address[]; fees: number[] } | undefined
-  >();
+  const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
+  const [usedV2, setUsedV2] = useState<boolean>(false);
   const [debugPath, setDebugPath] = useState<string | undefined>();
   const quoteLatch = useRef<number>(0);
 
@@ -271,99 +244,112 @@ export default function SwapForm() {
       setQuoteErr(undefined);
       setQuoteOutMain(undefined);
       setBestV3(undefined);
+      setUsedV2(false);
       setDebugPath(undefined);
-      if (!isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) {
+
+      if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) {
         setQuoteState("idle");
         return;
       }
+      const c = client;
       setQuoteState("loading");
       const myLatch = ++quoteLatch.current;
 
       let bestOut: bigint | undefined;
       let best: { tokens: Address[]; fees: number[] } | undefined;
 
+      // --- v3 attempt with hard timeout ---
       try {
         const tryAllV3 = (async () => {
           for (const cand of buildV3Candidates(tokenIn, tokenOut)) {
             try {
               const path = encodeV3Path(cand.tokens, cand.fees);
-              const [amountOut] = (await client.readContract({
+              const [amountOut] = (await c.readContract({
                 address: QUOTER_V3 as Address,
-                abi: QuoterV2Abi as any,
+                abi: QuoterV3Abi as any,
                 functionName: "quoteExactInput",
                 args: [path, mainAmountIn],
               })) as [bigint];
               if (amountOut > 0n && (!bestOut || amountOut > bestOut)) {
-                bestOut = amountOut;
-                best = cand;
+                bestOut = amountOut; best = cand;
               }
             } catch (e: any) {
-              if (!quoteErr)
-                setQuoteErr(String(e?.shortMessage || e?.message || e));
+              if (!quoteErr) setQuoteErr(String(e?.shortMessage || e?.message || e));
             }
           }
         })();
         await withTimeout(tryAllV3, QUOTE_TIMEOUT_MS);
       } catch {
-        // timeout -> treat as no route
+        // v3 timed out – we'll try v2 below
+      }
+
+      // --- v2 fallback if no v3 route found ---
+      if (!bestOut) {
+        try {
+          const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+          const v2Paths: Address[][] = [
+            [inAddr, tokenOut as Address],
+            [inAddr, WETH as Address, tokenOut as Address],
+            [inAddr, USDC as Address, tokenOut as Address],
+          ];
+          const tryAllV2 = (async () => {
+            for (const p of v2Paths) {
+              try {
+                const amounts = (await c.readContract({
+                  address: QUOTE_ROUTER_V2 as Address,
+                  abi: UniV2RouterAbi as any,
+                  functionName: "getAmountsOut",
+                  args: [mainAmountIn, p],
+                })) as bigint[];
+                const out = amounts[amounts.length - 1];
+                if (out > 0n && (!bestOut || out > bestOut)) {
+                  bestOut = out; best = undefined; setUsedV2(true);
+                  setDebugPath(`v2: ${p.map(a => TOKENS.find(x => eq(x.address, a))?.symbol ?? a.slice(0,6)).join(" → ")}`);
+                }
+              } catch {/* keep trying */}
+            }
+          })();
+          await withTimeout(tryAllV2, QUOTE_V2_TIMEOUT_MS);
+        } catch {/* ignore */}
       }
 
       if (!alive || myLatch !== quoteLatch.current) return;
 
-      if (bestOut && best) {
+      if (bestOut) {
         setQuoteOutMain(bestOut);
-        setBestV3(best);
-        const syms = best.tokens.map(
-          (t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6)
-        );
-        const parts: string[] = [];
-        for (let i = 0; i < best.fees.length; i++)
-          parts.push(`${syms[i]}(${best.fees[i]})→${syms[i + 1]}`);
-        setDebugPath(`v3: ${parts.join(" → ")}`);
+        if (best) {
+          setBestV3(best);
+          const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
+          const parts: string[] = [];
+          for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
+          setDebugPath(`v3: ${parts.join(" → ")}`);
+        }
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
-        setQuoteErr("No v3 route found or router timed out.");
+        setQuoteErr("No v3/v2 route found or routers timed out.");
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn]); // eslint-disable-line
 
   const expectedOutMainHuman = useMemo(() => {
-    try {
-      return quoteOutMain
-        ? Number(formatUnits(quoteOutMain, outMeta.decimals))
-        : undefined;
-    } catch {
-      return undefined;
-    }
+    try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; }
+    catch { return undefined; }
   }, [quoteOutMain, outMeta.decimals]);
 
   const minOutMainHuman = useMemo(() => {
     if (!quoteOutMain || SAFE_MODE_MINOUT_ZERO) return "0";
-    const raw =
-      (quoteOutMain * BigInt(Math.round((100 - slippage) * 100))) / 10000n;
+    const raw = (quoteOutMain * BigInt(Math.round((100 - slippage) * 100))) / 10000n;
     return formatUnits(raw, outMeta.decimals);
   }, [quoteOutMain, slippage, outMeta.decimals]);
 
   /* ---------- allowance / approval (stable & no flicker) ---------- */
   const tokenInAddr = inMeta.address as Address | undefined;
   const needsApproval = !!tokenInAddr;
-  const {
-    value: allowanceValue,
-    isLoading: isAllowanceLoading,
-    refetch: refetchAllowance,
-  } = useStickyAllowance(
-    tokenInAddr,
-    address as Address | undefined,
-    SWAPPER as Address
-  );
-  const { approveMaxFlow, isPending: isApproving } = useApprove(
-    tokenInAddr,
-    SWAPPER as Address
-  );
+  const { value: allowanceValue, isLoading: isAllowanceLoading, refetch: refetchAllowance } =
+    useStickyAllowance(tokenInAddr, address as Address | undefined, SWAPPER as Address);
+  const { approveMaxFlow, isPending: isApproving } = useApprove(tokenInAddr, SWAPPER as Address);
   const [approveCooldown, setApproveCooldown] = useState(false);
 
   const onApprove = useCallback(async () => {
@@ -371,46 +357,32 @@ export default function SwapForm() {
     setApproveCooldown(true);
     try {
       await approveMaxFlow(allowanceValue);
-      setTimeout(() => {
-        refetchAllowance();
-        setApproveCooldown(false);
-      }, 2000);
+      setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
     } catch {
       setApproveCooldown(false);
     }
-  }, [
-    needsApproval,
-    isConnected,
-    tokenInAddr,
-    approveMaxFlow,
-    allowanceValue,
-    refetchAllowance,
-  ]);
+  }, [needsApproval, isConnected, tokenInAddr, approveMaxFlow, allowanceValue, refetchAllowance]);
 
   const showApproveButton =
     needsApproval && amountInBig > 0n && (allowanceValue ?? 0n) < amountInBig;
 
-  const approveText = isApproving
-    ? "Approving…"
-    : isAllowanceLoading && !approveCooldown
-    ? "Checking allowance…"
-    : (allowanceValue ?? 0n) > 0n
-    ? `Re-approve ${inMeta.symbol}`
-    : `Approve ${inMeta.symbol}`;
+  const approveText =
+    isApproving ? "Approving…" :
+    isAllowanceLoading && !approveCooldown ? "Checking allowance…" :
+    (allowanceValue ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
 
-  /* ---------- simulate + send (v3-only for ERC20; ETH path uses contract’s ETH fn) ---------- */
+  /* ---------- simulate + send ---------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
 
   async function doSwap() {
-    if (!isConnected || !isOnBase) {
-      setPreflightMsg("Connect your wallet on Base to swap.");
-      return;
-    }
+    if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
     if (amountInBig === 0n) return;
+    if (!client) { setPreflightMsg("No RPC client available."); return; }
 
     setPreflightMsg(undefined);
     setSending(true);
+    const c = client;
 
     const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
@@ -420,20 +392,13 @@ export default function SwapForm() {
 
     try {
       if (tokenIn === "ETH") {
-        // your contract’s ETH entrypoint (still V2-style path for fee burn)
+        // ETH -> token via your contract’s ETH entrypoint
         const sim = await withTimeout<any>(
-          (client.simulateContract as any)({
+          (c.simulateContract as any)({
             address: lc(SWAPPER as Address),
             abi: TobySwapperAbi as any,
             functionName: "swapETHForTokensSupportingFeeOnTransferTokens",
-            args: [
-              lc(tokenOut),
-              parseUnits(minOutMainHuman, decOut),
-              [WETH as Address, tokenOut],
-              feePath,
-              0n,
-              deadline,
-            ],
+            args: [ lc(tokenOut), parseUnits(minOutMainHuman, decOut), [WETH as Address, tokenOut], feePath, 0n, deadline ],
             value: parseUnits(amt || "0", 18),
             account: address as Address,
             chain: base,
@@ -445,22 +410,13 @@ export default function SwapForm() {
         return;
       }
 
-      // v3 ERC20 -> token route (only)
-      if (!bestV3) {
-        setPreflightMsg("No v3 route available for this pair/size.");
-        setSending(false);
-        return;
-      }
-      if ((allowanceValue ?? 0n) < amountInBig) {
-        setPreflightMsg(`Approve ${inMeta.symbol} first.`);
-        setSending(false);
-        return;
-      }
-
-      const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
-      const paramsBytes = encodeAbiParameters(
-        [
-          {
+      // ERC20 -> token
+      if (bestV3) {
+        // v3 path found
+        if ((allowanceValue ?? 0n) < amountInBig) { setPreflightMsg(`Approve ${inMeta.symbol} first.`); setSending(false); return; }
+        const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
+        const paramsBytes = encodeAbiParameters(
+          [{
             type: "tuple",
             components: [
               { name: "path", type: "bytes" },
@@ -469,32 +425,46 @@ export default function SwapForm() {
               { name: "amountIn", type: "uint256" },
               { name: "amountOutMinimum", type: "uint256" },
             ],
-          },
-        ],
-        [
-          {
+          }],
+          [{
             path: v3Path,
             recipient: address as Address,
             deadline,
             amountIn: parseUnits(amt || "0", decIn),
             amountOutMinimum: parseUnits(minOutMainHuman, decOut),
-          },
-        ]
-      );
+          }]
+        );
+        const sim = await withTimeout<any>(
+          (c.simulateContract as any)({
+            address: lc(SWAPPER as Address),
+            abi: TobySwapperAbi as any,
+            functionName: "swapTokensForTokensV3ExactInput",
+            args: [ lc(inAddr), lc(tokenOut), address as Address, parseUnits(amt || "0", decIn), paramsBytes, feePath, 0n ],
+            account: address as Address,
+            chain: base,
+          }),
+          10_000
+        );
+        await writeContractAsync(sim.request);
+        setSending(false);
+        return;
+      }
 
+      // v2 fallback execution (only reached if no v3 route)
       const sim = await withTimeout<any>(
-        (client.simulateContract as any)({
+        (c.simulateContract as any)({
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
-          functionName: "swapTokensForTokensV3ExactInput",
+          functionName: "swapTokensForTokensSupportingFeeOnTransferTokens",
           args: [
             lc(inAddr),
             lc(tokenOut),
-            address as Address,
             parseUnits(amt || "0", decIn),
-            paramsBytes,
-            feePath,
+            parseUnits(minOutMainHuman, decOut),
+            [inAddr, tokenOut], // main swap path
+            feePath,            // burn/fee path
             0n,
+            deadline,
           ],
           account: address as Address,
           chain: base,
@@ -514,13 +484,9 @@ export default function SwapForm() {
 
   /* ---------- UI ---------- */
   const disableSwap =
-    !isConnected ||
-    !isOnBase ||
-    amountInBig === 0n ||
+    !isConnected || !isOnBase || amountInBig === 0n ||
     (balInRaw.value ?? 0n) < amountInBig ||
-    showApproveButton ||
-    quoteState !== "ok" ||
-    sending;
+    showApproveButton || sending || quoteState !== "ok";
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -537,11 +503,7 @@ export default function SwapForm() {
 
       {!isOnBase && (
         <div className="mb-3 text-xs rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
-          You’re not on Base.{" "}
-          <button onClick={ensureBase} className="underline">
-            Switch to Base
-          </button>{" "}
-          to continue.
+          You’re not on Base. <button onClick={ensureBase} className="underline">Switch to Base</button> to continue.
         </div>
       )}
 
@@ -552,16 +514,9 @@ export default function SwapForm() {
         </label>
         <TokenSelect
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          onChange={(a) => {
-            setTokenIn(a);
-            setAmt("");
-          }}
+          onChange={(a) => { setTokenIn(a); setAmt(""); }}
           exclude={tokenOut}
-          balance={
-            balInRaw.value !== undefined
-              ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
-              : undefined
-          }
+          balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
         />
       </div>
 
@@ -570,8 +525,7 @@ export default function SwapForm() {
         <button
           className="pill pill-opaque px-3 py-1 text-sm"
           onClick={() => {
-            const prevIn = tokenIn,
-              prevOut = tokenOut;
+            const prevIn = tokenIn, prevOut = tokenOut;
             setTokenIn(prevOut as Address);
             setTokenOut(prevIn === "ETH" ? (USDC as Address) : (prevIn as Address));
             setAmt("");
@@ -590,11 +544,8 @@ export default function SwapForm() {
             Amount {inMeta.symbol === "ETH" ? "(ETH • Base)" : `(${inMeta.symbol})`}
           </label>
           <div className="text-xs text-inkSub">
-            Bal:{" "}
-            <span className="font-mono">
-              {balInRaw.value !== undefined
-                ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6)
-                : "—"}
+            Bal: <span className="font-mono">
+              {balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : "—"}
             </span>
             <button
               className="ml-2 underline"
@@ -621,17 +572,11 @@ export default function SwapForm() {
           name="swap-amount"
         />
 
-        <div className="mt-2 text-xs text-inkSub">
-          ≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD
-        </div>
+        <div className="mt-2 text-xs text-inkSub">≈ ${amtInUsd ? amtInUsd.toFixed(2) : "0.00"} USD</div>
 
-        {isConnected &&
-          balInRaw.value !== undefined &&
-          balInRaw.value < amountInBig && (
-            <div className="mt-1 text-xs text-warn">
-              Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.
-            </div>
-          )}
+        {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
+          <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
+        )}
 
         {/* Approve (ERC-20 only) */}
         {showApproveButton && (
@@ -646,12 +591,7 @@ export default function SwapForm() {
             </button>
             <div className="mt-1 text-[11px] text-inkSub">
               Spender: <code className="break-all">{SWAPPER as Address}</code>
-              {allowanceValue !== undefined && (
-                <>
-                  {" "}
-                  · Allowance: <span className="font-mono">{allowanceValue.toString()}</span>
-                </>
-              )}
+              {(allowanceValue !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceValue).toString()}</span></>}
             </div>
           </div>
         )}
@@ -664,44 +604,23 @@ export default function SwapForm() {
         </label>
         <TokenSelect
           value={tokenOut}
-          onChange={(v) => {
-            setTokenOut(v);
-            setAmt("");
-          }}
+          onChange={(v) => { setTokenOut(v); setAmt(""); }}
           exclude={tokenIn as Address}
-          balance={
-            balOutRaw.value !== undefined
-              ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6)
-              : undefined
-          }
+          balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
         />
         <div className="text-xs text-inkSub">
           {quoteState === "loading" && <>Querying v3 routes…</>}
-          {quoteState === "noroute" && (
-            <>
-              No v3 route found for this pair/size.
-              {quoteErr && (
-                <>
-                  {" "}
-                  <span className="text-warn">({quoteErr})</span>
-                </>
-              )}
-            </>
-          )}
+          {quoteState === "noroute" && <>No route found for this pair/size.{quoteErr && <> <span className="text-warn"> ({quoteErr})</span></>}</>}
           {quoteState === "ok" && expectedOutMainHuman !== undefined && (
             <>
-              Est (after fee):{" "}
-              <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span>{" "}
-              {outMeta.symbol} · 1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol}
+              {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              {usedV2 && <> {" · "}via v2</>}
             </>
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
         </div>
-        {debugPath && (
-          <div className="text-[11px] text-inkSub">
-            v3 path: <code className="break-all">{debugPath}</code>
-          </div>
-        )}
+        {debugPath && <div className="text-[11px] text-inkSub">path: <code className="break-all">{debugPath}</code></div>}
       </div>
 
       {/* Swap */}
@@ -714,49 +633,26 @@ export default function SwapForm() {
         {sending ? "Submitting…" : `Swap & Burn ${Number(feeBps) / 100}% 🔥`}
       </button>
 
-      {preflightMsg && (
-        <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>
-      )}
+      {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
 
       {/* Slippage modal */}
       {slippageOpen && (
         <div className="fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setSlippageOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold">Slippage</h4>
-              <button
-                className="pill pill-opaque px-3 py-1 text-xs"
-                onClick={() => setSlippageOpen(false)}
-              >
-                Close
-              </button>
+              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0.1, 0.5, 1, 2].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSlippage(v)}
-                  className={`pill justify-center px-3 py-1 text-xs ${
-                    slippage === v ? "outline outline-1 outline-white/20" : ""
-                  }`}
-                >
+                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
                   {v}%
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={slippage}
-                onChange={(e) => setSlippage(Number(e.target.value))}
-                className="glass rounded-pill px-3 py-2 w-full"
-              />
+              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
               <span className="text-sm text-inkSub">%</span>
             </div>
           </div>
