@@ -1,18 +1,24 @@
 // app/api/burn/total/route.ts
 import { NextResponse } from "next/server";
-import { createPublicClient, http, type Address, parseAbi } from "viem";
+import {
+  createPublicClient,
+  http,
+  type Address,
+  parseAbi,
+  type Abi,
+} from "viem";
 import { base } from "viem/chains";
 
-// ✅ Your contract ABI & addresses
+// Your contract ABI & addresses
 import TobySwapperAbi from "@/abi/TobySwapper.json";
 import { SWAPPER, TOBY } from "@/lib/addresses";
 
-// Make ABI literal so viem infers signatures nicely
-const TobySwapper = TobySwapperAbi as const;
+// Type the imported JSON as a Viem Abi (avoid `as const` on imported JSON)
+const TobySwapper: Abi = TobySwapperAbi as unknown as Abi;
 
 // Minimal ERC20 to read decimals()
 const ERC20_DECIMALS_ABI = parseAbi([
-  "function decimals() view returns (uint8)"
+  "function decimals() view returns (uint8)",
 ]);
 
 export const revalidate = 0;
@@ -30,17 +36,17 @@ export async function GET() {
       address: swapper,
       abi: TobySwapper,
       functionName: "totalTobyBurned",
-      args: [], // 👈 required by your viem type setup
+      args: [], // explicit empty args keeps Viem/TS happy
     })) as bigint;
 
-    // 2) Scale using TOBY decimals (fallback 18 if anything fails)
+    // 2) Read TOBY decimals (fallback 18)
     let decimals = 18;
     try {
       const d = (await client.readContract({
         address: toby,
         abi: ERC20_DECIMALS_ABI,
         functionName: "decimals",
-        args: [], // 👈 some setups also want this present
+        args: [],
       })) as number;
       if (Number.isFinite(d)) decimals = d;
     } catch {
@@ -50,7 +56,8 @@ export async function GET() {
     const denom = BigInt(10) ** BigInt(decimals);
     const whole = totalRaw / denom;
     const frac = totalRaw % denom;
-    const totalHuman = (Number(whole) + Number(frac) / Number(denom)).toString();
+    const totalHuman =
+      (Number(whole) + Number(frac) / Number(denom)).toString();
 
     return NextResponse.json(
       {
