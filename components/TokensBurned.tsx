@@ -98,13 +98,32 @@ export default function TokensBurned() {
   const anim18 = useAnimatedBigint(burned18, 800);
   const pretty = burned18 / SCALE >= 1_000_000n ? formatCompact(anim18) : formatAmount18(anim18, 4);
 
-  const STEP = 1_000_000n;
-  const burnedInt = burned18 / SCALE;
+  /* ---------- Dynamic milestone steps ---------- */
+  const burnedInt = burned18 / SCALE; // whole-token units
+
+  const TEN_M = 10_000_000n;
+  const HUNDRED_M = 100_000_000n;
+  const ONE_B = 1_000_000_000n;
+  const TEN_B = 10_000_000_000n;
+  const HUNDRED_B = 100_000_000_000n;
+
+  function getStep(n: bigint): bigint {
+    if (n < HUNDRED_M) return TEN_M;            // < 100M → 10M steps
+    if (n < ONE_B) return HUNDRED_M;            // 100M–<1B → 100M steps
+    if (n < TEN_B) return ONE_B;                // 1B–<10B → 1B steps
+    if (n < HUNDRED_B) return TEN_B;            // 10B–<100B → 10B steps
+    return HUNDRED_B;                           // ≥ 100B → 100B steps
+  }
+
+  const STEP = getStep(burnedInt);
   const stepIdx = burnedInt / STEP;
   const base = stepIdx * STEP;
   const next = (stepIdx + 1n) * STEP;
   const toNext = next - burnedInt;
-  const progress = Math.min(100, Number(((burned18 - base * SCALE) * 10_000n) / (STEP * SCALE)) / 100);
+  const progress = Math.min(
+    100,
+    Number(((burned18 - base * SCALE) * 10_000n) / (STEP * SCALE)) / 100
+  );
 
   const doRefresh = async () => {
     if (isFetching) return;
