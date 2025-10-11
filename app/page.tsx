@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -31,22 +32,54 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
-// Quick Farcaster share (generic copy; TokensBurned already has a detailed one)
-function FarcasterShare() {
-  const text =
-    "🔥 Swap on TobySwap (Base) — 1% auto-burn to $TOBY. Join the lore 🐸 https://tobyswap.vercel.app";
-  const href = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+/** Share callout: Spread the Lore (Warpcast) + Share to X */
+function ShareCallout({
+  amount,
+  token = "$TOBY",
+  siteUrl,
+}: {
+  amount?: string;
+  token?: string;
+  siteUrl?: string;
+}) {
+  const site =
+    siteUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "https://tobyswap.vercel.app");
+
+  const line = amount
+    ? `🔥 I just helped burn ${amount} ${token}. Swap → burn → spread the lore 🐸`
+    : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
+
+  const textEncoded = encodeURIComponent(line);
+  const urlEncoded = encodeURIComponent(site);
+
+  // Warpcast compose (with embeds[] for link preview)
+  const farcasterHref = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
+  // X / Twitter intent
+  const xHref = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="pill pill-opaque hover:opacity-90 text-xs"
-      title="Share on Farcaster"
-    >
-      Share on Farcaster
-    </a>
+    <div className="flex flex-wrap gap-2">
+      <a
+        href={farcasterHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pill pill-opaque hover:opacity-90 text-xs"
+        title="Share on Farcaster"
+      >
+        Spread the Lore
+      </a>
+      <a
+        href={xHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pill pill-opaque hover:opacity-90 text-xs"
+        title="Share on X"
+      >
+        Share to X
+      </a>
+    </div>
   );
 }
 
@@ -92,7 +125,8 @@ export default function Page() {
             <div className="w-full max-w-full sm:max-w-[520px] content-visible">
               <SwapForm />
               <div className="mt-3 flex gap-2 items-center">
-                <FarcasterShare />
+                {/* Optional: pass live amount like amount="12,345" once wired */}
+                <ShareCallout token="$TOBY" />
               </div>
               <TokensBurned />
             </div>
