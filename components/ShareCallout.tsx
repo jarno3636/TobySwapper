@@ -1,3 +1,4 @@
+// components/ShareCallout.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,9 +26,8 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
         const j = await r.json();
         if (mounted && j?.ok) {
-          const floatVal = parseFloat(j.totalHuman);
-          const pretty = Number.isFinite(floatVal) ? formatCompact(floatVal) : undefined;
-          setBurn(pretty ?? j.totalHuman);
+          const n = parseFloat(j.totalHuman);
+          setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
         }
       } catch {}
     })();
@@ -39,31 +39,37 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "https://tobyswap.vercel.app");
 
-  const line = useMemo(() => {
-    return burn
-      ? `🔥 I just helped burn ${burn} ${token}. Swap → burn → spread the lore 🐸`
-      : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
-  }, [burn, token]);
+  const line = useMemo(
+    () =>
+      burn
+        ? `🔥 I just helped burn ${burn} ${token}. Swap → burn → spread the lore 🐸`
+        : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`,
+    [burn, token]
+  );
 
   const textEncoded = encodeURIComponent(line);
-  const urlEncoded = encodeURIComponent(site);
+  const urlEncoded  = encodeURIComponent(site);
 
-  // Use the *web* composer as primary to avoid app-store redirects
-  const farcasterWeb = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
-  const xHref = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
+  // Web composer (what we want to force)
+  const composerWebUrl = `https://warpcast.com/~/compose?text=${textEncoded}&embeds[]=${urlEncoded}`;
 
-  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
-    // For some mobile UAs, even the web composer may try to bounce to the store.
-    // If that happens, open the web composer again in a separate tab shortly after.
-    // This gives users a visible, working web composer even without the app.
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (!isMobile) return; // desktop is fine
+  // X / Twitter
+  const xUrl = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${urlEncoded}`;
 
-    // open once via default <a>, then force-open a second time after a short delay
-    setTimeout(() => {
-      // if the browser navigated away (store), give them a clean web tab too
-      window.open(farcasterWeb, "_blank", "noopener,noreferrer");
-    }, 700);
+  // If inside Farcaster Mini App, prefer SDK action; otherwise open web composer in a new tab.
+  const handleFarcasterShare = async () => {
+    try {
+      // Mini App SDK is injected by Farcaster clients
+      const sdk = (window as any)?.farcaster?.miniapp?.sdk || (window as any)?.sdk;
+      if (sdk?.actions?.composeCast) {
+        await sdk.actions.composeCast({ text: line, embeds: [site] }); // preferred path in-app
+        return;
+      }
+    } catch {
+      // fall through to web
+    }
+    // Force open the WEB composer (new window) to dodge universal-link -> App Store
+    window.open(composerWebUrl, "_blank", "noopener,noreferrer");
   };
 
   const copyToClipboard = async () => {
@@ -72,19 +78,17 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a
-        href={farcasterWeb}
-        onClick={onFarcasterClick}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handleFarcasterShare}
         className="pill pill-opaque hover:opacity-90 text-xs"
-        title="Share on Farcaster (web composer)"
+        title="Share on Farcaster"
+        type="button"
       >
         Spread the Lore
-      </a>
+      </button>
 
       <a
-        href={xHref}
+        href={xUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="pill pill-opaque hover:opacity-90 text-xs"
