@@ -5,8 +5,8 @@ import type { Address } from "viem";
 import { useMemo } from "react";
 
 const iconMap: Record<string, string> = {
-  ETH: "/tokens/baseeth.PNG",       // 👈 Base ETH icon
-  WETH: "/tokens/weth.PNG",      // show ETH icon for WETH in UI
+  ETH: "/tokens/baseeth.PNG",       // Base ETH icon
+  WETH: "/tokens/weth.PNG",         // Wrapped ETH icon
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
@@ -27,26 +27,25 @@ export default function TokenSelect({
   exclude?: Address | string;
   balance?: string; // human readable
 }) {
+  // Determine the selected token
   const selected = useMemo(
     () => TOKENS.find((t) => eq(t.address, value)),
     [value]
   );
 
-  // For UI: display WETH as ETH and use Base icon
-  const displaySymbol = selected?.symbol === "WETH" ? "ETH" : (selected?.symbol ?? "Unknown");
+  // Display the actual token symbol (WETH included)
+  const displaySymbol = selected?.symbol ?? "Unknown";
 
-  // Safe numeric balance
+  // Safe numeric balance display
   const numBal = useMemo(() => {
     const n = balance != null ? Number(balance) : NaN;
     return Number.isFinite(n) ? n : undefined;
   }, [balance]);
   const balText = numBal !== undefined ? numBal.toFixed(6) : "—";
 
+  // Filter out excluded tokens
   const availableTokens = useMemo(
-    () =>
-      TOKENS.filter(
-        (t) => !exclude || !eq(t.address, String(exclude))
-      ),
+    () => TOKENS.filter((t) => !exclude || !eq(t.address, String(exclude))),
     [exclude]
   );
 
@@ -60,9 +59,10 @@ export default function TokenSelect({
       >
         {availableTokens.map((t) => (
           <option key={t.address} value={t.address}>
-            {t.symbol === "WETH" ? "ETH" : t.symbol}
+            {t.symbol}
           </option>
         ))}
+
         {exclude &&
           !availableTokens.some((t) => eq(t.address, String(exclude))) && (
             <option disabled>
