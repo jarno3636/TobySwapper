@@ -21,9 +21,6 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 
-import SwapDebug from "./SwapDebug";
-import type { DebugInfo } from "./debugTypes";
-
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false;
 const FEE_DENOM = 10_000n;
@@ -64,7 +61,6 @@ const UniV2RouterAbi = [
 ] as const;
 
 /* ------------------------------ SWAPPER ABI ------------------------------ */
-// Only the entrypoints we call from your ABI
 const TobySwapperAbi = [
   { type:"function", name:"feeBps", stateMutability:"view", inputs:[], outputs:[{type:"uint256"}] },
 
@@ -213,7 +209,6 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 }
 
 /* ------------------------------ V2 helpers --------------------------------- */
-// Quote [in,out] and [in,WETH,out] on V2 to decide a path; execution is via SWAPPER.
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const tryPaths: Address[][] = [
@@ -254,22 +249,11 @@ export default function SwapForm() {
   const { writeContractAsync } = useWriteContract();
 
   // UI state
-  const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH"); // sentinel ETH
+  const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<Address>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
-
-  // Debug snapshot
-  const [debug, setDebug] = useState<DebugInfo>({
-    isOnBase, chainId, account: address as any,
-    tokenIn, tokenOut, amountInHuman: amt, slippage, feeBps: 100n,
-    state: "idle", attempts: [],
-    addresses: { SWAPPER: SWAPPER as any, QUOTER_V3: QUOTER_V3 as any, WETH: WETH as any, USDC: USDC as any, TOBY: TOBY as any },
-  });
-  useEffect(() => {
-    setDebug((d) => ({ ...d, isOnBase, chainId, account: address as any, tokenIn, tokenOut, amountInHuman: amt, slippage }));
-  }, [isOnBase, chainId, address, tokenIn, tokenOut, amt, slippage]);
 
   // Reset defaults on account/chain change
   useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
@@ -303,12 +287,9 @@ export default function SwapForm() {
           address: lc(SWAPPER as Address),
           abi: TobySwapperAbi as any,
           functionName: "feeBps",
-          args: [],                // 👈 required even for no-arg views
+          args: [],
         })) as bigint;
-        if (bps >= 0n && bps <= 500n) {
-          setFeeBps(bps);
-          setDebug((d)=>({ ...d, feeBps: bps }));
-        }
+        if (bps >= 0n && bps <= 500n) setFeeBps(bps);
       } catch {}
     })();
   }, [client]);
@@ -320,18 +301,15 @@ export default function SwapForm() {
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [bestV2Path, setBestV2Path] = useState<Address[] | undefined>();
-  const [debugPath, setDebugPath] = useState<string | undefined>();
   const quoteLatch = useRef<number>(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setDebugPath(undefined);
-      setDebug((d)=>({ ...d, state: "idle", attempts: [], bestOut: undefined, bestKind: undefined, quoteError: undefined }));
+      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined);
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
       setQuoteState("loading");
-      setDebug((d)=>({ ...d, state: "loading" }));
       const myLatch = ++quoteLatch.current;
 
       let bestOut: bigint | undefined;
@@ -346,15 +324,12 @@ export default function SwapForm() {
           const results = await withTimeout(
             Promise.allSettled(cands.map(async (cand) => {
               const path = encodeV3Path(cand.tokens, cand.fees);
-              const t0 = performance.now();
               const [amountOut] = (await client.readContract({
                 address: QUOTER_V3 as Address,
                 abi: QuoterV3Abi as any,
                 functionName: "quoteExactInput",
                 args: [path, mainAmountIn],
               })) as [bigint];
-              const ms = Math.round(performance.now() - t0);
-              setDebug((d)=>({ ...d, attempts: [...d.attempts, { kind: "v3", pathTokens: cand.tokens, fees: cand.fees, ok: true, amountOut, ms }] }));
               return { cand, amountOut };
             })), QUOTE_TIMEOUT_MS
           );
@@ -371,15 +346,8 @@ export default function SwapForm() {
         // Selection
         if (tokenIn === "ETH" && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
-          setDebugPath(`v2: ${v2Path.map(a => TOKENS.find(x=>eq(x.address,a))?.symbol ?? (eq(a,WETH)?"WETH":a.slice(0,6))).join(" → ")}`);
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
           best = undefined; bestOut = v2Out;
-          setDebugPath(`v2: ${v2Path?.map(a => TOKENS.find(x=>eq(x.address,a))?.symbol ?? (eq(a,WETH)?"WETH":a.slice(0,6))).join(" → ")}`);
-        } else if (best) {
-          const syms = best.tokens.map((t) => TOKENS.find((x) => eq(x.address, t))?.symbol ?? t.slice(0, 6));
-          const parts: string[] = [];
-          for (let i = 0; i < best.fees.length; i++) parts.push(`${syms[i]}(${best.fees[i]})→${syms[i+1]}`);
-          setDebugPath(`v3: ${parts.join(" → ")}`);
         }
       } catch (e:any) {
         setQuoteErr(e?.shortMessage || e?.message || String(e));
@@ -391,12 +359,10 @@ export default function SwapForm() {
         setQuoteOutMain(bestOut);
         setBestV3(best);
         setBestV2Path(best ? undefined : v2Path);
-        setDebug((d)=>({ ...d, state: "ok", bestOut: bestOut, bestKind: best ? "v3" : "v2" }));
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
         setQuoteErr("No V3/V2 route found.");
-        setDebug((d)=>({ ...d, state: "noroute", quoteError: "No route" }));
       }
     })();
     return () => { alive = false; };
@@ -460,14 +426,7 @@ export default function SwapForm() {
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
     const pathForFeeSwap = feePathForExecution(inAddr);
-    const minOutFee = 0n; // allow flexible fee conversion to TOBY
-
-    setDebug((d)=>({ ...d, preflight: {
-      allowance: tokenIn === "ETH" ? 0n : allowanceToSwapper,
-      needApproval: tokenIn !== "ETH" && ((allowanceToSwapper ?? 0n) < amountInBig),
-      inBalance: balInRaw.value, outBalance: balOutRaw.value,
-      minOut: minOutMainHuman, deadline, feePath: pathForFeeSwap
-    }, tx: { stage: "simulating" }}));
+    const minOutFee = 0n;
 
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
@@ -475,17 +434,14 @@ export default function SwapForm() {
       const isEthIn = tokenIn === "ETH";
       const isEthOut = outMeta.symbol === "ETH";
 
-      // Guard approvals for ERC-20 inputs
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
         setSending(false);
         return;
       }
 
-      // ----------- Route selection decided during quoting -----------
       if (isEthIn) {
-        // Always go through SWAPPER with ETH-native entry
-        const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address]; // fallback
+        const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
         const sim = await (client as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
@@ -504,13 +460,11 @@ export default function SwapForm() {
           value: parseUnits(amt || "0", 18),
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:ETH->TOKEN(V2 path)" } }));
         setSending(false);
         return;
       }
 
       if (bestV3) {
-        // ERC-20 -> ERC-20 via V3 inside SWAPPER
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [{
@@ -550,12 +504,10 @@ export default function SwapForm() {
         }), 10_000);
 
         const tx = await writeContractAsync(sim.request);
-        setDebug((d)=>({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V3" }}));
         setSending(false);
         return;
       }
 
-      // Otherwise use V2 supporting-fee paths via SWAPPER
       if (isEthOut) {
         const mainPath = bestV2Path ?? [inAddr, WETH as Address];
         const sim = await (client as any).simulateContract({
@@ -576,7 +528,6 @@ export default function SwapForm() {
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V2 TOKEN->ETH" } }));
       } else {
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (client as any).simulateContract({
@@ -598,14 +549,12 @@ export default function SwapForm() {
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
-        setDebug(d => ({ ...d, tx: { stage: "sending", hash: tx as any, used: "swapper:V2 TOKEN->TOKEN" } }));
       }
     } catch (e: any) {
-      const msg = e?.shortMessage || e?.message || String(e);
+      const msg = e?.shortMessage || e?.message || String(e));
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
       else setPreflightMsg(msg);
-      setDebug((d)=>({ ...d, tx: { stage: "error", msg }}));
     } finally {
       setSending(false);
     }
@@ -640,7 +589,7 @@ export default function SwapForm() {
           Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
         </label>
         <TokenSelect
-          user={address as Address | undefined}  {/* 👈 pass user so balances (incl. USDC) show */}
+          user={address as Address | undefined}
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           onChange={(a) => { setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); setAmt(""); }}
           exclude={tokenOut}
@@ -731,10 +680,9 @@ export default function SwapForm() {
           Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
         </label>
         <TokenSelect
-          user={address as Address | undefined}  {/* 👈 pass user here as well */}
+          user={address as Address | undefined}
           value={tokenOut}
           onChange={(v) => {
-            // v can be a TokenAddress union like "NATIVE_ETH" | Address
             const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
             setTokenOut(next);
             setAmt("");
@@ -753,7 +701,6 @@ export default function SwapForm() {
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
         </div>
-        {debugPath && <div className="text-[11px] text-inkSub">path: <code className="break-all">{debugPath}</code></div>}
       </div>
 
       {/* Swap */}
@@ -767,9 +714,6 @@ export default function SwapForm() {
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
-
-      {/* Debug panel */}
-      <SwapDebug info={debug} />
 
       {/* Slippage modal */}
       {slippageOpen && (
