@@ -12,7 +12,7 @@
     "splashImageUrl": "https://tobyswap.vercel.app/icons/toby-splash-200.png",
     "splashBackgroundColor": "#0b0b0b",
     "subtitle": "Swap. Burn. Spread the lore.",
-    "description": "TobySwap on Base — 1% auto-burn to $TOBY. Join the lore 🐸",
+    "description": "Swap on Base with 1 percent auto burn to TOBY. Join the lore today.",
     "webhookUrl": "https://tobyswap.vercel.app/api/webhook"
   }
 }
