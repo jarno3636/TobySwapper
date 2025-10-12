@@ -10,11 +10,13 @@ export async function GET() {
       image: `${site}/api/frame/image`,
       imageAlt: "Swap. Burn. Spread the Lore.",
       buttons: [
+        { label: "Spread the Lore",   action: "post" },                // -> POST builds live copy + links
+        { label: "Share to X",        action: "post" },                // -> POST builds live copy + links
         { label: "Open Toby Swapper", action: { type: "launch_url", url: site } },
-        { label: "More 🔥", action: "post" }, // <-- Follow-up route
+        { label: "More 🔥",           action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
     },
-    { headers: { "Cache-Control": "public, max-age=60" } }
+    { headers: { "Cache-Control": "no-store" } }
   );
 }
