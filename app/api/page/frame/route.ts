@@ -7,14 +7,14 @@ export async function GET() {
     {
       version: "next",
       title: "Toby Swapper 🐸",
-      image: `${site}/og.PNG`,
+      image: `${site}/api/frame/image`,
       imageAlt: "Swap on Base with 1% auto-burn to $TOBY.",
       buttons: [
         { label: "Enter Toby Swapper", action: { type: "launch_url", url: site } },
-        { label: "More 🔥", action: "post" },
+        { label: "More 🔥",            action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
     },
-    { headers: { "Cache-Control": "public, max-age=60" } }
+    { headers: { "Cache-Control": "no-store" } }
   );
 }
