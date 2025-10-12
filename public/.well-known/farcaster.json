@@ -1,17 +1,18 @@
 {
   "accountAssociation": {
-    "header": "REPLACE_WITH_BASE64_HEADER",
-    "payload": "REPLACE_WITH_BASE64_PAYLOAD",
-    "signature": "REPLACE_WITH_BASE64_SIGNATURE"
+    "header": "eyJmaWQiOjExMjExOTMsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhmNTYwMzNDMTkxYjY2NTA0QWQ0Q0Y4NzMyM0E3NzNGRDg2RGM1MGFkIn0",
+    "payload": "eyJkb21haW4iOiJ0b2J5c3dhcC52ZXJjZWwuYXBwIn0",
+    "signature": "MHhjOTljZGRiMzA0YTBjMTg3NTU2ZjUzMjkyYTRjOWEyNjE4NDM1NmM3NDBiMzNhYzg2ODBkYmJiZGM4Y2JiNjBjNTZiNWE2YWQ5NTNiYzg0NmNjY2Q5NGQwNWUwNGZjMmI5MDExY2RjNDYxYmM3ODgwZmYzMjI2NmQ4NTVmNjU5NzFi"
   },
   "miniapp": {
     "version": "1",
     "name": "Toby Swapper",
     "homeUrl": "https://tobyswap.vercel.app/",
-    "iconUrl": "https://tobyswap.vercel.app/icons/toby-1024.png",
-    "splashImageUrl": "https://tobyswap.vercel.app/icons/toby-200.png",
+    "iconUrl": "https://tobyswap.vercel.app/icons/toby-icon-1024.png",
+    "splashImageUrl": "https://tobyswap.vercel.app/icons/toby-splash-200.png",
     "splashBackgroundColor": "#0b0b0b",
     "subtitle": "Swap. Burn. Spread the lore.",
-    "description": "TobySwap on Base — 1% auto-burn to $TOBY. Join the lore 🐸"
+    "description": "TobySwap on Base — 1% auto-burn to $TOBY. Join the lore 🐸",
+    "webhookUrl": "https://tobyswap.vercel.app/api/webhook"
   }
 }
