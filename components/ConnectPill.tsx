@@ -1,3 +1,4 @@
+// components/ConnectPill.tsx
 "use client";
 
 import * as React from "react";
@@ -24,7 +25,6 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
         const connected = ready && !!account?.address;
         const onBase = connected && chain?.id === base.id && !chain?.unsupported;
 
-        // status styles
         const showSwitch = connected && !onBase;
         const dot = showSwitch
           ? "bg-amber-400"
@@ -32,18 +32,17 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
           ? "bg-[var(--accent)]"
           : "bg-[var(--danger)]";
 
-        // actions
         const onClick = showSwitch
           ? openChainModal
           : connected
           ? openAccountModal
           : openConnectModal;
 
-        // super-short labels to reduce width
+        // Short labels to avoid a very wide pill
         const text = showSwitch
-          ? "Base" // keep it tiny; user taps to switch
+          ? "Switch"
           : connected
-          ? truncate(account?.address) // 4…2
+          ? truncate(account?.address)
           : "Connect";
 
         const hidden: React.CSSProperties = ready
@@ -58,13 +57,12 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
             title={connected ? account?.address : "Connect wallet"}
             aria-label={connected ? "Wallet menu" : "Connect wallet"}
             className={[
-              // keep your look, but force a smaller size
-              "pill",
+              "pill",                             // your theme
               connected ? "pill-nav" : "pill-opaque",
               "inline-flex items-center whitespace-nowrap",
-              "leading-none text-[10px] gap-1",         // tiny text + tight gap
-              "!px-1.5 !py-[3px] !h-6 !rounded-full",   // override base padding/height
-              "min-w-0 max-w-[84px]"                    // hard cap width
+              "leading-none text-[11px] gap-1.5",
+              "!px-3 !py-1.5 !h-7 !rounded-full", // compact but not tiny
+              "!w-auto !min-w-0",                 // never force a fixed width
             ].join(" ")}
           >
             <span className={`block h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden />
