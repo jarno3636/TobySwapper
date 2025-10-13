@@ -58,8 +58,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/toby-192.png" />
 
         {/* Favicons (desktop browsers) — keeps your current files */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/toby-192.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/toby-192.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/toby-icon-32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/toby-icon-16.png" />
 
         {/* Farcaster Mini App embed meta */}
         <meta name="fc:miniapp" content={JSON.stringify(miniAppEmbed)} />
