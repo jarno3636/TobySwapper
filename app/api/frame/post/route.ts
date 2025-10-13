@@ -1,3 +1,4 @@
+// app/api/frame/post/route.ts
 import { NextResponse } from "next/server";
 
 function compact(n: number) {
@@ -23,22 +24,17 @@ async function liveLine(site: string, token = "$TOBY") {
 export async function POST(req: Request) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 
-  // Which button did they tap?
   let body: any = {};
   try { body = await req.json(); } catch {}
   const idx: number = body?.untrustedData?.buttonIndex ?? 1;
 
-  // Compose share text w/ live burn
   const line = await liveLine(site, "$TOBY");
   const encodedText = encodeURIComponent(line);
   const encodedSite = encodeURIComponent(site);
 
-  // In-frame (inside Warpcast), launch_url -> composer is correct
   const farcasterHref = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedSite}`;
   const xHref         = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedSite}`;
 
-  // Button routing:
-  // 1 Spread the Lore, 2 Share to X, 3 Open app, 4 More 🔥 (follow-up)
   if (idx === 1) {
     return NextResponse.json(
       {
@@ -91,7 +87,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Default: return the initial frame
   return NextResponse.json(
     {
       version: "next",
