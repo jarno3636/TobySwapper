@@ -1,9 +1,11 @@
-// app/page.tsx
 "use client";
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import Footer from "@/components/Footer";
+import MiniAppGate from "@/components/MiniAppGate";
+import { useEffect, useMemo, useState } from "react";
+import { composeCast } from "@/lib/miniapp";
 
 // Client-only heavy components
 const SwapForm = dynamic(() => import("@/components/SwapForm"), { ssr: false });
@@ -32,15 +34,19 @@ const TokensBurned = dynamic(() => import("@/components/TokensBurned"), {
   ),
 });
 
-/** Share callout: Farcaster + X with live burn and robust app/web handling */
-import { useEffect, useMemo, useState } from "react";
-
 function formatCompact(n: number): string {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.00$/, "") + "B";
   if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
   if (abs >= 1_000) return (n / 1_000).toFixed(2).replace(/\.00$/, "") + "K";
   return String(n);
+}
+
+function runtimeOrigin(fallback: string) {
+  try {
+    if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
+  } catch {}
+  return fallback;
 }
 
 function ShareCallout({
@@ -62,9 +68,7 @@ function ShareCallout({
           const n = parseFloat(j.totalHuman);
           setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
     return () => { mounted = false; };
   }, []);
@@ -72,7 +76,7 @@ function ShareCallout({
   const site =
     siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "https://tobyswap.vercel.app");
+    runtimeOrigin("https://tobyswap.vercel.app");
 
   const line = useMemo(
     () =>
@@ -82,36 +86,21 @@ function ShareCallout({
     [burn, token]
   );
 
-  // --- Farcaster (Warpcast) ---
+  // Farcaster compose (prefer SDK, fallback to web composer)
   const composerWebUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
-
   const handleFarcasterShare = async () => {
-    try {
-      // If running inside a Farcaster Mini App host, use the official SDK if present
-      const fcSdk =
-        (window as any)?.farcaster?.miniapp?.sdk ||
-        (window as any)?.sdk ||
-        undefined;
-
-      if (fcSdk?.actions?.composeCast) {
-        await fcSdk.actions.composeCast({ text: line, embeds: [site] });
-        return;
-      }
-    } catch {
-      // fall through to web
+    const ok = await composeCast({ text: line, embeds: [site] });
+    if (!ok) {
+      window.open(composerWebUrl, "_blank", "noopener,noreferrer");
     }
-    // Outside a Mini App: open web composer in a new tab to avoid app-store loops
-    window.open(composerWebUrl, "_blank", "noopener,noreferrer");
   };
 
-  // --- X / Twitter ---
+  // X / Twitter
   const xWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
-
   const handleXShare = () => {
     const message = `${line} ${site}`;
     const xAppUrl = `twitter://post?message=${encodeURIComponent(message)}`;
 
-    // Try native app; fallback to web after a short delay
     const fallback = setTimeout(() => {
       window.open(xWebUrl, "_blank", "noopener,noreferrer");
     }, 600);
@@ -123,9 +112,7 @@ function ShareCallout({
           clearTimeout(fallback);
           window.open(xWebUrl, "_blank", "noopener,noreferrer");
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }, 150);
   };
 
@@ -154,13 +141,12 @@ function ShareCallout({
   );
 }
 
-// Micro blur placeholder
 const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
 export default function Page() {
   return (
-    <>
+    <MiniAppGate>
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
           {/* LEFT */}
@@ -212,6 +198,6 @@ export default function Page() {
       </div>
 
       <Footer />
-    </>
+    </MiniAppGate>
   );
 }
