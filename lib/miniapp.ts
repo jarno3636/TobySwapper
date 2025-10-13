@@ -29,11 +29,11 @@ export function isFarcasterUA(): boolean {
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
 }
 
-/** ✅ NEW: very lenient Base app / Coinbase UA heuristic */
+/** ✅ Very lenient Base app / Coinbase UA heuristic */
 export function isBaseAppUA(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
-  // Includes Base Wallet, Coinbase Wallet in-app browser, and common variants
+  // Covers Base Wallet, Base app webview, and Coinbase Wallet/App variants
   return /BaseWallet|Base\sApp|Base\/\d|CoinbaseWallet|CoinbaseMobile|CoinbaseApp|CBBrowser|CBWallet|Coinbase(Android|iOS)?/i.test(
     ua
   );
