@@ -1,13 +1,9 @@
 // lib/miniapp.ts
-
 /** Farcaster Mini App SDK shape (tolerant to older builds) */
 type MiniAppSdk = {
   actions?: {
-    // Newer SDKs: lower-case "l", may accept string or object
-    openUrl?: (url: string | { url: string }) => Promise<void> | void;
-    // Older SDKs: legacy name
-    openURL?: (url: string) => Promise<void> | void;
-
+    openUrl?: (url: string | { url: string }) => Promise<void> | void; // new
+    openURL?: (url: string) => Promise<void> | void;                   // legacy
     composeCast?: (args: { text?: string; embeds?: string[] }) => Promise<void> | void;
     ready?: () => Promise<void> | void;
   };
@@ -85,14 +81,10 @@ export async function getMiniSdk(): Promise<MiniAppSdk | null> {
 
 export async function isMiniApp(): Promise<boolean> {
   const sdk = await getMiniSdk();
-  // Prefer explicit SDK signal when available
   return !!(sdk?.isInMiniApp?.() ?? false);
 }
 
-/**
- * Best-effort: call sdk.actions.ready() with a short timeout so we never hang.
- * Safe to call multiple times; no-ops outside Mini App.
- */
+/** Best-effort: call sdk.actions.ready() with a short timeout so we never hang. */
 export async function ensureReady(timeoutMs = 1200): Promise<void> {
   try {
     const sdk = await getMiniSdk();
@@ -107,13 +99,46 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
   }
 }
 
+/** ---------- Base App helpers (MiniKit) ---------- */
+
+/** Try MiniKit.composeCast inside Base App first */
+async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
+  if (!isBaseAppUA() || typeof window === "undefined") return false;
+  try {
+    // dynamic import keeps this out of SSR bundles & non-Base environments
+    const mod = await import("@coinbase/onchainkit/minikit");
+    const api: any = (mod as any).default ?? mod;
+
+    if (typeof api?.composeCast === "function") {
+      await api.composeCast(args);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
+/** Public helper: open a URL via MiniKit inside Base; return true if handled */
+export async function openInBase(url: string): Promise<boolean> {
+  if (!isBaseAppUA() || typeof window === "undefined") return false;
+  try {
+    const mod = await import("@coinbase/onchainkit/minikit");
+    const api: any = (mod as any).default ?? mod;
+
+    if (typeof api?.openUrl === "function") {
+      await api.openUrl(url);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
 /**
  * Open a URL with Mini App navigation when available.
- * Tries:
- *   - sdk.actions.openUrl(safe)
- *   - sdk.actions.openUrl({ url: safe })
- *   - sdk.actions.openURL(safe) (legacy)
- * Falls back to same-tab on web.
+ * Tries MiniKit (Base) → Farcaster SDK → web fallbacks.
  */
 export async function openInMini(url: string): Promise<boolean> {
   if (!url) return false;
@@ -123,35 +148,30 @@ export async function openInMini(url: string): Promise<boolean> {
     (typeof window !== "undefined" && window.location?.origin) || SITE_URL
   ).toString();
 
-  const sdk = await getMiniSdk();
+  // 1) Base App via MiniKit
+  if (await openInBase(safe)) return true;
 
-  // Prefer modern openUrl(string)
+  // 2) Farcaster SDK (Warpcast Mini App)
+  const sdk = await getMiniSdk();
   if (sdk?.actions?.openUrl) {
     try {
       await sdk.actions.openUrl(safe);
       return true;
     } catch {
-      // try object shape next
       try {
-        await sdk.actions.openUrl({ url: safe });
+        await (sdk.actions.openUrl as any)({ url: safe });
         return true;
-      } catch {
-        // fall through
-      }
+      } catch {}
     }
   }
-
-  // Legacy openURL
   if (sdk?.actions?.openURL) {
     try {
       await sdk.actions.openURL(safe);
       return true;
-    } catch {
-      // fall through
-    }
+    } catch {}
   }
 
-  // Web fallbacks
+  // 3) Web fallback
   if (typeof window !== "undefined") {
     try {
       window.location.assign(safe);
@@ -167,24 +187,24 @@ export async function openInMini(url: string): Promise<boolean> {
 }
 
 /**
- * Prefer SDK composer **only inside Warpcast**; otherwise return false so callers
- * can open the web composer (anchor href) reliably.
- * Return value signals whether the SDK path succeeded.
+ * Prefer MiniKit inside Base; else Farcaster SDK inside Warpcast; else let caller open web composer.
  */
 export async function composeCast({
   text = "",
   embeds = [] as string[],
 } = {}): Promise<boolean> {
-  const sdk = await getMiniSdk();
+  // 1) Base App (MiniKit)
+  if (await tryBaseComposeCast({ text, embeds })) return true;
 
-  // Only consider SDK path handled if we're truly in Warpcast and it succeeds
+  // 2) Farcaster Mini App SDK (Warpcast)
+  const sdk = await getMiniSdk();
   if (sdk?.actions?.composeCast && isFarcasterUA()) {
     try {
       await sdk.actions.composeCast({ text, embeds });
-      return true; // handled in-app
-    } catch {
-      // fall through
-    }
+      return true;
+    } catch {}
   }
-  return false; // let caller open Warpcast web composer
+
+  // 3) Not handled — caller should open the web composer.
+  return false;
 }
