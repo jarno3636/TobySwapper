@@ -1,4 +1,5 @@
 // lib/miniapp.ts
+
 /** Farcaster Mini App SDK shape (tolerant to older builds) */
 type MiniAppSdk = {
   actions?: {
@@ -25,7 +26,7 @@ export function isFarcasterUA(): boolean {
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
 }
 
-/** ✅ Very lenient Base app / Coinbase UA heuristic */
+/** Very lenient Base app / Coinbase UA heuristic */
 export function isBaseAppUA(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
@@ -99,18 +100,23 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
   }
 }
 
-/** ---------- Base App helpers (MiniKit) ---------- */
+/* ===================== Base App (MiniKit) ===================== */
+
+/** Get the injected MiniKit API if we are inside Base app */
+function getMiniKit(): any | null {
+  if (typeof window === "undefined") return null;
+  const w = window as any;
+  // Common injection points seen in Base app builds
+  return w?.miniKit || w?.coinbase?.miniKit || null;
+}
 
 /** Try MiniKit.composeCast inside Base App first */
 async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
-  if (!isBaseAppUA() || typeof window === "undefined") return false;
+  if (!isBaseAppUA()) return false;
   try {
-    // dynamic import keeps this out of SSR bundles & non-Base environments
-    const mod = await import("@coinbase/onchainkit/minikit");
-    const api: any = (mod as any).default ?? mod;
-
-    if (typeof api?.composeCast === "function") {
-      await api.composeCast(args);
+    const mk = getMiniKit();
+    if (mk && typeof mk.composeCast === "function") {
+      await mk.composeCast(args);
       return true;
     }
   } catch {
@@ -121,13 +127,15 @@ async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
 
 /** Public helper: open a URL via MiniKit inside Base; return true if handled */
 export async function openInBase(url: string): Promise<boolean> {
-  if (!isBaseAppUA() || typeof window === "undefined") return false;
+  if (!isBaseAppUA()) return false;
   try {
-    const mod = await import("@coinbase/onchainkit/minikit");
-    const api: any = (mod as any).default ?? mod;
-
-    if (typeof api?.openUrl === "function") {
-      await api.openUrl(url);
+    const mk = getMiniKit();
+    if (mk && typeof mk.openUrl === "function") {
+      await mk.openUrl(url);
+      return true;
+    }
+    if (mk && typeof mk.openURL === "function") {
+      await mk.openURL(url);
       return true;
     }
   } catch {
@@ -137,7 +145,7 @@ export async function openInBase(url: string): Promise<boolean> {
 }
 
 /**
- * Open a URL with Mini App navigation when available.
+ * Open a URL with in-app navigation when available.
  * Tries MiniKit (Base) → Farcaster SDK → web fallbacks.
  */
 export async function openInMini(url: string): Promise<boolean> {
@@ -187,7 +195,7 @@ export async function openInMini(url: string): Promise<boolean> {
 }
 
 /**
- * Prefer MiniKit inside Base; else Farcaster SDK inside Warpcast; else let caller open web composer.
+ * Prefer MiniKit inside Base; else Farcaster SDK inside Warpcast; else let caller open the web composer.
  */
 export async function composeCast({
   text = "",
