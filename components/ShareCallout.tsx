@@ -1,8 +1,7 @@
-// components/ShareCallout.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
+import * as React from "react";
+import { composeCast } from "@/lib/miniapp";
 
 type ShareCalloutProps = {
   token?: string;   // "$TOBY"
@@ -17,10 +16,17 @@ function formatCompact(n: number): string {
   return String(n);
 }
 
-export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
-  const [burn, setBurn] = useState<string | null>(null);
+function runtimeOrigin(fallback: string) {
+  try {
+    if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
+  } catch {}
+  return fallback;
+}
 
-  useEffect(() => {
+export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
+  const [burn, setBurn] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -30,9 +36,7 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
           const n = parseFloat(j.totalHuman);
           setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
     return () => { mounted = false; };
   }, []);
@@ -40,9 +44,9 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   const site =
     siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "https://tobyswap.vercel.app");
+    runtimeOrigin("https://tobyswap.vercel.app"); // must be absolute for embeds[]
 
-  const line = useMemo(
+  const line = React.useMemo(
     () =>
       burn
         ? `🔥 I just helped burn ${burn} ${token}. Swap → burn → spread the lore 🐸`
@@ -50,46 +54,18 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // ---- Farcaster (Warpcast) ----
+  // ---- Farcaster (anchor default; SDK intercepts in-app) ----
   const farcasterWeb = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
 
-  const handleFarcasterShare = async () => {
-    // If running inside a Farcaster host that injects the Mini App SDK, use the official action
-    try {
-      if (sdk?.actions?.composeCast) {
-        await sdk.actions.composeCast({ text: line, embeds: [site] });
-        return;
-      }
-    } catch {
-      // fall through to web
-    }
-    // Outside a Mini App: open the WEB composer in a new tab to avoid app-store bounce
-    window.open(farcasterWeb, "_blank", "noopener,noreferrer");
+  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
+    // Try SDK compose; if it works, keep user in-app and cancel link.
+    const ok = await composeCast({ text: line, embeds: [site] });
+    if (ok) e.preventDefault();
+    // If not ok, let the anchor open Warpcast web composer (works on web/dapp without popup blockers).
   };
 
-  // ---- X / Twitter ----
+  // ---- X / Twitter (anchor avoids popup-blockers) ----
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
-
-  const handleXShare = () => {
-    const message = `${line} ${site}`;
-    const xAppUrl = `twitter://post?message=${encodeURIComponent(message)}`;
-
-    const timer = setTimeout(() => {
-      window.open(xWeb, "_blank", "noopener,noreferrer");
-    }, 600);
-
-    const win = window.open(xAppUrl, "_blank");
-    setTimeout(() => {
-      try {
-        if (!win || win.closed) {
-          clearTimeout(timer);
-          window.open(xWeb, "_blank", "noopener,noreferrer");
-        }
-      } catch {
-        // ignore
-      }
-    }, 150);
-  };
 
   const copyToClipboard = async () => {
     try { await navigator.clipboard.writeText(`${line} ${site}`); } catch {}
@@ -97,25 +73,30 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        onClick={handleFarcasterShare}
-        className="pill pill-opaque hover:opacity-90 text-xs"
+      <a
+        href={farcasterWeb}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onFarcasterClick}
+        className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on Farcaster"
-        type="button"
         aria-label="Share on Farcaster"
       >
+        <span className="text-[#8A63D2]">🌀</span>
         Spread the Lore
-      </button>
+      </a>
 
-      <button
-        onClick={handleXShare}
-        className="pill pill-opaque hover:opacity-90 text-xs"
+      <a
+        href={xWeb}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on X"
-        type="button"
         aria-label="Share on X"
       >
+        <span>𝕏</span>
         Share to X
-      </button>
+      </a>
 
       <button
         onClick={copyToClipboard}
