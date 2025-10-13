@@ -1,6 +1,6 @@
 "use client";
 
-import { http, createStorage, cookieStorage, createConfig } from "wagmi";
+import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
 import {
   connectorsForWallets,
@@ -17,31 +17,30 @@ if (!projectId) {
   console.warn("⚠️ WalletConnect disabled: missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID");
 }
 
-// ✅ Chains go here — inside getDefaultWallets
+// ✅ Step 1 — Build the wallet groups (no chains here)
 const { wallets } = getDefaultWallets({
+  appName: "TobySwapper",
+  projectId,
+});
+
+// ✅ Step 2 — Pass chains into connectorsForWallets (required in RainbowKit 2.x)
+const rkConnectors = connectorsForWallets(wallets, {
   appName: "TobySwapper",
   projectId,
   chains: [base],
 });
 
-// ❌ Remove 'chains' here — it is not a valid parameter for connectorsForWallets
-const rkConnectors = connectorsForWallets(wallets, {
-  appName: "TobySwapper",
-  projectId,
-});
-
-// Final Wagmi config with the Farcaster Mini-App connector first
+// ✅ Step 3 — Create the final Wagmi config
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
   connectors: [
-    // Prefer Mini-App connector when running inside Farcaster
+    // Farcaster Mini-App connector first (auto-connect inside Farcaster)
     miniAppConnector(),
-    // Then all RainbowKit wallets
     ...rkConnectors,
   ],
   ssr: true,
-  storage: createStorage({ storage: cookieStorage }), // SSR-safe
+  storage: createStorage({ storage: cookieStorage }),
 });
