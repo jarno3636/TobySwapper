@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, MouseEvent } from 'react';
+import type { ReactNode, MouseEvent } from 'react';
 import { openInMini } from '@/lib/miniapp';
 
 type Props = {
@@ -12,7 +12,6 @@ type Props = {
 
 export default function LinkMaybeMini({ href, children, className, title }: Props) {
   const onClick = async (e: MouseEvent<HTMLAnchorElement>) => {
-    // Let cmd/ctrl click open a new tab normally
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     const ok = await openInMini(href);
