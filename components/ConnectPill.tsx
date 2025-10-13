@@ -1,4 +1,3 @@
-// /components/ConnectPill.tsx
 "use client";
 
 import * as React from "react";
@@ -63,13 +62,13 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
             className={[
               "pill",
               connected ? "pill-nav" : "pill-opaque",
-              "inline-flex items-center gap-1 text-xs",
+              "inline-flex items-center gap-1.5 text-[11px] px-2 py-1 h-6 rounded-full leading-none",
             ].join(" ")}
             title={connected ? account?.address : "Connect wallet"}
             aria-label={connected ? "Wallet menu" : "Connect wallet"}
           >
-            <span className={`block h-2 w-2 rounded-full ${dot}`} aria-hidden />
-            <span className="truncate">{text}</span>
+            <span className={`block h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden />
+            <span className="truncate max-w-[70px]">{text}</span>
           </button>
         );
       }}
