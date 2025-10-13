@@ -7,6 +7,8 @@ import {
   SITE_URL,
   MINIAPP_URL,
   isFarcasterUA,
+  isBaseAppUA,
+  openInBase,
 } from "@/lib/miniapp";
 
 type ShareCalloutProps = {
@@ -40,9 +42,8 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     return () => { mounted = false; };
   }, []);
 
-  // Absolute URLs
-  const site = siteUrl || SITE_URL;             // your normal site
-  const shareLanding = `${SITE_URL}/share`;     // lightweight page to avoid X loops
+  const site = siteUrl || SITE_URL;         // your normal site
+  const shareLanding = `${SITE_URL}/share`; // avoids X loops
 
   const line = React.useMemo(
     () =>
@@ -55,14 +56,28 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   // Embed: use MINIAPP_URL only inside Warpcast; use normal site elsewhere
   const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
 
-  // Farcaster
+  // Farcaster composer URL (web)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
+
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
+    // 0) Base app: try its in-app opener to keep user in Base
+    if (isBaseAppUA()) {
+      const handled = await openInBase(farcasterWeb);
+      if (handled) {
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // 1) Warpcast Mini App: prefer in-app composer
     const ok = await composeCast({ text: line, embeds: [embedForFC] });
-    if (ok) e.preventDefault(); // handled in Warpcast
+    if (ok) {
+      e.preventDefault();
+      return;
+    }
+    // 2) Else let anchor open web composer (works in normal browsers).
   };
 
-  // X / Twitter -> point to /share so there’s no wallet/miniap redirects
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
 
   return (
