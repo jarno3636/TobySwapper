@@ -12,31 +12,34 @@ export const metadata = {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    images: ["/og2.PNG"],
+    images: ["/og/tobyswap-frame-3x2.png"], // ✅ Updated OG image
   },
-  twitter: { card: "summary_large_image", images: ["/og2.PNG"] },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og/tobyswap-frame-3x2.png"], // ✅ Consistent with OG
+  },
   other: {
     "fc:frame": "vNext",
     "fc:frame:image": `${process.env.NEXT_PUBLIC_SITE_URL}/api/frame/image`,
     "fc:frame:button:1": "Open Toby Swapper",
     "fc:frame:button:1:action": "post",
-    "og:image": "/og2.PNG",
+    "og:image": "/og/tobyswap-frame-3x2.png", // ✅ Updated image reference
   },
 };
 
 // ---------------- Root Layout ----------------
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Farcaster Mini App embed info (for rich previews & launch)
+  // ✅ Farcaster Mini App embed info (for rich previews & launch)
   const miniAppEmbed = {
     version: "1",
-    imageUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/og/miniapp-3x2.png`,
+    imageUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-frame-3x2.png`, // ✅ Updated
     button: {
       title: "Open Toby Swapper",
       action: {
         type: "launch_frame",
         name: "Toby Swapper",
         url: `${process.env.NEXT_PUBLIC_SITE_URL}/`,
-        splashImageUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/icons/toby-splash-200.png`,
+        splashImageUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/icons/icon-512.png`, // ✅ Updated splash icon
         splashBackgroundColor: "#0b0b0b",
       },
     },
