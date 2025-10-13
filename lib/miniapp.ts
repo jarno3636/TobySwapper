@@ -29,6 +29,16 @@ export function isFarcasterUA(): boolean {
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
 }
 
+/** ✅ NEW: very lenient Base app / Coinbase UA heuristic */
+export function isBaseAppUA(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  // Includes Base Wallet, Coinbase Wallet in-app browser, and common variants
+  return /BaseWallet|Base\sApp|Base\/\d|CoinbaseWallet|CoinbaseMobile|CoinbaseApp|CBBrowser|CBWallet|Coinbase(Android|iOS)?/i.test(
+    ua
+  );
+}
+
 /** Prefer in-app Mini App URL in Warpcast, else normal site */
 export function fcPreferMini(pathOrAbs = ""): string {
   const base = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : SITE_URL;
