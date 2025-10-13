@@ -3,7 +3,18 @@
 
 import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
-import { injected, walletConnect, coinbaseWallet } from "@wagmi/connectors";
+
+// ✅ Use RainbowKit's wallet factories so the modal shows
+// branded install buttons, icons, deep links, etc.
+import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+import {
+  metaMaskWallet,
+  coinbaseWallet as rkCoinbaseWallet,
+  rainbowWallet,
+  rabbyWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets";
+
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector";
 
 const projectId =
@@ -11,45 +22,38 @@ const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_ID ||
   "";
 
+// Absolute site URL for WC metadata
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 
-/**
- * Connector order:
- *  1) Farcaster Mini-App
- *  2) Injected (Coinbase-targeted)  → Base/CB Smart Wallet
- *  3) Injected (generic)            → MetaMask/Rabby/etc.
- *  4) WalletConnect (QR)            → if projectId set
- *  5) Coinbase Wallet connector
- */
-const connectors = [
-  miniAppConnector(),
-  injected({ target: "coinbaseWallet", shimDisconnect: true }),
-  injected({ shimDisconnect: true }),
-  ...(projectId
-    ? [
-        walletConnect({
-          projectId,
-          showQrModal: true,
-          metadata: {
-            name: "TobySwap",
-            description: "Swap on Base with auto-TOBY burn",
-            url: siteUrl,
-            icons: [`${siteUrl}/favicon.ico`],
-          },
-        }),
-      ]
-    : []),
-  coinbaseWallet({ appName: "TobySwap" }),
+/** 1) Build RainbowKit wallets (branded, with installers) */
+const wallets = [
+  {
+    groupName: "Popular",
+    wallets: [
+      metaMaskWallet({ projectId }),
+      rkCoinbaseWallet({ appName: "TobySwap" }),
+      rainbowWallet({ projectId }),
+      rabbyWallet(),
+      walletConnectWallet({ projectId }),
+    ],
+  },
 ];
 
+/** 2) Convert to wagmi connectors (no `chains` here) */
+const rkConnectors = connectorsForWallets(wallets);
+
+/** 3) Final wagmi config (Farcaster first, then full RainbowKit set) */
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
-  connectors,
+  connectors: [
+    // works only in Warpcast; harmless elsewhere
+    miniAppConnector(),
+    ...rkConnectors,
+  ],
   ssr: true,
-  // ❌ remove autoConnect here (not supported by your wagmi build)
   storage: createStorage({ storage: cookieStorage }),
 });
