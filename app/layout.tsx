@@ -1,4 +1,3 @@
-// app/layout.tsx
 import "./globals.css";
 import Brand from "@/components/Brand";
 import Background from "@/components/Background";
@@ -11,28 +10,29 @@ export const metadata = {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    images: ["/og/tobyswap-card-1200x630.png"], // ✅ new image
+    // absolute URL (helps some crawlers)
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/og/tobyswap-card-1200x630.png"], // ✅ new image
+    images: [`${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`],
   },
   other: {
     "fc:frame": "vNext",
     "fc:frame:image": `${process.env.NEXT_PUBLIC_SITE_URL}/api/frame/image`,
     "fc:frame:button:1": "Open Toby Swapper",
     "fc:frame:button:1:action": "post",
-    "og:image": "/og/tobyswap-card-1200x630.png", // ✅ new image
+    // keep plain og:image too, absolute
+    "og:image": `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`,
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 
-  // Farcaster Mini App embed info (for rich previews & launch)
   const miniAppEmbed = {
     version: "1",
-    imageUrl: `${site}/og/miniapp-3x2.png`, // ✅ new miniapp image (3:2)
+    imageUrl: `${site}/og/miniapp-3x2.png`,
     button: {
       title: "Open Toby Swapper",
       action: {
@@ -48,12 +48,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* ✅ PWA / Base app */}
+        {/* PWA / Base app */}
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/icons/toby-192.png" />
         <meta name="theme-color" content="#79ffe1" />
-
-        {/* ✅ Farcaster Mini App embed meta */}
+        {/* Farcaster Mini App embed meta */}
         <meta name="fc:miniapp" content={JSON.stringify(miniAppEmbed)} />
       </head>
       <body suppressHydrationWarning>
