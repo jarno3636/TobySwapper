@@ -1,12 +1,10 @@
 'use client';
-
 import * as React from 'react';
 import { useAccount, useConnect } from 'wagmi';
 import useMiniAppReady from '@/hooks/useMiniAppReady';
 
 /**
- * When inside Farcaster, attempt a silent connect with the injected connector
- * (which now points at the Mini provider thanks to FarcasterMiniBridge).
+ * Auto-connects the injected connector only when inside Farcaster.
  */
 export default function FarcasterMiniAutoConnect() {
   const { isInFarcaster } = useMiniAppReady();
@@ -16,13 +14,9 @@ export default function FarcasterMiniAutoConnect() {
   React.useEffect(() => {
     if (!isInFarcaster) return;
     if (status === 'connected' || status === 'connecting') return;
-
     const injected = connectors.find((c) => c.id === 'injected');
     if (!injected) return;
-
-    connect({ connector: injected }).catch(() => {
-      // stay quiet; user can still use your normal Connect button
-    });
+    connect({ connector: injected }).catch(() => {});
   }, [isInFarcaster, status, connectors, connect]);
 
   return null;
