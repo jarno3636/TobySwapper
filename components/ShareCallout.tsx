@@ -54,22 +54,15 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // ---- Farcaster (anchor default; SDK intercepts in-app) ----
+  // Farcaster: anchor works everywhere; SDK keeps users in-app
   const farcasterWeb = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
-
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Try SDK compose; if it works, keep user in-app and cancel link.
     const ok = await composeCast({ text: line, embeds: [site] });
-    if (ok) e.preventDefault();
-    // If not ok, let the anchor open Warpcast web composer (works on web/dapp without popup blockers).
+    if (ok) e.preventDefault(); // handled in-app
   };
 
-  // ---- X / Twitter (anchor avoids popup-blockers) ----
+  // X / Twitter
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
-
-  const copyToClipboard = async () => {
-    try { await navigator.clipboard.writeText(`${line} ${site}`); } catch {}
-  };
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -97,16 +90,6 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         <span>𝕏</span>
         Share to X
       </a>
-
-      <button
-        onClick={copyToClipboard}
-        className="pill pill-opaque hover:opacity-90 text-xs"
-        title="Copy share text"
-        type="button"
-        aria-label="Copy share text"
-      >
-        Copy Text
-      </button>
 
       {burn && <span className="text-[10px] opacity-70 ml-1">live burned: {burn}</span>}
     </div>
