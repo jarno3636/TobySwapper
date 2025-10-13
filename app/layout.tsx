@@ -22,7 +22,7 @@ export const metadata = {
     "fc:frame:image": `${process.env.NEXT_PUBLIC_SITE_URL}/api/frame/image`,
     "fc:frame:button:1": "Open Toby Swapper",
     "fc:frame:button:1:action": "post",
-    "og:image": "/og/tobyswap-card-1200x630.png" // ✅ new image
+    "og:image": "/og/tobyswap-card-1200x630.png", // ✅ new image
   },
 };
 
