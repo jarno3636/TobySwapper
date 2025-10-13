@@ -1,10 +1,11 @@
+// app/providers.tsx
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, useAccount, useChainId } from "wagmi";
+import { WagmiProvider, useAccount, useChainId, useReconnect } from "wagmi";
 import {
   RainbowKitProvider,
   darkTheme,
@@ -31,11 +32,20 @@ const queryClient = new QueryClient({
 
 /* Theme */
 const rkTheme = darkTheme({
-  accentColor: "#79ffe1", // match your --accent
-  accentColorForeground: "#0a0b12", // on-accent
+  accentColor: "#79ffe1",          // match your --accent
+  accentColorForeground: "#0a0b12",// on-accent
   borderRadius: "large",
   overlayBlur: "small",
 });
+
+/** Reconnect last-used connector on first mount (replaces config.autoConnect) */
+function AutoReconnect() {
+  const { reconnect } = useReconnect();
+  useEffect(() => {
+    reconnect();
+  }, [reconnect]);
+  return null;
+}
 
 /* Optional: soft Base gate toast */
 function ChainGate({ children }: { children: ReactNode }) {
@@ -86,6 +96,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
+        <AutoReconnect />
         <RainbowKitProvider
           theme={theme}
           initialChain={base}
