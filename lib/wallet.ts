@@ -3,12 +3,11 @@
 import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
 
-// Use Wagmi’s first-party connectors directly
-import { injected } from "wagmi/connectors/injected";
-import { walletConnect } from "wagmi/connectors/walletConnect";
-import { coinbaseWallet } from "wagmi/connectors/coinbaseWallet";
+// ✅ Correct connector import package
+import { injected } from "@wagmi/connectors/injected";
+import { walletConnect } from "@wagmi/connectors/walletConnect";
+import { coinbaseWallet } from "@wagmi/connectors/coinbaseWallet";
 
-// Farcaster Mini-App connector (preferred in-app)
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector";
 
 const projectId =
@@ -32,7 +31,7 @@ export const wagmiConfig = createConfig({
     // Prefer Farcaster connector when inside a Mini App
     miniAppConnector(),
 
-    // Standard web connectors (RainbowKit will use these just fine)
+    // Standard web connectors
     injected(),
 
     walletConnect({
@@ -43,7 +42,6 @@ export const wagmiConfig = createConfig({
         url: siteUrl,
         icons: [`${siteUrl}/favicon.ico`],
       },
-      // optional: enable/disable QR modal if you like
       showQrModal: true,
     }),
 
