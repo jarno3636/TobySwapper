@@ -15,7 +15,7 @@ type MiniAppSdk = {
 };
 
 /** ---- Env helpers ---- */
-const SITE_URL =
+export const SITE_URL =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SITE_URL) ||
   "https://tobyswap.vercel.app";
 
