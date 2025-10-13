@@ -1,38 +1,51 @@
-{
-  "name": "toby-swapper",
-  "version": "0.1.0",
-  "private": true,
-  "engines": { "node": ">=18.18 <23" },
-  "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "next lint",
-    "format": "prettier --cache --write ."
-  },
-  "dependencies": {
-    "@farcaster/miniapp-sdk": "latest",
-    "@farcaster/miniapp-wagmi-connector": "1.1.0",
-    "@rainbow-me/rainbowkit": "2.2.1",
-    "@tanstack/react-query": "5.56.2",
-    "autoprefixer": "10.4.19",
-    "next": "14.2.15",
-    "postcss": "8.4.47",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "tailwindcss": "3.4.13",
-    "viem": "^2.21.55",
-    "wagmi": "^2.22.0",
-    "zod": "3.23.8"
-  },
-  "devDependencies": {
-    "@types/node": "20.14.9",
-    "@types/react": "18.3.5",
-    "@types/react-dom": "18.3.0",
-    "eslint": "8.57.0",
-    "eslint-config-next": "14.2.15",
-    "prettier": "3.3.3",
-    "prettier-plugin-tailwindcss": "0.6.6",
-    "typescript": "5.6.2"
-  }
+"use client";
+
+import { http, createStorage, cookieStorage, createConfig } from "wagmi";
+import { base } from "viem/chains";
+
+// RainbowKit helpers to build the same wallet list you had,
+// but as connectors so we can prepend the Farcaster connector.
+import {
+  connectorsForWallets,
+  getDefaultWallets,
+} from "@rainbow-me/rainbowkit";
+
+import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector";
+
+const projectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_WALLETCONNECT_ID ||
+  "";
+
+if (!projectId) {
+  console.warn("⚠️ WalletConnect disabled: missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID");
 }
+
+// Build RainbowKit’s default wallets (same set as getDefaultConfig)
+const { wallets } = getDefaultWallets({
+  appName: "TobySwapper",
+  projectId,
+  chains: [base],
+});
+
+// Convert those wallets into Wagmi connectors
+const rkConnectors = connectorsForWallets(wallets, {
+  appName: "TobySwapper",
+  projectId,
+});
+
+// Final Wagmi config with the Farcaster Mini-App connector FIRST
+export const wagmiConfig = createConfig({
+  chains: [base],
+  transports: {
+    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
+  },
+  connectors: [
+    // Prefer Mini-App connector when running inside Farcaster
+    miniAppConnector(),
+    // Then all RainbowKit wallets (Injected, WC, Coinbase, etc.)
+    ...rkConnectors,
+  ],
+  ssr: true,
+  storage: createStorage({ storage: cookieStorage }), // SSR-safe
+});
