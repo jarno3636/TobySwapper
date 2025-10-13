@@ -1,8 +1,8 @@
 "use client";
 
-import { http, cookieStorage, createStorage } from "wagmi";
+import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { getDefaultWallets, connectorsForWallets } from "@rainbow-me/rainbowkit";
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector";
 
 const projectId =
@@ -14,23 +14,38 @@ if (!projectId) {
   console.warn("⚠️ WalletConnect disabled: missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID");
 }
 
-// 1️⃣ Start from RainbowKit’s ready-made config
-const rainbowConfig = getDefaultConfig({
+/**
+ * 1) Build RainbowKit wallet groups.
+ *    ✅ chains belong here for v2.2.x
+ */
+const { wallets } = getDefaultWallets({
   appName: "TobySwapper",
   projectId,
+  chains: [base],
+});
+
+/**
+ * 2) Convert to Wagmi connectors.
+ *    ❌ DO NOT pass `chains` here (TS error you saw).
+ */
+const rkConnectors = connectorsForWallets(wallets, {
+  appName: "TobySwapper",
+  projectId,
+});
+
+/**
+ * 3) Create Wagmi config without mutating anything, and
+ *    prepend the Farcaster Mini-App connector.
+ */
+export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
+  connectors: [
+    miniAppConnector(), // preferred in Farcaster
+    ...rkConnectors,    // RainbowKit’s (Injected, WC, Coinbase, etc.)
+  ],
   ssr: true,
   storage: createStorage({ storage: cookieStorage }),
 });
-
-// 2️⃣ Prepend Farcaster Mini-App connector to RainbowKit’s list
-rainbowConfig.connectors = [
-  miniAppConnector(),
-  ...rainbowConfig.connectors,
-];
-
-// 3️⃣ Export Wagmi config for <WagmiProvider>
-export const wagmiConfig = rainbowConfig;
