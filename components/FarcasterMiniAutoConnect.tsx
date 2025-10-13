@@ -4,7 +4,8 @@ import { useAccount, useConnect } from 'wagmi';
 import useMiniAppReady from '@/hooks/useMiniAppReady';
 
 /**
- * Auto-connects the injected connector only when inside Farcaster.
+ * Auto-connects only when inside Farcaster.
+ * Prefers the official Farcaster Mini-App connector; falls back to injected.
  */
 export default function FarcasterMiniAutoConnect() {
   const { isInFarcaster } = useMiniAppReady();
@@ -17,16 +18,19 @@ export default function FarcasterMiniAutoConnect() {
     if (status === 'connected' || status === 'connecting') return;
     if (triedRef.current) return;
 
-    const injected =
-      connectors.find((c) => c.id === 'injected') ??
-      connectors[0]; // fall back to first available
+    const isMini = (c: any) =>
+      String(c.id).toLowerCase().includes('mini') ||
+      String(c.name || '').toLowerCase().includes('farcaster');
 
-    if (!injected) return;
+    const mini = connectors.find(isMini);
+    const injected = connectors.find((c) => c.id === 'injected');
+
+    const target = mini ?? injected ?? connectors[0];
+    if (!target) return;
 
     triedRef.current = true;
-    // Promise-based connect
-    connectAsync({ connector: injected }).catch(() => {
-      // stay quiet; user can still connect manually
+    connectAsync({ connector: target }).catch(() => {
+      // stay silent; user can still connect manually
     });
   }, [isInFarcaster, status, connectors, connectAsync]);
 
