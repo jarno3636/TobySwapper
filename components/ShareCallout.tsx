@@ -1,11 +1,16 @@
+// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
-import { composeCast } from "@/lib/miniapp";
+import {
+  composeCast,
+  buildFarcasterComposeUrl,
+  MINIAPP_URL,
+} from "@/lib/miniapp";
 
 type ShareCalloutProps = {
   token?: string;   // "$TOBY"
-  siteUrl?: string; // override destination URL
+  siteUrl?: string; // override destination URL for X
 };
 
 function formatCompact(n: number): string {
@@ -41,10 +46,14 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     return () => { mounted = false; };
   }, []);
 
+  // Absolute URLs
   const site =
     siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    runtimeOrigin("https://tobyswap.vercel.app"); // must be absolute for embeds[]
+    runtimeOrigin("https://tobyswap.vercel.app"); // used for X
+
+  // ✅ Farcaster embeds the Mini App URL so it opens in-app (fallback to site if unset)
+  const mini = MINIAPP_URL || process.env.NEXT_PUBLIC_FC_MINIAPP_URL || site;
 
   const line = React.useMemo(
     () =>
@@ -54,14 +63,16 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Farcaster: anchor works everywhere; SDK keeps users in-app
-  const farcasterWeb = `https://warpcast.com/~/compose?text=${encodeURIComponent(line)}&embeds[]=${encodeURIComponent(site)}`;
+  // Farcaster web composer (works everywhere)
+  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [mini] });
+
+  // Try SDK in-app; otherwise let the anchor open web composer
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    const ok = await composeCast({ text: line, embeds: [site] });
-    if (ok) e.preventDefault(); // handled in-app
+    const ok = await composeCast({ text: line, embeds: [mini] });
+    if (ok) e.preventDefault(); // handled in Warpcast
   };
 
-  // X / Twitter
+  // X / Twitter uses your public site URL
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
 
   return (
