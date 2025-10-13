@@ -12,15 +12,15 @@ export const metadata = {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    images: ["/og.PNG"],
+    images: ["/og3.PNG"],
   },
-  twitter: { card: "summary_large_image", images: ["/og.PNG"] },
+  twitter: { card: "summary_large_image", images: ["/og2.PNG"] },
   other: {
     "fc:frame": "vNext",
     "fc:frame:image": `${process.env.NEXT_PUBLIC_SITE_URL}/api/frame/image`,
     "fc:frame:button:1": "Open Toby Swapper",
     "fc:frame:button:1:action": "post",
-    "og:image": "/og.PNG",
+    "og:image": "/og2.PNG",
   },
 };
 
