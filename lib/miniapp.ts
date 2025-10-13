@@ -20,7 +20,7 @@ export const MINIAPP_URL =
   (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_FC_MINIAPP_URL) ||
   "";
 
-/** ---- UA heuristics (don’t depend on it for logic that must be bulletproof) ---- */
+/** ---- UA heuristics ---- */
 export function isFarcasterUA(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
@@ -30,7 +30,6 @@ export function isFarcasterUA(): boolean {
 export function isBaseAppUA(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
-  // Covers Base Wallet, Base app webview, and Coinbase Wallet/App variants
   return /BaseWallet|Base\sApp|Base\/\d|CoinbaseWallet|CoinbaseMobile|CoinbaseApp|CBBrowser|CBWallet|Coinbase(Android|iOS)?/i.test(
     ua
   );
@@ -61,7 +60,7 @@ export function buildFarcasterComposeUrl({
   return url.toString();
 }
 
-/** ---- SDK loader: module first, then globals fallback ---- */
+/** ---- Farcaster SDK: module first, then globals fallback ---- */
 export async function getMiniSdk(): Promise<MiniAppSdk | null> {
   if (typeof window === "undefined") return null;
   try {
@@ -106,7 +105,6 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
 function getMiniKit(): any | null {
   if (typeof window === "undefined") return null;
   const w = window as any;
-  // Common injection points seen in Base app builds
   return w?.miniKit || w?.coinbase?.miniKit || null;
 }
 
@@ -119,9 +117,7 @@ async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
       await mk.composeCast(args);
       return true;
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return false;
 }
 
@@ -138,9 +134,7 @@ export async function openInBase(url: string): Promise<boolean> {
       await mk.openURL(url);
       return true;
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return false;
 }
 
@@ -208,6 +202,7 @@ export async function composeCast({
   const sdk = await getMiniSdk();
   if (sdk?.actions?.composeCast && isFarcasterUA()) {
     try {
+      await ensureReady();
       await sdk.actions.composeCast({ text, embeds });
       return true;
     } catch {}
