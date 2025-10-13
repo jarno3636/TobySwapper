@@ -23,10 +23,11 @@
     },
 
     "forceConsistentCasingInFileNames": true,
-    "preserveValueImports": true,
 
+    /* Next.js build expects this */
     "incremental": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [{ "name": "next" }],
+    "isolatedModules": true
   },
   "include": [
     "next-env.d.ts",
