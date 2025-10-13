@@ -6,6 +6,8 @@ import Providers from "./providers";
 export const metadata = {
   title: "Toby Swapper",
   description: "Swap on Base with auto-TOBY burn",
+  manifest: "/site.webmanifest",                // ✅ App Router manifest
+  themeColor: "#0b0b0b",                         // ✅ surfaced via metadata
   openGraph: {
     title: "Toby Swapper",
     description:
@@ -24,7 +26,7 @@ export const metadata = {
     "fc:frame:button:1:action": "post",
     "og:image": `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`,
   },
-};
+} as const;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
@@ -47,14 +49,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* PWA / Base app */}
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#0b0b0b" />
         {/* iOS / Safari */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/toby-192.png" />
-        {/* Favicons (desktop browsers) */}
+
+        {/* Favicons (desktop browsers) — keeps your current files */}
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/toby-192.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/toby-192.png" />
 
