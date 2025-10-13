@@ -10,7 +10,7 @@ export const metadata = {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    // absolute URL (helps some crawlers)
+    // absolute URL helps some crawlers
     images: [`${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`],
   },
   twitter: {
@@ -22,7 +22,6 @@ export const metadata = {
     "fc:frame:image": `${process.env.NEXT_PUBLIC_SITE_URL}/api/frame/image`,
     "fc:frame:button:1": "Open Toby Swapper",
     "fc:frame:button:1:action": "post",
-    // keep plain og:image too, absolute
     "og:image": `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`,
   },
 };
@@ -50,8 +49,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* PWA / Base app */}
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/icons/toby-192.png" />
-        <meta name="theme-color" content="#79ffe1" />
+        <meta name="theme-color" content="#0b0b0b" />
+        {/* iOS / Safari */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/toby-192.png" />
+        {/* Favicons (desktop browsers) */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/toby-192.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/toby-192.png" />
+
         {/* Farcaster Mini App embed meta */}
         <meta name="fc:miniapp" content={JSON.stringify(miniAppEmbed)} />
       </head>
