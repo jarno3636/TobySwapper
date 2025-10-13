@@ -1,4 +1,3 @@
-// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
