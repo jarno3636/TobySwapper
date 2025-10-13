@@ -5,29 +5,22 @@ import * as React from "react";
 import {
   composeCast,
   buildFarcasterComposeUrl,
+  SITE_URL,
   MINIAPP_URL,
   isFarcasterUA,
-  isBaseAppUA,
 } from "@/lib/miniapp";
 
 type ShareCalloutProps = {
-  token?: string;
-  siteUrl?: string;
+  token?: string;   // "$TOBY"
+  siteUrl?: string; // override destination URL for X
 };
 
-function formatCompact(n: number) {
+function formatCompact(n: number): string {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.00$/, "") + "B";
   if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
   if (abs >= 1_000) return (n / 1_000).toFixed(2).replace(/\.00$/, "") + "K";
   return String(n);
-}
-
-function runtimeOrigin(fallback: string) {
-  try {
-    if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
-  } catch {}
-  return fallback;
 }
 
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
@@ -48,11 +41,9 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     return () => { mounted = false; };
   }, []);
 
-  const site =
-    siteUrl || process.env.NEXT_PUBLIC_SITE_URL || runtimeOrigin("https://tobyswap.vercel.app");
-
-  // Use your Mini App link for Farcaster embeds (opens in-app)
-  const mini = MINIAPP_URL || process.env.NEXT_PUBLIC_FC_MINIAPP_URL || site;
+  // Absolute URLs
+  const site = siteUrl || SITE_URL;             // your normal site
+  const shareLanding = `${SITE_URL}/share`;     // lightweight page to avoid X loops
 
   const line = React.useMemo(
     () =>
@@ -62,31 +53,24 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [mini] });
-  const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
+  // Embed: use MINIAPP_URL only inside Warpcast; use normal site elsewhere
+  const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
 
+  // Farcaster
+  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // 1) If in Warpcast, use SDK & prevent default.
-    if (isFarcasterUA()) {
-      const ok = await composeCast({ text: line, embeds: [mini] });
-      if (ok) {
-        e.preventDefault();
-        return;
-      }
-    }
-    // 2) If inside Base app webview, force same-tab to avoid app-store bounce.
-    if (isBaseAppUA()) {
-      e.preventDefault();
-      window.location.href = farcasterWeb;
-    }
-    // 3) Else let the anchor open normally (new tab).
+    const ok = await composeCast({ text: line, embeds: [embedForFC] });
+    if (ok) e.preventDefault(); // handled in Warpcast
   };
+
+  // X / Twitter -> point to /share so there’s no wallet/miniap redirects
+  const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
         href={farcasterWeb}
-        target={isBaseAppUA() ? "_self" : "_blank"}
+        target="_blank"
         rel="noopener noreferrer"
         onClick={onFarcasterClick}
         className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
