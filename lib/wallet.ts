@@ -3,10 +3,8 @@
 import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
 
-// ✅ Correct connector import package
-import { injected } from "@wagmi/connectors/injected";
-import { walletConnect } from "@wagmi/connectors/walletConnect";
-import { coinbaseWallet } from "@wagmi/connectors/coinbaseWallet";
+// ✅ Import from the package root (not subpaths)
+import { injected, walletConnect, coinbaseWallet } from "@wagmi/connectors";
 
 import { farcasterMiniApp as miniAppConnector } from "@farcaster/miniapp-wagmi-connector";
 
@@ -28,7 +26,7 @@ export const wagmiConfig = createConfig({
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
   connectors: [
-    // Prefer Farcaster connector when inside a Mini App
+    // Prefer Farcaster connector inside the Mini App
     miniAppConnector(),
 
     // Standard web connectors
