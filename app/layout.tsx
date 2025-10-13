@@ -12,7 +12,7 @@ export const metadata = {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    images: ["/og3.PNG"],
+    images: ["/og2.PNG"],
   },
   twitter: { card: "summary_large_image", images: ["/og2.PNG"] },
   other: {
