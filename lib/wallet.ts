@@ -15,29 +15,17 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 
 /**
- * Connectors order matters:
- *  1) Farcaster Mini-App connector (only engages inside Warpcast)
- *  2) Injected (Coinbase-targeted) → helps auto-inject CB/Base Smart Wallet
- *  3) Injected (generic) → MetaMask / Rabby / etc.
- *  4) WalletConnect (QR) → always shows if projectId set
+ * Connector order:
+ *  1) Farcaster Mini-App
+ *  2) Injected (Coinbase-targeted)  → Base/CB Smart Wallet
+ *  3) Injected (generic)            → MetaMask/Rabby/etc.
+ *  4) WalletConnect (QR)            → if projectId set
  *  5) Coinbase Wallet connector
  */
 const connectors = [
-  // Works only inside Warpcast; present everywhere so it "just works" in-app
   miniAppConnector(),
-
-  // Prefer Coinbase-injected first to catch Base / CB Smart Wallet injections
-  injected({
-    target: "coinbaseWallet",        // explicitly target Coinbase’s injected provider if present
-    shimDisconnect: true,
-  }),
-
-  // Generic injected for MetaMask/Rabby/etc
-  injected({
-    shimDisconnect: true,
-  }),
-
-  // WalletConnect QR (shows on web if projectId present)
+  injected({ target: "coinbaseWallet", shimDisconnect: true }),
+  injected({ shimDisconnect: true }),
   ...(projectId
     ? [
         walletConnect({
@@ -52,8 +40,6 @@ const connectors = [
         }),
       ]
     : []),
-
-  // Coinbase Wallet connector (desktop extension/app)
   coinbaseWallet({ appName: "TobySwap" }),
 ];
 
@@ -64,7 +50,6 @@ export const wagmiConfig = createConfig({
   },
   connectors,
   ssr: true,
-  // remember the last-used wallet → auto-connect on revisit (helps “auto inject” feel)
-  autoConnect: true,
+  // ❌ remove autoConnect here (not supported by your wagmi build)
   storage: createStorage({ storage: cookieStorage }),
 });
