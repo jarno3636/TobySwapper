@@ -6,14 +6,14 @@ export async function GET() {
   return NextResponse.json(
     {
       version: "next",
-      title: "Toby Swapper 🔥",
+      title: "Toby Swapper 🐸",
+      // You can point directly at the static PNG, or keep using the image route.
+      // image: `${site}/og/tobyswap-card-1200x630.png`,
       image: `${site}/api/frame/image`,
-      imageAlt: "Swap. Burn. Spread the Lore.",
+      imageAlt: "Swap on Base with 1% auto-burn to $TOBY.",
       buttons: [
-        { label: "Spread the Lore",   action: "post" },                // -> POST builds live copy + links
-        { label: "Share to X",        action: "post" },                // -> POST builds live copy + links
         { label: "Open Toby Swapper", action: { type: "launch_url", url: site } },
-        { label: "More 🔥",           action: "post" },
+        { label: "More 🔥",            action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
     },
