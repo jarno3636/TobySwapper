@@ -1,4 +1,3 @@
-// /app/providers.tsx
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
@@ -6,9 +5,16 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, useAccount, useChainId } from "wagmi";
-import { RainbowKitProvider, darkTheme, useChainModal, useConnectModal } from "@rainbow-me/rainbowkit";
+import {
+  RainbowKitProvider,
+  darkTheme,
+  useChainModal,
+  useConnectModal,
+} from "@rainbow-me/rainbowkit";
 import { base } from "viem/chains";
 import { wagmiConfig } from "@/lib/wallet";
+import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
+import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
 
 /* React Query */
 const queryClient = new QueryClient({
@@ -25,8 +31,8 @@ const queryClient = new QueryClient({
 
 /* Theme */
 const rkTheme = darkTheme({
-  accentColor: "#79ffe1",            // match your --accent
-  accentColorForeground: "#0a0b12",  // on-accent
+  accentColor: "#79ffe1", // match your --accent
+  accentColorForeground: "#0a0b12", // on-accent
   borderRadius: "large",
   overlayBlur: "small",
 });
@@ -80,7 +86,16 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <RainbowKitProvider theme={theme} initialChain={base} modalSize="compact" appInfo={{ appName: "TobySwapper" }}>
+        <RainbowKitProvider
+          theme={theme}
+          initialChain={base}
+          modalSize="compact"
+          appInfo={{ appName: "TobySwapper" }}
+        >
+          {/* ✅ Farcaster Mini support */}
+          <FarcasterMiniBridge />
+          <FarcasterMiniAutoConnect />
+
           <ChainGate>{children}</ChainGate>
         </RainbowKitProvider>
       </WagmiProvider>
