@@ -9,15 +9,26 @@ import useMiniAppReady from '@/hooks/useMiniAppReady';
 export default function FarcasterMiniAutoConnect() {
   const { isInFarcaster } = useMiniAppReady();
   const { status } = useAccount();
-  const { connectors, connect } = useConnect();
+  const { connectors, connectAsync } = useConnect();
+  const triedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!isInFarcaster) return;
     if (status === 'connected' || status === 'connecting') return;
-    const injected = connectors.find((c) => c.id === 'injected');
+    if (triedRef.current) return;
+
+    const injected =
+      connectors.find((c) => c.id === 'injected') ??
+      connectors[0]; // fall back to first available
+
     if (!injected) return;
-    connect({ connector: injected }).catch(() => {});
-  }, [isInFarcaster, status, connectors, connect]);
+
+    triedRef.current = true;
+    // Promise-based connect
+    connectAsync({ connector: injected }).catch(() => {
+      // stay quiet; user can still connect manually
+    });
+  }, [isInFarcaster, status, connectors, connectAsync]);
 
   return null;
 }
