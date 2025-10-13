@@ -4,7 +4,7 @@ import * as React from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { base } from "viem/chains";
 
-function truncate(addr?: string, left = 6, right = 4) {
+function truncate(addr?: string, left = 4, right = 2) {
   if (!addr) return "";
   return `${addr.slice(0, left)}…${addr.slice(-right)}`;
 }
@@ -24,32 +24,28 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
         const connected = ready && !!account?.address;
         const onBase = connected && chain?.id === base.id && !chain?.unsupported;
 
-        // Status
+        // status styles
         const showSwitch = connected && !onBase;
-        const label = connected ? truncate(account?.address) : "Not Connected";
         const dot = showSwitch
           ? "bg-amber-400"
           : connected
           ? "bg-[var(--accent)]"
           : "bg-[var(--danger)]";
 
-        // Action
+        // actions
         const onClick = showSwitch
           ? openChainModal
           : connected
           ? openAccountModal
           : openConnectModal;
 
-        // Text
+        // super-short labels to reduce width
         const text = showSwitch
-          ? "Switch to Base"
+          ? "Base" // keep it tiny; user taps to switch
           : connected
-          ? compact
-            ? label
-            : label
-          : "Not Connected";
+          ? truncate(account?.address) // 4…2
+          : "Connect";
 
-        // Hydration guard — avoid flicker
         const hidden: React.CSSProperties = ready
           ? {}
           : { opacity: 0, pointerEvents: "none" };
@@ -59,16 +55,20 @@ export default function ConnectPill({ compact = false }: { compact?: boolean }) 
             type="button"
             onClick={onClick}
             style={hidden}
-            className={[
-              "pill",
-              connected ? "pill-nav" : "pill-opaque",
-              "inline-flex items-center gap-1.5 text-[11px] px-2 py-1 h-6 rounded-full leading-none",
-            ].join(" ")}
             title={connected ? account?.address : "Connect wallet"}
             aria-label={connected ? "Wallet menu" : "Connect wallet"}
+            className={[
+              // keep your look, but force a smaller size
+              "pill",
+              connected ? "pill-nav" : "pill-opaque",
+              "inline-flex items-center whitespace-nowrap",
+              "leading-none text-[10px] gap-1",         // tiny text + tight gap
+              "!px-1.5 !py-[3px] !h-6 !rounded-full",   // override base padding/height
+              "min-w-0 max-w-[84px]"                    // hard cap width
+            ].join(" ")}
           >
             <span className={`block h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden />
-            <span className="truncate max-w-[70px]">{text}</span>
+            <span className="truncate">{text}</span>
           </button>
         );
       }}
