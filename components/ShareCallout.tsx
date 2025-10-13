@@ -6,14 +6,16 @@ import {
   composeCast,
   buildFarcasterComposeUrl,
   MINIAPP_URL,
+  isFarcasterUA,
+  isBaseAppUA,
 } from "@/lib/miniapp";
 
 type ShareCalloutProps = {
-  token?: string;   // "$TOBY"
-  siteUrl?: string; // override destination URL for X
+  token?: string;
+  siteUrl?: string;
 };
 
-function formatCompact(n: number): string {
+function formatCompact(n: number) {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.00$/, "") + "B";
   if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
@@ -46,13 +48,10 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     return () => { mounted = false; };
   }, []);
 
-  // Absolute URLs
   const site =
-    siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    runtimeOrigin("https://tobyswap.vercel.app"); // used for X
+    siteUrl || process.env.NEXT_PUBLIC_SITE_URL || runtimeOrigin("https://tobyswap.vercel.app");
 
-  // ✅ Farcaster embeds the Mini App URL so it opens in-app (fallback to site if unset)
+  // Use your Mini App link for Farcaster embeds (opens in-app)
   const mini = MINIAPP_URL || process.env.NEXT_PUBLIC_FC_MINIAPP_URL || site;
 
   const line = React.useMemo(
@@ -63,23 +62,31 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Farcaster web composer (works everywhere)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [mini] });
-
-  // Try SDK in-app; otherwise let the anchor open web composer
-  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    const ok = await composeCast({ text: line, embeds: [mini] });
-    if (ok) e.preventDefault(); // handled in Warpcast
-  };
-
-  // X / Twitter uses your public site URL
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(site)}`;
+
+  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
+    // 1) If in Warpcast, use SDK & prevent default.
+    if (isFarcasterUA()) {
+      const ok = await composeCast({ text: line, embeds: [mini] });
+      if (ok) {
+        e.preventDefault();
+        return;
+      }
+    }
+    // 2) If inside Base app webview, force same-tab to avoid app-store bounce.
+    if (isBaseAppUA()) {
+      e.preventDefault();
+      window.location.href = farcasterWeb;
+    }
+    // 3) Else let the anchor open normally (new tab).
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <a
         href={farcasterWeb}
-        target="_blank"
+        target={isBaseAppUA() ? "_self" : "_blank"}
         rel="noopener noreferrer"
         onClick={onFarcasterClick}
         className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
