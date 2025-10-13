@@ -23,7 +23,6 @@
     },
 
     "forceConsistentCasingInFileNames": true,
-    "verbatimModuleSyntax": true,
     "preserveValueImports": true,
 
     "incremental": true,
