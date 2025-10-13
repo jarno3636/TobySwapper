@@ -9,6 +9,7 @@ import {
   useConnect,
   useDisconnect,
   useSwitchChain,
+  Connector,
 } from "wagmi";
 import { base } from "viem/chains";
 
@@ -17,6 +18,40 @@ function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
+}
+
+/** UA hint for Warpcast (best-effort only) */
+function isFarcasterUA() {
+  if (typeof navigator === "undefined") return false;
+  return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
+}
+
+/** Pick the best connector for this environment */
+function choosePreferredConnector(list: readonly Connector[] = []): Connector | null {
+  // 1) Farcaster Mini-App connector (id is typically 'farcasterMiniApp')
+  const mini = list.find((c) => c.id.toLowerCase().includes("farcaster"));
+  if (mini && isFarcasterUA()) return mini;
+
+  // 2) Coinbase-injected first (helps Base / CB Smart Wallet)
+  const cbInjected = list.find(
+    (c) => c.id === "injected" && c.name.toLowerCase().includes("coinbase")
+  );
+  if (cbInjected) return cbInjected;
+
+  // 3) Generic injected (Metamask / Rabby / etc.)
+  const injected = list.find((c) => c.id === "injected");
+  if (injected) return injected;
+
+  // 4) WalletConnect QR (if configured in wagmiConfig)
+  const wc = list.find((c) => c.id.toLowerCase().includes("walletconnect"));
+  if (wc) return wc;
+
+  // 5) Coinbase Wallet connector
+  const cbw = list.find((c) => c.id.toLowerCase().includes("coinbasewallet"));
+  if (cbw) return cbw;
+
+  // Fallback: first available
+  return list[0] ?? null;
 }
 
 /** Small helper */
@@ -36,20 +71,12 @@ export default function WalletPillInner() {
   const { address, isConnected, status: accountStatus } = useAccount();
   const chainId = useChainId();
 
-  const { connectors = [], connect, status: connectStatus, error, reset } =
-    useConnect();
+  const { connectors = [], connect, status: connectStatus, error, reset } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
-  // Prefer injected; else first connector (if any)
-  const injected = useMemo(
-    () => connectors.find((c) => c.id === "injected") ?? null,
-    [connectors]
-  );
-  const fallback = useMemo(
-    () => injected ?? (connectors.length ? connectors[0] : null),
-    [injected, connectors]
-  );
+  // Prefer best connector for the current environment
+  const preferred = useMemo(() => choosePreferredConnector(connectors), [connectors]);
 
   // Soft switch to Base after connect
   useEffect(() => {
@@ -108,8 +135,8 @@ export default function WalletPillInner() {
   const safeConnect = async () => {
     try {
       if (error) reset();
-      if (!fallback) return; // nothing available to connect
-      await connect({ connector: fallback });
+      if (!preferred) return; // nothing available to connect
+      await connect({ connector: preferred });
     } catch {
       // swallow errors to avoid crashing the app
     }
