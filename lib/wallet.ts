@@ -4,8 +4,6 @@
 import { http, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
 
-// ✅ Use RainbowKit's wallet factories so the modal shows
-// branded install buttons, icons, deep links, etc.
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
   metaMaskWallet,
@@ -22,11 +20,7 @@ const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_ID ||
   "";
 
-// Absolute site URL for WC metadata
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
-
-/** 1) Build RainbowKit wallets (branded, with installers) */
+/** 1) Build RainbowKit wallets (branded options) */
 const wallets = [
   {
     groupName: "Popular",
@@ -40,8 +34,11 @@ const wallets = [
   },
 ];
 
-/** 2) Convert to wagmi connectors (no `chains` here) */
-const rkConnectors = connectorsForWallets(wallets);
+/** 2) Convert to wagmi connectors — v2.2.x requires the options as 2nd arg */
+const rkConnectors = connectorsForWallets(wallets, {
+  appName: "TobySwap",
+  projectId,
+});
 
 /** 3) Final wagmi config (Farcaster first, then full RainbowKit set) */
 export const wagmiConfig = createConfig({
@@ -50,8 +47,7 @@ export const wagmiConfig = createConfig({
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
   connectors: [
-    // works only in Warpcast; harmless elsewhere
-    miniAppConnector(),
+    miniAppConnector(), // preferred inside Warpcast; harmless elsewhere
     ...rkConnectors,
   ],
   ssr: true,
