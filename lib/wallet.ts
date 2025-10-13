@@ -17,27 +17,27 @@ if (!projectId) {
   console.warn("⚠️ WalletConnect disabled: missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID");
 }
 
-// Build RainbowKit’s default wallet groups (Injected, WC, Coinbase, etc.)
+// ✅ Chains go here — inside getDefaultWallets
 const { wallets } = getDefaultWallets({
   appName: "TobySwapper",
   projectId,
   chains: [base],
 });
 
-// Convert those wallets into Wagmi connectors (no `chains` key here)
+// ❌ Remove 'chains' here — it is not a valid parameter for connectorsForWallets
 const rkConnectors = connectorsForWallets(wallets, {
   appName: "TobySwapper",
   projectId,
 });
 
-// Final Wagmi config with Farcaster Mini-App connector first
+// Final Wagmi config with the Farcaster Mini-App connector first
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
   },
   connectors: [
-    // Prefer Mini-App connector when inside Farcaster
+    // Prefer Mini-App connector when running inside Farcaster
     miniAppConnector(),
     // Then all RainbowKit wallets
     ...rkConnectors,
