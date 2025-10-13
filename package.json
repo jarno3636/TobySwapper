@@ -11,6 +11,7 @@
     "format": "prettier --cache --write ."
   },
   "dependencies": {
+    "@coinbase/onchainkit": "latest",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@rainbow-me/rainbowkit": "2.2.1",
