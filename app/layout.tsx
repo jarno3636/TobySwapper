@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         {/* PWA / Base app */}
-        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#0b0b0b" />
         {/* iOS / Safari */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
