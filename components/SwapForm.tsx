@@ -246,12 +246,11 @@ async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", to
 }
 
 /* -------------------------- Fee/burn helper path --------------------------- */
-// NEW: route fee via USDC hub to avoid missing V2 pair reverts
 function buildFeePathFor(tokenInAddr: Address): Address[] {
   const t = lc(tokenInAddr);
-  if (eq(t, TOBY)) return [TOBY as Address, TOBY as Address];
-  if (eq(t, WETH)) return [WETH as Address, USDC as Address, TOBY as Address];
-  return [t as Address, WETH as Address, USDC as Address, TOBY as Address];
+  if (eq(t, TOBY)) return [t as Address, TOBY as Address];
+  if (eq(t, WETH)) return [WETH as Address, TOBY as Address];
+  return [t as Address, WETH as Address, TOBY as Address];
 }
 
 /* ---------------------------- UI small helper ------------------------------ */
@@ -259,7 +258,7 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
       <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        d="M10.325 4.317a1 1 0 0 1 1.35-.436l.7.35a1 1 0 0 0 .894 0l.7-.35a1 1 0 0 1 1.35.436l.35.7a1 1 0 0 0 .5.5l.7.35a1 1 0 0 1 .436 1.35l-.35.7a1 1 0 0 0 0 .894l.35.7a1 1 0 0 1-.436 1.35l-.7.35a1 1 0 0 0-.5.5l-.35.7Z" />
+        d="M10.325 4.317a1 1 0 0 1 1.35-.436l.7.35a1 1 0 0 0 .894 0l.7-.35a1 1 0 0 1 1.35.436l.35.7a1 1 0 0 0 .5.5l.7.35a1 1 0 0 1 .436 1.35l-.35.7a1 1 0 0 0 0 .894l.35.7a1 1 0 0 1-.436 1.35l-.7.35a1 1 0 0 0-.5.5l-.35.7a1 1 0 0 1-1.35.436l-.7-.35a1 1 0 0 0-.894 0l-.7.35a1 1 0 0 1-1.35-.436l-.35-.7a1 1 0 0 0-.5-.5l-.7-.35a1 1 0 0 1-.436-1.35l.35-.7a1 1 0 0 0 0-.894l-.35-.7a1 1 0 0 1 .436-1.35l.7-.35a1 1 0 0 0 .5-.5l.35-.7Z" />
       <circle cx="12" cy="12" r="3" strokeWidth="2" />
     </svg>
   );
@@ -294,7 +293,7 @@ function SuccessToast({
 
   return (
     <Portal>
-      {/* Shield */}
+      {/* Shield to eat stray taps (and ensure nothing refocuses beneath) */}
       <div className="fixed inset-0 z-[10999]" onClick={onClose} />
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
@@ -421,11 +420,7 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  const mainAmountIn = useMemo(
-    () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
-    [amountInBig, feeBps]
-  );
-
+  const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -553,23 +548,16 @@ export default function SwapForm() {
     invalidateBurnTotal();
   }
 
-  // local getter to satisfy TS when we know client exists
-  const getClient = () => {
-    if (!client) throw new Error("No RPC client available.");
-    return client;
-  };
-
   async function ensureAllowance(token: Address, needed: bigint) {
-    const pc = getClient() as any;
     try {
-      const current: bigint = await pc.readContract({
+      const current: bigint = await client.readContract({
         address: token,
         abi: ERC20Abi,
         functionName: "allowance",
         args: [address as Address, SWAPPER as Address],
       }) as any;
       if (current >= needed) return true;
-      const sim = await pc.simulateContract({
+      const sim = await (client as any).simulateContract({
         address: token,
         abi: ERC20Abi,
         functionName: "approve",
@@ -578,14 +566,13 @@ export default function SwapForm() {
         chain: base,
       });
       const tx = await writeContractAsync(sim.request);
-      await pc.waitForTransactionReceipt({ hash: tx });
+      await client.waitForTransactionReceipt({ hash: tx });
       return true;
     } catch { return false; }
   }
 
   async function wrapEth(amount: bigint) {
-    const pc = getClient() as any;
-    const sim = await pc.simulateContract({
+    const sim = await (client as any).simulateContract({
       address: WETH as Address,
       abi: WethAbi,
       functionName: "deposit",
@@ -595,7 +582,7 @@ export default function SwapForm() {
       value: amount,
     });
     const tx = await writeContractAsync(sim.request);
-    await pc.waitForTransactionReceipt({ hash: tx });
+    await client.waitForTransactionReceipt({ hash: tx });
   }
 
   async function doSwap() {
@@ -610,6 +597,7 @@ export default function SwapForm() {
     const isEthOut = outMeta.symbol === "ETH";
 
     const inAddr = isEthIn ? (WETH as Address) : (tokenIn as Address);
+    const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
     const pathForFeeSwap = feePathForExecution(inAddr);
@@ -641,12 +629,12 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: mainAmountIn, // after fee
+            amountIn: parseUnits(amt || "0", 18),
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
 
-        const sim = await withTimeout<any>((getClient() as any).simulateContract({
+        const sim = await withTimeout<any>((client.simulateContract as any)({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensV3ExactInput",
@@ -654,7 +642,7 @@ export default function SwapForm() {
             WETH as Address,
             tokenOut as Address,
             address as Address,
-            amountInBig, // full pull; swapper uses only mainAmountIn for V3
+            parseUnits(amt || "0", 18),
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -689,7 +677,7 @@ export default function SwapForm() {
 
       if (isEthIn) {
         const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
-        const sim = await (getClient() as any).simulateContract({
+        const sim = await (client as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapETHForTokensSupportingFeeOnTransferTokensTo",
@@ -739,12 +727,12 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: mainAmountIn, // after fee
+            amountIn: parseUnits(amt || "0", inMeta.decimals),
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
 
-        const sim = await withTimeout<any>((getClient() as any).simulateContract({
+        const sim = await withTimeout<any>((client.simulateContract as any)({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensV3ExactInput",
@@ -752,7 +740,7 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            amountInBig, // full pull
+            parseUnits(amt || "0", inMeta.decimals),
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -779,7 +767,7 @@ export default function SwapForm() {
 
       if (isEthOut) {
         const mainPath = bestV2Path ?? [inAddr, WETH as Address];
-        const sim = await (getClient() as any).simulateContract({
+        const sim = await (client as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForETHSupportingFeeOnTransferTokensTo",
@@ -810,7 +798,7 @@ export default function SwapForm() {
         });
       } else {
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
-        const sim = await (getClient() as any).simulateContract({
+        const sim = await (client as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensSupportingFeeOnTransferTokensTo",
@@ -863,13 +851,6 @@ export default function SwapForm() {
 
   const disableSwap = !!disableReason;
 
-  // --- USD estimate under Amount ---
-  const amtNumber = useMemo(() => {
-    const n = Number(debouncedAmt || "0");
-    return Number.isFinite(n) ? n : 0;
-  }, [debouncedAmt]);
-  const amtUsd = useMemo(() => amtNumber * inUsd, [amtNumber, inUsd]);
-
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
@@ -888,9 +869,7 @@ export default function SwapForm() {
             aria-label="Slippage settings"
             title="Slippage settings"
           >
-            {/* Gear icon added */}
-            <GearIcon className="w-4 h-4 opacity-80" />
-            <span className="hidden sm:inline">{`${slippage}%`}</span>
+            <span className="hidden sm:inline">{slippage}%</span>
           </button>
         </div>
       </div>
@@ -958,13 +937,6 @@ export default function SwapForm() {
           spellCheck={false}
           name="swap-amount"
         />
-
-        {/* USD estimate */}
-        {amtNumber > 0 && (
-          <div className="mt-1 text-xs text-inkSub">
-            ≈ <span className="font-mono">${amtUsd.toFixed(2)}</span>
-          </div>
-        )}
 
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
