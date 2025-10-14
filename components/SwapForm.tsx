@@ -420,7 +420,10 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
+  const mainAmountIn = useMemo(
+    () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
+    [amountInBig, feeBps]
+  );
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -548,8 +551,7 @@ export default function SwapForm() {
     invalidateBurnTotal();
   }
 
-  // ---- FIX: client possibly undefined (type-safe narrowing) ----
-  // Use a local non-null reference for helper calls after an explicit guard.
+  // ---- Type-safe client guard to fix "possibly undefined" errors ----
   const getClient = () => {
     if (!client) throw new Error("No RPC client available.");
     return client;
@@ -615,6 +617,7 @@ export default function SwapForm() {
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
+      // ---- ETH wrap -> V3 (exactInput) path ----
       if (isEthIn && needsWrapWeth) {
         try { await wrapEth(amountInBig); }
         catch (e:any) { setPreflightMsg(e?.shortMessage || e?.message || "Failed to wrap ETH to WETH."); setSending(false); return; }
@@ -630,7 +633,7 @@ export default function SwapForm() {
               { name: "path", type: "bytes" },
               { name: "recipient", type: "address" },
               { name: "deadline", type: "uint256" },
-              { name: "amountIn", type: "uint256" },
+              { name: "amountIn", type: "uint256" },          // must be post-fee
               { name: "amountOutMinimum", type: "uint256" },
             ],
           }],
@@ -638,7 +641,7 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: parseUnits(amt || "0", 18),
+            amountIn: mainAmountIn,                            // ✅ use post-fee for V3
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -651,7 +654,7 @@ export default function SwapForm() {
             WETH as Address,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", 18),
+            parseUnits(amt || "0", 18),                        // pre-fee/gross here
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -676,15 +679,18 @@ export default function SwapForm() {
         return;
       }
 
+      // For ERC20 inputs, make sure allowance is OK
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
         setSending(false);
         return;
       }
 
+      // For all V2 routes we set minOutMainV2 = 0n to avoid fee-on-transfer reverts
       const minOutMainV2 = 0n;
 
       if (isEthIn) {
+        // ETH → V2 route
         const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
@@ -720,6 +726,7 @@ export default function SwapForm() {
       }
 
       if (bestV3) {
+        // ---- ERC20 → V3 (exactInput) path ----
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [{
@@ -728,7 +735,7 @@ export default function SwapForm() {
               { name: "path", type: "bytes" },
               { name: "recipient", type: "address" },
               { name: "deadline", type: "uint256" },
-              { name: "amountIn", type: "uint256" },
+              { name: "amountIn", type: "uint256" },          // must be post-fee
               { name: "amountOutMinimum", type: "uint256" },
             ],
           }],
@@ -736,7 +743,7 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: parseUnits(amt || "0", inMeta.decimals),
+            amountIn: mainAmountIn,                            // ✅ use post-fee for V3
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -749,7 +756,7 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", inMeta.decimals),
+            parseUnits(amt || "0", inMeta.decimals),           // pre-fee/gross here
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -775,6 +782,7 @@ export default function SwapForm() {
       }
 
       if (isEthOut) {
+        // ERC20 → V2 → ETH
         const mainPath = bestV2Path ?? [inAddr, WETH as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
@@ -806,6 +814,7 @@ export default function SwapForm() {
           burnedSymbol: inMeta.symbol,
         });
       } else {
+        // ERC20 → V2 → ERC20
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
