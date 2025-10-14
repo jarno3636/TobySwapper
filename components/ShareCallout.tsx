@@ -11,6 +11,7 @@ import {
   isBaseAppUA,
   openInBase,
 } from "@/lib/miniapp";
+import { useBurnTotal } from "@/lib/burn";   // ✅ NEW
 
 type ShareCalloutProps = {
   token?: string;   // "$TOBY"
@@ -26,24 +27,18 @@ function formatCompact(n: number): string {
 }
 
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
-  const [burn, setBurn] = React.useState<string | null>(null);
+  // ✅ shared, reactive data source
+  const { data: burnRaw } = useBurnTotal();
 
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
-        const j = await r.json();
-        if (mounted && j?.ok) {
-          const n = parseFloat(j.totalHuman);
-          setBurn(Number.isFinite(n) ? formatCompact(n) : j.totalHuman);
-        }
-      } catch {}
-    })();
-    return () => { mounted = false; };
-  }, []);
+  // normalize/pretty-print
+  const burn = React.useMemo(() => {
+    if (!burnRaw) return null;
+    const n = Number.parseFloat(String(burnRaw).replace(/,/g, ""));
+    return Number.isFinite(n) ? formatCompact(n) : burnRaw;
+  }, [burnRaw]);
 
-  const site = siteUrl || SITE_URL;         // your normal site
+  // Absolute URLs
+  const site = siteUrl || SITE_URL;
   const shareLanding = `${SITE_URL}/share`; // avoids X loops
 
   const line = React.useMemo(
@@ -54,22 +49,28 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Embed MiniApp URL only inside Warpcast, else use normal site
+  // Embed: use MINIAPP_URL only inside Warpcast; use normal site elsewhere
   const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
 
-  // Farcaster composer URL (web)
+  // Farcaster web composer
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
 
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Inside Base app, try its in-app opener first
+    // Base app: try in-app
     if (isBaseAppUA()) {
       const handled = await openInBase(farcasterWeb);
-      if (handled) { e.preventDefault(); return; }
+      if (handled) {
+        e.preventDefault();
+        return;
+      }
     }
-    // Inside Warpcast, prefer in-app composer
+    // Warpcast Mini App: in-app compose
     const ok = await composeCast({ text: line, embeds: [embedForFC] });
-    if (ok) { e.preventDefault(); return; }
-    // Else: let anchor open the web composer
+    if (ok) {
+      e.preventDefault();
+      return;
+    }
+    // Else: let the anchor open web composer
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
