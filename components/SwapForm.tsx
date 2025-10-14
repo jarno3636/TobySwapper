@@ -29,7 +29,6 @@ const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
 
 /* ------------------------------- Minimal ABIs ------------------------------- */
-// Uniswap V3 Quoter (a.k.a. QuoterV2)
 const QuoterV3Abi = [
   {
     type: "function",
@@ -45,7 +44,6 @@ const QuoterV3Abi = [
   },
 ] as const;
 
-// V3 Factory (pool existence)
 const V3_FACTORY = "0x33128a8fC17869897dcE68Ed026d694621f6FDfD" as Address;
 const V3FactoryAbi = [
   { type: "function", name: "getPool", stateMutability: "view",
@@ -53,7 +51,6 @@ const V3FactoryAbi = [
     outputs: [{type:"address"}] },
 ] as const;
 
-// Uniswap V2 Router (for quoting ONLY — execution always via SWAPPER)
 const V2_ROUTER = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24" as Address;
 const UniV2RouterAbi = [
   { type: "function", name: "getAmountsOut", stateMutability: "view",
@@ -264,9 +261,12 @@ function SuccessToast({
   }, [onClose]);
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-md">
-      {/* SOLID card; pinned close button inside */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-lg p-4 text-white">
+    <div
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-1.5rem)] max-w-md isolate pointer-events-none"
+      aria-live="polite"
+    >
+      {/* SOLID card; pinned close button inside; isolates z-index and events */}
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
         {/* Close button pinned */}
         <button
           onClick={onClose}
@@ -368,13 +368,9 @@ export default function SwapForm() {
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Reset defaults on account/chain change
   useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
-
-  // Ensure Base when connected
   useEffect(() => { if (isConnected) void ensureBase(); }, [isConnected, ensureBase]);
 
-  // balances & price
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
   const balInRaw = useTokenBalance(address, inMeta.address);
@@ -382,7 +378,6 @@ export default function SwapForm() {
   const inUsd = useUsdPriceSingle(inMeta.symbol === "ETH" ? "ETH" : (inMeta.address as Address));
   const outUsd = useUsdPriceSingle(outMeta.symbol === "ETH" ? "ETH" : (outMeta.address as Address));
 
-  // debounced amount
   const [debouncedAmt, setDebouncedAmt] = useState(amt);
   useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt.trim()), 220); return () => clearTimeout(id); }, [amt]);
 
@@ -390,7 +385,6 @@ export default function SwapForm() {
   const amtNum = Number(debouncedAmt || "0");
   const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
-  /* ------------------------------ feeBps (read) ------------------------------ */
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
     (async () => {
@@ -407,7 +401,6 @@ export default function SwapForm() {
     })();
   }, [client]);
 
-  /* ----------------------------- Quote (V3+V2) ----------------------------- */
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
@@ -431,7 +424,6 @@ export default function SwapForm() {
       let v2Out: bigint | undefined;
 
       try {
-        // V3 candidates
         const cands = await buildV3CandidatesPruned(client, tokenIn, tokenOut);
         if (cands.length) {
           const results = await withTimeout(
@@ -452,11 +444,9 @@ export default function SwapForm() {
           }
         }
 
-        // V2 quote (for path discovery)
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
-        // Selection
         if (tokenIn === "ETH" && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
@@ -491,7 +481,6 @@ export default function SwapForm() {
   }, [quoteOutMain, slippage]);
   const minOutMainHuman = useMemo(() => formatUnits(minOutMain, outMeta.decimals), [minOutMain, outMeta.decimals]);
 
-  /* -------------------- Allowances (ONLY to SWAPPER) -------------------- */
   const tokenInAddr = inMeta.address as Address | undefined;
 
   const needsApproval = !!tokenInAddr && tokenIn !== "ETH";
@@ -518,7 +507,6 @@ export default function SwapForm() {
     isAllowLoad && !approveCooldown ? "Checking allowance…" :
     (allowanceToSwapper ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
 
-  /* ----------------------------- Execute (via SWAPPER) ---------------------------- */
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
 
@@ -527,12 +515,10 @@ export default function SwapForm() {
   }
 
   async function afterTxConfirmed(txHash: `0x${string}`) {
-    // wait for confirmation (best-effort)
     const pc = client;
     if (pc) {
       try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {}
     }
-    // refresh live burn counters/UI
     invalidateBurnTotal();
   }
 
@@ -727,7 +713,6 @@ export default function SwapForm() {
     }
   }
 
-  /* ----------------------------------- UI ----------------------------------- */
   const disableSwap =
     !isConnected || !isOnBase || amountInBig === 0n ||
     (balInRaw.value ?? 0n) < amountInBig ||
