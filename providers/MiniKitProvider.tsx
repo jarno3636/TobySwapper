@@ -1,6 +1,7 @@
+// providers/MiniKitProvider.tsx
 "use client";
-import { ReactNode } from "react";
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
+import { ReactNode } from "react";
 import { base } from "wagmi/chains";
 
 export function MiniKitContextProvider({ children }: { children: ReactNode }) {
