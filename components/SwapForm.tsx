@@ -29,6 +29,10 @@ const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
 
+/* --------------------- Disable a specific token (TABOSHI) ------------------- */
+const TABOSHI = "0x3A1a33cf4553Db61F0db2c1e1721CD480b02789f" as Address;
+const isTaboshiAddr = (a?: string) => !!a && a.toLowerCase() === TABOSHI.toLowerCase();
+
 /* ------------------------------- Minimal ABIs ------------------------------- */
 const QuoterV3Abi = [
   {
@@ -210,7 +214,6 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 /* ------------------------------ V2 helpers --------------------------------- */
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-  // include USDC hops — helps pairs like TABOSHI when no direct WETH pool
   const tryPaths: Address[][] = [
     [inAddr, tokenOut],
     [inAddr, WETH as Address, tokenOut],
@@ -310,6 +313,7 @@ function SuccessToast({
 /* ---------------------------------- View ----------------------------------- */
 export default function SwapForm() {
   const { address, chainId, isConnected } = useAccount();
+  const connected = !!address; // robust across WC reconnects
   const { isOnBase, ensureBase } = useNetworkGuard();
   const client = usePublicClient({ chainId: base.id }); // pin to Base
   const { writeContractAsync } = useWriteContract();
@@ -378,7 +382,7 @@ export default function SwapForm() {
   }, [slippageOpen]);
 
   useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
-  useEffect(() => { if (isConnected) void ensureBase(); }, [isConnected, ensureBase]);
+  useEffect(() => { if (connected) void ensureBase(); }, [connected, ensureBase]);
 
   const inMeta = byAddress(tokenIn);
   const outMeta = byAddress(tokenOut);
@@ -422,6 +426,13 @@ export default function SwapForm() {
     let alive = true;
     (async () => {
       setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined);
+
+      // Block TABOSHI entirely
+      if (isTaboshiAddr(tokenOut) || (typeof tokenIn === "string" && isTaboshiAddr(tokenIn))) {
+        setQuoteState("noroute");
+        setQuoteErr("This token is disabled in the app.");
+        return;
+      }
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
       setQuoteState("loading");
@@ -501,13 +512,13 @@ export default function SwapForm() {
 
   const [approveCooldown, setApproveCooldown] = useState(false);
   const onApprove = useCallback(async () => {
-    if (!needsApproval || !isConnected || !tokenInAddr) return;
+    if (!needsApproval || !connected || !tokenInAddr) return;
     setApproveCooldown(true);
     try {
       await approveMaxToSwapper(allowanceToSwapper);
       setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
     } catch { setApproveCooldown(false); }
-  }, [needsApproval, isConnected, tokenInAddr, approveMaxToSwapper, allowanceToSwapper, refetchAllowance]);
+  }, [needsApproval, connected, tokenInAddr, approveMaxToSwapper, allowanceToSwapper, refetchAllowance]);
 
   const showApproveButton =
     needsApproval && amountInBig > 0n && (allowanceToSwapper ?? 0n) < amountInBig;
@@ -531,7 +542,13 @@ export default function SwapForm() {
   }
 
   async function doSwap() {
-    if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
+    // Block if TABOSHI is involved
+    if (isTaboshiAddr(tokenOut) || (typeof tokenIn === "string" && isTaboshiAddr(tokenIn))) {
+      setPreflightMsg("This token is disabled in the app.");
+      return;
+    }
+
+    if (!connected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
     if (amountInBig === 0n) return;
     if (!client) { setPreflightMsg("No RPC client available."); return; }
 
@@ -562,7 +579,7 @@ export default function SwapForm() {
       // ---- ETH-IN handling ----
       if (isEthIn) {
         if (bestV2Path) {
-          // ETH-in with a valid V2 route: proceed as before
+          // ETH-in with a valid V2 route
           const mainPath = bestV2Path;
           const sim = await (client as any).simulateContract({
             address: SWAPPER as Address,
@@ -597,7 +614,7 @@ export default function SwapForm() {
           return;
         }
 
-        // ❗ ETH-in but NO V2 route (e.g., TABOSHI): auto-switch to WETH so V3 route can be used
+        // ETH-in but NO V2 route: nudge to WETH for V3 routing
         if (!bestV2Path && bestV3) {
           setTokenIn(WETH as Address);
           setPreflightMsg("No V2 route for ETH → this token. Switched input to WETH to route via V3 — approve WETH (if needed) and swap.");
@@ -605,7 +622,6 @@ export default function SwapForm() {
           return;
         }
 
-        // No route at all
         setPreflightMsg("No available route for this pair/size.");
         setSending(false);
         return;
@@ -742,14 +758,14 @@ export default function SwapForm() {
   }
 
   const disableReason = useMemo(() => {
-    if (!isConnected) return "Connect wallet";
+    if (!connected) return "Connect wallet";
     if (!isOnBase) return "Switch to Base";
     if (amountInBig === 0n) return "Enter amount";
     if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
     if (quoteState !== "ok") return quoteState === "loading" ? "Finding route…" : "No route";
     if (sending) return "Submitting…";
     return null;
-  }, [isConnected, isOnBase, amountInBig, balInRaw.value, quoteState, sending]);
+  }, [connected, isOnBase, amountInBig, balInRaw.value, quoteState, sending]);
 
   const disableSwap = !!disableReason;
 
@@ -791,7 +807,15 @@ export default function SwapForm() {
         <TokenSelect
           user={address as Address | undefined}
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          onChange={(a) => { setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); setAmt(""); }}
+          onChange={(a) => {
+            // Block TABOSHI selection
+            if (isTaboshiAddr(String(a))) {
+              setPreflightMsg("This token is disabled in the app.");
+              return;
+            }
+            setTokenIn(eq(a, WETH) ? "ETH" : (a as Address));
+            setAmt("");
+          }}
           exclude={tokenOut}
           balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
           forceBlur={slippageOpen || !!success}
@@ -804,6 +828,10 @@ export default function SwapForm() {
           className="pill pill-opaque px-3 py-1 text-sm"
           onClick={() => {
             const prevIn = tokenIn, prevOut = tokenOut;
+            if (isTaboshiAddr(String(prevOut))) {
+              setPreflightMsg("This token is disabled in the app.");
+              return;
+            }
             setTokenIn(prevOut as Address);
             setTokenOut(prevIn === "ETH" ? (WETH as Address) : (prevIn as Address));
             setAmt("");
@@ -851,7 +879,7 @@ export default function SwapForm() {
         {/* USD estimate under Amount */}
         <div className="mt-2 text-xs text-inkSub">≈ ${Number.isFinite(amtInUsd) ? amtInUsd.toFixed(2) : "0.00"} USD</div>
 
-        {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
+        {connected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
         )}
 
@@ -861,7 +889,7 @@ export default function SwapForm() {
             <button
               onClick={onApprove}
               className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApproving || !isConnected || !isOnBase || approveCooldown}
+              disabled={isApproving || !connected || !isOnBase || approveCooldown}
               title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
             >
               {approveText}
@@ -877,6 +905,10 @@ export default function SwapForm() {
           user={address as Address | undefined}
           value={tokenOut}
           onChange={(v) => {
+            if (isTaboshiAddr(String(v))) {
+              setPreflightMsg("This token is disabled in the app.");
+              return;
+            }
             const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
             setTokenOut(next);
             setAmt("");
@@ -892,8 +924,7 @@ export default function SwapForm() {
             <>
               Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol}
               {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              {" · "}
-              Min out: <span className="font-mono">{minOutMainHuman}</span>
+              {" · "}Min out: <span className="font-mono">{minOutMainHuman}</span>
             </>
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
@@ -928,44 +959,21 @@ export default function SwapForm() {
       {slippageOpen && (
         <Portal>
           <div className="fixed inset-0 z-[10000]">
-            <div
-              className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm"
-              onClick={() => setSlippageOpen(false)}
-            />
-            <div
-              role="dialog"
-              aria-modal="true"
-              className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto"
-            >
+            <div className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
+            <div role="dialog" aria-modal="true" className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold">Slippage</h4>
-                <button
-                  className="pill pill-opaque px-3 py-1 text-xs"
-                  onClick={() => setSlippageOpen(false)}
-                >
-                  Close
-                </button>
+                <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
               </div>
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[0.1, 0.5, 1, 2].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setSlippage(v)}
-                    className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}
-                  >
+                  <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
                     {v}%
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={slippage}
-                  onChange={(e) => setSlippage(Number(e.target.value))}
-                  className="glass rounded-pill px-3 py-2 w-full"
-                />
+                <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
                 <span className="text-sm text-inkSub">%</span>
               </div>
             </div>
