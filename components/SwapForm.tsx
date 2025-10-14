@@ -265,11 +265,12 @@ function SuccessToast({
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-md">
-      <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/15 backdrop-blur-md shadow-lg p-4">
+      {/* SOLID card (no opacity/blur) */}
+      <div className="rounded-2xl border border-emerald-500 bg-emerald-600 shadow-lg p-4 text-white">
         <div className="flex items-start gap-3">
           <div className="text-2xl leading-none">✅</div>
           <div className="flex-1">
-            <div className="font-semibold text-emerald-300">Swap confirmed</div>
+            <div className="font-semibold">Swap confirmed</div>
 
             <div className="mt-1 text-sm">
               {bought && boughtSymbol && (
@@ -295,7 +296,7 @@ function SuccessToast({
                   {hash.slice(0, 10)}…{hash.slice(-8)}
                 </a>
               </div>
-              <div className="mt-1 text-[11px] text-inkSub">
+              <div className="mt-1 text-[11px] text-white/80">
                 Values shown are estimates. Refer to the transaction on Basescan for exact amounts.
               </div>
             </div>
@@ -303,7 +304,7 @@ function SuccessToast({
 
           <button
             onClick={onClose}
-            className="ml-2 rounded-full px-2 py-1 text-xs bg-emerald-400/20 hover:bg-emerald-400/30"
+            className="ml-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
             aria-label="Close"
           >
             Close
@@ -501,6 +502,7 @@ export default function SwapForm() {
   const [approveCooldown, setApproveCooldown] = useState(false);
   const onApprove = useCallback(async () => {
     if (!needsApproval || !isConnected || !tokenInAddr) return;
+    setApproveCooldown=true;
     setApproveCooldown(true);
     try {
       await approveMaxToSwapper(allowanceToSwapper);
