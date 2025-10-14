@@ -67,7 +67,7 @@ export default function Page() {
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-6 w-full">
               <span className="pill bg-[var(--glass)] text-sm">1% auto-burn to $TOBY 🔥</span>
-              <span className="pill bg-[var(--glass)] text-sm">Swap ETH, Toby, Patience, Taboshi</span>
+              <span className="pill bg-[var(--glass)] text-sm">Swap ETH, Toby, & Patience</span>
               <span className="pill bg-[var(--glass)] text-sm">Fuel the meme · Join the lore 🐸</span>
             </div>
 
