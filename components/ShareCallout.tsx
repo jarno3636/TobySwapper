@@ -1,4 +1,3 @@
-// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
@@ -8,10 +7,8 @@ import {
   SITE_URL,
   MINIAPP_URL,
   isFarcasterUA,
-  isBaseAppUA,
-  openInBase,
 } from "@/lib/miniapp";
-import { useBurnTotal } from "@/lib/burn";   // ✅ NEW
+import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
   token?: string;   // "$TOBY"
@@ -27,19 +24,16 @@ function formatCompact(n: number): string {
 }
 
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
-  // ✅ shared, reactive data source
   const { data: burnRaw } = useBurnTotal();
 
-  // normalize/pretty-print
   const burn = React.useMemo(() => {
     if (!burnRaw) return null;
     const n = Number.parseFloat(String(burnRaw).replace(/,/g, ""));
     return Number.isFinite(n) ? formatCompact(n) : burnRaw;
   }, [burnRaw]);
 
-  // Absolute URLs
   const site = siteUrl || SITE_URL;
-  const shareLanding = `${SITE_URL}/share`; // avoids X loops
+  const shareLanding = `${SITE_URL}/share`;
 
   const line = React.useMemo(
     () =>
@@ -49,28 +43,21 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Embed: use MINIAPP_URL only inside Warpcast; use normal site elsewhere
+  // Inside Warpcast, prefer the Mini App URL as the embed; else use the public site.
   const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
 
-  // Farcaster web composer
+  // Web fallback (used only if native composers aren’t available)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
 
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Base app: try in-app
-    if (isBaseAppUA()) {
-      const handled = await openInBase(farcasterWeb);
-      if (handled) {
-        e.preventDefault();
-        return;
-      }
-    }
-    // Warpcast Mini App: in-app compose
-    const ok = await composeCast({ text: line, embeds: [embedForFC] });
-    if (ok) {
+    // Try native composers first (Base MiniKit ➜ Farcaster Mini App SDK)
+    const handled = await composeCast({ text: line, embeds: [embedForFC] });
+    if (handled) {
+      // Native composer opened; prevent navigation to web /~/compose
       e.preventDefault();
       return;
     }
-    // Else: let the anchor open web composer
+    // Otherwise, allow the <a> to navigate to warpcast.com/~/compose (web)
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
