@@ -94,9 +94,7 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
       Promise.resolve(sdk.actions.ready()),
       new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
     ]);
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 /* ===================== Base App (MiniKit) ===================== */
