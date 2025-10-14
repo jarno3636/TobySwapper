@@ -523,10 +523,13 @@ export default function SwapForm() {
 
   async function afterTxConfirmed(txHash: `0x${string}`) {
     // wait for confirmation (best-effort)
-    try { await client.waitForTransactionReceipt({ hash: txHash }); } catch {}
+    const pc = client;
+    if (pc) {
+      try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {}
+    } 
     // refresh live burn counters/UI
     invalidateBurnTotal();
-  }
+  } 
 
   async function doSwap() {
     if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
