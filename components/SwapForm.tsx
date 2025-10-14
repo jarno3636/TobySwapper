@@ -1,4 +1,4 @@
- // components/SwapForm.tsx
+// components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -274,14 +274,14 @@ function SuccessToast({
             <div className="mt-1 text-sm">
               {bought && boughtSymbol && (
                 <div>
-                  Received:&nbsp;
-                  <span className="font-mono">{bought}</span> {boughtSymbol}
+                  Received (est.):&nbsp;
+                  <span className="font-mono">~{bought}</span> {boughtSymbol}
                 </div>
               )}
               {burnedInput && burnedSymbol && (
                 <div>
                   Burn fee (input est.):&nbsp;
-                  <span className="font-mono">{burnedInput}</span> {burnedSymbol}
+                  <span className="font-mono">~{burnedInput}</span> {burnedSymbol}
                 </div>
               )}
               <div className="truncate">
@@ -294,6 +294,9 @@ function SuccessToast({
                 >
                   {hash.slice(0, 10)}…{hash.slice(-8)}
                 </a>
+              </div>
+              <div className="mt-1 text-[11px] text-inkSub">
+                Values shown are estimates. Refer to the transaction on Basescan for exact amounts.
               </div>
             </div>
           </div>
@@ -442,7 +445,7 @@ export default function SwapForm() {
             })), QUOTE_TIMEOUT_MS
           );
           for (const r of results) if (r.status === "fulfilled") {
-            const { cand, amountOut } = r.value as any;
+            const { cand, amountOut } = (r as any).value;
             if (amountOut > 0n && (!bestOut || amountOut > bestOut)) { bestOut = amountOut; best = cand; }
           }
         }
@@ -526,10 +529,10 @@ export default function SwapForm() {
     const pc = client;
     if (pc) {
       try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {}
-    } 
+    }
     // refresh live burn counters/UI
     invalidateBurnTotal();
-  } 
+  }
 
   async function doSwap() {
     if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
