@@ -13,7 +13,7 @@ const iconMap: Record<string, string> = {
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
-  TABOSHI: "/tokens/taboshi.PNG",
+  // TABOSHI removed
 };
 
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
@@ -24,7 +24,8 @@ const preferredAddressForSymbol: Partial<Record<string, Address>> = {
     "0x0000000000000000000000000000000000000000") as Address,
 };
 
-const symbolOrder = ["ETH", "TOBY", "PATIENCE", "TABOSHI"];
+// Keep desired ordering (TABOSHI removed)
+const symbolOrder = ["ETH", "TOBY", "PATIENCE"];
 
 export default function TokenSelect({
   user,
@@ -33,7 +34,7 @@ export default function TokenSelect({
   exclude,
   balance,
   collapseETH = true,
-  forceBlur = false, // 👈 new (prevents native picker sitting above overlays)
+  forceBlur = false, // prevent native picker sitting above overlays
 }: {
   user?: Address;
   value: Address;
@@ -80,8 +81,12 @@ export default function TokenSelect({
   }, [balance, autoBal]);
 
   const availableTokens = useMemo(() => {
+    // Filter out USDC (per your original), the excluded address, and TABOSHI entirely
     const filtered = TOKENS.filter(
-      (t) => t.symbol !== "USDC" && (!exclude || !eq(t.address, String(exclude)))
+      (t) =>
+        t.symbol !== "USDC" &&
+        t.symbol !== "TABOSHI" &&
+        (!exclude || !eq(t.address, String(exclude)))
     );
 
     const deduped: (typeof TOKENS)[number][] = [];
