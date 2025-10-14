@@ -258,7 +258,7 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
       <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        d="M10.325 4.317a1 1 0 0 1 1.35-.436l.7.35a1 1 0 0 0 .894 0l.7-.35a1 1 0 0 1 1.35.436l.35.7a1 1 0 0 0 .5.5l.7.35a1 1 0 0 1 .436 1.35l-.35.7a1 1 0 0 0 0 .894l.35.7a1 1 0 0 1-.436 1.35l-.7.35a1 1 0 0 0-.5.5l-.35.7a1 1 0 0 1-1.35.436l-.7-.35a1 1 0 0 0-.894 0l-.7.35a1 1 0 0 1-1.35-.436l-.35-.7a1 1 0 0 0-.5-.5l-.7-.35a1 1 0 0 1-.436-1.35l.35-.7a1 1 0 0 0 0-.894l-.35-.7a1 1 0 0 1 .436-1.35l.7-.35a1 1 0 0 0 .5-.5l.35-.7Z" />
+        d="M10.325 4.317a1 1 0 0 1 1.35-.436l.7.35a1 1 0 0 0 .894 0l.7-.35a1 1 0 0 1 1.35.436l.35.7a1 1 0 0 0 .5.5l.7.35a1 1 0 0 1 .436 1.35l-.35.7a1 1 0 0 0 0 .894l.35.7a1 1 0 0 1-.436 1.35l-.7.35a1 1 0 0 0-.5.5l-.35.7Z" />
       <circle cx="12" cy="12" r="3" strokeWidth="2" />
     </svg>
   );
@@ -293,7 +293,6 @@ function SuccessToast({
 
   return (
     <Portal>
-      {/* Shield to eat stray taps (and ensure nothing refocuses beneath) */}
       <div className="fixed inset-0 z-[10999]" onClick={onClose} />
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
@@ -424,6 +423,7 @@ export default function SwapForm() {
     () => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM),
     [amountInBig, feeBps]
   );
+
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -551,7 +551,7 @@ export default function SwapForm() {
     invalidateBurnTotal();
   }
 
-  // ---- Type-safe client guard to fix "possibly undefined" errors ----
+  // local getter to satisfy TS when we know client exists
   const getClient = () => {
     if (!client) throw new Error("No RPC client available.");
     return client;
@@ -617,7 +617,6 @@ export default function SwapForm() {
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
-      // ---- ETH wrap -> V3 (exactInput) path ----
       if (isEthIn && needsWrapWeth) {
         try { await wrapEth(amountInBig); }
         catch (e:any) { setPreflightMsg(e?.shortMessage || e?.message || "Failed to wrap ETH to WETH."); setSending(false); return; }
@@ -633,7 +632,7 @@ export default function SwapForm() {
               { name: "path", type: "bytes" },
               { name: "recipient", type: "address" },
               { name: "deadline", type: "uint256" },
-              { name: "amountIn", type: "uint256" },          // must be post-fee
+              { name: "amountIn", type: "uint256" },
               { name: "amountOutMinimum", type: "uint256" },
             ],
           }],
@@ -641,7 +640,8 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: mainAmountIn,                            // ✅ use post-fee for V3
+            // ✅ FIX: use mainAmountIn (after fee), not the full input
+            amountIn: mainAmountIn,
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -654,7 +654,8 @@ export default function SwapForm() {
             WETH as Address,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", 18),                        // pre-fee/gross here
+            // full amount to pull from user (swapper will split fee & main internally)
+            amountInBig,
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -679,18 +680,15 @@ export default function SwapForm() {
         return;
       }
 
-      // For ERC20 inputs, make sure allowance is OK
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
         setSending(false);
         return;
       }
 
-      // For all V2 routes we set minOutMainV2 = 0n to avoid fee-on-transfer reverts
       const minOutMainV2 = 0n;
 
       if (isEthIn) {
-        // ETH → V2 route
         const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
@@ -726,7 +724,6 @@ export default function SwapForm() {
       }
 
       if (bestV3) {
-        // ---- ERC20 → V3 (exactInput) path ----
         const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
         const paramsBytes = encodeAbiParameters(
           [{
@@ -735,7 +732,7 @@ export default function SwapForm() {
               { name: "path", type: "bytes" },
               { name: "recipient", type: "address" },
               { name: "deadline", type: "uint256" },
-              { name: "amountIn", type: "uint256" },          // must be post-fee
+              { name: "amountIn", type: "uint256" },
               { name: "amountOutMinimum", type: "uint256" },
             ],
           }],
@@ -743,7 +740,8 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: mainAmountIn,                            // ✅ use post-fee for V3
+            // ✅ FIX: use mainAmountIn (after fee), not the full input
+            amountIn: mainAmountIn,
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -756,7 +754,8 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", inMeta.decimals),           // pre-fee/gross here
+            // full amount pulled; swapper burns its cut and forwards mainAmountIn to V3
+            amountInBig,
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -782,7 +781,6 @@ export default function SwapForm() {
       }
 
       if (isEthOut) {
-        // ERC20 → V2 → ETH
         const mainPath = bestV2Path ?? [inAddr, WETH as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
@@ -814,7 +812,6 @@ export default function SwapForm() {
           burnedSymbol: inMeta.symbol,
         });
       } else {
-        // ERC20 → V2 → ERC20
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
