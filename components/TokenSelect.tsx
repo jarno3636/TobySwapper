@@ -1,8 +1,9 @@
+// components/TokenSelect.tsx
 "use client";
 import Image from "next/image";
 import { TOKENS, type TokenAddress } from "@/lib/addresses";
 import type { Address } from "viem";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { formatUnits } from "viem";
 
@@ -31,6 +32,7 @@ export default function TokenSelect({
   exclude,
   balance,
   collapseETH = true,
+  forceBlur = false, // 👈 new
 }: {
   user?: Address;
   value: Address;
@@ -38,7 +40,19 @@ export default function TokenSelect({
   exclude?: Address | string;
   balance?: string;
   collapseETH?: boolean;
+  /** When true, immediately blur the native <select> to prevent OS overlay from staying open */
+  forceBlur?: boolean;
 }) {
+  const selectRef = useRef<HTMLSelectElement | null>(null);
+
+  // Auto-blur whenever the parent asks us to (modal/toast open)
+  useEffect(() => {
+    if (forceBlur && selectRef.current) {
+      // small rAF to ensure state updates/render complete before blur
+      requestAnimationFrame(() => selectRef.current?.blur());
+    }
+  }, [forceBlur]);
+
   const selected = useMemo(() => {
     const fromList = TOKENS.find((t) => eq(t.address, value));
     if (fromList) return fromList;
@@ -111,15 +125,20 @@ export default function TokenSelect({
   }
 
   return (
-    <div className="glass rounded-2xl px-3 py-2">
+    <div className="glass rounded-2xl px-3 py-2 relative">
       {/* Dropdown */}
       <select
+        ref={selectRef}
         className="bg-transparent w-full rounded-pill px-2 py-2 focus:outline-none text-sm font-medium appearance-none [-webkit-tap-highlight-color:transparent]"
         aria-label="Select token"
         value={value}
+        onClick={(e) => {
+          // If an overlay is up, immediately blur to prevent native picker from opening
+          if (forceBlur) (e.currentTarget as HTMLSelectElement).blur();
+        }}
         onChange={(e) => {
           handleChange(e.target.value as Address);
-          // 👇 Kill iOS native select overlay so it doesn't sit above the toast
+          // Kill iOS native select overlay so it doesn't sit above toasts/modals
           (e.target as HTMLSelectElement).blur();
         }}
       >
@@ -129,7 +148,7 @@ export default function TokenSelect({
             label === "ETH" && preferredAddressForSymbol.ETH
               ? preferredAddressForSymbol.ETH
               : (t.address as Address);
-        return (
+          return (
             <option key={t.address as string} value={val}>
               {label}
             </option>
