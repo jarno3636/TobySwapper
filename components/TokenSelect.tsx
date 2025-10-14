@@ -7,87 +7,69 @@ import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { formatUnits } from "viem";
 
 const iconMap: Record<string, string> = {
-  ETH: "/tokens/baseeth.PNG",   // Base ETH icon for ETH/WETH
-  WETH: "/tokens/baseeth.PNG",  // (collapsed anyway)
+  ETH: "/tokens/baseeth.PNG",
+  WETH: "/tokens/baseeth.PNG",
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
   TABOSHI: "/tokens/taboshi.PNG",
 };
 
-const eq = (a?: string, b?: string) =>
-  !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-/**
- * Preferred address per display symbol.
- * For "ETH", we use the WETH address under the hood.
- */
 const preferredAddressForSymbol: Partial<Record<string, Address>> = {
   ETH: (TOKENS.find(t => t.symbol === "WETH")?.address ??
     "0x0000000000000000000000000000000000000000") as Address,
 };
 
-/** Optional custom order for nicer UX. Unknown symbols go last alphabetically. */
-const symbolOrder = ["ETH", "TOBY", "PATIENCE", "TABOSHI"]; // 👈 USDC REMOVED
+const symbolOrder = ["ETH", "TOBY", "PATIENCE", "TABOSHI"];
 
 export default function TokenSelect({
-  user,           // 👈 add user so we can self-fetch balances
+  user,
   value,
   onChange,
   exclude,
-  balance,        // optional preformatted balance string (still supported)
+  balance,
   collapseETH = true,
 }: {
-  user?: Address;                // 👈 NEW (use useAccount().address)
+  user?: Address;
   value: Address;
   onChange: (a: Address) => void;
   exclude?: Address | string;
-  balance?: string; // human readable
-  /** collapse any ETH/WETH dupes down to a single "ETH" option (default true) */
+  balance?: string;
   collapseETH?: boolean;
 }) {
-  /** Selected metadata (or fallback if not found) */
   const selected = useMemo(() => {
     const fromList = TOKENS.find((t) => eq(t.address, value));
     if (fromList) return fromList;
-    // Fallback entry (keeps control stable even if value not in TOKENS)
-    return {
-      symbol: "UNKNOWN",
-      address: value,
-      decimals: 18,
-    } as (typeof TOKENS)[number];
+    return { symbol: "UNKNOWN", address: value, decimals: 18 } as (typeof TOKENS)[number];
   }, [value]);
 
-  /** UI label: display WETH as ETH */
   const displaySymbol = selected.symbol === "WETH" ? "ETH" : (selected.symbol ?? "Unknown");
 
-  /** Self-fetch balance if not provided */
   const { value: hookBal, decimals: hookDec } = useTokenBalance(
     user,
     selected.address as TokenAddress,
-    { chainId: 8453 } // Base mainnet
+    { chainId: 8453 }
   );
+
   const autoBal =
     hookBal !== undefined && hookDec !== undefined
       ? formatUnits(hookBal, hookDec)
       : undefined;
 
-  /** Final balance text: prefer prop if provided; else hook; else dash */
   const balText = useMemo(() => {
     const src = balance ?? autoBal;
     if (src == null) return "—";
     const n = Number(src);
-    return Number.isFinite(n) ? n.toFixed(6) : src; // keep string if not numeric
+    return Number.isFinite(n) ? n.toFixed(6) : src;
   }, [balance, autoBal]);
 
-  /** Build list: exclude, collapse WETH→ETH, remove USDC, sort for UX */
   const availableTokens = useMemo(() => {
-    // Step 1: filter out excluded AND remove USDC
     const filtered = TOKENS.filter(
       (t) => t.symbol !== "USDC" && (!exclude || !eq(t.address, String(exclude)))
     );
 
-    // Step 2: collapse dupes by display label if asked
     const deduped: (typeof TOKENS)[number][] = [];
     if (collapseETH) {
       const seen = new Set<string>();
@@ -95,8 +77,6 @@ export default function TokenSelect({
         const label = t.symbol === "WETH" ? "ETH" : t.symbol;
         if (seen.has(label)) continue;
         seen.add(label);
-
-        // Prefer specific address if we have a preference for that label
         const preferred =
           preferredAddressForSymbol[label] &&
           filtered.find((x) => eq(x.address, preferredAddressForSymbol[label]!));
@@ -106,7 +86,6 @@ export default function TokenSelect({
       deduped.push(...filtered);
     }
 
-    // Step 3: sort by preferred symbol order, then alphabetically
     const rank = (sym: string) => {
       const label = sym === "WETH" ? "ETH" : sym;
       const i = symbolOrder.indexOf(label);
@@ -121,9 +100,7 @@ export default function TokenSelect({
     });
   }, [exclude, collapseETH]);
 
-  /** When a user picks an option, normalize "ETH" → WETH address (preferred) */
   function handleChange(next: Address) {
-    // If user chose a token whose display is "ETH", remap to preferred ETH address
     const entry = TOKENS.find(t => eq(t.address, next));
     const label = entry?.symbol === "WETH" ? "ETH" : entry?.symbol;
     if (label === "ETH" && preferredAddressForSymbol.ETH) {
@@ -137,10 +114,14 @@ export default function TokenSelect({
     <div className="glass rounded-2xl px-3 py-2">
       {/* Dropdown */}
       <select
-        className="bg-transparent w-full rounded-pill px-2 py-2 focus:outline-none text-sm font-medium"
+        className="bg-transparent w-full rounded-pill px-2 py-2 focus:outline-none text-sm font-medium appearance-none [-webkit-tap-highlight-color:transparent]"
         aria-label="Select token"
         value={value}
-        onChange={(e) => handleChange(e.target.value as Address)}
+        onChange={(e) => {
+          handleChange(e.target.value as Address);
+          // 👇 Kill iOS native select overlay so it doesn't sit above the toast
+          (e.target as HTMLSelectElement).blur();
+        }}
       >
         {availableTokens.map((t) => {
           const label = t.symbol === "WETH" ? "ETH" : t.symbol;
@@ -148,13 +129,12 @@ export default function TokenSelect({
             label === "ETH" && preferredAddressForSymbol.ETH
               ? preferredAddressForSymbol.ETH
               : (t.address as Address);
-          return (
+        return (
             <option key={t.address as string} value={val}>
               {label}
             </option>
           );
         })}
-        {/* If exclude is not in list anymore, still show disabled tag so UX explains why it’s missing */}
         {exclude &&
           !availableTokens.some((t) => eq(t.address, String(exclude))) && (
             <option disabled>
