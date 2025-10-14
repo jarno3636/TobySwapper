@@ -208,11 +208,14 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 }
 
 /* ------------------------------ V2 helpers --------------------------------- */
+// 🔧 Expanded V2 paths to include USDC hops to improve coverage for pairs like TABOSHI
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const tryPaths: Address[][] = [
     [inAddr, tokenOut],
     [inAddr, WETH as Address, tokenOut],
+    [inAddr, USDC as Address, tokenOut],
+    [inAddr, WETH as Address, USDC as Address, tokenOut],
   ];
   let best: { out: bigint; path: Address[] } | undefined;
   for (const path of tryPaths) {
@@ -280,6 +283,11 @@ function SuccessToast({
 
   return (
     <Portal>
+      {/* Shield to eat stray taps (and ensure nothing refocuses beneath) */}
+      <div
+        className="fixed inset-0 z-[10999]"
+        onClick={onClose}
+      />
       <div
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate"
         aria-live="polite"
@@ -486,6 +494,7 @@ export default function SwapForm() {
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
+        // Prefer V2 when it's clearly better (or ETH in w/ a V2 path)
         if (tokenIn === "ETH" && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
@@ -755,10 +764,19 @@ export default function SwapForm() {
     }
   }
 
+  // Helpful: say *why* the swap button is disabled
+  const disableReason = useMemo(() => {
+    if (!isConnected) return "Connect wallet";
+    if (!isOnBase) return "Switch to Base";
+    if (amountInBig === 0n) return "Enter amount";
+    if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
+    if (quoteState !== "ok") return quoteState === "loading" ? "Finding route…" : "No route";
+    if (sending) return "Submitting…";
+    return null;
+  }, [isConnected, isOnBase, amountInBig, balInRaw.value, quoteState, sending]);
+
   const disableSwap =
-    !isConnected || !isOnBase || amountInBig === 0n ||
-    (balInRaw.value ?? 0n) < amountInBig ||
-    sending || quoteState !== "ok";
+    !!disableReason;
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -772,7 +790,12 @@ export default function SwapForm() {
           {/* Slippage / Settings button */}
           <button
             type="button"
-            onClick={() => setSlippageOpen(true)}
+            onClick={() => {
+              if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+              setSlippageOpen(true);
+            }}
             className="ml-3 pill pill-opaque px-2 py-1 inline-flex items-center gap-1"
             aria-label="Slippage settings"
             title="Slippage settings"
@@ -800,6 +823,7 @@ export default function SwapForm() {
           onChange={(a) => { setTokenIn(eq(a, WETH) ? "ETH" : (a as Address)); setAmt(""); }}
           exclude={tokenOut}
           balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
+          forceBlur={slippageOpen || !!success}
         />
       </div>
 
@@ -895,6 +919,7 @@ export default function SwapForm() {
           }}
           exclude={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
+          forceBlur={slippageOpen || !!success}
         />
         <div className="text-xs text-inkSub">
           {quoteState === "loading" && <>Querying routes…</>}
@@ -903,6 +928,8 @@ export default function SwapForm() {
             <>
               Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol}
               {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
+              {" · "}
+              Min out: <span className="font-mono">{minOutMainHuman}</span>
             </>
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
@@ -914,9 +941,9 @@ export default function SwapForm() {
         onClick={doSwap}
         className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 mt-4"
         disabled={disableSwap}
-        title="Swap"
+        title={disableReason ?? "Swap"}
       >
-        {sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)"}
+        {disableReason ? disableReason : (sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)")}
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
@@ -937,10 +964,12 @@ export default function SwapForm() {
       {slippageOpen && (
         <Portal>
           <div className="fixed inset-0 z-[10000]">
+            {/* backdrop */}
             <div
               className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm"
               onClick={() => setSlippageOpen(false)}
             />
+            {/* dialog */}
             <div
               role="dialog"
               aria-modal="true"
