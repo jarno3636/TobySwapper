@@ -23,7 +23,7 @@ import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import { useInvalidateBurnTotal } from "@/lib/burn";
 
 /* ---------------------------------- Config --------------------------------- */
-const SAFE_MODE_MINOUT_ZERO = false;
+const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
@@ -239,6 +239,17 @@ function buildFeePathFor(tokenInAddr: Address): Address[] {
   return [t as Address, WETH as Address, TOBY as Address];
 }
 
+/* ---------------------------- UI small helper ------------------------------ */
+function GearIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M10.325 4.317a1 1 0 0 1 1.35-.436l.7.35a1 1 0 0 0 .894 0l.7-.35a1 1 0 0 1 1.35.436l.35.7a1 1 0 0 0 .5.5l.7.35a1 1 0 0 1 .436 1.35l-.35.7a1 1 0 0 0 0 .894l.35.7a1 1 0 0 1-.436 1.35l-.7.35a1 1 0 0 0-.5.5l-.35.7a1 1 0 0 1-1.35.436l-.7-.35a1 1 0 0 0-.894 0l-.7.35a1 1 0 0 1-1.35-.436l-.35-.7a1 1 0 0 0-.5-.5l-.7-.35a1 1 0 0 1-.436-1.35l.35-.7a1 1 0 0 0 0-.894l-.35-.7a1 1 0 0 1 .436-1.35l.7-.35a1 1 0 0 0 .5-.5l.35-.7Z" />
+      <circle cx="12" cy="12" r="3" strokeWidth="2" />
+    </svg>
+  );
+}
+
 /* ---- Success Toast (inline component) ---- */
 function SuccessToast({
   onClose,
@@ -265,9 +276,7 @@ function SuccessToast({
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-1.5rem)] max-w-md isolate pointer-events-none"
       aria-live="polite"
     >
-      {/* SOLID card; pinned close button inside; isolates z-index and events */}
       <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
-        {/* Close button pinned */}
         <button
           onClick={onClose}
           className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
@@ -351,6 +360,11 @@ export default function SwapForm() {
       args.burnedInRaw !== undefined && args.burnedInDec !== undefined
         ? Number(formatUnits(args.burnedInRaw, args.burnedInDec)).toFixed(6)
         : undefined;
+
+    // Blur any focused control so iOS <select> overlay can't sit over the toast
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     setSuccess({
       hash: args.hash,
@@ -549,6 +563,9 @@ export default function SwapForm() {
         return;
       }
 
+      // For all V2 routes we set minOutMainV2 = 0n to avoid fee-on-transfer reverts
+      const minOutMainV2 = 0n;
+
       if (isEthIn) {
         const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
         const sim = await (client as any).simulateContract({
@@ -558,7 +575,7 @@ export default function SwapForm() {
           args: [
             tokenOut as Address,
             address as Address,
-            minOutMain,
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -649,7 +666,7 @@ export default function SwapForm() {
             inAddr,
             address as Address,
             parseUnits(amt || "0", decIn),
-            minOutMain,
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -681,7 +698,7 @@ export default function SwapForm() {
             tokenOut as Address,
             address as Address,
             parseUnits(amt || "0", decIn),
-            minOutMain,
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -726,6 +743,18 @@ export default function SwapForm() {
           <span>Network</span>
           <img src="/tokens/baseeth.PNG" alt="Base" className="w-4 h-4 rounded-full" />
           <span>Base</span>
+
+          {/* Slippage / Settings button */}
+          <button
+            type="button"
+            onClick={() => setSlippageOpen(true)}
+            className="ml-3 pill pill-opaque px-2 py-1 inline-flex items-center gap-1"
+            aria-label="Slippage settings"
+            title="Slippage settings"
+          >
+            <GearIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">{slippage}%</span>
+          </button>
         </div>
       </div>
 
