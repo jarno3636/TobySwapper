@@ -548,16 +548,24 @@ export default function SwapForm() {
     invalidateBurnTotal();
   }
 
+  // ---- FIX: client possibly undefined (type-safe narrowing) ----
+  // Use a local non-null reference for helper calls after an explicit guard.
+  const getClient = () => {
+    if (!client) throw new Error("No RPC client available.");
+    return client;
+  };
+
   async function ensureAllowance(token: Address, needed: bigint) {
+    const pc = getClient() as any;
     try {
-      const current: bigint = await client.readContract({
+      const current: bigint = await pc.readContract({
         address: token,
         abi: ERC20Abi,
         functionName: "allowance",
         args: [address as Address, SWAPPER as Address],
       }) as any;
       if (current >= needed) return true;
-      const sim = await (client as any).simulateContract({
+      const sim = await pc.simulateContract({
         address: token,
         abi: ERC20Abi,
         functionName: "approve",
@@ -566,13 +574,14 @@ export default function SwapForm() {
         chain: base,
       });
       const tx = await writeContractAsync(sim.request);
-      await client.waitForTransactionReceipt({ hash: tx });
+      await pc.waitForTransactionReceipt({ hash: tx });
       return true;
     } catch { return false; }
   }
 
   async function wrapEth(amount: bigint) {
-    const sim = await (client as any).simulateContract({
+    const pc = getClient() as any;
+    const sim = await pc.simulateContract({
       address: WETH as Address,
       abi: WethAbi,
       functionName: "deposit",
@@ -582,7 +591,7 @@ export default function SwapForm() {
       value: amount,
     });
     const tx = await writeContractAsync(sim.request);
-    await client.waitForTransactionReceipt({ hash: tx });
+    await pc.waitForTransactionReceipt({ hash: tx });
   }
 
   async function doSwap() {
@@ -634,7 +643,7 @@ export default function SwapForm() {
           }]
         );
 
-        const sim = await withTimeout<any>((client.simulateContract as any)({
+        const sim = await withTimeout<any>((getClient() as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensV3ExactInput",
@@ -677,7 +686,7 @@ export default function SwapForm() {
 
       if (isEthIn) {
         const mainPath = bestV2Path ?? [WETH as Address, tokenOut as Address];
-        const sim = await (client as any).simulateContract({
+        const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapETHForTokensSupportingFeeOnTransferTokensTo",
@@ -732,7 +741,7 @@ export default function SwapForm() {
           }]
         );
 
-        const sim = await withTimeout<any>((client.simulateContract as any)({
+        const sim = await withTimeout<any>((getClient() as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensV3ExactInput",
@@ -767,7 +776,7 @@ export default function SwapForm() {
 
       if (isEthOut) {
         const mainPath = bestV2Path ?? [inAddr, WETH as Address];
-        const sim = await (client as any).simulateContract({
+        const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForETHSupportingFeeOnTransferTokensTo",
@@ -798,7 +807,7 @@ export default function SwapForm() {
         });
       } else {
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
-        const sim = await (client as any).simulateContract({
+        const sim = await (getClient() as any).simulateContract({
           address: SWAPPER as Address,
           abi: TobySwapperAbi,
           functionName: "swapTokensForTokensSupportingFeeOnTransferTokensTo",
