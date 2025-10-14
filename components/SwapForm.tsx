@@ -587,7 +587,7 @@ export default function SwapForm() {
           bought: quoteOutMain,
           boughtDec: decOut,
           boughtSymbol: outMeta.symbol,
-          burnedInRaw: (amountInBig * FEE_DENOM - amountInBig * (FEE_DENOM - 0n)) / FEE_DENOM, // cosmetic; not shown if 0
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
           burnedInDec: decIn,
           burnedSymbol: inMeta.symbol,
         });
@@ -723,8 +723,6 @@ export default function SwapForm() {
       setSending(false);
     }
   }
-
-  const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
 
   const disableReason = useMemo(() => {
     if (!isConnected) return "Connect wallet";
