@@ -1,9 +1,11 @@
+// components/TokensBurned.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useReadContract } from "wagmi";
 import { Address } from "viem";
 import { SWAPPER } from "@/lib/addresses";
+import { useInvalidateBurnTotal } from "@/lib/burn"; // ✅ NEW
 
 const DECIMALS = 18n;
 const SCALE = 10n ** DECIMALS;
@@ -80,6 +82,9 @@ export default function TokensBurned() {
   const visible = usePageVisible();
   const [rot, setRot] = useState(false);
 
+  // ✅ NEW: shared-query invalidator so Share bar updates right away
+  const invalidateBurnTotal = useInvalidateBurnTotal();
+
   const { data, refetch, isFetching, isError } = useReadContract({
     address: SWAPPER as Address,
     abi: [
@@ -129,11 +134,21 @@ export default function TokensBurned() {
     if (isFetching) return;
     setRot(true);
     try {
-      await refetch();
+      const r = await refetch();
+      // ✅ If the chain value changed, notify the shared query so Share updates immediately
+      if (r?.data !== undefined) {
+        invalidateBurnTotal();
+      }
     } finally {
       setTimeout(() => setRot(false), 400);
     }
   };
+
+  // ✅ Also, if the value changes due to background refetch (visibility true), keep Share in sync
+  useEffect(() => {
+    if (mounted) invalidateBurnTotal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [burned18]);
 
   if (!mounted) return null;
 
