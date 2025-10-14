@@ -265,14 +265,23 @@ function SuccessToast({
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-md">
-      {/* SOLID card (no opacity/blur) */}
-      <div className="rounded-2xl border border-emerald-500 bg-emerald-600 shadow-lg p-4 text-white">
-        <div className="flex items-start gap-3">
+      {/* SOLID card; pinned close button inside */}
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-lg p-4 text-white">
+        {/* Close button pinned */}
+        <button
+          onClick={onClose}
+          className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
+          aria-label="Close"
+        >
+          Close
+        </button>
+
+        <div className="flex items-start gap-3 pr-14">
           <div className="text-2xl leading-none">✅</div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="font-semibold">Swap confirmed</div>
 
-            <div className="mt-1 text-sm">
+            <div className="mt-1 text-sm break-words">
               {bought && boughtSymbol && (
                 <div>
                   Received (est.):&nbsp;
@@ -301,14 +310,6 @@ function SuccessToast({
               </div>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="ml-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
-            aria-label="Close"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
@@ -502,7 +503,6 @@ export default function SwapForm() {
   const [approveCooldown, setApproveCooldown] = useState(false);
   const onApprove = useCallback(async () => {
     if (!needsApproval || !isConnected || !tokenInAddr) return;
-    setApproveCooldown=true;
     setApproveCooldown(true);
     try {
       await approveMaxToSwapper(allowanceToSwapper);
