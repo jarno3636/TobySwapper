@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import Footer from "@/components/Footer";
 import MiniAppGate from "@/components/MiniAppGate";
 import ShareCallout from "@/components/ShareCallout";
+import { useMiniKit } from "@coinbase/onchainkit/minikit"; // ✅ Base MiniKit
 
 // Client-only heavy components
 const SwapForm = dynamic(() => import("@/components/SwapForm"), { ssr: false });
@@ -37,6 +39,12 @@ const BLUR =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACgAB3y2e1iAAAAAASUVORK5CYII=";
 
 export default function Page() {
+  // ✅ Signal Base Mini App is ready once UI mounts (prevents Base hand-off quirks)
+  const { setFrameReady, isFrameReady } = useMiniKit();
+  useEffect(() => {
+    if (!isFrameReady) setFrameReady();
+  }, [isFrameReady, setFrameReady]);
+
   return (
     <MiniAppGate>
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
@@ -74,6 +82,7 @@ export default function Page() {
             <div className="w-full max-w-full sm:max-w-[520px] content-visible">
               <SwapForm />
               <div className="mt-3 flex gap-2 items-center">
+                {/* ✅ Uses native composers first (MiniKit ➜ Farcaster SDK), no web bounce */}
                 <ShareCallout token="$TOBY" />
               </div>
               <TokensBurned />
