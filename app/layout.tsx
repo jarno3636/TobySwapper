@@ -6,18 +6,21 @@ import Providers from "./providers";
 export const metadata = {
   title: "Toby Swapper",
   description: "Swap on Base with auto-TOBY burn",
-  manifest: "/site.webmanifest",                // ✅ App Router manifest
-  themeColor: "#0b0b0b",                         // ✅ surfaced via metadata
+  manifest: "/site.webmanifest", // ✅ App Router manifest route
+  themeColor: "#0b0b0b",         // ✅ consistent across PWA + Base
   openGraph: {
     title: "Toby Swapper",
     description:
       "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
-    // absolute URL helps some crawlers
-    images: [`${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`],
+    images: [
+      `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`,
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    images: [`${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`],
+    images: [
+      `${process.env.NEXT_PUBLIC_SITE_URL}/og/tobyswap-card-1200x630.png`,
+    ],
   },
   other: {
     "fc:frame": "vNext",
@@ -31,6 +34,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 
+  // ✅ Farcaster Mini App Embed object
   const miniAppEmbed = {
     version: "1",
     imageUrl: `${site}/og/miniapp-3x2.png`,
@@ -49,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* iOS / Safari */}
+        {/* ✅ iOS / Safari */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
@@ -57,11 +61,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/toby-192.png" />
 
-        {/* Favicons (desktop browsers) — keeps your current files */}
+        {/* ✅ Favicon set */}
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/toby-icon-32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/toby-icon-16.png" />
 
-        {/* Farcaster Mini App embed meta */}
+        {/* ✅ Farcaster Mini App embed meta */}
         <meta name="fc:miniapp" content={JSON.stringify(miniAppEmbed)} />
       </head>
       <body suppressHydrationWarning>
@@ -69,7 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Background />
           <div className="relative z-10 flex flex-col items-center w-full">
             <Brand />
-            <main className="mx-auto max-w-5xl px-4 py-8 w-full">{children}</main>
+            <main className="mx-auto max-w-5xl px-4 py-8 w-full">
+              {children}
+            </main>
           </div>
         </Providers>
       </body>
