@@ -1,4 +1,4 @@
-// components/SwapForm.tsx
+ // components/SwapForm.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +20,7 @@ import {
 import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
+import { useInvalidateBurnTotal } from "@/lib/burn";
 
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false;
@@ -241,12 +242,119 @@ function buildFeePathFor(tokenInAddr: Address): Address[] {
   return [t as Address, WETH as Address, TOBY as Address];
 }
 
+/* ---- Success Toast (inline component) ---- */
+function SuccessToast({
+  onClose,
+  hash,
+  bought,
+  boughtSymbol,
+  burnedInput,
+  burnedSymbol,
+}: {
+  onClose: () => void;
+  hash: `0x${string}`;
+  bought?: string;
+  boughtSymbol?: string;
+  burnedInput?: string;
+  burnedSymbol?: string;
+}) {
+  useEffect(() => {
+    const id = setTimeout(onClose, 6500);
+    return () => clearTimeout(id);
+  }, [onClose]);
+
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-1.5rem)] max-w-md">
+      <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/15 backdrop-blur-md shadow-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl leading-none">✅</div>
+          <div className="flex-1">
+            <div className="font-semibold text-emerald-300">Swap confirmed</div>
+
+            <div className="mt-1 text-sm">
+              {bought && boughtSymbol && (
+                <div>
+                  Received:&nbsp;
+                  <span className="font-mono">{bought}</span> {boughtSymbol}
+                </div>
+              )}
+              {burnedInput && burnedSymbol && (
+                <div>
+                  Burn fee (input est.):&nbsp;
+                  <span className="font-mono">{burnedInput}</span> {burnedSymbol}
+                </div>
+              )}
+              <div className="truncate">
+                Tx:&nbsp;
+                <a
+                  className="underline"
+                  href={`https://basescan.org/tx/${hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {hash.slice(0, 10)}…{hash.slice(-8)}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="ml-2 rounded-full px-2 py-1 text-xs bg-emerald-400/20 hover:bg-emerald-400/30"
+            aria-label="Close"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------------------------- View ----------------------------------- */
 export default function SwapForm() {
   const { address, chainId, isConnected } = useAccount();
   const { isOnBase, ensureBase } = useNetworkGuard();
   const client = usePublicClient({ chainId: base.id }); // pin to Base
   const { writeContractAsync } = useWriteContract();
+  const invalidateBurnTotal = useInvalidateBurnTotal();
+
+  // Success toast state
+  const [success, setSuccess] = useState<{
+    hash: `0x${string}`;
+    bought?: string;
+    boughtSymbol?: string;
+    burnedInput?: string;
+    burnedSymbol?: string;
+  } | null>(null);
+
+  function showSuccessToast(args: {
+    hash: `0x${string}`;
+    bought?: bigint;
+    boughtDec?: number;
+    boughtSymbol?: string;
+    burnedInRaw?: bigint;
+    burnedInDec?: number;
+    burnedSymbol?: string;
+  }) {
+    const prettyBought =
+      args.bought !== undefined && args.boughtDec !== undefined
+        ? Number(formatUnits(args.bought, args.boughtDec)).toFixed(6)
+        : undefined;
+
+    const prettyBurnedIn =
+      args.burnedInRaw !== undefined && args.burnedInDec !== undefined
+        ? Number(formatUnits(args.burnedInRaw, args.burnedInDec)).toFixed(6)
+        : undefined;
+
+    setSuccess({
+      hash: args.hash,
+      bought: prettyBought,
+      boughtSymbol: args.boughtSymbol,
+      burnedInput: prettyBurnedIn,
+      burnedSymbol: args.burnedSymbol,
+    });
+  }
 
   // UI state
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
@@ -413,6 +521,13 @@ export default function SwapForm() {
     return buildFeePathFor(actualIn);
   }
 
+  async function afterTxConfirmed(txHash: `0x${string}`) {
+    // wait for confirmation (best-effort)
+    try { await client.waitForTransactionReceipt({ hash: txHash }); } catch {}
+    // refresh live burn counters/UI
+    invalidateBurnTotal();
+  }
+
   async function doSwap() {
     if (!isConnected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
     if (amountInBig === 0n) return;
@@ -460,6 +575,17 @@ export default function SwapForm() {
           value: parseUnits(amt || "0", 18),
         });
         const tx = await writeContractAsync(sim.request);
+
+        await afterTxConfirmed(tx as `0x${string}`);
+        showSuccessToast({
+          hash: tx as `0x${string}`,
+          bought: quoteOutMain,
+          boughtDec: decOut,
+          boughtSymbol: outMeta.symbol,
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
+          burnedInDec: decIn,
+          burnedSymbol: inMeta.symbol,
+        });
         setSending(false);
         return;
       }
@@ -504,6 +630,17 @@ export default function SwapForm() {
         }), 10_000);
 
         const tx = await writeContractAsync(sim.request);
+
+        await afterTxConfirmed(tx as `0x${string}`);
+        showSuccessToast({
+          hash: tx as `0x${string}`,
+          bought: quoteOutMain,
+          boughtDec: decOut,
+          boughtSymbol: outMeta.symbol,
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
+          burnedInDec: decIn,
+          burnedSymbol: inMeta.symbol,
+        });
         setSending(false);
         return;
       }
@@ -528,6 +665,17 @@ export default function SwapForm() {
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
+
+        await afterTxConfirmed(tx as `0x${string}`);
+        showSuccessToast({
+          hash: tx as `0x${string}`,
+          bought: quoteOutMain,
+          boughtDec: decOut,
+          boughtSymbol: outMeta.symbol,
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
+          burnedInDec: decIn,
+          burnedSymbol: inMeta.symbol,
+        });
       } else {
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (client as any).simulateContract({
@@ -549,6 +697,17 @@ export default function SwapForm() {
           chain: base,
         });
         const tx = await writeContractAsync(sim.request);
+
+        await afterTxConfirmed(tx as `0x${string}`);
+        showSuccessToast({
+          hash: tx as `0x${string}`,
+          bought: quoteOutMain,
+          boughtDec: decOut,
+          boughtSymbol: outMeta.symbol,
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
+          burnedInDec: decIn,
+          burnedSymbol: inMeta.symbol,
+        });
       }
     } catch (e: any) {
       const msg = e?.shortMessage || e?.message || String(e);
@@ -714,6 +873,18 @@ export default function SwapForm() {
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
+
+      {/* Success Toast */}
+      {success && (
+        <SuccessToast
+          hash={success.hash}
+          bought={success.bought}
+          boughtSymbol={success.boughtSymbol}
+          burnedInput={success.burnedInput}
+          burnedSymbol={success.burnedSymbol}
+          onClose={() => setSuccess(null)}
+        />
+      )}
 
       {/* Slippage modal */}
       {slippageOpen && (
