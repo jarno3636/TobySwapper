@@ -246,11 +246,12 @@ async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", to
 }
 
 /* -------------------------- Fee/burn helper path --------------------------- */
+// NEW: route fee via USDC hub to avoid missing V2 pair reverts
 function buildFeePathFor(tokenInAddr: Address): Address[] {
   const t = lc(tokenInAddr);
-  if (eq(t, TOBY)) return [t as Address, TOBY as Address];
-  if (eq(t, WETH)) return [WETH as Address, TOBY as Address];
-  return [t as Address, WETH as Address, TOBY as Address];
+  if (eq(t, TOBY)) return [TOBY as Address, TOBY as Address];
+  if (eq(t, WETH)) return [WETH as Address, USDC as Address, TOBY as Address];
+  return [t as Address, WETH as Address, USDC as Address, TOBY as Address];
 }
 
 /* ---------------------------- UI small helper ------------------------------ */
@@ -293,6 +294,7 @@ function SuccessToast({
 
   return (
     <Portal>
+      {/* Shield */}
       <div className="fixed inset-0 z-[10999]" onClick={onClose} />
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
@@ -608,7 +610,6 @@ export default function SwapForm() {
     const isEthOut = outMeta.symbol === "ETH";
 
     const inAddr = isEthIn ? (WETH as Address) : (tokenIn as Address);
-    const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
     const pathForFeeSwap = feePathForExecution(inAddr);
@@ -640,8 +641,7 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            // ✅ FIX: use mainAmountIn (after fee), not the full input
-            amountIn: mainAmountIn,
+            amountIn: mainAmountIn, // after fee
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -654,8 +654,7 @@ export default function SwapForm() {
             WETH as Address,
             tokenOut as Address,
             address as Address,
-            // full amount to pull from user (swapper will split fee & main internally)
-            amountInBig,
+            amountInBig, // full pull; swapper uses only mainAmountIn for V3
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -740,8 +739,7 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            // ✅ FIX: use mainAmountIn (after fee), not the full input
-            amountIn: mainAmountIn,
+            amountIn: mainAmountIn, // after fee
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -754,8 +752,7 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            // full amount pulled; swapper burns its cut and forwards mainAmountIn to V3
-            amountInBig,
+            amountInBig, // full pull
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -866,6 +863,13 @@ export default function SwapForm() {
 
   const disableSwap = !!disableReason;
 
+  // --- USD estimate under Amount ---
+  const amtNumber = useMemo(() => {
+    const n = Number(debouncedAmt || "0");
+    return Number.isFinite(n) ? n : 0;
+  }, [debouncedAmt]);
+  const amtUsd = useMemo(() => amtNumber * inUsd, [amtNumber, inUsd]);
+
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
       <div className="flex items-center justify-between mb-4">
@@ -884,7 +888,9 @@ export default function SwapForm() {
             aria-label="Slippage settings"
             title="Slippage settings"
           >
-            <span className="hidden sm:inline">{slippage}%</span>
+            {/* Gear icon added */}
+            <GearIcon className="w-4 h-4 opacity-80" />
+            <span className="hidden sm:inline">{`${slippage}%`}</span>
           </button>
         </div>
       </div>
@@ -952,6 +958,13 @@ export default function SwapForm() {
           spellCheck={false}
           name="swap-amount"
         />
+
+        {/* USD estimate */}
+        {amtNumber > 0 && (
+          <div className="mt-1 text-xs text-inkSub">
+            ≈ <span className="font-mono">${amtUsd.toFixed(2)}</span>
+          </div>
+        )}
 
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
