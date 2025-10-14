@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Address } from "viem";
 import {
   formatUnits, parseUnits, isAddress,
@@ -250,6 +251,12 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+/* ------------------------------- Portals ----------------------------------- */
+function Portal({ children }: { children: React.ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+}
+
 /* ---- Success Toast (inline component) ---- */
 function SuccessToast({
   onClose,
@@ -272,56 +279,58 @@ function SuccessToast({
   }, [onClose]);
 
   return (
-    <div
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-1.5rem)] max-w-md isolate pointer-events-none"
-      aria-live="polite"
-    >
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
-        <button
-          onClick={onClose}
-          className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
-          aria-label="Close"
-        >
-          Close
-        </button>
+    <Portal>
+      <div
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate"
+        aria-live="polite"
+      >
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
+          <button
+            onClick={onClose}
+            className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
+            aria-label="Close"
+          >
+            Close
+          </button>
 
-        <div className="flex items-start gap-3 pr-14">
-          <div className="text-2xl leading-none">✅</div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold">Swap confirmed</div>
+          <div className="flex items-start gap-3 pr-14">
+            <div className="text-2xl leading-none">✅</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold">Swap confirmed</div>
 
-            <div className="mt-1 text-sm break-words">
-              {bought && boughtSymbol && (
-                <div>
-                  Received (est.):&nbsp;
-                  <span className="font-mono">~{bought}</span> {boughtSymbol}
+              <div className="mt-1 text-sm break-words">
+                {bought && boughtSymbol && (
+                  <div>
+                    Received (est.):&nbsp;
+                    <span className="font-mono">~{bought}</span> {boughtSymbol}
+                  </div>
+                )}
+                {burnedInput && burnedSymbol && (
+                  <div>
+                    Burn fee (input est.):&nbsp;
+                    <span className="font-mono">~{burnedInput}</span> {burnedSymbol}
+                  </div>
+                )}
+                <div className="truncate">
+                  Tx:&nbsp;
+                  <a
+                    className="underline"
+                    href={`https://basescan.org/tx/${hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {hash.slice(0, 10)}…{hash.slice(-8)}
+                  </a>
                 </div>
-              )}
-              {burnedInput && burnedSymbol && (
-                <div>
-                  Burn fee (input est.):&nbsp;
-                  <span className="font-mono">~{burnedInput}</span> {burnedSymbol}
+                <div className="mt-1 text-[11px] text-white/80">
+                  Values shown are estimates. Refer to the transaction on Basescan for exact amounts.
                 </div>
-              )}
-              <div className="truncate">
-                Tx:&nbsp;
-                <a
-                  className="underline"
-                  href={`https://basescan.org/tx/${hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {hash.slice(0, 10)}…{hash.slice(-8)}
-                </a>
-              </div>
-              <div className="mt-1 text-[11px] text-white/80">
-                Values shown are estimates. Refer to the transaction on Basescan for exact amounts.
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 
@@ -361,7 +370,7 @@ export default function SwapForm() {
         ? Number(formatUnits(args.burnedInRaw, args.burnedInDec)).toFixed(6)
         : undefined;
 
-    // Blur any focused control so iOS <select> overlay can't sit over the toast
+    // Kill any native <select> overlays before showing the toast
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -381,6 +390,22 @@ export default function SwapForm() {
   const [amt, setAmt] = useState<string>("");
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
+
+  // Body scroll lock & close native pickers when modal opens
+  useEffect(() => {
+    if (!slippageOpen) return;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSlippageOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [slippageOpen]);
 
   useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
   useEffect(() => { if (isConnected) void ensureBase(); }, [isConnected, ensureBase]);
@@ -575,7 +600,7 @@ export default function SwapForm() {
           args: [
             tokenOut as Address,
             address as Address,
-            minOutMainV2,
+            minOutMainV2, // V2: zero minOut
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -666,7 +691,7 @@ export default function SwapForm() {
             inAddr,
             address as Address,
             parseUnits(amt || "0", decIn),
-            minOutMainV2,
+            minOutMainV2, // V2: zero minOut
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -698,7 +723,7 @@ export default function SwapForm() {
             tokenOut as Address,
             address as Address,
             parseUnits(amt || "0", decIn),
-            minOutMainV2,
+            minOutMainV2, // V2: zero minOut
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -721,7 +746,7 @@ export default function SwapForm() {
         });
       }
     } catch (e: any) {
-      const msg = e?.shortMessage || e?.message || String(e);
+      const msg = e?.shortMessage || e?.message || String(e));
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
       else setPreflightMsg(msg);
@@ -908,28 +933,53 @@ export default function SwapForm() {
         />
       )}
 
-      {/* Slippage modal */}
+      {/* Slippage modal (portaled, strong z-index & explicit stacking) */}
       {slippageOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Slippage</h4>
-              <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
-            </div>
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {[0.1, 0.5, 1, 2].map((v) => (
-                <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
-                  {v}%
+        <Portal>
+          <div className="fixed inset-0 z-[10000]">
+            <div
+              className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setSlippageOpen(false)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold">Slippage</h4>
+                <button
+                  className="pill pill-opaque px-3 py-1 text-xs"
+                  onClick={() => setSlippageOpen(false)}
+                >
+                  Close
                 </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
-              <span className="text-sm text-inkSub">%</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {[0.1, 0.5, 1, 2].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setSlippage(v)}
+                    className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}
+                  >
+                    {v}%
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={slippage}
+                  onChange={(e) => setSlippage(Number(e.target.value))}
+                  className="glass rounded-pill px-3 py-2 w-full"
+                />
+                <span className="text-sm text-inkSub">%</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );
