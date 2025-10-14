@@ -1,3 +1,5 @@
+// lib/miniapp.ts
+
 /** Farcaster Mini App SDK shape (tolerant to older builds) */
 type MiniAppSdk = {
   actions?: {
@@ -26,7 +28,6 @@ export function isFarcasterUA(): boolean {
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
 }
 
-/** Lenient Base/Coinbase UA heuristic (wallet, webview, or app) */
 export function isBaseAppUA(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
@@ -108,8 +109,7 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
   } catch {}
 }
 
-/* ===================== Base App (MiniKit) ===================== */
-/* We avoid bundling MiniKit; rely on global injection per docs. */
+/* ===================== Base App (MiniKit globals) ===================== */
 
 function getMiniKit(): any | null {
   if (typeof window === "undefined") return null;
@@ -126,6 +126,47 @@ async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
       return true;
     }
   } catch {}
+  return false;
+}
+
+/** Try to open a URL natively (Base MiniKit ➜ Farcaster SDK), else let caller fall back to web */
+export async function openInMini(url: string): Promise<boolean> {
+  if (!url) return false;
+  const safe = toAbsoluteUrl(url, SITE_URL);
+
+  // 1) Base App MiniKit
+  try {
+    const mk = getMiniKit();
+    if (mk?.openUrl) {
+      await mk.openUrl(safe);
+      return true;
+    }
+    if (mk?.openURL) {
+      await mk.openURL(safe);
+      return true;
+    }
+  } catch {}
+
+  // 2) Farcaster Mini App SDK (Warpcast)
+  try {
+    const sdk = await getMiniSdk();
+    if (sdk?.actions?.openUrl) {
+      try {
+        await sdk.actions.openUrl(safe);
+        return true;
+      } catch {
+        // Some builds expect an object
+        await (sdk.actions.openUrl as any)({ url: safe });
+        return true;
+      }
+    }
+    if (sdk?.actions?.openURL) {
+      await sdk.actions.openURL(safe);
+      return true;
+    }
+  } catch {}
+
+  // 3) Not handled
   return false;
 }
 
