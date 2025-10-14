@@ -19,6 +19,7 @@ const iconMap: Record<string, string> = {
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
 const preferredAddressForSymbol: Partial<Record<string, Address>> = {
+  // If user selects ETH, we write WETH address for on-chain (keeps UI "ETH")
   ETH: (TOKENS.find(t => t.symbol === "WETH")?.address ??
     "0x0000000000000000000000000000000000000000") as Address,
 };
@@ -32,7 +33,7 @@ export default function TokenSelect({
   exclude,
   balance,
   collapseETH = true,
-  forceBlur = false, // 👈 new
+  forceBlur = false, // 👈 new (prevents native picker sitting above overlays)
 }: {
   user?: Address;
   value: Address;
@@ -40,15 +41,14 @@ export default function TokenSelect({
   exclude?: Address | string;
   balance?: string;
   collapseETH?: boolean;
-  /** When true, immediately blur the native <select> to prevent OS overlay from staying open */
+  /** When true, immediately blur the native <select> so OS overlay can’t sit above modals/toasts */
   forceBlur?: boolean;
 }) {
   const selectRef = useRef<HTMLSelectElement | null>(null);
 
-  // Auto-blur whenever the parent asks us to (modal/toast open)
+  // Blur whenever overlays are up (toast / modal)
   useEffect(() => {
     if (forceBlur && selectRef.current) {
-      // small rAF to ensure state updates/render complete before blur
       requestAnimationFrame(() => selectRef.current?.blur());
     }
   }, [forceBlur]);
@@ -133,7 +133,6 @@ export default function TokenSelect({
         aria-label="Select token"
         value={value}
         onClick={(e) => {
-          // If an overlay is up, immediately blur to prevent native picker from opening
           if (forceBlur) (e.currentTarget as HTMLSelectElement).blur();
         }}
         onChange={(e) => {
