@@ -28,6 +28,7 @@ const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
+const MAX_UINT256 = (1n << 256n) - 1n;
 
 /* ------------------------------- Minimal ABIs ------------------------------- */
 const QuoterV3Abi = [
@@ -113,6 +114,16 @@ const TobySwapperAbi = [
       {name:"minOutFee", type:"uint256"},
     ],
     outputs:[] },
+] as const;
+
+/* ----------------------------- ERC20/WETH ABIs ----------------------------- */
+const ERC20Abi = [
+  { type: "function", name: "allowance", stateMutability: "view", inputs: [{name:"owner", type:"address"},{name:"spender", type:"address"}], outputs: [{type:"uint256"}] },
+  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{name:"spender", type:"address"},{name:"amount", type:"uint256"}], outputs: [{type:"bool"}] },
+] as const;
+
+const WethAbi = [
+  { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
 ] as const;
 
 /* --------------------------------- helpers --------------------------------- */
@@ -208,7 +219,6 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 }
 
 /* ------------------------------ V2 helpers --------------------------------- */
-// 🔧 Expanded V2 paths to include USDC hops to improve coverage for pairs like TABOSHI
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
   const tryPaths: Address[][] = [
@@ -284,55 +294,21 @@ function SuccessToast({
   return (
     <Portal>
       {/* Shield to eat stray taps (and ensure nothing refocuses beneath) */}
-      <div
-        className="fixed inset-0 z-[10999]"
-        onClick={onClose}
-      />
-      <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate"
-        aria-live="polite"
-      >
+      <div className="fixed inset-0 z-[10999]" onClick={onClose} />
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
-          <button
-            onClick={onClose}
-            className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25"
-            aria-label="Close"
-          >
-            Close
-          </button>
-
+          <button onClick={onClose} className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25" aria-label="Close">Close</button>
           <div className="flex items-start gap-3 pr-14">
             <div className="text-2xl leading-none">✅</div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold">Swap confirmed</div>
-
               <div className="mt-1 text-sm break-words">
-                {bought && boughtSymbol && (
-                  <div>
-                    Received (est.):&nbsp;
-                    <span className="font-mono">~{bought}</span> {boughtSymbol}
-                  </div>
-                )}
-                {burnedInput && burnedSymbol && (
-                  <div>
-                    Burn fee (input est.):&nbsp;
-                    <span className="font-mono">~{burnedInput}</span> {burnedSymbol}
-                  </div>
-                )}
+                {bought && boughtSymbol && (<div>Received (est.):&nbsp;<span className="font-mono">~{bought}</span> {boughtSymbol}</div>)}
+                {burnedInput && burnedSymbol && (<div>Burn fee (input est.):&nbsp;<span className="font-mono">~{burnedInput}</span> {burnedSymbol}</div>)}
                 <div className="truncate">
-                  Tx:&nbsp;
-                  <a
-                    className="underline"
-                    href={`https://basescan.org/tx/${hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {hash.slice(0, 10)}…{hash.slice(-8)}
-                  </a>
+                  Tx:&nbsp;<a className="underline" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noopener noreferrer">{hash.slice(0, 10)}…{hash.slice(-8)}</a>
                 </div>
-                <div className="mt-1 text-[11px] text-white/80">
-                  Values shown are estimates. Refer to the transaction on Basescan for exact amounts.
-                </div>
+                <div className="mt-1 text-[11px] text-white/80">Values shown are estimates. Refer to the transaction on Basescan for exact amounts.</div>
               </div>
             </div>
           </div>
@@ -378,7 +354,6 @@ export default function SwapForm() {
         ? Number(formatUnits(args.burnedInRaw, args.burnedInDec)).toFixed(6)
         : undefined;
 
-    // Kill any native <select> overlays before showing the toast
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -399,7 +374,6 @@ export default function SwapForm() {
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
-  // Body scroll lock & close native pickers when modal opens
   useEffect(() => {
     if (!slippageOpen) return;
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
@@ -429,8 +403,6 @@ export default function SwapForm() {
   useEffect(() => { const id = setTimeout(() => setDebouncedAmt(amt.trim()), 220); return () => clearTimeout(id); }, [amt]);
 
   const amountInBig = useMemo(() => { try { return parseUnits(debouncedAmt || "0", inMeta.decimals); } catch { return 0n; }}, [debouncedAmt, inMeta.decimals]);
-  const amtNum = Number(debouncedAmt || "0");
-  const amtInUsd = Number.isFinite(amtNum) ? amtNum * inUsd : 0;
 
   const [feeBps, setFeeBps] = useState<bigint>(100n);
   useEffect(() => {
@@ -454,12 +426,13 @@ export default function SwapForm() {
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [bestV2Path, setBestV2Path] = useState<Address[] | undefined>();
+  const [needsWrapWeth, setNeedsWrapWeth] = useState<boolean>(false);
   const quoteLatch = useRef<number>(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined);
+      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setNeedsWrapWeth(false);
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
       setQuoteState("loading");
@@ -494,11 +467,18 @@ export default function SwapForm() {
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
-        // Prefer V2 when it's clearly better (or ETH in w/ a V2 path)
-        if (tokenIn === "ETH" && v2Path && v2Out) {
-          best = undefined; bestOut = v2Out;
-        } else if (v2Out && (!bestOut || v2Out > bestOut)) {
-          best = undefined; bestOut = v2Out;
+        if (tokenIn === "ETH") {
+          if (v2Path && v2Out) {
+            best = undefined; bestOut = v2Out;
+          } else if (best && bestOut) {
+            setNeedsWrapWeth(true);
+          } else {
+            setQuoteState("noroute"); setQuoteErr("No V2/V3 route found for ETH-in."); return;
+          }
+        } else {
+          if (v2Out && (!bestOut || v2Out > bestOut)) {
+            best = undefined; bestOut = v2Out;
+          }
         }
       } catch (e:any) {
         setQuoteErr(e?.shortMessage || e?.message || String(e));
@@ -564,10 +544,45 @@ export default function SwapForm() {
 
   async function afterTxConfirmed(txHash: `0x${string}`) {
     const pc = client;
-    if (pc) {
-      try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {}
-    }
+    if (pc) { try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {} }
     invalidateBurnTotal();
+  }
+
+  async function ensureAllowance(token: Address, needed: bigint) {
+    try {
+      const current: bigint = await client.readContract({
+        address: token,
+        abi: ERC20Abi,
+        functionName: "allowance",
+        args: [address as Address, SWAPPER as Address],
+      }) as any;
+      if (current >= needed) return true;
+      const sim = await (client as any).simulateContract({
+        address: token,
+        abi: ERC20Abi,
+        functionName: "approve",
+        args: [SWAPPER as Address, MAX_UINT256],
+        account: address as Address,
+        chain: base,
+      });
+      const tx = await writeContractAsync(sim.request);
+      await client.waitForTransactionReceipt({ hash: tx });
+      return true;
+    } catch { return false; }
+  }
+
+  async function wrapEth(amount: bigint) {
+    const sim = await (client as any).simulateContract({
+      address: WETH as Address,
+      abi: WethAbi,
+      functionName: "deposit",
+      args: [],
+      account: address as Address,
+      chain: base,
+      value: amount,
+    });
+    const tx = await writeContractAsync(sim.request);
+    await client.waitForTransactionReceipt({ hash: tx });
   }
 
   async function doSwap() {
@@ -578,7 +593,10 @@ export default function SwapForm() {
     setPreflightMsg(undefined);
     setSending(true);
 
-    const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+    const isEthIn = tokenIn === "ETH";
+    const isEthOut = outMeta.symbol === "ETH";
+
+    const inAddr = isEthIn ? (WETH as Address) : (tokenIn as Address);
     const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
@@ -588,8 +606,66 @@ export default function SwapForm() {
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
-      const isEthIn = tokenIn === "ETH";
-      const isEthOut = outMeta.symbol === "ETH";
+      if (isEthIn && needsWrapWeth) {
+        try { await wrapEth(amountInBig); }
+        catch (e:any) { setPreflightMsg(e?.shortMessage || e?.message || "Failed to wrap ETH to WETH."); setSending(false); return; }
+        const ok = await ensureAllowance(WETH as Address, amountInBig);
+        if (!ok) { setPreflightMsg("Please approve WETH for the swapper."); setSending(false); return; }
+        if (!bestV3) { setPreflightMsg("Internal error: missing V3 route after wrap."); setSending(false); return; }
+
+        const v3Path = encodeV3Path(bestV3.tokens, bestV3.fees);
+        const paramsBytes = encodeAbiParameters(
+          [{
+            type: "tuple",
+            components: [
+              { name: "path", type: "bytes" },
+              { name: "recipient", type: "address" },
+              { name: "deadline", type: "uint256" },
+              { name: "amountIn", type: "uint256" },
+              { name: "amountOutMinimum", type: "uint256" },
+            ],
+          }],
+          [{
+            path: v3Path,
+            recipient: address as Address,
+            deadline,
+            amountIn: parseUnits(amt || "0", 18),
+            amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
+          }]
+        );
+
+        const sim = await withTimeout<any>((client.simulateContract as any)({
+          address: SWAPPER as Address,
+          abi: TobySwapperAbi,
+          functionName: "swapTokensForTokensV3ExactInput",
+          args: [
+            WETH as Address,
+            tokenOut as Address,
+            address as Address,
+            parseUnits(amt || "0", 18),
+            paramsBytes,
+            pathForFeeSwap,
+            minOutFee,
+          ],
+          account: address as Address,
+          chain: base,
+        }), 10_000);
+
+        const tx = await writeContractAsync(sim.request);
+
+        await afterTxConfirmed(tx as `0x${string}`);
+        showSuccessToast({
+          hash: tx as `0x${string}`,
+          bought: quoteOutMain,
+          boughtDec: decOut,
+          boughtSymbol: outMeta.symbol,
+          burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
+          burnedInDec: 18,
+          burnedSymbol: "WETH",
+        });
+        setSending(false);
+        return;
+      }
 
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
@@ -597,7 +673,6 @@ export default function SwapForm() {
         return;
       }
 
-      // For all V2 routes we set minOutMainV2 = 0n to avoid fee-on-transfer reverts
       const minOutMainV2 = 0n;
 
       if (isEthIn) {
@@ -609,7 +684,7 @@ export default function SwapForm() {
           args: [
             tokenOut as Address,
             address as Address,
-            minOutMainV2, // V2: zero minOut
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -628,8 +703,8 @@ export default function SwapForm() {
           boughtDec: decOut,
           boughtSymbol: outMeta.symbol,
           burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
-          burnedInDec: decIn,
-          burnedSymbol: inMeta.symbol,
+          burnedInDec: 18,
+          burnedSymbol: "ETH",
         });
         setSending(false);
         return;
@@ -652,7 +727,7 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: parseUnits(amt || "0", decIn),
+            amountIn: parseUnits(amt || "0", inMeta.decimals),
             amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
           }]
         );
@@ -665,7 +740,7 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", decIn),
+            parseUnits(amt || "0", inMeta.decimals),
             paramsBytes,
             pathForFeeSwap,
             minOutFee,
@@ -683,7 +758,7 @@ export default function SwapForm() {
           boughtDec: decOut,
           boughtSymbol: outMeta.symbol,
           burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
-          burnedInDec: decIn,
+          burnedInDec: inMeta.decimals,
           burnedSymbol: inMeta.symbol,
         });
         setSending(false);
@@ -699,8 +774,8 @@ export default function SwapForm() {
           args: [
             inAddr,
             address as Address,
-            parseUnits(amt || "0", decIn),
-            minOutMainV2, // V2: zero minOut
+            parseUnits(amt || "0", inMeta.decimals),
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -718,7 +793,7 @@ export default function SwapForm() {
           boughtDec: decOut,
           boughtSymbol: outMeta.symbol,
           burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
-          burnedInDec: decIn,
+          burnedInDec: inMeta.decimals,
           burnedSymbol: inMeta.symbol,
         });
       } else {
@@ -731,8 +806,8 @@ export default function SwapForm() {
             inAddr,
             tokenOut as Address,
             address as Address,
-            parseUnits(amt || "0", decIn),
-            minOutMainV2, // V2: zero minOut
+            parseUnits(amt || "0", inMeta.decimals),
+            minOutMainV2,
             mainPath,
             pathForFeeSwap,
             minOutFee,
@@ -750,7 +825,7 @@ export default function SwapForm() {
           boughtDec: decOut,
           boughtSymbol: outMeta.symbol,
           burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
-          burnedInDec: decIn,
+          burnedInDec: inMeta.decimals,
           burnedSymbol: inMeta.symbol,
         });
       }
@@ -764,7 +839,6 @@ export default function SwapForm() {
     }
   }
 
-  // Helpful: say *why* the swap button is disabled
   const disableReason = useMemo(() => {
     if (!isConnected) return "Connect wallet";
     if (!isOnBase) return "Switch to Base";
@@ -775,8 +849,7 @@ export default function SwapForm() {
     return null;
   }, [isConnected, isOnBase, amountInBig, balInRaw.value, quoteState, sending]);
 
-  const disableSwap =
-    !!disableReason;
+  const disableSwap = !!disableReason;
 
   return (
     <div className="glass rounded-3xl p-6 shadow-soft">
@@ -786,21 +859,16 @@ export default function SwapForm() {
           <span>Network</span>
           <img src="/tokens/baseeth.PNG" alt="Base" className="w-4 h-4 rounded-full" />
           <span>Base</span>
-
-          {/* Slippage / Settings button */}
           <button
             type="button"
             onClick={() => {
-              if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
-                document.activeElement.blur();
-              }
+              if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) document.activeElement.blur();
               setSlippageOpen(true);
             }}
             className="ml-3 pill pill-opaque px-2 py-1 inline-flex items-center gap-1"
             aria-label="Slippage settings"
             title="Slippage settings"
           >
-            <GearIcon className="w-4 h-4" />
             <span className="hidden sm:inline">{slippage}%</span>
           </button>
         </div>
@@ -812,11 +880,8 @@ export default function SwapForm() {
         </div>
       )}
 
-      {/* Token In */}
       <div className="space-y-2">
-        <label className="text-sm text-inkSub">
-          Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
-        </label>
+        <label className="text-sm text-inkSub">Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}</label>
         <TokenSelect
           user={address as Address | undefined}
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
@@ -827,7 +892,6 @@ export default function SwapForm() {
         />
       </div>
 
-      {/* Swap sides */}
       <div className="flex justify-center my-2">
         <button
           className="pill pill-opaque px-3 py-1 text-sm"
@@ -844,12 +908,9 @@ export default function SwapForm() {
         </button>
       </div>
 
-      {/* Amount */}
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-inkSub">
-            Amount {inMeta.symbol === "ETH" ? "(ETH • Base)" : `(${inMeta.symbol})`}
-          </label>
+          <label className="text-sm text-inkSub">Amount {inMeta.symbol === "ETH" ? "(ETH • Base)" : `(${inMeta.symbol})`}</label>
           <div className="text-xs text-inkSub">
             Bal: <span className="font-mono">
               {balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : "—"}
@@ -862,9 +923,7 @@ export default function SwapForm() {
                 const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
                 setAmt((safe > 0 ? safe : 0).toString());
               }}
-            >
-              MAX
-            </button>
+            >MAX</button>
           </div>
         </div>
 
@@ -879,13 +938,10 @@ export default function SwapForm() {
           name="swap-amount"
         />
 
-        <div className="mt-2 text-xs text-inkSub">≈ ${Number.isFinite(amtInUsd) ? amtInUsd.toFixed(2) : "0.00"} USD</div>
-
         {isConnected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
           <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
         )}
 
-        {/* Approve (SWAPPER) */}
         {showApproveButton && (
           <div className="mt-3">
             <button
@@ -896,19 +952,12 @@ export default function SwapForm() {
             >
               {approveText}
             </button>
-            <div className="mt-1 text-[11px] text-inkSub">
-              Spender: <code className="break-all">{SWAPPER as Address}</code>
-              {(allowanceToSwapper !== undefined) && <> · Allowance: <span className="font-mono">{(allowanceToSwapper).toString()}</span></>}
-            </div>
           </div>
         )}
       </div>
 
-      {/* Token Out & estimate */}
       <div className="space-y-2 mt-4">
-        <label className="text-sm text-inkSub">
-          Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}
-        </label>
+        <label className="text-sm text-inkSub">Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}</label>
         <TokenSelect
           user={address as Address | undefined}
           value={tokenOut}
@@ -928,27 +977,30 @@ export default function SwapForm() {
             <>
               Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol}
               {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              {" · "}
-              Min out: <span className="font-mono">{minOutMainHuman}</span>
+              {" · "}Min out: <span className="font-mono">{minOutMainHuman}</span>
+              {tokenIn === "ETH" && needsWrapWeth && <span className="ml-1 text-amber-400">(will wrap ETH → WETH)</span>}
             </>
           )}
           {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
         </div>
       </div>
 
-      {/* Swap */}
       <button
         onClick={doSwap}
         className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 mt-4"
         disabled={disableSwap}
         title={disableReason ?? "Swap"}
       >
-        {disableReason ? disableReason : (sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)")}
+        {disableReason ? disableReason : (
+          sending ? "Submitting…" :
+          (tokenIn === "ETH" && needsWrapWeth)
+            ? `Wrap & Swap ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)`
+            : (bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)")
+        )}
       </button>
 
       {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
 
-      {/* Success Toast */}
       {success && (
         <SuccessToast
           hash={success.hash}
@@ -960,50 +1012,24 @@ export default function SwapForm() {
         />
       )}
 
-      {/* Slippage modal (portaled, strong z-index & explicit stacking) */}
       {slippageOpen && (
         <Portal>
           <div className="fixed inset-0 z-[10000]">
-            {/* backdrop */}
-            <div
-              className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm"
-              onClick={() => setSlippageOpen(false)}
-            />
-            {/* dialog */}
-            <div
-              role="dialog"
-              aria-modal="true"
-              className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto"
-            >
+            <div className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
+            <div role="dialog" aria-modal="true" className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold">Slippage</h4>
-                <button
-                  className="pill pill-opaque px-3 py-1 text-xs"
-                  onClick={() => setSlippageOpen(false)}
-                >
-                  Close
-                </button>
+                <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
               </div>
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[0.1, 0.5, 1, 2].map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setSlippage(v)}
-                    className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}
-                  >
+                  <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
                     {v}%
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={slippage}
-                  onChange={(e) => setSlippage(Number(e.target.value))}
-                  className="glass rounded-pill px-3 py-2 w-full"
-                />
+                <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
                 <span className="text-sm text-inkSub">%</span>
               </div>
             </div>
