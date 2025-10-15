@@ -6,6 +6,7 @@ import {
   buildFarcasterComposeUrl,
   SITE_URL,
   MINIAPP_URL,
+  isFarcasterUA,
 } from "@/lib/miniapp";
 import { useBurnTotal } from "@/lib/burn";
 
@@ -42,8 +43,8 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Prefer the Mini App URL if configured; otherwise public site (no UA gating).
-  const embedForFC = MINIAPP_URL ? MINIAPP_URL : site;
+  // Inside Warpcast, prefer the Mini App URL as the embed; else use the public site.
+  const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
 
   // Web fallback (used only if native composers aren’t available)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
