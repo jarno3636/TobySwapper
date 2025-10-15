@@ -21,6 +21,21 @@ export const MINIAPP_URL =
   (typeof process !== "undefined" && (process as any).env?.NEXT_PUBLIC_FC_MINIAPP_URL) ||
   "";
 
+/* ---------------- UA heuristics ---------------- */
+
+export function isFarcasterUA(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
+}
+
+export function isBaseAppUA(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /BaseWallet|Base\sApp|Base\/\d|CoinbaseWallet|CoinbaseMobile|CoinbaseApp|CBBrowser|CBWallet|Coinbase(Android|iOS)?/i.test(
+    ua
+  );
+}
+
 /* ---------------- URL helpers ---------------- */
 
 function toAbsoluteUrl(input: string, base = SITE_URL): string {
@@ -35,9 +50,9 @@ function toAbsoluteUrl(input: string, base = SITE_URL): string {
   }
 }
 
-/** Prefer Mini App URL inside Warpcast if env var is set; else normal site (absolute). */
+/** Prefer Mini App URL inside Warpcast; else normal site (absolute). */
 export function fcPreferMini(pathOrAbs = ""): string {
-  const base = MINIAPP_URL || SITE_URL; // don’t rely on UA here
+  const base = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : SITE_URL;
   const absBase = toAbsoluteUrl(base);
   if (!pathOrAbs) return absBase;
   if (/^https?:\/\//i.test(pathOrAbs)) return pathOrAbs;
@@ -74,9 +89,12 @@ export async function getMiniSdk(): Promise<MiniAppSdk | null> {
     };
     const fromModule = mod?.sdk ?? mod?.default;
     if (fromModule) return fromModule;
-  } catch {}
-  const g = window as any;
-  return g?.farcaster?.miniapp?.sdk || g?.sdk || null;
+    const g = window as any;
+    return g?.farcaster?.miniapp?.sdk || g?.sdk || null;
+  } catch {
+    const g = window as any;
+    return g?.farcaster?.miniapp?.sdk || g?.sdk || null;
+  }
 }
 
 /** Call sdk.actions.ready() quickly so we never hang splash */
@@ -100,6 +118,7 @@ function getMiniKit(): any | null {
 }
 
 async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
+  if (!isBaseAppUA()) return false;
   try {
     const mk = getMiniKit();
     if (mk?.composeCast) {
@@ -110,12 +129,12 @@ async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
   return false;
 }
 
-/** Public helper: open a URL via MiniKit or Farcaster SDK; return true if handled */
+/** Try to open a URL natively (Base MiniKit ➜ Farcaster SDK), else let caller fall back to web */
 export async function openInMini(url: string): Promise<boolean> {
   if (!url) return false;
   const safe = toAbsoluteUrl(url, SITE_URL);
 
-  // 1) Base App MiniKit (if injected)
+  // 1) Base App MiniKit
   try {
     const mk = getMiniKit();
     if (mk?.openUrl) {
@@ -128,7 +147,7 @@ export async function openInMini(url: string): Promise<boolean> {
     }
   } catch {}
 
-  // 2) Farcaster Mini App SDK (if injected)
+  // 2) Farcaster Mini App SDK (Warpcast)
   try {
     const sdk = await getMiniSdk();
     if (sdk?.actions?.openUrl) {
@@ -147,13 +166,14 @@ export async function openInMini(url: string): Promise<boolean> {
     }
   } catch {}
 
+  // 3) Not handled
   return false;
 }
 
 /**
  * Unified compose helper:
- * 1) Base App (MiniKit.composeCast) if present
- * 2) Farcaster Mini App SDK (sdk.actions.composeCast) if present
+ * 1) Base App (MiniKit.composeCast)
+ * 2) Warpcast Mini App SDK (sdk.actions.composeCast)
  * 3) Fail -> caller should open web /~/compose
  */
 export async function composeCast({
@@ -165,7 +185,7 @@ export async function composeCast({
   if (await tryBaseComposeCast({ text, embeds: normalizedEmbeds })) return true;
 
   const sdk = await getMiniSdk();
-  if (sdk?.actions?.composeCast) {
+  if (sdk?.actions?.composeCast && isFarcasterUA()) {
     try {
       await ensureReady();
       await sdk.actions.composeCast({ text, embeds: normalizedEmbeds });
