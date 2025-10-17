@@ -5,14 +5,14 @@ import {
   composeCast,
   buildFarcasterComposeUrl,
   SITE_URL,
-  MINIAPP_URL,
+  MINIAPP_URL,          // make sure this is your Farcaster Mini App URL
   isFarcasterUA,
 } from "@/lib/miniapp";
 import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
   token?: string;   // "$TOBY"
-  siteUrl?: string; // override destination URL for X
+  siteUrl?: string; // optional override for public site (X only)
 };
 
 function formatCompact(n: number): string {
@@ -43,21 +43,21 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Inside Warpcast, prefer the Mini App URL as the embed; else use the public site.
-  const embedForFC = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : site;
+  // Prefer the Farcaster Mini App URL for embeds so the cast opens *inside* Farcaster.
+  // Outside Farcaster, public site is fine.
+  const embedForFC = (MINIAPP_URL && MINIAPP_URL.length > 0) ? MINIAPP_URL : site;
 
-  // Web fallback (used only if native composers aren’t available)
+  // Web fallback to composer (used only if native composers aren’t available)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
 
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Try native composers first (Base MiniKit ➜ Farcaster Mini App SDK)
+    // Try native (MiniKit / Farcaster SDK). If it opens, stay in-app.
     const handled = await composeCast({ text: line, embeds: [embedForFC] });
     if (handled) {
-      // Native composer opened; prevent navigation to web /~/compose
       e.preventDefault();
       return;
     }
-    // Otherwise, allow the <a> to navigate to warpcast.com/~/compose (web)
+    // Otherwise allow navigation to web composer
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
