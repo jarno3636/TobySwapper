@@ -1,4 +1,4 @@
-// lib/miniapp.ts
+// lib/miniapps.ts
 
 /** Farcaster Mini App SDK shape (tolerant to older builds) */
 type MiniAppSdk = {
