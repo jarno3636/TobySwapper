@@ -1,13 +1,7 @@
-// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
-import {
-  composeCast,
-  buildFarcasterComposeUrl,
-  SITE_URL,
-  MINIAPP_URL,
-} from "@/lib/miniapp";
+import { composeCast, buildFarcasterComposeUrl, SITE_URL, MINIAPP_URL } from "@/lib/miniapp";
 import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
@@ -43,27 +37,23 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Always prefer the Farcaster Mini App URL for embeds so taps stay in-app.
-  const embed = (MINIAPP_URL && MINIAPP_URL.length > 0) ? MINIAPP_URL : site;
+  // Always embed the Mini App universal link so taps stay in Farcaster
+  const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
 
-  // Web fallback to composer (used only if native composers aren’t available)
+  // Web fallback (only if native composer isn’t available)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embed] });
 
   const onFarcasterClick = async () => {
-    // Try native (MiniKit / Farcaster SDK). If it opens, we stay in-app.
     const handled = await composeCast({ text: line, embeds: [embed] });
     if (!handled) {
-      // Fallback: route to web composer in the SAME tab (no target=_blank)
+      // Same-tab fallback lets Warpcast/Base handle in-app if possible
       window.location.assign(farcasterWeb);
     }
   };
 
-  // X always points to your public landing (intentionally external)
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
 
-  // Dev guard: surface missing MINIAPP_URL in console (no UX impact)
   if (process.env.NODE_ENV !== "production" && !MINIAPP_URL) {
-    // eslint-disable-next-line no-console
     console.warn("[ShareCallout] NEXT_PUBLIC_FC_MINIAPP_URL is not set; falling back to SITE_URL.");
   }
 
