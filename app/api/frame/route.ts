@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
+import { getSiteUrl, getMiniUrl } from "@/lib/fc";
 
 export async function GET() {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
+  const site = getSiteUrl();
+  const mini = getMiniUrl();
 
   return NextResponse.json(
     {
       version: "next",
       title: "Toby Swapper 🐸",
-      // You can point directly at the static PNG, or keep using the image route.
-      // image: `${site}/og/tobyswap-card-1200x630.png`,
       image: `${site}/api/frame/image`,
       imageAlt: "Swap on Base with 1% auto-burn to $TOBY.",
       buttons: [
-        { label: "Open Toby Swapper", action: { type: "launch_url", url: site } },
+        // IMPORTANT: open inside Farcaster
+        { label: "Open Toby Swapper", action: { type: "launch_url", url: mini } },
         { label: "More 🔥",            action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
