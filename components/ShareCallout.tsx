@@ -1,7 +1,14 @@
+// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
-import { composeCast, buildFarcasterComposeUrl, SITE_URL, MINIAPP_URL } from "@/lib/miniapp";
+import {
+  composeCast,
+  buildFarcasterComposeUrl,
+  SITE_URL,
+  MINIAPP_URL,
+  isFarcasterUA,
+} from "@/lib/miniapp";
 import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
@@ -40,15 +47,21 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   // Always embed the Mini App universal link so taps stay in Farcaster
   const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
 
-  // Web fallback (only if native composer isn’t available)
+  // Web fallback composer URL (works anywhere)
   const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embed] });
 
-  const onFarcasterClick = async () => {
+  const inFC = isFarcasterUA();
+  const target = inFC ? "_self" : "_blank"; // stay in-app on Farcaster, open new tab elsewhere
+
+  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
+    // Try native composer first (MiniKit / Farcaster SDK)
     const handled = await composeCast({ text: line, embeds: [embed] });
-    if (!handled) {
-      // Same-tab fallback lets Warpcast/Base handle in-app if possible
-      window.location.assign(farcasterWeb);
+    if (handled) {
+      e.preventDefault(); // native composer opened; don't navigate
+      return;
     }
+    // Not handled -> allow normal anchor navigation to farcasterWeb (works in dapp browsers)
+    // (No preventDefault here)
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
@@ -59,8 +72,10 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
+      <a
+        href={farcasterWeb}
+        target={target}
+        rel={inFC ? undefined : "noopener noreferrer"}
         onClick={onFarcasterClick}
         className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on Farcaster"
@@ -68,7 +83,7 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
       >
         <span className="text-[#8A63D2]">🌀</span>
         Spread the Lore
-      </button>
+      </a>
 
       <a
         href={xWeb}
