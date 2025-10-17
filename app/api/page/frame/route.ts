@@ -1,8 +1,9 @@
-// app/api/page/frame/route.ts
 import { NextResponse } from "next/server";
+import { getSiteUrl, getMiniUrl } from "@/lib/fc";
 
 export async function GET() {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
+  const site = getSiteUrl();
+  const mini = getMiniUrl();
 
   return NextResponse.json(
     {
@@ -10,8 +11,9 @@ export async function GET() {
       title: "Toby Swapper 🐸",
       image: `${site}/api/frame/image`,
       imageAlt: "Swap on Base with 1% auto-burn to $TOBY.",
+      // IMPORTANT: use the Mini App URL so it opens inside Farcaster
       buttons: [
-        { label: "Enter Toby Swapper", action: { type: "launch_url", url: site } },
+        { label: "Enter Toby Swapper", action: { type: "launch_url", url: mini } },
         { label: "More 🔥",            action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
