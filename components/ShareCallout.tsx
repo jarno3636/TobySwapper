@@ -1,3 +1,4 @@
+// components/ShareCallout.tsx
 "use client";
 
 import * as React from "react";
@@ -5,8 +6,7 @@ import {
   composeCast,
   buildFarcasterComposeUrl,
   SITE_URL,
-  MINIAPP_URL,          // make sure this is your Farcaster Mini App URL
-  isFarcasterUA,
+  MINIAPP_URL,
 } from "@/lib/miniapp";
 import { useBurnTotal } from "@/lib/burn";
 
@@ -43,31 +43,34 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
     [burn, token]
   );
 
-  // Prefer the Farcaster Mini App URL for embeds so the cast opens *inside* Farcaster.
-  // Outside Farcaster, public site is fine.
-  const embedForFC = (MINIAPP_URL && MINIAPP_URL.length > 0) ? MINIAPP_URL : site;
+  // Always prefer the Farcaster Mini App URL for embeds so taps stay in-app.
+  const embed = (MINIAPP_URL && MINIAPP_URL.length > 0) ? MINIAPP_URL : site;
 
   // Web fallback to composer (used only if native composers aren’t available)
-  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embedForFC] });
+  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embed] });
 
-  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Try native (MiniKit / Farcaster SDK). If it opens, stay in-app.
-    const handled = await composeCast({ text: line, embeds: [embedForFC] });
-    if (handled) {
-      e.preventDefault();
-      return;
+  const onFarcasterClick = async () => {
+    // Try native (MiniKit / Farcaster SDK). If it opens, we stay in-app.
+    const handled = await composeCast({ text: line, embeds: [embed] });
+    if (!handled) {
+      // Fallback: route to web composer in the SAME tab (no target=_blank)
+      window.location.assign(farcasterWeb);
     }
-    // Otherwise allow navigation to web composer
   };
 
+  // X always points to your public landing (intentionally external)
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
+
+  // Dev guard: surface missing MINIAPP_URL in console (no UX impact)
+  if (process.env.NODE_ENV !== "production" && !MINIAPP_URL) {
+    // eslint-disable-next-line no-console
+    console.warn("[ShareCallout] NEXT_PUBLIC_FC_MINIAPP_URL is not set; falling back to SITE_URL.");
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a
-        href={farcasterWeb}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        type="button"
         onClick={onFarcasterClick}
         className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on Farcaster"
@@ -75,7 +78,7 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
       >
         <span className="text-[#8A63D2]">🌀</span>
         Spread the Lore
-      </a>
+      </button>
 
       <a
         href={xWeb}
