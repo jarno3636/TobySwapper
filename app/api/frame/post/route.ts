@@ -1,5 +1,5 @@
-// app/api/frame/post/route.ts
 import { NextResponse } from "next/server";
+import { getSiteUrl, getMiniUrl } from "@/lib/fc";
 
 function compact(n: number) {
   if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.00$/, "") + "B";
@@ -22,7 +22,8 @@ async function liveLine(site: string, token = "$TOBY") {
 }
 
 export async function POST(req: Request) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
+  const site = getSiteUrl();
+  const mini = getMiniUrl();
 
   let body: any = {};
   try { body = await req.json(); } catch {}
@@ -30,12 +31,15 @@ export async function POST(req: Request) {
 
   const line = await liveLine(site, "$TOBY");
   const encodedText = encodeURIComponent(line);
+  const encodedMini = encodeURIComponent(mini);
   const encodedSite = encodeURIComponent(site);
 
-  const farcasterHref = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedSite}`;
+  // For Farcaster composer, EMBED THE MINI APP URL
+  const farcasterHref = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedMini}`;
   const xHref         = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedSite}`;
 
   if (idx === 1) {
+    // “Spread the Lore” page — opens composer *inside* Farcaster
     return NextResponse.json(
       {
         version: "next",
@@ -70,6 +74,7 @@ export async function POST(req: Request) {
   }
 
   if (idx === 4) {
+    // “More 🔥” — keep both primary actions inside Farcaster
     return NextResponse.json(
       {
         version: "next",
@@ -77,7 +82,8 @@ export async function POST(req: Request) {
         image: `${site}/api/frame/image`,
         imageAlt: "Keep the flames going — swap & burn to $TOBY.",
         buttons: [
-          { label: "Swap Now",        action: { type: "launch_url", url: site } },
+          // IMPORTANT: use Mini App URL so it opens in-app
+          { label: "Swap Now",        action: { type: "launch_url", url: mini } },
           { label: "Spread the Lore", action: { type: "launch_url", url: farcasterHref } },
           { label: "⬅️ Back",         action: "post" },
         ],
@@ -87,6 +93,7 @@ export async function POST(req: Request) {
     );
   }
 
+  // Default page
   return NextResponse.json(
     {
       version: "next",
@@ -96,7 +103,8 @@ export async function POST(req: Request) {
       buttons: [
         { label: "Spread the Lore",   action: "post" },
         { label: "Share to X",        action: "post" },
-        { label: "Open Toby Swapper", action: { type: "launch_url", url: site } },
+        // IMPORTANT: open the Mini App in Farcaster, not the public site
+        { label: "Open Toby Swapper", action: { type: "launch_url", url: mini } },
         { label: "More 🔥",           action: "post" },
       ],
       postUrl: `${site}/api/frame/post`,
