@@ -11,7 +11,9 @@ type MiniAppSdk = {
   isInMiniApp?: () => boolean;
 };
 
-/* ---------------- Env helpers ---------------- */
+/* =========================
+ * Env helpers
+ * ========================= */
 
 export const SITE_URL =
   (typeof process !== "undefined" && (process as any).env?.NEXT_PUBLIC_SITE_URL) ||
@@ -21,7 +23,9 @@ export const MINIAPP_URL =
   (typeof process !== "undefined" && (process as any).env?.NEXT_PUBLIC_FC_MINIAPP_URL) ||
   "";
 
-/* ---------------- UA heuristics ---------------- */
+/* =========================
+ * UA heuristics (fallback only)
+ * ========================= */
 
 export function isFarcasterUA(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -36,7 +40,9 @@ export function isBaseAppUA(): boolean {
   );
 }
 
-/* ---------------- URL helpers ---------------- */
+/* =========================
+ * URL helpers
+ * ========================= */
 
 function toAbsoluteUrl(input: string, base = SITE_URL): string {
   try {
@@ -50,12 +56,12 @@ function toAbsoluteUrl(input: string, base = SITE_URL): string {
   }
 }
 
-/** Always prefer the Mini App URL for embeds (keeps users inside Farcaster). */
+/** Prefer Mini App base when available */
 function preferMiniBase(): string {
   return MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : SITE_URL;
 }
 
-/** Prefer Mini App URL inside Warpcast; else normal site (absolute). */
+/** Prefer Mini App URL inside Warpcast; else normal site */
 export function fcPreferMini(pathOrAbs = ""): string {
   const base = isFarcasterUA() && MINIAPP_URL ? MINIAPP_URL : SITE_URL;
   const absBase = toAbsoluteUrl(base);
@@ -65,7 +71,9 @@ export function fcPreferMini(pathOrAbs = ""): string {
   return `${absBase}${sep}${pathOrAbs}`;
 }
 
-/* ---------------- Farcaster composer helpers ---------------- */
+/* =========================
+ * Farcaster web composer
+ * ========================= */
 
 export function buildFarcasterComposeUrl({
   text = "",
@@ -77,48 +85,40 @@ export function buildFarcasterComposeUrl({
   const url = new URL("https://warpcast.com/~/compose");
   if (text) url.searchParams.set("text", text);
 
-  // Normalize embed URLs to the Mini App base so casts open in-app
   const miniBase = preferMiniBase();
-  for (const e of embeds || []) {
+  for (const e of embeds) {
     const abs = e ? toAbsoluteUrl(e, miniBase) : "";
     if (abs) url.searchParams.append("embeds[]", abs);
   }
+
   return url.toString();
 }
 
-/* ---------------- SDK loaders ---------------- */
+/* =========================
+ * SDK loaders
+ * ========================= */
 
 export async function getMiniSdk(): Promise<MiniAppSdk | null> {
   if (typeof window === "undefined") return null;
+
   try {
     const mod = (await import("@farcaster/miniapp-sdk")) as {
       sdk?: MiniAppSdk;
       default?: MiniAppSdk;
     };
-    const fromModule = mod?.sdk ?? mod?.default;
-    if (fromModule) return fromModule;
-    const g = window as any;
-    return g?.farcaster?.miniapp?.sdk || g?.sdk || null;
+    return mod?.sdk ?? mod?.default ?? null;
   } catch {
     const g = window as any;
     return g?.farcaster?.miniapp?.sdk || g?.sdk || null;
   }
 }
 
-/** Async signal from SDK; more reliable than UA sniffing. */
-export async function isInFarcasterMini(): Promise<boolean> {
-  try {
-    const sdk = await getMiniSdk();
-    if (typeof sdk?.isInMiniApp === "function") return !!sdk.isInMiniApp();
-  } catch {}
-  return isFarcasterUA(); // fallback if SDK unavailable
-}
-
-/** Call sdk.actions.ready() quickly so we never hang splash */
+/** Fire ready() quickly so Mini App splash never hangs */
 export async function ensureReady(timeoutMs = 1200): Promise<void> {
   try {
     const sdk = await getMiniSdk();
     if (!sdk?.actions?.ready) return;
+
     await Promise.race<void>([
       Promise.resolve(sdk.actions.ready()),
       new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
@@ -126,7 +126,9 @@ export async function ensureReady(timeoutMs = 1200): Promise<void> {
   } catch {}
 }
 
-/* ===================== Base App (MiniKit globals) ===================== */
+/* =========================
+ * Base App (MiniKit globals)
+ * ========================= */
 
 function getMiniKit(): any | null {
   if (typeof window === "undefined") return null;
@@ -146,10 +148,12 @@ async function tryBaseComposeCast(args: { text?: string; embeds?: string[] }) {
   return false;
 }
 
-/** Try to open a URL natively (Base MiniKit ➜ Farcaster SDK), else let caller fall back to web */
+/* =========================
+ * Open URL natively when possible
+ * ========================= */
+
 export async function openInMini(url: string): Promise<boolean> {
   if (!url) return false;
-  // Prefer the mini base so in-app opens land on the Mini App
   const safe = toAbsoluteUrl(url, preferMiniBase());
 
   // 1) Base App MiniKit
@@ -165,7 +169,7 @@ export async function openInMini(url: string): Promise<boolean> {
     }
   } catch {}
 
-  // 2) Farcaster Mini App SDK (Warpcast)
+  // 2) Warpcast Mini App SDK
   try {
     const sdk = await getMiniSdk();
     if (sdk?.actions?.openUrl) {
@@ -173,7 +177,6 @@ export async function openInMini(url: string): Promise<boolean> {
         await sdk.actions.openUrl(safe);
         return true;
       } catch {
-        // Some builds expect an object
         await (sdk.actions.openUrl as any)({ url: safe });
         return true;
       }
@@ -184,30 +187,34 @@ export async function openInMini(url: string): Promise<boolean> {
     }
   } catch {}
 
-  // 3) Not handled
   return false;
 }
 
+/* =========================
+ * Unified composeCast
+ * ========================= */
+
 /**
- * Unified compose helper:
+ * Order:
  * 1) Base App (MiniKit.composeCast)
  * 2) Warpcast Mini App SDK (sdk.actions.composeCast)
- * 3) Fail -> caller should open web /~/compose
- *
- * Embeds are normalized to the Mini App base to ensure taps open inside Farcaster.
+ * 3) Caller falls back to web /~/compose
  */
 export async function composeCast({
   text = "",
   embeds = [] as string[],
 } = {}): Promise<boolean> {
   const base = preferMiniBase();
-  const normalizedEmbeds = (embeds || []).map((e) => toAbsoluteUrl(e, base));
+  const normalizedEmbeds = embeds.map((e) => toAbsoluteUrl(e, base));
 
-  if (await tryBaseComposeCast({ text, embeds: normalizedEmbeds })) return true;
+  // 1) Base App
+  if (await tryBaseComposeCast({ text, embeds: normalizedEmbeds })) {
+    return true;
+  }
 
+  // 2) Warpcast Mini App (do NOT gate on isInMini)
   const sdk = await getMiniSdk();
-  const inMini = await isInFarcasterMini();
-  if (sdk?.actions?.composeCast && inMini) {
+  if (sdk?.actions?.composeCast) {
     try {
       await ensureReady();
       await sdk.actions.composeCast({ text, embeds: normalizedEmbeds });
@@ -215,5 +222,6 @@ export async function composeCast({
     } catch {}
   }
 
+  // 3) Not handled
   return false;
 }
