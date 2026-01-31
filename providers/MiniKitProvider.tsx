@@ -1,6 +1,6 @@
 "use client";
 
-import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
+import { MiniKitProvider } from "@coinbase/onchainkit";
 import { ReactNode } from "react";
 import { base } from "wagmi/chains";
 
