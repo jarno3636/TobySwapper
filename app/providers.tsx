@@ -14,7 +14,6 @@ import {
 import { base } from "viem/chains";
 import { wagmiConfig } from "@/lib/wallet";
 
-import { MiniKitContextProvider } from "../providers/MiniKitProvider";
 import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
 import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
 
@@ -102,24 +101,22 @@ export default function Providers({ children }: { children: ReactNode }) {
   const theme = useMemo(() => rkTheme, []);
 
   return (
-    <MiniKitContextProvider>
-      <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={wagmiConfig}>
-          <AutoReconnect />
-          <RainbowKitProvider
-            theme={theme}
-            initialChain={base}
-            modalSize="compact"
-            appInfo={{ appName: "TobySwapper" }}
-          >
-            {/* Mini App bootstrapping */}
-            <FarcasterMiniBridge />
-            <FarcasterMiniAutoConnect />
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        <AutoReconnect />
+        <RainbowKitProvider
+          theme={theme}
+          initialChain={base}
+          modalSize="compact"
+          appInfo={{ appName: "TobySwapper" }}
+        >
+          {/* Mini App bootstrapping */}
+          <FarcasterMiniBridge />
+          <FarcasterMiniAutoConnect />
 
-            <ChainGate>{children}</ChainGate>
-          </RainbowKitProvider>
-        </WagmiProvider>
-      </QueryClientProvider>
-    </MiniKitContextProvider>
+          <ChainGate>{children}</ChainGate>
+        </RainbowKitProvider>
+      </WagmiProvider>
+    </QueryClientProvider>
   );
 }
