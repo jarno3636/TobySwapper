@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { ensureReady } from "@/lib/miniapp";
+import { ensureReady } from "@/lib/miniapps";
 
 export default function FarcasterMiniBridge() {
   useEffect(() => {
