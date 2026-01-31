@@ -8,7 +8,7 @@ import {
   SITE_URL,
   MINIAPP_URL,
   isFarcasterUA,
-} from "@/lib/miniapp";
+} from "@/lib/miniapps";
 import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
