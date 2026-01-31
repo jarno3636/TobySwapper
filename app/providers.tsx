@@ -14,7 +14,7 @@ import {
 import { base } from "viem/chains";
 import { wagmiConfig } from "@/lib/wallet";
 
-import { MiniKitContextProvider } from "@/providers/MiniKitProvider";
+import { MiniKitContextProvider } from "../providers/MiniKitProvider";
 import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
 import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
 
