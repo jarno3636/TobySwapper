@@ -7,7 +7,6 @@ import {
   buildFarcasterComposeUrl,
   SITE_URL,
   MINIAPP_URL,
-  isFarcasterUA,
 } from "@/lib/miniapps";
 import { useBurnTotal } from "@/lib/burn";
 
@@ -40,7 +39,6 @@ function getRandomLead() {
 
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
   const { data: burnRaw } = useBurnTotal();
-  const inFC = isFarcasterUA();
 
   const burn = React.useMemo(() => {
     if (!burnRaw) return null;
@@ -49,7 +47,6 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   }, [burnRaw]);
 
   const site = siteUrl || SITE_URL;
-  const shareLanding = `${SITE_URL}/share`;
   const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
 
   const buildLine = React.useCallback(() => {
@@ -62,27 +59,30 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   const onFarcasterClick = async () => {
     const text = buildLine();
 
-    // 1️⃣ Try native Mini App composer (Base App / Farcaster)
-    const handled = await composeCast({
+    // 1️⃣ Try native Mini App / SDK compose
+    try {
+      const handled = await composeCast({
+        text,
+        embeds: [embed],
+      });
+
+      if (handled) return;
+    } catch {
+      // swallow and fall through
+    }
+
+    // 2️⃣ ALWAYS fallback to web composer
+    const url = buildFarcasterComposeUrl({
       text,
       embeds: [embed],
     });
 
-    if (handled) return;
-
-    // 2️⃣ Fallback ONLY when not inside Farcaster
-    if (!inFC) {
-      const url = buildFarcasterComposeUrl({
-        text,
-        embeds: [embed],
-      });
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
     buildLine()
-  )}&url=${encodeURIComponent(shareLanding)}`;
+  )}&url=${encodeURIComponent(`${SITE_URL}/share`)}`;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
