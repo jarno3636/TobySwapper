@@ -12,8 +12,8 @@ import {
 import { useBurnTotal } from "@/lib/burn";
 
 type ShareCalloutProps = {
-  token?: string;   // "$TOBY"
-  siteUrl?: string; // optional override for public site (X only)
+  token?: string;
+  siteUrl?: string;
 };
 
 function formatCompact(n: number): string {
@@ -24,13 +24,7 @@ function formatCompact(n: number): string {
   return String(n);
 }
 
-/**
- * Creative message pool.
- * IMPORTANT:
- *  - Do NOT include burn count here
- *  - Do NOT include the final 🔥 line
- */
-function getRandomLead(token: string) {
+function getRandomLead() {
   const messages = [
     `Swap. Burn. Spread the lore 🐸`,
     `What better way to spread the lore than a burn?`,
@@ -41,12 +35,12 @@ function getRandomLead(token: string) {
     `The chain remembers every burn.`,
     `A ritual on Base — swap and let it burn.`,
   ];
-
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
   const { data: burnRaw } = useBurnTotal();
+  const inFC = isFarcasterUA();
 
   const burn = React.useMemo(() => {
     if (!burnRaw) return null;
@@ -56,63 +50,45 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
 
   const site = siteUrl || SITE_URL;
   const shareLanding = `${SITE_URL}/share`;
+  const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
 
-  /**
-   * Build the share line.
-   * ALWAYS ends with:
-   *   Burn Counter is at X 🔥
-   */
-  const line = React.useMemo(() => {
+  const buildLine = React.useCallback(() => {
     if (!burn) {
       return `Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
     }
-
-    const lead = getRandomLead(token);
-    return `${lead}\n\nBurn Counter is at ${burn} 🔥`;
+    return `${getRandomLead()}\n\nBurn Counter is at ${burn} 🔥`;
   }, [burn, token]);
 
-  // Always embed Mini App universal link so taps stay in Farcaster / Base App
-  const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
+  const onFarcasterClick = async () => {
+    const text = buildLine();
 
-  // Web fallback composer URL
-  const farcasterWeb = buildFarcasterComposeUrl({
-    text: line,
-    embeds: [embed],
-  });
-
-  const inFC = isFarcasterUA();
-  const target = inFC ? "_self" : "_blank";
-
-  const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
-    // Try native composer first (MiniKit / Farcaster SDK)
+    // 1️⃣ Try native Mini App composer (Base App / Farcaster)
     const handled = await composeCast({
-      text: line,
+      text,
       embeds: [embed],
     });
 
-    if (handled) {
-      e.preventDefault();
-      return;
+    if (handled) return;
+
+    // 2️⃣ Fallback ONLY when not inside Farcaster
+    if (!inFC) {
+      const url = buildFarcasterComposeUrl({
+        text,
+        embeds: [embed],
+      });
+      window.open(url, "_blank", "noopener,noreferrer");
     }
-    // otherwise fall through to web composer
   };
 
   const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    line
+    buildLine()
   )}&url=${encodeURIComponent(shareLanding)}`;
-
-  if (process.env.NODE_ENV !== "production" && !MINIAPP_URL) {
-    console.warn(
-      "[ShareCallout] NEXT_PUBLIC_FC_MINIAPP_URL is not set; falling back to SITE_URL."
-    );
-  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a
-        href={farcasterWeb}
-        target={target}
-        rel={inFC ? undefined : "noopener noreferrer"}
+      {/* FARCASTER / BASE APP SHARE */}
+      <button
+        type="button"
         onClick={onFarcasterClick}
         className="pill pill-opaque hover:opacity-90 text-xs flex items-center gap-1"
         title="Share on Farcaster"
@@ -120,8 +96,9 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
       >
         <span className="text-[#8A63D2]">🌀</span>
         Spread the Lore
-      </a>
+      </button>
 
+      {/* X SHARE */}
       <a
         href={xWeb}
         target="_blank"
