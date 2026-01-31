@@ -24,6 +24,27 @@ function formatCompact(n: number): string {
   return String(n);
 }
 
+/**
+ * Creative message pool.
+ * IMPORTANT:
+ *  - Do NOT include burn count here
+ *  - Do NOT include the final 🔥 line
+ */
+function getRandomLead(token: string) {
+  const messages = [
+    `Swap. Burn. Spread the lore 🐸`,
+    `What better way to spread the lore than a burn?`,
+    `On Base, every swap leaves a mark.`,
+    `Lore travels fastest when it burns.`,
+    `Small swap. Big story.`,
+    `Fuel the legend. Let it burn.`,
+    `The chain remembers every burn.`,
+    `A ritual on Base — swap and let it burn.`,
+  ];
+
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutProps) {
   const { data: burnRaw } = useBurnTotal();
 
@@ -36,38 +57,54 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
   const site = siteUrl || SITE_URL;
   const shareLanding = `${SITE_URL}/share`;
 
-  const line = React.useMemo(
-    () =>
-      burn
-        ? `🔥 I just helped burn ${burn} ${token}. Swap → burn → spread the lore 🐸`
-        : `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`,
-    [burn, token]
-  );
+  /**
+   * Build the share line.
+   * ALWAYS ends with:
+   *   Burn Counter is at X 🔥
+   */
+  const line = React.useMemo(() => {
+    if (!burn) {
+      return `Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
+    }
 
-  // Always embed the Mini App universal link so taps stay in Farcaster
+    const lead = getRandomLead(token);
+    return `${lead}\n\nBurn Counter is at ${burn} 🔥`;
+  }, [burn, token]);
+
+  // Always embed Mini App universal link so taps stay in Farcaster / Base App
   const embed = MINIAPP_URL && MINIAPP_URL.length > 0 ? MINIAPP_URL : site;
 
-  // Web fallback composer URL (works anywhere)
-  const farcasterWeb = buildFarcasterComposeUrl({ text: line, embeds: [embed] });
+  // Web fallback composer URL
+  const farcasterWeb = buildFarcasterComposeUrl({
+    text: line,
+    embeds: [embed],
+  });
 
   const inFC = isFarcasterUA();
-  const target = inFC ? "_self" : "_blank"; // stay in-app on Farcaster, open new tab elsewhere
+  const target = inFC ? "_self" : "_blank";
 
   const onFarcasterClick: React.MouseEventHandler<HTMLAnchorElement> = async (e) => {
     // Try native composer first (MiniKit / Farcaster SDK)
-    const handled = await composeCast({ text: line, embeds: [embed] });
+    const handled = await composeCast({
+      text: line,
+      embeds: [embed],
+    });
+
     if (handled) {
-      e.preventDefault(); // native composer opened; don't navigate
+      e.preventDefault();
       return;
     }
-    // Not handled -> allow normal anchor navigation to farcasterWeb (works in dapp browsers)
-    // (No preventDefault here)
+    // otherwise fall through to web composer
   };
 
-  const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(line)}&url=${encodeURIComponent(shareLanding)}`;
+  const xWeb = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    line
+  )}&url=${encodeURIComponent(shareLanding)}`;
 
   if (process.env.NODE_ENV !== "production" && !MINIAPP_URL) {
-    console.warn("[ShareCallout] NEXT_PUBLIC_FC_MINIAPP_URL is not set; falling back to SITE_URL.");
+    console.warn(
+      "[ShareCallout] NEXT_PUBLIC_FC_MINIAPP_URL is not set; falling back to SITE_URL."
+    );
   }
 
   return (
@@ -97,7 +134,11 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
         Share to X
       </a>
 
-      {burn && <span className="text-[10px] opacity-70 ml-1">live burned: {burn}</span>}
+      {burn && (
+        <span className="text-[10px] opacity-70 ml-1">
+          Burn Counter: {burn}
+        </span>
+      )}
     </div>
   );
 }
