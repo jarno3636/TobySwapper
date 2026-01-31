@@ -1,4 +1,3 @@
-// app/providers.tsx
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
@@ -14,10 +13,13 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { base } from "viem/chains";
 import { wagmiConfig } from "@/lib/wallet";
+
+import { MiniKitContextProvider } from "@/providers/MiniKitProvider";
 import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
 import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
 
-/* React Query */
+/* ---------------- React Query ---------------- */
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -30,15 +32,17 @@ const queryClient = new QueryClient({
   },
 });
 
-/* Theme */
+/* ---------------- RainbowKit Theme ---------------- */
+
 const rkTheme = darkTheme({
-  accentColor: "#79ffe1",          // match your --accent
-  accentColorForeground: "#0a0b12",// on-accent
+  accentColor: "#79ffe1",
+  accentColorForeground: "#0a0b12",
   borderRadius: "large",
   overlayBlur: "small",
 });
 
-/** Reconnect last-used connector on first mount (replaces config.autoConnect) */
+/* ---------------- Auto reconnect ---------------- */
+
 function AutoReconnect() {
   const { reconnect } = useReconnect();
   useEffect(() => {
@@ -47,7 +51,8 @@ function AutoReconnect() {
   return null;
 }
 
-/* Optional: soft Base gate toast */
+/* ---------------- Base chain soft gate ---------------- */
+
 function ChainGate({ children }: { children: ReactNode }) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -91,25 +96,30 @@ function ChainGate({ children }: { children: ReactNode }) {
   );
 }
 
+/* ---------------- ROOT PROVIDERS ---------------- */
+
 export default function Providers({ children }: { children: ReactNode }) {
   const theme = useMemo(() => rkTheme, []);
-  return (
-    <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={wagmiConfig}>
-        <AutoReconnect />
-        <RainbowKitProvider
-          theme={theme}
-          initialChain={base}
-          modalSize="compact"
-          appInfo={{ appName: "TobySwapper" }}
-        >
-          {/* ✅ Farcaster Mini support */}
-          <FarcasterMiniBridge />
-          <FarcasterMiniAutoConnect />
 
-          <ChainGate>{children}</ChainGate>
-        </RainbowKitProvider>
-      </WagmiProvider>
-    </QueryClientProvider>
+  return (
+    <MiniKitContextProvider>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
+          <AutoReconnect />
+          <RainbowKitProvider
+            theme={theme}
+            initialChain={base}
+            modalSize="compact"
+            appInfo={{ appName: "TobySwapper" }}
+          >
+            {/* Mini App bootstrapping */}
+            <FarcasterMiniBridge />
+            <FarcasterMiniAutoConnect />
+
+            <ChainGate>{children}</ChainGate>
+          </RainbowKitProvider>
+        </WagmiProvider>
+      </QueryClientProvider>
+    </MiniKitContextProvider>
   );
 }
