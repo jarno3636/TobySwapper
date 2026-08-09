@@ -2,7 +2,9 @@
   "name": "toby-swapper",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=18.18 <23" },
+  "engines": {
+    "node": ">=18.18 <23"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -11,7 +13,6 @@
     "format": "prettier --cache --write ."
   },
   "dependencies": {
-    "@coinbase/onchainkit": "0.33.3",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@rainbow-me/rainbowkit": "2.2.1",
