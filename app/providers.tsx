@@ -16,6 +16,7 @@ import { wagmiConfig } from "@/lib/wallet";
 
 import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
 import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
+import FarcasterProfileMemory from "@/components/FarcasterProfileMemory";
 
 /* ---------------- React Query ---------------- */
 
@@ -113,6 +114,7 @@ export default function Providers({ children }: { children: ReactNode }) {
           {/* Mini App bootstrapping */}
           <FarcasterMiniBridge />
           <FarcasterMiniAutoConnect />
+          <FarcasterProfileMemory />
 
           <ChainGate>{children}</ChainGate>
         </RainbowKitProvider>
