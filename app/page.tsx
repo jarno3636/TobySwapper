@@ -33,6 +33,12 @@ export default function Page() {
             <span className="hero-status hero-status-red">PATIENCE</span>
             <span className="hero-status hero-status-green">TABOSHI</span>
             <span className="hero-status hero-status-cyan">TOBY</span>
+            <span className="hero-status hero-status-weth">WETH routes</span>
+          </div>
+          <div className="hero-cta-deck">
+            <a href="#swap" className="hero-cta hero-cta-primary"><span>↔</span><strong>Start a swap</strong><small>Find the best pond route</small></a>
+            <a href="/burners" className="hero-cta hero-cta-fire"><span>🔥</span><strong>Climb the Burners</strong><small>See your onchain rank</small></a>
+            <a href="https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas" className="hero-cta hero-cta-world"><span>◎</span><strong>Open the Atlas</strong><small>Explore Tobyworld</small></a>
           </div>
         </section>
 
