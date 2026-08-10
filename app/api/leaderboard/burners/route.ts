@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import {
-  createPublicClient,
+  decodeAbiParameters,
   formatUnits,
   getAddress,
-  http,
+  hexToBigInt,
   isAddress,
-  parseAbiItem,
+  keccak256,
+  stringToHex,
   type Address,
+  type Hex,
 } from "viem";
-import { base } from "viem/chains";
 import { SWAPPER } from "@/lib/addresses";
 import { burnerTitleForRank } from "@/lib/burnerRanks";
 import { hasSupabaseServerEnv, supabaseRest, supabaseRpc } from "@/lib/supabase/rest";
@@ -17,9 +18,26 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEPLOYMENT_SCAN_BLOCK = BigInt(process.env.TOBYSWAP_DEPLOYMENT_BLOCK || "36000000");
-const SWAP_SUMMARY = parseAbiItem(
-  "event SwapSummary(address indexed user, address indexed recipient, address indexed tokenIn, address tokenOut, uint256 amountIn, uint256 mainOutMin, uint256 feeBpsApplied, uint256 tobyBurned)",
+const SWAP_SUMMARY_TOPIC = keccak256(
+  stringToHex("SwapSummary(address,address,address,address,uint256,uint256,uint256,uint256)"),
 );
+
+const SWAP_SUMMARY_DATA = [
+  { type: "address" },
+  { type: "uint256" },
+  { type: "uint256" },
+  { type: "uint256" },
+  { type: "uint256" },
+] as const;
+
+type RpcLog = {
+  address: Address;
+  topics: Hex[];
+  data: Hex;
+  blockNumber: Hex;
+  transactionHash: Hex;
+  logIndex: Hex;
+};
 
 type SwapLog = {
   args?: { user?: Address; tobyBurned?: bigint };
@@ -56,58 +74,140 @@ type SummaryRow = {
   total_burned_raw: string | number | null;
 };
 
-function rpcUrl() {
-  if (process.env.ALCHEMY_API_KEY) {
-    return `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
-  }
-  return process.env.BASE_RPC_URL || "https://mainnet.base.org";
+type JsonRpcEnvelope<T> = {
+  jsonrpc?: string;
+  id?: number | string;
+  result?: T;
+  error?: { code?: number; message?: string; data?: unknown };
+};
+
+function normalizeRpcCandidate(value?: string) {
+  const clean = value?.trim();
+  if (!clean) return undefined;
+  if (/^https?:\/\//i.test(clean)) return clean;
+  return undefined;
 }
 
-const client = createPublicClient({
-  chain: base,
-  transport: http(rpcUrl(), { timeout: 14_000, retryCount: 2 }),
-});
+function rpcEndpoints() {
+  const alchemyRaw = process.env.ALCHEMY_API_KEY?.trim();
+  const alchemy = alchemyRaw
+    ? /^https?:\/\//i.test(alchemyRaw)
+      ? alchemyRaw
+      : `https://base-mainnet.g.alchemy.com/v2/${alchemyRaw}`
+    : undefined;
+
+  return Array.from(
+    new Set(
+      [
+        alchemy,
+        normalizeRpcCandidate(process.env.BASE_RPC_URL),
+        "https://mainnet.base.org",
+        "https://base-rpc.publicnode.com",
+        "https://1rpc.io/base",
+      ].filter((value): value is string => Boolean(value)),
+    ),
+  );
+}
+
+function hexBlock(value: bigint) {
+  return `0x${value.toString(16)}` as Hex;
+}
+
+async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
+  const errors: string[] = [];
+
+  for (const endpoint of rpcEndpoints()) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      const text = await response.text();
+      let payload: JsonRpcEnvelope<T>;
+      try {
+        payload = JSON.parse(text) as JsonRpcEnvelope<T>;
+      } catch {
+        throw new Error(`HTTP ${response.status}: ${text.slice(0, 160) || "non-JSON RPC response"}`);
+      }
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${payload.error?.message || response.statusText}`);
+      if (payload.error) throw new Error(payload.error.message || `RPC ${payload.error.code || "error"}`);
+      if (!("result" in payload)) throw new Error("RPC response did not include a result");
+      return payload.result as T;
+    } catch (error: any) {
+      const host = (() => { try { return new URL(endpoint).host; } catch { return "rpc"; } })();
+      errors.push(`${host}: ${error?.message || String(error)}`);
+    }
+  }
+
+  throw new Error(`All Base RPC endpoints failed. ${errors.join(" | ").slice(0, 900)}`);
+}
+
+async function getLatestBlockNumber() {
+  const result = await rpcCall<Hex>("eth_blockNumber", []);
+  return hexToBigInt(result);
+}
+
+function parseSwapLog(log: RpcLog): SwapLog | null {
+  if (!log.topics?.[1] || !log.data) return null;
+  try {
+    const user = getAddress(`0x${log.topics[1].slice(-40)}`);
+    const decoded = decodeAbiParameters(SWAP_SUMMARY_DATA, log.data);
+    const tobyBurned = decoded[4] as bigint;
+    return {
+      args: { user, tobyBurned },
+      blockNumber: log.blockNumber ? hexToBigInt(log.blockNumber) : null,
+      transactionHash: log.transactionHash as `0x${string}`,
+      logIndex: log.logIndex ? Number(hexToBigInt(log.logIndex)) : null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 async function getLogsRange(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
-  const logs = await client.getLogs({
-    address: SWAPPER,
-    event: SWAP_SUMMARY,
-    fromBlock,
-    toBlock,
-    strict: true,
-  });
-  return logs as unknown as SwapLog[];
+  const logs = await rpcCall<RpcLog[]>("eth_getLogs", [
+    {
+      address: SWAPPER,
+      topics: [SWAP_SUMMARY_TOPIC],
+      fromBlock: hexBlock(fromBlock),
+      toBlock: hexBlock(toBlock),
+    },
+  ]);
+  return logs.map(parseSwapLog).filter((log): log is SwapLog => Boolean(log));
 }
 
 async function getAllSwapSummaryLogs(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
   if (fromBlock > toBlock) return [];
 
-  try {
-    return await getLogsRange(fromBlock, toBlock);
-  } catch {
-    const out: SwapLog[] = [];
-    const queue: Array<[bigint, bigint]> = [];
-    const initialSpan = 1_000_000n;
+  // Small fixed windows are accepted by public Base RPCs and avoid enormous
+  // eth_getLogs payloads. If a provider is stricter, bisect until it succeeds.
+  const out: SwapLog[] = [];
+  const queue: Array<[bigint, bigint]> = [];
+  const initialSpan = 50_000n;
 
-    for (let start = fromBlock; start <= toBlock; start += initialSpan) {
-      const end = start + initialSpan - 1n > toBlock ? toBlock : start + initialSpan - 1n;
-      queue.push([start, end]);
-    }
-
-    while (queue.length) {
-      const [start, end] = queue.shift()!;
-      try {
-        out.push(...(await getLogsRange(start, end)));
-      } catch (error) {
-        const span = end - start + 1n;
-        if (span <= 10_000n) throw error;
-        const mid = start + span / 2n - 1n;
-        queue.unshift([mid + 1n, end], [start, mid]);
-      }
-    }
-
-    return out;
+  for (let start = fromBlock; start <= toBlock; start += initialSpan) {
+    const end = start + initialSpan - 1n > toBlock ? toBlock : start + initialSpan - 1n;
+    queue.push([start, end]);
   }
+
+  while (queue.length) {
+    const [start, end] = queue.shift()!;
+    try {
+      out.push(...(await getLogsRange(start, end)));
+    } catch (error) {
+      const span = end - start + 1n;
+      if (span <= 1_000n) throw error;
+      const mid = start + span / 2n - 1n;
+      queue.unshift([mid + 1n, end], [start, mid]);
+    }
+  }
+
+  return out;
 }
 
 function normalizeStoredRow(row: StoredLeaderboardRow) {
@@ -166,9 +266,7 @@ async function syncIntoSupabase(latestBlock: bigint) {
     });
   }
 
-  if (rows.length > 0 || !state[0]) {
-    await supabaseRpc("refresh_tobyswap_burner_stats");
-  }
+  if (rows.length > 0 || !state[0]) await supabaseRpc("refresh_tobyswap_burner_stats");
 
   await supabaseRest("tobyswap_sync_state?on_conflict=id", {
     method: "POST",
@@ -267,7 +365,11 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const viewerAddress = url.searchParams.get("address") || undefined;
-    const latestBlock = await client.getBlockNumber();
+    const latestBlock = await getLatestBlockNumber();
+
+    if (latestBlock < DEPLOYMENT_SCAN_BLOCK) {
+      throw new Error(`Configured deployment block ${DEPLOYMENT_SCAN_BLOCK} is ahead of Base head ${latestBlock}. Check TOBYSWAP_DEPLOYMENT_BLOCK.`);
+    }
 
     if (hasSupabaseServerEnv()) {
       try {
@@ -276,7 +378,7 @@ export async function GET(request: Request) {
         return NextResponse.json(
           {
             ok: true,
-            source: "Base + persistent Supabase index",
+            source: "Base RPC + persistent Supabase index",
             contract: SWAPPER,
             fromBlock: DEPLOYMENT_SCAN_BLOCK.toString(),
             toBlock: latestBlock.toString(),
@@ -298,7 +400,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: true,
-        source: "Base logs (live fallback)",
+        source: "Base RPC logs (live fallback)",
         contract: SWAPPER,
         fromBlock: DEPLOYMENT_SCAN_BLOCK.toString(),
         toBlock: latestBlock.toString(),
@@ -309,8 +411,13 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=180" } },
     );
   } catch (error: any) {
+    console.error("Burner leaderboard failed", error);
     return NextResponse.json(
-      { ok: false, error: error?.shortMessage || error?.message || "Unable to read burn events" },
+      {
+        ok: false,
+        error: error?.message || "Unable to read burn events",
+        hint: "TobySwap tried multiple Base RPC providers. Check BASE_RPC_URL/ALCHEMY_API_KEY and TOBYSWAP_DEPLOYMENT_BLOCK if this persists.",
+      },
       { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
