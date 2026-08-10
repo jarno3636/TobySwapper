@@ -232,12 +232,12 @@ export default function WalletPillInner() {
         aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
         disabled={connecting}
       >
-        {isConnected && farcaster?.pfpUrl ? (
+        {isConnected ? (
           <img
-            src={farcaster.pfpUrl}
+            src={farcaster?.pfpUrl || "/tokens/toby.PNG"}
             alt=""
             aria-hidden="true"
-            className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm"
+            className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm bg-white"
             referrerPolicy="no-referrer"
           />
         ) : (

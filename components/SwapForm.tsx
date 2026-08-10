@@ -22,6 +22,7 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import { useInvalidateBurnTotal } from "@/lib/burn";
+import { getMiniSdk, isInFarcasterMiniApp } from "@/lib/miniapps";
 
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
@@ -126,6 +127,11 @@ function byAddress(addr?: Address | "ETH") {
   return t
     ? { symbol: t.symbol, decimals: (t.decimals ?? 18) as 18 | 6, address: t.address as Address }
     : { symbol: "TOKEN", decimals: 18 as const, address: addr as Address };
+}
+
+function toCaip19(token: TokenChoice): string {
+  if (token === "ETH") return "eip155:8453/native";
+  return `eip155:8453/erc20:${getAddress(token as Address)}`;
 }
 
 function encodeV3Path(tokens: Address[], fees: number[]): `0x${string}` {
@@ -555,6 +561,27 @@ export default function SwapForm() {
 
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
+  const [nativeSwapBusy, setNativeSwapBusy] = useState(false);
+  const [nativeSwapAvailable, setNativeSwapAvailable] = useState<boolean | null>(null);
+  const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const inMini = await isInFarcasterMiniApp();
+        if (!inMini) {
+          if (!cancelled) setNativeSwapAvailable(false);
+          return;
+        }
+        const sdk = await getMiniSdk();
+        if (!cancelled) setNativeSwapAvailable(typeof (sdk as any)?.actions?.swapToken === "function");
+      } catch {
+        if (!cancelled) setNativeSwapAvailable(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function feePathForExecution(actualIn: Address) {
     return buildFeePathFor(actualIn);
@@ -564,6 +591,52 @@ export default function SwapForm() {
     const pc = client;
     if (pc) { try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {} }
     invalidateBurnTotal();
+  }
+
+  async function doFarcasterSwap() {
+    if (amountInBig === 0n) {
+      setPreflightMsg("Enter an amount first.");
+      return;
+    }
+
+    setPreflightMsg(undefined);
+    setNativeSwapBusy(true);
+    try {
+      if (!(await isInFarcasterMiniApp())) {
+        setNativeSwapAvailable(false);
+        setPreflightMsg("TABOSHI uses Farcaster's native swap route here. Open TobySwap inside Farcaster to use this route.");
+        return;
+      }
+
+      const sdk = await getMiniSdk();
+      const swapToken = (sdk as any)?.actions?.swapToken;
+      if (typeof swapToken !== "function") {
+        setNativeSwapAvailable(false);
+        setPreflightMsg("This Farcaster client does not expose the native swap action yet. Update Farcaster and try again.");
+        return;
+      }
+
+      const result = await swapToken({
+        sellToken: toCaip19(tokenIn),
+        buyToken: toCaip19(tokenOut),
+        sellAmount: amountInBig.toString(),
+      });
+
+      if (result?.success) {
+        setPreflightMsg("Farcaster swap completed. This native TABOSHI route bypasses the TobySwap burn, so it does not add to your Burners rank.");
+        setAmt("");
+        try { await balInRaw.refetch?.(); } catch {}
+        try { await balOutRaw.refetch?.(); } catch {}
+      } else if (result?.reason === "rejected_by_user") {
+        setPreflightMsg("Farcaster swap cancelled.");
+      } else {
+        setPreflightMsg(result?.error?.message || "Farcaster could not complete that swap. Try a different amount or pair.");
+      }
+    } catch (error: any) {
+      setPreflightMsg(error?.shortMessage || error?.message || "Unable to open Farcaster swap.");
+    } finally {
+      setNativeSwapBusy(false);
+    }
   }
 
   async function doSwap() {
@@ -792,8 +865,16 @@ export default function SwapForm() {
   }, [connected, isOnBase, amountInBig, balInRaw.value, quoteState, sending]);
 
   const disableSwap = !!disableReason;
+  const nativeDisableReason = useMemo(() => {
+    if (!connected) return "Connect wallet";
+    if (!isOnBase) return "Switch to Base";
+    if (amountInBig === 0n) return "Enter amount";
+    if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
+    if (nativeSwapBusy) return "Opening Farcaster…";
+    return null;
+  }, [connected, isOnBase, amountInBig, balInRaw.value, nativeSwapBusy]);
 
-  const routeLabel = bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
+  const routeLabel = isTaboshiPair ? "Farcaster native" : bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
   const feePct = Number(feeBps) / 100;
   const receiveHuman = quoteState === "ok" && expectedOutMainHuman !== undefined
     ? expectedOutMainHuman.toLocaleString(undefined, { maximumFractionDigits: 6 })
@@ -835,8 +916,8 @@ export default function SwapForm() {
         <span className={`route-status ${isOnBase ? "route-status-live" : ""}`}>
           <span className="status-dot !mr-0" /> Base {isOnBase ? "connected" : "required"}
         </span>
-        <span className="route-status">{quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
-        <span className="route-status">{feePct}% → TOBY burn</span>
+        <span className="route-status">{isTaboshiPair ? "Farcaster chooses live route" : quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
+        <span className="route-status">{isTaboshiPair ? "Native route · no burn" : `${feePct}% → TOBY burn`}</span>
       </div>
 
       {!isOnBase && (
@@ -940,18 +1021,17 @@ export default function SwapForm() {
         </section>
       </div>
 
-      {(eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI)) && tokenIn !== WETH && tokenOut !== WETH && (
+      {isTaboshiPair && (
         <div className="weth-route-callout">
-          <span className="weth-route-orb"><img src="/tokens/baseeth.PNG" alt="" /><i>W</i></span>
-          <div>
-            <strong>Want the clearest TABOSHI route?</strong>
-            <p>TABOSHI liquidity is strongest against WETH. Use wrapped ETH directly instead of treating it like native ETH.</p>
+          <span className="weth-route-orb"><img src="/tokens/toby.PNG" alt="" /></span>
+          <div className="min-w-0 flex-1">
+            <strong>TABOSHI takes the Farcaster lane</strong>
+            <p>For TABOSHI, TobySwap hands the selected pair and amount to Farcaster&apos;s native swap screen so Farcaster can choose the live route.</p>
+            <small>No TobySwap burn on this route · it will not increase your Burners rank.</small>
           </div>
-          <button type="button" className="metal-button compact-metal weth-route-cta" onClick={() => {
-            if (eq(String(tokenIn), TABOSHI)) setTokenOut(WETH as Address);
-            else setTokenIn(WETH as Address);
-            setAmt("");
-          }}>Use WETH</button>
+          <span className="metal-button compact-metal pointer-events-none whitespace-nowrap">
+            {nativeSwapAvailable === null ? "Checking…" : nativeSwapAvailable ? "Farcaster ready" : "Farcaster only"}
+          </span>
         </div>
       )}
 
@@ -979,19 +1059,19 @@ export default function SwapForm() {
             <strong>{slippage}%</strong>
           </div>
           <div className="quote-receipt-row quote-burn-row">
-            <span>Protocol burn</span>
-            <strong>{feePct}% of input → TOBY 🔥</strong>
+            <span>{isTaboshiPair ? "Burn credit" : "Protocol burn"}</span>
+            <strong>{isTaboshiPair ? "Native Farcaster route · no TobySwap burn" : `${feePct}% of input → TOBY 🔥`}</strong>
           </div>
         </div>
       )}
 
-      {quoteState === "noroute" && amountInBig > 0n && (
+      {!isTaboshiPair && quoteState === "noroute" && amountInBig > 0n && (
         <div className="swap-alert mt-3">
           <div><strong>No route found.</strong><br /><span>Try a different amount or pair.{quoteErr ? ` ${quoteErr}` : ""}</span></div>
         </div>
       )}
 
-      {showApproveButton && (
+      {showApproveButton && !isTaboshiPair && (
         <button
           onClick={onApprove}
           className="metal-button w-full approve-button mt-4 justify-center font-black disabled:opacity-60"
@@ -1003,17 +1083,35 @@ export default function SwapForm() {
         </button>
       )}
 
-      <button
-        onClick={doSwap}
-        className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
-        disabled={disableSwap}
-        title={disableReason ?? "Swap"}
-      >
-        {!disableSwap && <span className="swap-button-shine" aria-hidden="true" />}
-        <span className="button-mini-medallion"><img src="/tokens/sato.jpg" alt="" /></span>
-        <span>{disableReason ? disableReason : sending ? "Sending through the pond…" : `Swap ${inMeta.symbol} → ${outMeta.symbol}`}</span>
-        {!disableSwap && <span className="swap-button-route">{bestV3 ? "V3" : "V2"}</span>}
-      </button>
+      {isTaboshiPair ? (
+        <button
+          onClick={doFarcasterSwap}
+          className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
+          disabled={!!nativeDisableReason}
+          title={nativeDisableReason ?? "Swap with Farcaster"}
+        >
+          {!nativeDisableReason && <span className="swap-button-shine" aria-hidden="true" />}
+          <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
+          <span>{nativeDisableReason || `Swap ${inMeta.symbol} → ${outMeta.symbol} with Farcaster`}</span>
+          {!nativeDisableReason && <span className="swap-button-route">FC</span>}
+        </button>
+      ) : (
+        <button
+          onClick={doSwap}
+          className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
+          disabled={disableSwap}
+          title={disableReason ?? "Swap"}
+        >
+          {!disableSwap && <span className="swap-button-shine" aria-hidden="true" />}
+          <span className="button-mini-medallion"><img src="/tokens/sato.jpg" alt="" /></span>
+          <span>{disableReason ? disableReason : sending ? "Sending through the pond…" : `Swap ${inMeta.symbol} → ${outMeta.symbol}`}</span>
+          {!disableSwap && <span className="swap-button-route">{bestV3 ? "V3" : "V2"}</span>}
+        </button>
+      )}
+
+      {isTaboshiPair && (
+        <p className="mt-2 text-center text-[10px] font-bold leading-relaxed text-inkSub">Farcaster executes this trade outside the TobySwapper contract. No TOBY burn or Burner leaderboard credit is created.</p>
+      )}
 
       {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}
 

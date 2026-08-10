@@ -68,7 +68,11 @@ function ProfileAvatar({ row, size = "normal", override }: { row: Leader; size?:
 
   return (
     <span className={`burn-pfp burn-pfp-${size}`} aria-label={label}>
-      {pfp ? <img src={pfp} alt={`${label} profile`} loading="lazy" referrerPolicy="no-referrer" /> : <b>{row.address.slice(2, 4).toUpperCase()}</b>}
+      {pfp ? (
+        <img src={pfp} alt={`${label} profile`} loading="lazy" referrerPolicy="no-referrer" />
+      ) : (
+        <img src="/tokens/toby.PNG" alt="Toby frog" loading="lazy" className="burn-pfp-fallback" />
+      )}
       <i className="burn-pfp-shine" aria-hidden="true" />
     </span>
   );
@@ -88,8 +92,17 @@ function farcasterProfileHref(profile?: FarcasterProfile) {
 }
 
 function BurnerLink({ row, className, children }: { row: Leader; className: string; children: React.ReactNode }) {
-  const href = farcasterProfileHref(row.profile) || `https://basescan.org/address/${row.address}`;
+  const farcasterHref = farcasterProfileHref(row.profile);
+  const hasFarcasterIdentity = !!(row.profile?.fid || row.profile?.username);
 
+  // Anonymous/onchain-only burners stay inside the leaderboard. Their truncated
+  // wallet is shown beside the Toby frog instead of turning every row into a
+  // BaseScan link. Farcaster-linked burners open their social profile.
+  if (!hasFarcasterIdentity) {
+    return <div className={`${className} burn-row-anonymous`}>{children}</div>;
+  }
+
+  const href = farcasterHref || "#";
   const onClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
@@ -107,11 +120,15 @@ function BurnerLink({ row, className, children }: { row: Leader; className: stri
       } catch {}
     }
 
-    // Use native Mini App / Base App URL handling as the fallback.
+    if (!farcasterHref) {
+      event.preventDefault();
+      return;
+    }
+
     if (await isInFarcasterMiniApp()) {
       event.preventDefault();
-      const opened = await openInMini(href);
-      if (!opened) window.location.href = href;
+      const opened = await openInMini(farcasterHref);
+      if (!opened) window.location.href = farcasterHref;
     }
   };
 
