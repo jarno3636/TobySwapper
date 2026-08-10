@@ -664,8 +664,11 @@ export default function SwapForm() {
             path: v3Path,
             recipient: address as Address,
             deadline,
-            amountIn: parseUnits(amt || "0", decIn),
-            amountOutMinimum: parseUnits(formatUnits(minOutMain, decOut), decOut),
+            // IMPORTANT: the contract splits the outer amountIn into main + fee.
+            // The V3 router must therefore receive only the post-fee main amount,
+            // otherwise it tries to spend tokens already reserved for the TOBY burn.
+            amountIn: mainAmountIn,
+            amountOutMinimum: minOutMain,
           }]
         );
 
@@ -770,6 +773,8 @@ export default function SwapForm() {
       const msg = e?.shortMessage || e?.message || String(e);
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
+      else if (/swapTokensForTokensV3ExactInput/i.test(msg) && /revert/i.test(msg))
+        setPreflightMsg("That V3 route failed its onchain preflight. Refresh the quote and try again. TobySwap now sends only the post-fee amount into V3 so WETH routes do not attempt to spend the burn portion twice.");
       else setPreflightMsg(msg);
     } finally {
       setSending(false);

@@ -12,6 +12,7 @@ import {
   Connector,
 } from "wagmi";
 import { base } from "viem/chains";
+import { getMiniSdk, isInFarcasterMiniApp } from "@/lib/miniapps";
 
 /** Hydration guard */
 function useMounted() {
@@ -64,6 +65,13 @@ async function safeClipboardCopy(text?: string) {
   }
 }
 
+type FarcasterIdentity = {
+  fid: number;
+  username?: string;
+  displayName?: string;
+  pfpUrl?: string;
+};
+
 /** The pill */
 export default function WalletPillInner() {
   const mounted = useMounted();
@@ -77,6 +85,71 @@ export default function WalletPillInner() {
 
   // Prefer best connector for the current environment
   const preferred = useMemo(() => choosePreferredConnector(connectors), [connectors]);
+
+  const [farcaster, setFarcaster] = useState<FarcasterIdentity | null>(null);
+
+  // Prefer the signed-in Farcaster Mini App identity. On the regular web/Base
+  // surface, fall back to a server-side wallet -> Farcaster lookup when Neynar
+  // is configured. The wallet still signs every transaction; this is display only.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isConnected || !address) {
+        if (!cancelled) setFarcaster(null);
+        return;
+      }
+
+      try {
+        if (await isInFarcasterMiniApp()) {
+          const sdk = await getMiniSdk();
+          const rawContext = (sdk as any)?.context;
+          const context = typeof rawContext === "function" ? await rawContext() : await rawContext;
+          const user = context?.user;
+          if (!cancelled && user?.fid) {
+            setFarcaster({
+              fid: Number(user.fid),
+              username: typeof user.username === "string" ? user.username : undefined,
+              displayName: typeof user.displayName === "string" ? user.displayName : undefined,
+              pfpUrl: typeof user.pfpUrl === "string" ? user.pfpUrl : undefined,
+            });
+            return;
+          }
+        }
+      } catch {
+        // Continue to the address resolver below.
+      }
+
+      try {
+        const response = await fetch(`/api/farcaster/identity?address=${encodeURIComponent(address)}`, { cache: "no-store" });
+        const payload = await response.json();
+        if (!cancelled && response.ok && payload?.profile?.fid) setFarcaster(payload.profile);
+      } catch {
+        // Identity enrichment must never interfere with wallet connectivity.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [address, isConnected]);
+
+  // Popover (no <details>, fully controlled)
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      const t = e.target as Node | null;
+      if (!menuRef.current.contains(t)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   // Soft switch to Base after connect
   useEffect(() => {
@@ -103,34 +176,13 @@ export default function WalletPillInner() {
     accountStatus === "connecting" ||
     accountStatus === "reconnecting";
 
-  const label = isConnected
-    ? `${address?.slice(0, 6)}…${address?.slice(-4)}`
-    : connecting
-    ? "Connecting…"
-    : "Not Connected";
+  const walletLabel = `${address?.slice(0, 6)}…${address?.slice(-4)}`;
+  const socialLabel = farcaster?.username
+    ? `@${farcaster.username}`
+    : farcaster?.displayName || walletLabel;
+  const label = isConnected ? socialLabel : connecting ? "Connecting…" : "Not Connected";
 
   const dotClass = isConnected ? "bg-[var(--accent)]" : "bg-[var(--danger)]";
-
-  // Popover (no <details>, fully controlled)
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!menuRef.current) return;
-      const t = e.target as Node | null;
-      if (!menuRef.current.contains(t)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
 
   const safeConnect = async () => {
     try {
@@ -180,8 +232,18 @@ export default function WalletPillInner() {
         aria-label={isConnected ? "Wallet menu" : "Connect wallet"}
         disabled={connecting}
       >
-        <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
-        <span className="ml-1.5">{label}</span>
+        {isConnected && farcaster?.pfpUrl ? (
+          <img
+            src={farcaster.pfpUrl}
+            alt=""
+            aria-hidden="true"
+            className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span aria-hidden className={`block h-2 w-2 rounded-full ${dotClass}`} />
+        )}
+        <span className="ml-1.5 max-w-[132px] truncate font-semibold">{label}</span>
       </button>
 
       {open && isConnected && (
@@ -189,6 +251,17 @@ export default function WalletPillInner() {
           role="menu"
           className="absolute right-0 mt-2 min-w-[220px] rounded-2xl glass shadow-soft p-2 z-50"
         >
+          {farcaster && (
+            <div className="flex items-center gap-2 px-2 py-2">
+              {farcaster.pfpUrl && (
+                <img src={farcaster.pfpUrl} alt="" className="h-10 w-10 rounded-xl object-cover" referrerPolicy="no-referrer" />
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-sm font-bold text-ink">{farcaster.displayName || `@${farcaster.username}`}</div>
+                {farcaster.username && <div className="truncate text-xs text-inkSub">@{farcaster.username} · FID {farcaster.fid}</div>}
+              </div>
+            </div>
+          )}
           <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
 
           <button
