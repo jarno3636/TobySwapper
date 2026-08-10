@@ -638,7 +638,7 @@ export default function SwapForm() {
     // pretending it is native ETH; switching to WETH keeps the flow explicit.
     if (tokenOut === "ETH") {
       setTokenOut(WETH as Address);
-      setPreflightMsg("Direct V3 → ETH settles as WETH. I switched the receive token to WETH; I switched the receive token to WETH; swap again when the quote refreshes.");
+      setPreflightMsg("Direct V3 → ETH settles as WETH. I switched the receive token to WETH; swap again when the quote refreshes.");
       return;
     }
 
@@ -698,6 +698,22 @@ export default function SwapForm() {
     } finally {
       setNativeSwapBusy(false);
     }
+  }
+
+  async function handleDirectRouteAction() {
+    if (!connected || !address) { setPreflightMsg("Connect your wallet first."); return; }
+    if (!isOnBase) { await ensureBase(); return; }
+    if (amountInBig === 0n) { setPreflightMsg("Enter an amount first."); return; }
+
+    // The small route CTA and the large primary CTA share one real action.
+    // If ERC-20 approval is still needed, request that first. Once confirmed,
+    // the user can tap again to execute the direct V3 swap.
+    if (needsApproval && (allowanceToSpender ?? 0n) < amountInBig) {
+      await onApprove();
+      return;
+    }
+
+    await doDirectV3Swap();
   }
 
   async function doSwap() {
@@ -947,7 +963,6 @@ export default function SwapForm() {
     if (amountInBig === 0n) return "Enter amount";
     if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
     if (quoteState !== "ok" || !bestV3) return quoteState === "loading" ? "Finding V3 route…" : "No V3 route";
-    if (needsApproval && (allowanceToSpender ?? 0n) < amountInBig) return `Approve ${inMeta.symbol} first`;
     if (nativeSwapBusy) return "Submitting…";
     return null;
   }, [connected, isOnBase, amountInBig, balInRaw.value, quoteState, bestV3, needsApproval, allowanceToSpender, inMeta.symbol, nativeSwapBusy]);
@@ -1107,9 +1122,15 @@ export default function SwapForm() {
             <p>{isTaboshiPair ? "Live Uniswap liquidity on Base." : "Reliable USDC routing on Base."}</p>
             <small>Direct route · no burn credit.</small>
           </div>
-          <span className="metal-button compact-metal pointer-events-none whitespace-nowrap">
-            Direct on Base
-          </span>
+          <button
+            type="button"
+            onClick={handleDirectRouteAction}
+            className="metal-button compact-metal whitespace-nowrap"
+            disabled={nativeSwapBusy || isApproving || quoteState !== "ok"}
+            title={showApproveButton ? `Approve ${inMeta.symbol} for Uniswap V3` : `Swap ${inMeta.symbol} → ${outMeta.symbol} on Base`}
+          >
+            {isApproving ? "Approving…" : nativeSwapBusy ? "Submitting…" : showApproveButton ? `Approve ${inMeta.symbol}` : "Swap on Base"}
+          </button>
         </div>
       )}
 
@@ -1163,14 +1184,14 @@ export default function SwapForm() {
 
       {isDirectPair ? (
         <button
-          onClick={doDirectV3Swap}
+          onClick={handleDirectRouteAction}
           className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
           disabled={!!nativeDisableReason}
           title={nativeDisableReason ?? "Swap directly on Uniswap V3"}
         >
           {!nativeDisableReason && <span className="swap-button-shine" aria-hidden="true" />}
           <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
-          <span>{nativeDisableReason || `Swap ${inMeta.symbol} → ${outMeta.symbol} direct`}</span>
+          <span>{nativeDisableReason || (showApproveButton ? `Approve ${inMeta.symbol} for V3` : `Swap ${inMeta.symbol} → ${outMeta.symbol}`)}</span>
           {!nativeDisableReason && <span className="swap-button-route">V3</span>}
         </button>
       ) : (
