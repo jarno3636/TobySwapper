@@ -74,6 +74,110 @@ type SummaryRow = {
   total_burned_raw: string | number | null;
 };
 
+type NeynarUser = {
+  fid?: number;
+  username?: string;
+  display_name?: string;
+  pfp_url?: string;
+  custody_address?: string;
+};
+
+type FarcasterProfile = {
+  fid: number;
+  username?: string;
+  displayName?: string;
+  pfpUrl?: string;
+};
+
+function neynarConfigured() {
+  return Boolean(process.env.NEYNAR_API_KEY?.trim());
+}
+
+/**
+ * Reverse-resolve burner wallets to Farcaster identities. Neynar's bulk endpoint
+ * accepts up to 350 addresses and returns users for custody OR verified wallets.
+ * A verified wallet can belong to multiple FIDs, so we only auto-attach when the
+ * result is unambiguous or the wallet is the user's unique custody address.
+ */
+async function fetchNeynarProfiles(addresses: string[]) {
+  const out = new Map<string, FarcasterProfile>();
+  const apiKey = process.env.NEYNAR_API_KEY?.trim();
+  if (!apiKey || addresses.length === 0) return out;
+
+  const unique = Array.from(new Set(addresses.map((a) => a.toLowerCase()))).filter((address) => isAddress(address));
+  for (let offset = 0; offset < unique.length; offset += 300) {
+    const chunk = unique.slice(offset, offset + 300);
+    const url = new URL("https://api.neynar.com/v2/farcaster/user/bulk-by-address/");
+    url.searchParams.set("addresses", chunk.join(","));
+
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "x-api-key": apiKey },
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) throw new Error(`Neynar ${response.status}: ${(await response.text()).slice(0, 180)}`);
+
+    const payload = (await response.json()) as Record<string, NeynarUser[]>;
+    for (const [walletKey, usersRaw] of Object.entries(payload || {})) {
+      const wallet = walletKey.toLowerCase();
+      const users = Array.isArray(usersRaw) ? usersRaw.filter((u) => Number(u?.fid) > 0) : [];
+      if (!users.length) continue;
+
+      const custody = users.find((u) => u.custody_address?.toLowerCase() === wallet);
+      // Never guess when one verified address maps to several FIDs.
+      const user = custody || (users.length === 1 ? users[0] : undefined);
+      if (!user?.fid) continue;
+
+      out.set(wallet, {
+        fid: Number(user.fid),
+        username: user.username || undefined,
+        displayName: user.display_name || undefined,
+        pfpUrl: user.pfp_url || undefined,
+      });
+    }
+  }
+  return out;
+}
+
+async function rememberNeynarProfiles(profiles: Map<string, FarcasterProfile>) {
+  if (!hasSupabaseServerEnv() || profiles.size === 0) return;
+  const now = new Date().toISOString();
+  const profileRows = new Map<number, { fid: number; username: string | null; display_name: string | null; pfp_url: string | null; updated_at: string }>();
+  const walletRows: Array<{ wallet_address: string; fid: number; last_seen_at: string }> = [];
+
+  for (const [wallet, profile] of profiles) {
+    profileRows.set(profile.fid, {
+      fid: profile.fid,
+      username: profile.username || null,
+      display_name: profile.displayName || null,
+      pfp_url: profile.pfpUrl || null,
+      updated_at: now,
+    });
+    walletRows.push({ wallet_address: wallet, fid: profile.fid, last_seen_at: now });
+  }
+
+  await supabaseRest("tobyswap_farcaster_profiles?on_conflict=fid", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify([...profileRows.values()]),
+  });
+  await supabaseRest("tobyswap_profile_wallets?on_conflict=wallet_address", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify(walletRows),
+  });
+}
+
+async function enrichStoredRowsWithFarcaster(rows: StoredLeaderboardRow[]) {
+  if (!neynarConfigured() || !hasSupabaseServerEnv()) return false;
+  const missing = rows.filter((row) => !row.fid).map((row) => row.wallet_address);
+  if (!missing.length) return false;
+  const profiles = await fetchNeynarProfiles(missing);
+  if (!profiles.size) return false;
+  await rememberNeynarProfiles(profiles);
+  return true;
+}
+
 type JsonRpcEnvelope<T> = {
   jsonrpc?: string;
   id?: number | string;
@@ -404,26 +508,47 @@ async function syncIntoSupabase(latestBlock: bigint) {
 }
 
 async function readStoredLeaderboard(viewerAddress?: string) {
-  const leadersRaw = await supabaseRest<StoredLeaderboardRow[]>(
+  let leadersRaw = await supabaseRest<StoredLeaderboardRow[]>(
     "tobyswap_burner_leaderboard?select=*&order=current_rank.asc&limit=100",
   );
-  const summaryRows = await supabaseRest<SummaryRow[]>("tobyswap_burner_summary?select=*&limit=1");
 
-  let viewer = null;
+  let viewerRaw: StoredLeaderboardRow | undefined;
   if (viewerAddress && isAddress(viewerAddress)) {
     const normalized = getAddress(viewerAddress).toLowerCase();
     const rows = await supabaseRest<StoredLeaderboardRow[]>(
       `tobyswap_burner_leaderboard?wallet_address=eq.${encodeURIComponent(normalized)}&select=*&limit=1`,
     );
-    if (rows[0]) viewer = normalizeStoredRow(rows[0]);
+    viewerRaw = rows[0];
   }
 
+  // Fill missing leaderboard identities from wallet -> Farcaster mappings. Once
+  // resolved they are persisted, so normal page loads remain Supabase-fast.
+  try {
+    const candidates = viewerRaw ? [...leadersRaw, viewerRaw] : leadersRaw;
+    const changed = await enrichStoredRowsWithFarcaster(candidates);
+    if (changed) {
+      leadersRaw = await supabaseRest<StoredLeaderboardRow[]>(
+        "tobyswap_burner_leaderboard?select=*&order=current_rank.asc&limit=100",
+      );
+      if (viewerAddress && isAddress(viewerAddress)) {
+        const normalized = getAddress(viewerAddress).toLowerCase();
+        const rows = await supabaseRest<StoredLeaderboardRow[]>(
+          `tobyswap_burner_leaderboard?wallet_address=eq.${encodeURIComponent(normalized)}&select=*&limit=1`,
+        );
+        viewerRaw = rows[0];
+      }
+    }
+  } catch (error) {
+    console.warn("Farcaster leaderboard enrichment unavailable", error);
+  }
+
+  const summaryRows = await supabaseRest<SummaryRow[]>("tobyswap_burner_summary?select=*&limit=1");
   const summary = summaryRows[0] || {};
   const totalRaw = String(summary.total_burned_raw || "0");
 
   return {
     leaders: leadersRaw.map(normalizeStoredRow),
-    viewer,
+    viewer: viewerRaw ? normalizeStoredRow(viewerRaw) : null,
     uniqueBurners: Number(summary.unique_burners || 0),
     swapEvents: Number(summary.swap_events || 0),
     totalFromEventsRaw: totalRaw,
@@ -538,7 +663,20 @@ export async function GET(request: Request) {
     }
 
     const liveRead = await getAllSwapSummaryLogs(DEPLOYMENT_SCAN_BLOCK, latestBlock);
-    const live = aggregateLive(liveRead.logs, viewerAddress);
+    const live: any = aggregateLive(liveRead.logs, viewerAddress);
+
+    if (neynarConfigured()) {
+      try {
+        const profiles = await fetchNeynarProfiles([
+          ...live.leaders.map((row) => row.address),
+          ...(live.viewer ? [live.viewer.address] : []),
+        ]);
+        live.leaders = live.leaders.map((row) => ({ ...row, profile: profiles.get(row.address.toLowerCase()) }));
+        if (live.viewer) live.viewer = { ...live.viewer, profile: profiles.get(live.viewer.address.toLowerCase()) };
+      } catch (error) {
+        console.warn("Live Farcaster enrichment unavailable", error);
+      }
+    }
 
     return NextResponse.json(
       {
