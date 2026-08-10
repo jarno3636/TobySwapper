@@ -46,7 +46,7 @@ export default function Page() {
         </div>
       </div>
       <Footer />
-      <PondDock />
+      <PondDock active="swap" />
     </MiniAppGate>
   );
 }
