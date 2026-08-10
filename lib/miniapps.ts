@@ -7,6 +7,11 @@ type MiniAppSdk = {
     openURL?: (url: string) => Promise<void> | void; // legacy
     composeCast?: (args: { text?: string; embeds?: string[] }) => Promise<void> | void;
     ready?: () => Promise<void> | void;
+    swapToken?: (args: { sellToken?: string; buyToken?: string; sellAmount?: string }) => Promise<
+      | { success: true; swap: { transactions: `0x${string}`[] } }
+      | { success: false; reason: "rejected_by_user" | "swap_failed"; error?: { error: string; message?: string } }
+    >;
+    viewProfile?: (args: { fid: number }) => Promise<void> | void;
   };
   isInMiniApp?: (timeoutMs?: number) => Promise<boolean> | boolean;
 };
