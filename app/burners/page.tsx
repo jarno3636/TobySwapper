@@ -5,6 +5,7 @@ import MiniAppGate from "@/components/MiniAppGate";
 import BurnerLeaderboard from "@/components/BurnerLeaderboard";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
+import BurnShareActions from "@/components/BurnShareActions";
 
 export default function BurnersPage() {
   return (
@@ -19,6 +20,7 @@ export default function BurnersPage() {
               <a href="/#swap" className="metal-button burn-hero-cta burn-hero-cta-primary"><span>↔</span> Swap &amp; climb</a>
               <a href="#leaderboard" className="metal-button burn-hero-cta"><span>↓</span> See the ranks</a>
             </div>
+            <BurnShareActions />
           </div>
           <div className="burn-hero-art" aria-hidden="true">
             <span className="burn-hero-toby"><Image src="/tokens/toby.PNG" alt="" fill sizes="140px" className="object-contain" /></span>
