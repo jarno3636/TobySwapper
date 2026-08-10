@@ -1,13 +1,14 @@
-// components/TokenSelect.tsx
 "use client";
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { TOKENS, type TokenAddress } from "@/lib/addresses";
+import { NATIVE_ETH, TOKENS, type TokenAddress } from "@/lib/addresses";
 import type { Address } from "viem";
 import { useMemo, useEffect, useState } from "react";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { formatUnits } from "viem";
+
+export type TokenChoice = Address | "ETH";
 
 const iconMap: Record<string, string> = {
   ETH: "/tokens/baseeth.PNG",
@@ -19,21 +20,26 @@ const iconMap: Record<string, string> = {
 };
 
 const tokenCopy: Record<string, string> = {
-  ETH: "Base native asset",
+  ETH: "Native ETH on Base",
+  WETH: "Wrapped ETH · ERC-20",
   USDC: "USD Coin on Base",
-  TOBY: "Tobyworld",
+  TOBY: "Tobyworld token",
   PATIENCE: "Patience",
-  TABOSHI: "Taboshi",
+  TABOSHI: "Taboshi · strongest WETH route",
 };
 
-const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const symbolOrder = ["ETH", "WETH", "USDC", "TOBY", "PATIENCE", "TABOSHI"];
+const eqAddr = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-const preferredAddressForSymbol: Partial<Record<string, Address>> = {
-  ETH: (TOKENS.find((t) => t.symbol === "WETH")?.address ??
-    "0x0000000000000000000000000000000000000000") as Address,
-};
+function choiceForToken(token: (typeof TOKENS)[number]): TokenChoice {
+  return token.address === NATIVE_ETH ? "ETH" : (token.address as Address);
+}
 
-const symbolOrder = ["ETH", "USDC", "TOBY", "PATIENCE", "TABOSHI"];
+function sameChoice(a?: TokenChoice, b?: TokenChoice | string) {
+  if (!a || !b) return false;
+  if (a === "ETH" || b === "ETH") return a === b;
+  return eqAddr(a, b);
+}
 
 export default function TokenSelect({
   user,
@@ -41,15 +47,13 @@ export default function TokenSelect({
   onChange,
   exclude,
   balance,
-  collapseETH = true,
   forceBlur = false,
 }: {
   user?: Address;
-  value: Address;
-  onChange: (a: Address) => void;
-  exclude?: Address | string;
+  value: TokenChoice;
+  onChange: (a: TokenChoice) => void;
+  exclude?: TokenChoice | string;
   balance?: string;
-  collapseETH?: boolean;
   forceBlur?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -73,24 +77,18 @@ export default function TokenSelect({
   }, [open]);
 
   const selected = useMemo(() => {
-    const fromList = TOKENS.find((t) => eq(t.address, value));
-    if (fromList) return fromList;
-    return { symbol: "UNKNOWN", address: value, decimals: 18 } as (typeof TOKENS)[number];
+    if (value === "ETH") return TOKENS.find((t) => t.address === NATIVE_ETH)!;
+    return TOKENS.find((t) => t.address !== NATIVE_ETH && eqAddr(String(t.address), value)) ?? {
+      symbol: "UNKNOWN",
+      address: value,
+      decimals: 18,
+    };
   }, [value]);
 
-  const displaySymbol = selected.symbol === "WETH" ? "ETH" : (selected.symbol ?? "Unknown");
+  const tokenForBalance = selected.address as TokenAddress;
+  const { value: hookBal, decimals: hookDec } = useTokenBalance(user, tokenForBalance, { chainId: 8453 });
 
-  const { value: hookBal, decimals: hookDec } = useTokenBalance(
-    user,
-    selected.address as TokenAddress,
-    { chainId: 8453 }
-  );
-
-  const autoBal =
-    hookBal !== undefined && hookDec !== undefined
-      ? formatUnits(hookBal, hookDec)
-      : undefined;
-
+  const autoBal = hookBal !== undefined && hookDec !== undefined ? formatUnits(hookBal, hookDec) : undefined;
   const balText = useMemo(() => {
     const src = balance ?? autoBal;
     if (src == null) return "—";
@@ -102,88 +100,60 @@ export default function TokenSelect({
   }, [balance, autoBal]);
 
   const availableTokens = useMemo(() => {
-    const filtered = TOKENS.filter((t) => !exclude || !eq(t.address, String(exclude)));
-    const deduped: (typeof TOKENS)[number][] = [];
+    return [...TOKENS]
+      .filter((token) => !exclude || !sameChoice(choiceForToken(token), exclude))
+      .sort((a, b) => symbolOrder.indexOf(a.symbol) - symbolOrder.indexOf(b.symbol));
+  }, [exclude]);
 
-    if (collapseETH) {
-      const seen = new Set<string>();
-      for (const t of filtered) {
-        const label = t.symbol === "WETH" ? "ETH" : t.symbol;
-        if (seen.has(label)) continue;
-        seen.add(label);
-        const preferred = preferredAddressForSymbol[label] &&
-          filtered.find((x) => eq(x.address, preferredAddressForSymbol[label]!));
-        deduped.push(preferred ?? t);
-      }
-    } else {
-      deduped.push(...filtered);
-    }
-
-    const rank = (sym: string) => {
-      const label = sym === "WETH" ? "ETH" : sym;
-      const i = symbolOrder.indexOf(label);
-      return i === -1 ? 999 : i;
-    };
-
-    return deduped.sort((a, b) => {
-      const A = a.symbol === "WETH" ? "ETH" : a.symbol;
-      const B = b.symbol === "WETH" ? "ETH" : b.symbol;
-      const r = rank(A) - rank(B);
-      return r !== 0 ? r : A.localeCompare(B);
-    });
-  }, [exclude, collapseETH]);
-
-  function choose(next: Address) {
-    const entry = TOKENS.find((t) => eq(t.address, next));
-    const label = entry?.symbol === "WETH" ? "ETH" : entry?.symbol;
-    onChange(label === "ETH" && preferredAddressForSymbol.ETH ? preferredAddressForSymbol.ETH : next);
+  function choose(next: TokenChoice) {
+    onChange(next);
     setOpen(false);
   }
 
   const modal = open && typeof document !== "undefined" ? createPortal(
-    <div className="token-modal fixed inset-0 z-[12000] flex items-end sm:items-center justify-center p-3 sm:p-6">
+    <div className="token-modal fixed inset-0 z-[12000] flex items-end justify-center p-3 sm:items-center sm:p-6">
       <button className="absolute inset-0 bg-[#1c2933]/25 backdrop-blur-[3px]" aria-label="Close token selector" onClick={() => setOpen(false)} />
       <div role="dialog" aria-modal="true" aria-label="Choose a token" className="token-modal-card relative z-10 w-full max-w-md p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <div className="world-kicker">TOBYWORLD ASSETS</div>
-            <h3 className="text-xl font-black tracking-[-.03em] mt-1">Choose a token</h3>
+            <div className="world-kicker">BASE + TOBYWORLD</div>
+            <h3 className="mt-1 text-xl font-black tracking-[-.03em]">Choose a token</h3>
+            <p className="mt-1 text-[11px] text-inkSub">WETH is listed separately from native ETH for direct liquidity routes.</p>
           </div>
           <button type="button" className="metal-button compact-metal px-3" onClick={() => setOpen(false)}>Close</button>
         </div>
 
         <div className="token-modal-list">
-          {availableTokens.map((t) => {
-            const label = t.symbol === "WETH" ? "ETH" : t.symbol;
-            const val = label === "ETH" && preferredAddressForSymbol.ETH
-              ? preferredAddressForSymbol.ETH
-              : (t.address as Address);
-            const active = eq(val, value);
+          {availableTokens.map((token) => {
+            const choice = choiceForToken(token);
+            const active = sameChoice(choice, value);
             return (
               <button
                 type="button"
-                key={t.address as string}
+                key={`${token.symbol}:${String(token.address)}`}
                 className={`token-option ${active ? "token-option-active" : ""}`}
-                onClick={() => choose(val)}
+                onClick={() => choose(choice)}
               >
-                <span className="token-option-icon">
-                  <Image src={iconMap[label] ?? "/tokens/baseeth.PNG"} alt="" fill sizes="48px" className="object-contain" />
+                <span className={`token-option-icon token-option-icon-${token.symbol.toLowerCase()}`}>
+                  <Image src={iconMap[token.symbol] ?? "/tokens/baseeth.PNG"} alt="" fill sizes="48px" className="object-contain" />
+                  {token.symbol === "WETH" && <i className="wrapped-token-ring" aria-hidden="true">W</i>}
                 </span>
-                <span className="min-w-0 text-left flex-1">
-                  <span className="block font-black text-[15px]">{label}</span>
-                  <span className="block text-[11px] text-inkSub truncate">{tokenCopy[label] ?? "Base asset"}</span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block font-black text-[15px]">{token.symbol}</span>
+                  <span className="block truncate text-[11px] text-inkSub">{tokenCopy[token.symbol] ?? "Base asset"}</span>
                 </span>
+                {token.symbol === "WETH" && <span className="token-route-chip">TABOSHI route</span>}
                 <span className="token-option-arrow">{active ? "✓" : "›"}</span>
               </button>
             );
           })}
         </div>
-        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-bold tracking-[.12em] text-inkSub uppercase">
+        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-inkSub">
           <span className="status-dot !mr-0" /> Base network
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   ) : null;
 
   return (
@@ -195,17 +165,12 @@ export default function TokenSelect({
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <span className="token-trigger-icon">
-          <Image
-            src={iconMap[displaySymbol] ?? "/tokens/baseeth.PNG"}
-            alt={displaySymbol}
-            fill
-            sizes="44px"
-            className="object-contain"
-          />
+        <span className={`token-trigger-icon token-trigger-icon-${selected.symbol.toLowerCase()}`}>
+          <Image src={iconMap[selected.symbol] ?? "/tokens/baseeth.PNG"} alt={selected.symbol} fill sizes="44px" className="object-contain" />
+          {selected.symbol === "WETH" && <i className="wrapped-token-ring wrapped-token-ring-small" aria-hidden="true">W</i>}
         </span>
-        <span className="min-w-0 text-left flex-1">
-          <span className="token-trigger-symbol">{displaySymbol}</span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="token-trigger-symbol">{selected.symbol}</span>
           <span className="token-trigger-balance">Balance {balText}</span>
         </span>
         <span className="token-trigger-chevron">⌄</span>

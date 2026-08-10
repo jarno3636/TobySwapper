@@ -13,7 +13,7 @@ import {
   useAccount, usePublicClient, useWriteContract, useSwitchChain,
 } from "wagmi";
 
-import TokenSelect from "./TokenSelect";
+import TokenSelect, { type TokenChoice } from "./TokenSelect";
 import {
   TOKENS, USDC, WETH, SWAPPER, TOBY, TABOSHI, QUOTER_V3,
 } from "@/lib/addresses";
@@ -375,7 +375,7 @@ export default function SwapForm() {
 
   // UI state
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
-  const [tokenOut, setTokenOut] = useState<Address>(TOBY as Address);
+  const [tokenOut, setTokenOut] = useState<TokenChoice>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
@@ -442,7 +442,7 @@ export default function SwapForm() {
     (async () => {
       setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setBestFeePath(undefined);
 
-      if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
+      if (!client || !isOnBase || mainAmountIn === 0n) { setQuoteState("idle"); return; }
       setQuoteState("loading");
       const myLatch = ++quoteLatch.current;
 
@@ -453,7 +453,8 @@ export default function SwapForm() {
       let feePath: Address[] | undefined;
 
       try {
-        const cands = await buildV3CandidatesPruned(client, tokenIn, tokenOut);
+        const quoteTokenOut = tokenOut === "ETH" ? (WETH as Address) : (tokenOut as Address);
+        const cands = tokenOut === "ETH" ? [] : await buildV3CandidatesPruned(client, tokenIn, quoteTokenOut);
         if (cands.length) {
           const results = await withTimeout(
             Promise.allSettled(cands.map(async (cand) => {
@@ -473,7 +474,7 @@ export default function SwapForm() {
           }
         }
 
-        const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
+        const v2 = await v2Quote(client, mainAmountIn, tokenIn, quoteTokenOut);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
         // The contract converts the fee to TOBY through Router02. Quote that
@@ -490,9 +491,8 @@ export default function SwapForm() {
           feePath = buildFeePathFor(actualIn);
         }
 
-        // Native ETH input and ETH output use the contract's dedicated V2 paths.
-        // In the UI, WETH as tokenOut is the marker for native ETH output.
-        if ((tokenIn === "ETH" || eq(tokenOut, WETH)) && v2Path && v2Out) {
+        // Native ETH input/output use the contract's dedicated V2 paths. WETH remains a distinct ERC-20.
+        if ((tokenIn === "ETH" || tokenOut === "ETH") && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
           best = undefined; bestOut = v2Out;
@@ -585,7 +585,7 @@ export default function SwapForm() {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
       const isEthIn = tokenIn === "ETH";
-      const isEthOut = eq(tokenOut, WETH);
+      const isEthOut = tokenOut === "ETH";
 
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
@@ -605,7 +605,7 @@ export default function SwapForm() {
             abi: TobySwapperAbi,
             functionName: "swapETHForTokensSupportingFeeOnTransferTokensTo",
             args: [
-              tokenOut as Address,
+              (tokenOut === "ETH" ? WETH : tokenOut) as Address,
               address as Address,
               minOutMainV2,
               mainPath,
@@ -808,7 +808,7 @@ export default function SwapForm() {
           <div className="min-w-0">
             <div className="world-kicker">SWAP GATE</div>
             <h2 className="mt-1 text-xl sm:text-2xl font-black tracking-[-.04em]">Trade the pond</h2>
-            <div className="text-[11px] text-inkSub mt-1">TOBY · PATIENCE · TABOSHI · Base assets</div>
+            <div className="text-[11px] text-inkSub mt-1">TOBY · PATIENCE · TABOSHI · ETH · WETH · USDC</div>
           </div>
         </div>
         <button
@@ -868,9 +868,9 @@ export default function SwapForm() {
             <div className="trade-token-side">
               <TokenSelect
                 user={address as Address | undefined}
-                value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
+                value={tokenIn}
                 onChange={(a) => {
-                  setTokenIn(eq(a, WETH) ? "ETH" : (a as Address));
+                  setTokenIn(a);
                   setAmt("");
                 }}
                 exclude={tokenOut}
@@ -898,8 +898,8 @@ export default function SwapForm() {
           className="metal-button swap-direction-button swap-direction-floating"
           onClick={() => {
             const prevIn = tokenIn, prevOut = tokenOut;
-            setTokenIn(eq(prevOut, WETH) ? "ETH" : (prevOut as Address));
-            setTokenOut(prevIn === "ETH" ? (WETH as Address) : (prevIn as Address));
+            setTokenIn(prevOut);
+            setTokenOut(prevIn);
             setAmt("");
           }}
           aria-label="Reverse swap direction"
@@ -923,11 +923,10 @@ export default function SwapForm() {
                 user={address as Address | undefined}
                 value={tokenOut}
                 onChange={(v) => {
-                  const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
-                  setTokenOut(next);
+                  setTokenOut(v);
                   setAmt("");
                 }}
-                exclude={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
+                exclude={tokenIn}
                 balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
                 forceBlur={slippageOpen || !!success}
               />
@@ -935,6 +934,21 @@ export default function SwapForm() {
           </div>
         </section>
       </div>
+
+      {(eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI)) && tokenIn !== WETH && tokenOut !== WETH && (
+        <div className="weth-route-callout">
+          <span className="weth-route-orb"><img src="/tokens/baseeth.PNG" alt="" /><i>W</i></span>
+          <div>
+            <strong>Want the clearest TABOSHI route?</strong>
+            <p>TABOSHI liquidity is strongest against WETH. Use wrapped ETH directly instead of treating it like native ETH.</p>
+          </div>
+          <button type="button" className="metal-button compact-metal weth-route-cta" onClick={() => {
+            if (eq(String(tokenIn), TABOSHI)) setTokenOut(WETH as Address);
+            else setTokenIn(WETH as Address);
+            setAmt("");
+          }}>Use WETH</button>
+        </div>
+      )}
 
       {quoteState === "loading" && amountInBig > 0n && (
         <div className="pond-route-loader" aria-live="polite">

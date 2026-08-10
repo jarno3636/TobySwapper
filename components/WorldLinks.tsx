@@ -63,6 +63,16 @@ export default function WorldLinks() {
         </div>
       </div>
 
+      <a href="#swap" className="pond-feature-cta">
+        <span className="pond-feature-icons" aria-hidden="true">
+          <span className="pond-feature-weth"><Image src="/tokens/baseeth.PNG" alt="" fill sizes="34px" className="object-contain" /><i>W</i></span>
+          <span className="pond-feature-arrow">→</span>
+          <span className="pond-feature-taboshi"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="34px" className="object-contain" /></span>
+        </span>
+        <span className="min-w-0 flex-1"><small>LIQUIDITY LANE</small><strong>Trade TABOSHI with WETH</strong><em>WETH is now a distinct swap asset for its strongest Base route.</em></span>
+        <span className="metal-arrow">↓</span>
+      </a>
+
       <div className="pond-path-line" aria-hidden="true" />
       <div className="grid gap-3 pond-destination-grid">
         {links.map((item) => {

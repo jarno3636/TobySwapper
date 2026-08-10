@@ -39,6 +39,7 @@ type Payload = {
   newEvents?: number;
   updatedAt?: string;
   error?: string;
+  hint?: string;
 };
 
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
@@ -203,9 +204,17 @@ export default function BurnerLeaderboard() {
       )}
 
       {!loading && !data?.ok && (
-        <div className="burn-error" role="status">
-          <span>🌀</span>
-          <div><strong>The pond is having trouble reading Base.</strong><p>{data?.error || "Try refreshing in a moment."}</p></div>
+        <div className="burn-error burn-error-upgraded" role="status">
+          <span className="burn-error-orb">🌀</span>
+          <div className="min-w-0 flex-1">
+            <strong>The pond lost the Base signal.</strong>
+            <p>{data?.error || "Try refreshing in a moment."}</p>
+            {data?.hint && <small>{data.hint}</small>}
+            <div className="burn-error-actions">
+              <button type="button" className="metal-button compact-metal" onClick={() => void load(true)}>Try Base again</button>
+              <a className="metal-button compact-metal" href="/#swap">Back to Swap</a>
+            </div>
+          </div>
         </div>
       )}
 
