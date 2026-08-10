@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Background />
           <div className="relative z-10 flex w-full flex-col items-center">
             <Brand />
-            <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
+            <main className="w-full">{children}</main>
           </div>
         </Providers>
       </body>
