@@ -312,6 +312,7 @@ function SuccessToast({
   boughtSymbol,
   burnedInput,
   burnedSymbol,
+  burnedToby,
 }: {
   onClose: () => void;
   hash: `0x${string}`;
@@ -319,6 +320,7 @@ function SuccessToast({
   boughtSymbol?: string;
   burnedInput?: string;
   burnedSymbol?: string;
+  burnedToby?: string;
 }) {
   useEffect(() => {
     const id = setTimeout(onClose, 6500);
@@ -329,22 +331,21 @@ function SuccessToast({
     <Portal>
       <div className="fixed inset-0 z-[10999]" onClick={onClose} />
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500 bg-emerald-600 shadow-2xl p-4 text-white pointer-events-auto">
-          <button onClick={onClose} className="absolute right-2 top-2 rounded-full px-2 py-1 text-xs bg-white/15 hover:bg-white/25" aria-label="Close">Close</button>
-          <div className="flex items-start gap-3 pr-14">
-            <div className="text-2xl leading-none">✅</div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold">Swap confirmed</div>
-              <div className="mt-1 text-sm break-words">
-                {bought && boughtSymbol && (<div>Received (est.):&nbsp;<span className="font-mono">~{bought}</span> {boughtSymbol}</div>)}
-                {burnedInput && burnedSymbol && (<div>Burn fee (input est.):&nbsp;<span className="font-mono">~{burnedInput}</span> {burnedSymbol}</div>)}
-                <div className="truncate">
-                  Tx:&nbsp;<a className="underline" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noopener noreferrer">{hash.slice(0, 10)}…{hash.slice(-8)}</a>
-                </div>
-                <div className="mt-1 text-[11px] text-white/80">Values shown are estimates. Refer to the transaction on Basescan for exact amounts.</div>
-              </div>
-            </div>
+        <div className="swap-success-card pointer-events-auto">
+          <span className="swap-success-shine" aria-hidden="true" />
+          <button onClick={onClose} className="swap-success-close" aria-label="Close">×</button>
+          <div className="swap-success-head">
+            <span className="swap-success-orb">✓</span>
+            <div><small>BASE CONFIRMED</small><strong>Swap landed in the pond</strong></div>
           </div>
+          <div className="swap-success-grid">
+            {bought && boughtSymbol && <div><small>Estimated receive</small><strong>~{bought} {boughtSymbol}</strong></div>}
+            {burnedToby ? <div className="swap-success-burn"><small>Estimated burn</small><strong>🔥 ~{burnedToby} TOBY</strong></div> : burnedInput && burnedSymbol ? <div><small>Fee input</small><strong>~{burnedInput} {burnedSymbol}</strong></div> : null}
+          </div>
+          <a className="swap-success-basescan" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noopener noreferrer">
+            <span>View confirmed transaction</span><strong>BaseScan ↗</strong>
+          </a>
+          <p>Burn and receive values are estimates; BaseScan is the final onchain record.</p>
         </div>
       </div>
     </Portal>
@@ -366,6 +367,7 @@ export default function SwapForm() {
     boughtSymbol?: string;
     burnedInput?: string;
     burnedSymbol?: string;
+    burnedToby?: string;
   } | null>(null);
 
   function showSuccessToast(args: {
@@ -376,6 +378,7 @@ export default function SwapForm() {
     burnedInRaw?: bigint;
     burnedInDec?: number;
     burnedSymbol?: string;
+    burnedTobyRaw?: bigint;
   }) {
     const prettyBought =
       args.bought !== undefined && args.boughtDec !== undefined
@@ -385,6 +388,11 @@ export default function SwapForm() {
     const prettyBurnedIn =
       args.burnedInRaw !== undefined && args.burnedInDec !== undefined
         ? Number(formatUnits(args.burnedInRaw, args.burnedInDec)).toFixed(6)
+        : undefined;
+
+    const prettyBurnedToby =
+      args.burnedTobyRaw !== undefined
+        ? Number(formatUnits(args.burnedTobyRaw, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })
         : undefined;
 
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
@@ -397,6 +405,7 @@ export default function SwapForm() {
       boughtSymbol: args.boughtSymbol,
       burnedInput: prettyBurnedIn,
       burnedSymbol: args.burnedSymbol,
+      burnedToby: prettyBurnedToby,
     });
   }
 
@@ -465,12 +474,13 @@ export default function SwapForm() {
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [bestV2Path, setBestV2Path] = useState<Address[] | undefined>();
   const [bestFeePath, setBestFeePath] = useState<Address[] | undefined>();
+  const [quoteBurnToby, setQuoteBurnToby] = useState<bigint | undefined>();
   const quoteLatch = useRef<number>(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setBestFeePath(undefined);
+      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setBestFeePath(undefined); setQuoteBurnToby(undefined);
 
       if (!client || !isOnBase || routeAmountIn === 0n) { setQuoteState("idle"); return; }
       setQuoteState("loading");
@@ -481,6 +491,7 @@ export default function SwapForm() {
       let v2Path: Address[] | undefined;
       let v2Out: bigint | undefined;
       let feePath: Address[] | undefined;
+      let burnTobyEstimate: bigint | undefined;
 
       try {
         const quoteTokenOut = tokenOut === "ETH" ? (WETH as Address) : (tokenOut as Address);
@@ -514,12 +525,15 @@ export default function SwapForm() {
         if (isTaboshiPair) {
           // TABOSHI's direct Uniswap lane bypasses TobySwapper entirely.
           feePath = undefined;
+          burnTobyEstimate = undefined;
         } else if (eq(actualIn, TOBY)) {
           feePath = [TOBY as Address, TOBY as Address];
+          burnTobyEstimate = feeAmount;
         } else if (feeAmount > 0n) {
           const feeQuote = await v2Quote(client, feeAmount, actualIn, TOBY as Address);
           if (!feeQuote?.path) throw new Error("No V2 route is available for the TOBY burn fee.");
           feePath = feeQuote.path;
+          burnTobyEstimate = feeQuote.out;
         } else {
           feePath = buildFeePathFor(actualIn);
         }
@@ -541,8 +555,10 @@ export default function SwapForm() {
         setBestV3(best);
         setBestV2Path(best ? undefined : v2Path);
         setBestFeePath(feePath);
+        setQuoteBurnToby(burnTobyEstimate);
         setQuoteState("ok");
       } else {
+        setQuoteBurnToby(undefined);
         setQuoteState("noroute");
         setQuoteErr("No V3/V2 route found.");
       }
@@ -566,7 +582,7 @@ export default function SwapForm() {
   const approvalSpender = (isTaboshiPair ? SWAP_ROUTER_02 : SWAPPER) as Address;
   const { value: allowanceToSpender, isLoading: isAllowLoad, refetch: refetchAllowance } =
     useStickyAllowance(tokenInAddr, address as Address | undefined, approvalSpender);
-  const { approveMaxFlow: approveMaxToSpender, isPending: isApproving } =
+  const { approveAmountFlow: approveToSpender, isPending: isApproving } =
     useApprove(tokenInAddr, approvalSpender);
 
   const [approveCooldown, setApproveCooldown] = useState(false);
@@ -574,10 +590,11 @@ export default function SwapForm() {
     if (!needsApproval || !connected || !tokenInAddr) return;
     setApproveCooldown(true);
     try {
-      await approveMaxToSpender(allowanceToSpender);
-      setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
+      await approveToSpender(amountInBig, allowanceToSpender);
+      await refetchAllowance();
+      setApproveCooldown(false);
     } catch { setApproveCooldown(false); }
-  }, [needsApproval, connected, tokenInAddr, approveMaxToSpender, allowanceToSpender, refetchAllowance]);
+  }, [needsApproval, connected, tokenInAddr, approveToSpender, amountInBig, allowanceToSpender, refetchAllowance]);
 
   const showApproveButton =
     needsApproval && amountInBig > 0n && (allowanceToSpender ?? 0n) < amountInBig;
@@ -585,7 +602,9 @@ export default function SwapForm() {
   const approveText =
     isApproving ? "Approving…" :
     isAllowLoad && !approveCooldown ? "Checking allowance…" :
-    (allowanceToSpender ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
+    inMeta.symbol === "USDC" && amountInBig > 0n
+      ? `Approve ${Number(formatUnits(amountInBig, 6)).toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC`
+      : (allowanceToSpender ?? 0n) > 0n ? `Update ${inMeta.symbol} approval` : `Approve ${inMeta.symbol}`;
 
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
@@ -598,6 +617,9 @@ export default function SwapForm() {
     const pc = client;
     if (pc) { try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {} }
     invalidateBurnTotal();
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("tobyswap:burn-updated", { detail: { hash: txHash } }));
+    try { await balInRaw.refetch?.(); } catch {}
+    try { await balOutRaw.refetch?.(); } catch {}
   }
 
   async function doTaboshiDirectSwap() {
@@ -742,7 +764,9 @@ export default function SwapForm() {
             burnedInRaw: (amountInBig * feeBps) / FEE_DENOM,
             burnedInDec: decIn,
             burnedSymbol: inMeta.symbol,
+            burnedTobyRaw: quoteBurnToby,
           });
+          setAmt("");
           setSending(false);
           return;
         }
@@ -814,7 +838,9 @@ export default function SwapForm() {
           burnedInRaw: 0n,
           burnedInDec: decIn,
           burnedSymbol: inMeta.symbol,
+          burnedTobyRaw: quoteBurnToby,
         });
+        setAmt("");
         setSending(false);
         return;
       }
@@ -849,7 +875,9 @@ export default function SwapForm() {
           burnedInRaw: 0n,
           burnedInDec: decIn,
           burnedSymbol: inMeta.symbol,
+          burnedTobyRaw: quoteBurnToby,
         });
+        setAmt("");
       } else {
         const mainPath = bestV2Path ?? [inAddr, tokenOut as Address];
         const sim = await (client as any).simulateContract({
@@ -881,7 +909,9 @@ export default function SwapForm() {
           burnedInRaw: 0n,
           burnedInDec: decIn,
           burnedSymbol: inMeta.symbol,
+          burnedTobyRaw: quoteBurnToby,
         });
+        setAmt("");
       }
     } catch (e: any) {
       const msg = e?.shortMessage || e?.message || String(e);
@@ -1068,9 +1098,9 @@ export default function SwapForm() {
         <div className="weth-route-callout">
           <span className="weth-route-orb"><img src="/tokens/toby.PNG" alt="" /></span>
           <div className="min-w-0 flex-1">
-            <strong>TABOSHI takes the direct V3 lane</strong>
-            <p>Farcaster&apos;s native swap screen cannot reliably resolve TABOSHI. TobySwap now executes TABOSHI directly against Uniswap V3 with your connected wallet instead.</p>
-            <small>No TobySwap burn on this route · it will not increase your Burners rank.</small>
+            <strong>TABOSHI · Direct V3</strong>
+            <p>Trades straight through Uniswap on Base.</p>
+            <small>No TOBY burn · no Burner rank credit.</small>
           </div>
           <span className="metal-button compact-metal pointer-events-none whitespace-nowrap">
             Direct on Base
@@ -1103,7 +1133,7 @@ export default function SwapForm() {
           </div>
           <div className="quote-receipt-row quote-burn-row">
             <span>{isTaboshiPair ? "Burn credit" : "Protocol burn"}</span>
-            <strong>{isTaboshiPair ? "Direct Uniswap route · no TobySwap burn" : `${feePct}% of input → TOBY 🔥`}</strong>
+            <strong>{isTaboshiPair ? "No burn on direct route" : quoteBurnToby ? `~${Number(formatUnits(quoteBurnToby, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} TOBY 🔥` : `${feePct}% of input → TOBY 🔥`}</strong>
           </div>
         </div>
       )}
@@ -1153,7 +1183,7 @@ export default function SwapForm() {
       )}
 
       {isTaboshiPair && (
-        <p className="mt-2 text-center text-[10px] font-bold leading-relaxed text-inkSub">This TABOSHI trade executes directly through Uniswap V3 using your connected wallet. It bypasses the TobySwapper contract, so no TOBY burn or Burner leaderboard credit is created.</p>
+        <p className="taboshi-note">Direct Uniswap route on Base · no TOBY burn or leaderboard credit.</p>
       )}
 
       {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}
@@ -1170,6 +1200,7 @@ export default function SwapForm() {
           boughtSymbol={success.boughtSymbol}
           burnedInput={success.burnedInput}
           burnedSymbol={success.burnedSymbol}
+          burnedToby={success.burnedToby}
           onClose={() => setSuccess(null)}
         />
       )}

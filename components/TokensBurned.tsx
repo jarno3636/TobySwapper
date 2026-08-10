@@ -95,9 +95,16 @@ export default function TokensBurned() {
       enabled: mounted && visible,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      staleTime: 60_000,
+      staleTime: 8_000,
+      refetchInterval: 15_000,
     },
   });
+
+  useEffect(() => {
+    const refreshFromSwap = () => { void refetch(); };
+    window.addEventListener("tobyswap:burn-updated", refreshFromSwap);
+    return () => window.removeEventListener("tobyswap:burn-updated", refreshFromSwap);
+  }, [refetch]);
 
   const burned18 = useMemo(() => (data ? (data as bigint) : 0n), [data]);
   const anim18 = useAnimatedBigint(burned18, 800);
