@@ -15,6 +15,10 @@ export default function BurnersPage() {
             <span className="burn-hero-kicker">THE POND KEEPS SCORE</span>
             <h2>Top <em>Burners</em></h2>
             <p>Swap through TobySwap. Feed the flame. Climb the all-time onchain burn trail.</p>
+            <div className="burn-hero-actions">
+              <a href="/#swap" className="metal-button burn-hero-cta burn-hero-cta-primary"><span>↔</span> Swap &amp; climb</a>
+              <a href="#leaderboard" className="metal-button burn-hero-cta"><span>↓</span> See the ranks</a>
+            </div>
           </div>
           <div className="burn-hero-art" aria-hidden="true">
             <span className="burn-hero-toby"><Image src="/tokens/toby.PNG" alt="" fill sizes="140px" className="object-contain" /></span>
@@ -23,7 +27,7 @@ export default function BurnersPage() {
             <i className="burn-spark burn-spark-one">✦</i><i className="burn-spark burn-spark-two">✦</i><i className="burn-spark burn-spark-three">✦</i>
           </div>
         </section>
-        <BurnerLeaderboard />
+        <div id="leaderboard" className="scroll-mt-24"><BurnerLeaderboard /></div>
       </div>
       <Footer />
       <PondDock active="burners" />
