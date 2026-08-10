@@ -5,7 +5,7 @@ export const metadata = {
   openGraph: {
     title: "Toby Swapper",
     description:
-      "Swap USDC/ETH ↔️ TOBY · PATIENCE · TABOSHI. 1% auto-burn to TOBY.",
+      "Swap ETH/WETH ↔️ TOBY · PATIENCE · TABOSHI. Auto-burn TOBY on supported TobySwap routes.",
     images: ["/og/tobyswap-card-1200x630.png"],
   },
   twitter: {
