@@ -655,7 +655,6 @@ export default function SwapForm() {
             components: [
               { name: "path", type: "bytes" },
               { name: "recipient", type: "address" },
-              { name: "deadline", type: "uint256" },
               { name: "amountIn", type: "uint256" },
               { name: "amountOutMinimum", type: "uint256" },
             ],
@@ -663,10 +662,11 @@ export default function SwapForm() {
           [{
             path: v3Path,
             recipient: address as Address,
-            deadline,
-            // IMPORTANT: the contract splits the outer amountIn into main + fee.
-            // The V3 router must therefore receive only the post-fee main amount,
-            // otherwise it tries to spend tokens already reserved for the TOBY burn.
+            // Base uses Uniswap SwapRouter02 / IV3SwapRouter ExactInputParams.
+            // That struct has NO deadline field. Encoding the legacy five-field
+            // V3 struct makes the router calldata invalid and the contract preflight revert.
+            // TobySwapper still receives the full outer amount and splits its fee; only
+            // the post-fee main amount is sent through the V3 route.
             amountIn: mainAmountIn,
             amountOutMinimum: minOutMain,
           }]
@@ -774,7 +774,7 @@ export default function SwapForm() {
       if (/timeout/i.test(msg)) setPreflightMsg("RPC timed out. Please try again.");
       else if (/HTTP/i.test(msg)) setPreflightMsg("Network RPC error. Try again.");
       else if (/swapTokensForTokensV3ExactInput/i.test(msg) && /revert/i.test(msg))
-        setPreflightMsg("That V3 route failed its onchain preflight. Refresh the quote and try again. TobySwap now sends only the post-fee amount into V3 so WETH routes do not attempt to spend the burn portion twice.");
+        setPreflightMsg("That V3 route failed its onchain preflight. Refresh the quote and try again. TobySwap now uses Base SwapRouter02's four-field ExactInputParams and sends only the post-fee amount through V3.");
       else setPreflightMsg(msg);
     } finally {
       setSending(false);

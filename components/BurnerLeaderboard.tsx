@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
-import { getMiniSdk, isInFarcasterMiniApp } from "@/lib/miniapps";
+import { getMiniSdk, isInFarcasterMiniApp, openInMini } from "@/lib/miniapps";
 
 type FarcasterProfile = {
   fid: number;
@@ -83,9 +83,48 @@ function Medal({ rank }: { rank: number }) {
   return <span className={`burn-medal burn-medal-${rank}`} aria-label={`Rank ${rank}`}>{rank}</span>;
 }
 
+function farcasterProfileHref(profile?: FarcasterProfile) {
+  return profile?.username ? `https://farcaster.xyz/@${encodeURIComponent(profile.username)}` : undefined;
+}
+
+function BurnerLink({ row, className, children }: { row: Leader; className: string; children: React.ReactNode }) {
+  const href = farcasterProfileHref(row.profile) || `https://basescan.org/address/${row.address}`;
+
+  const onClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    if (row.profile?.fid) {
+      try {
+        if (await isInFarcasterMiniApp()) {
+          const sdk = await getMiniSdk();
+          const viewProfile = (sdk as any)?.actions?.viewProfile;
+          if (typeof viewProfile === "function") {
+            event.preventDefault();
+            await viewProfile({ fid: row.profile.fid });
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // Use native Mini App / Base App URL handling as the fallback.
+    if (await isInFarcasterMiniApp()) {
+      event.preventDefault();
+      const opened = await openInMini(href);
+      if (!opened) window.location.href = href;
+    }
+  };
+
+  return (
+    <a href={href} className={className} onClick={onClick} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
 function PodiumCard({ row }: { row: Leader }) {
   return (
-    <LinkMaybeMini href={`https://basescan.org/address/${row.address}`} className={`burn-podium-card burn-podium-${row.rank}`}>
+    <BurnerLink row={row} className={`burn-podium-card burn-podium-${row.rank}`}>
       <span className="burn-podium-glint" aria-hidden="true" />
       <Medal rank={row.rank} />
       <ProfileAvatar row={row} size="large" />
@@ -94,7 +133,7 @@ function PodiumCard({ row }: { row: Leader }) {
       <RankTitle row={row} />
       <span className="burn-podium-amount">{prettyBurn(row.burned)} <small>TOBY</small></span>
       <span className="burn-podium-swaps">{row.swaps} swap{row.swaps === 1 ? "" : "s"}</span>
-    </LinkMaybeMini>
+    </BurnerLink>
   );
 }
 
@@ -233,7 +272,7 @@ export default function BurnerLeaderboard() {
               <div className="burn-table-label"><span>THE BURN TRAIL</span><span>Top {leaders.length}</span></div>
               <div className="burn-table">
                 {rest.map((row) => (
-                  <LinkMaybeMini key={row.address} href={`https://basescan.org/address/${row.address}`} className={`burn-row burn-row-${row.titleKey || "ember"}`}>
+                  <BurnerLink key={row.address} row={row} className={`burn-row burn-row-${row.titleKey || "ember"}`}>
                     <Medal rank={row.rank} />
                     <ProfileAvatar row={row} />
                     <span className="burn-row-user">
@@ -243,7 +282,7 @@ export default function BurnerLeaderboard() {
                     <span className="burn-row-title"><RankTitle row={row} />{row.bestRank && row.bestRank < row.rank ? <small>Best #{row.bestRank}</small> : null}</span>
                     <span className="burn-row-value"><strong>{prettyBurn(row.burned)}</strong><small>TOBY burned</small></span>
                     <span className="burn-row-arrow">↗</span>
-                  </LinkMaybeMini>
+                  </BurnerLink>
                 ))}
               </div>
             </div>
