@@ -18,6 +18,7 @@ function safeNum(v: unknown) {
 }
 
 function loadCache(keys: string[]): PriceMap {
+  if (typeof window === "undefined") return {};
   const now = Date.now();
   const out: PriceMap = {};
   for (const k of keys) {
@@ -38,6 +39,7 @@ function loadCache(keys: string[]): PriceMap {
 }
 
 function saveCache(map: PriceMap) {
+  if (typeof window === "undefined") return;
   const t = Date.now();
   for (const [k, v] of Object.entries(map)) {
     const good = safeNum(v);

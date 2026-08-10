@@ -8,7 +8,7 @@ type MiniAppSdk = {
     composeCast?: (args: { text?: string; embeds?: string[] }) => Promise<void> | void;
     ready?: () => Promise<void> | void;
   };
-  isInMiniApp?: () => boolean;
+  isInMiniApp?: (timeoutMs?: number) => Promise<boolean> | boolean;
 };
 
 /* =========================
@@ -30,6 +30,15 @@ export const MINIAPP_URL =
 export function isFarcasterUA(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Warpcast|Farcaster|FarcasterMini/i.test(navigator.userAgent);
+}
+
+export async function isInFarcasterMiniApp(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const sdk = await getMiniSdk();
+    if (sdk?.isInMiniApp) return Boolean(await sdk.isInMiniApp(250));
+  } catch {}
+  return isFarcasterUA();
 }
 
 export function isBaseAppUA(): boolean {

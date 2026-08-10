@@ -1,7 +1,7 @@
 // lib/wallet.ts
 "use client";
 
-import { http, cookieStorage, createStorage, createConfig } from "wagmi";
+import { http, fallback, cookieStorage, createStorage, createConfig } from "wagmi";
 import { base } from "viem/chains";
 
 // ➊ RainbowKit wallet factories (modal buttons)
@@ -50,7 +50,17 @@ const rkConnectors = connectorsForWallets(walletGroups, {
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
-    [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || undefined),
+    [base.id]: fallback([
+      // First choice: our same-origin server proxy. It can use a private BASE_RPC_URL
+      // or ALCHEMY_API_KEY and rotates to public Base RPCs if the provider is down.
+      http("/api/rpc", { timeout: 10_000, retryCount: 1 }),
+      ...(process.env.NEXT_PUBLIC_BASE_RPC_URL
+        ? [http(process.env.NEXT_PUBLIC_BASE_RPC_URL, { timeout: 10_000, retryCount: 1 })]
+        : []),
+      http("https://mainnet.base.org", { timeout: 10_000, retryCount: 1 }),
+      http("https://base-rpc.publicnode.com", { timeout: 10_000, retryCount: 1 }),
+      http("https://1rpc.io/base", { timeout: 10_000, retryCount: 1 }),
+    ], { rank: true }),
   },
   connectors: [
     // Prefer Mini-App when inside Warpcast (no effect on web)
