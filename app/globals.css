@@ -944,3 +944,40 @@ html { scroll-behavior: smooth; }
   html { scroll-behavior:auto; }
   .hero-glint { animation:none!important; }
 }
+
+/* ===== TobySwap polish pass: destination dock + richer pond surfaces ===== */
+.pond-dock-wrap{position:relative;isolation:isolate}
+.pond-dock-shine{position:absolute;z-index:2;left:9%;right:9%;top:2px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.98),transparent);pointer-events:none}
+.pond-dock-item{position:relative;overflow:hidden;transition:transform .18s ease,filter .18s ease}
+.pond-dock-item:hover{transform:translateY(-2px)}
+.pond-dock-item:active{transform:translateY(1px) scale(.985)}
+.pond-dock-label{position:relative;z-index:2}
+.dock-art,.pond-dock-icon{position:relative;overflow:hidden}
+.dock-art{width:46px;height:46px;display:grid;place-items:center;border-radius:17px;color:#fff;border:1px solid rgba(255,255,255,.86);box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 -3px 6px rgba(12,32,61,.16) inset,0 6px 12px rgba(28,57,84,.16)}
+.dock-art svg{width:31px;height:31px;filter:drop-shadow(0 2px 1px rgba(0,0,0,.16))}
+.dock-art-swap{background:radial-gradient(circle at 30% 18%,#8fe5ff 0 12%,transparent 13%),linear-gradient(145deg,#64d7ff 0%,#218eff 42%,#1556e9 78%,#8b64ff 115%)}
+.dock-art-atlas{background:radial-gradient(circle at 30% 18%,#d6ffbc 0 10%,transparent 11%),linear-gradient(145deg,#91e876 0%,#38b96c 43%,#1b86a8 100%)}
+.dock-art-atlas .atlas-leaf{fill:#f4d35e;stroke:#fff;stroke-width:2}
+.dock-glint{position:absolute;left:8px;top:6px;width:19px;height:8px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,.12));transform:rotate(-18deg);pointer-events:none}
+.pond-dock-active .dock-art{box-shadow:0 1px 0 #fff inset,0 -4px 8px rgba(12,32,61,.18) inset,0 0 0 3px rgba(72,177,255,.12),0 8px 18px rgba(26,107,223,.22)}
+
+.pond-explore{position:relative;overflow:hidden}
+.pond-explore:before{content:"";position:absolute;width:210px;height:210px;right:-85px;top:-95px;border-radius:50%;background:radial-gradient(circle,rgba(88,198,255,.14),rgba(88,198,255,0) 70%);pointer-events:none}
+.pond-path-line{height:2px;margin:-2px 18px 13px;background:linear-gradient(90deg,rgba(63,179,237,.06),rgba(63,179,237,.38),rgba(80,190,114,.3),rgba(236,77,73,.18),rgba(63,179,237,.06));border-radius:999px;box-shadow:0 1px 0 #fff}
+.pond-destination{position:relative;overflow:hidden}
+.pond-destination:before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .18s ease;pointer-events:none}
+.pond-destination-blue:before{background:linear-gradient(105deg,rgba(69,180,255,.10),transparent 48%)}
+.pond-destination-green:before{background:linear-gradient(105deg,rgba(79,196,116,.11),transparent 48%)}
+.pond-destination-cyan:before{background:linear-gradient(105deg,rgba(74,207,222,.10),transparent 48%)}
+.pond-destination:hover:before{opacity:1}
+.pond-destination .pond-link-icon{transition:transform .2s ease,box-shadow .2s ease}
+.pond-destination:hover .pond-link-icon{transform:translateY(-2px) rotate(-2deg);box-shadow:0 9px 18px rgba(23,49,67,.14),0 1px 0 #fff inset}
+
+/* Metallic controls: brighter top specular line, colored edge-light and tactile press. */
+.metal-button,.swap-primary,.token-trigger,.swap-direction-floating{position:relative;overflow:hidden}
+.metal-button:before,.swap-primary:before,.token-trigger:before,.swap-direction-floating:before{content:"";position:absolute;left:7%;right:7%;top:2px;height:32%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,0));opacity:.72;pointer-events:none}
+.swap-primary{box-shadow:0 2px 0 rgba(255,255,255,.95) inset,0 -5px 10px rgba(19,82,160,.15) inset,0 7px 0 rgba(29,103,186,.10),0 12px 24px rgba(30,113,207,.18)}
+.swap-primary:hover{filter:saturate(1.08) brightness(1.02)}
+.swap-primary:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -2px 7px rgba(19,82,160,.15) inset,0 3px 0 rgba(29,103,186,.09),0 7px 14px rgba(30,113,207,.14)}
+
+@media(max-width:440px){.dock-art{width:40px;height:40px;border-radius:14px}.dock-art svg{width:27px;height:27px}.pond-dock-label{font-size:9px}.pond-path-line{margin-left:8px;margin-right:8px}}
