@@ -5,6 +5,14 @@ import LinkMaybeMini from "@/components/LinkMaybeMini";
 
 const links = [
   {
+    eyebrow: "ONCHAIN",
+    title: "Pond Burners",
+    copy: "See the wallets that have burned the most TOBY through TobySwap.",
+    href: "/burners",
+    icon: "/tokens/patience.PNG",
+    accent: "red",
+  },
+  {
     eyebrow: "WORLD",
     title: "Tobyworld",
     copy: "Enter the official Tobyworld experience and follow the lore.",
@@ -57,19 +65,25 @@ export default function WorldLinks() {
 
       <div className="pond-path-line" aria-hidden="true" />
       <div className="grid gap-3 pond-destination-grid">
-        {links.map((item) => (
-          <LinkMaybeMini key={item.title} href={item.href} className={`world-link-card pond-destination pond-destination-${item.accent} group`}>
-            <span className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl pond-link-icon pond-link-${item.accent}`}>
-              <Image src={item.icon} alt="" fill sizes="48px" className="object-contain p-1" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="world-kicker block">{item.eyebrow}</span>
-              <span className="mt-0.5 block font-extrabold text-[var(--ink)]">{item.title}</span>
-              <span className="mt-1 block text-xs leading-relaxed text-inkSub">{item.copy}</span>
-            </span>
-            <span className="metal-arrow" aria-hidden="true">↗</span>
-          </LinkMaybeMini>
-        ))}
+        {links.map((item) => {
+          const content = (
+            <>
+              <span className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl pond-link-icon pond-link-${item.accent}`}>
+                <Image src={item.icon} alt="" fill sizes="48px" className="object-contain p-1" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="world-kicker block">{item.eyebrow}</span>
+                <span className="mt-0.5 block font-extrabold text-[var(--ink)]">{item.title}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-inkSub">{item.copy}</span>
+              </span>
+              <span className="metal-arrow" aria-hidden="true">↗</span>
+            </>
+          );
+          const className = `world-link-card pond-destination pond-destination-${item.accent} group`;
+          return item.href.startsWith("/")
+            ? <a key={item.title} href={item.href} className={className}>{content}</a>
+            : <LinkMaybeMini key={item.title} href={item.href} className={className}>{content}</LinkMaybeMini>;
+        })}
       </div>
 
       <LinkMaybeMini
