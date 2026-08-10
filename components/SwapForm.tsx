@@ -788,168 +788,221 @@ export default function SwapForm() {
 
   const disableSwap = !!disableReason;
 
+  const routeLabel = bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
+  const feePct = Number(feeBps) / 100;
+  const receiveHuman = quoteState === "ok" && expectedOutMainHuman !== undefined
+    ? expectedOutMainHuman.toLocaleString(undefined, { maximumFractionDigits: 6 })
+    : quoteState === "loading" ? "…" : "0.00";
+  const receiveUsd = quoteState === "ok" && expectedOutMainHuman !== undefined
+    ? expectedOutMainHuman * outUsd
+    : 0;
+
   return (
-    <div className="glass rounded-3xl p-6 shadow-soft">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Swap</h2>
-        <div className="inline-flex items-center gap-2 text-xs text-inkSub">
-          <span>Network</span>
-          <img src="/tokens/baseeth.PNG" alt="Base" className="w-4 h-4 rounded-full" />
-          <span>Base</span>
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
-                document.activeElement.blur();
-              }
-              setSlippageOpen(true);
-            }}
-            className="ml-3 pill pill-opaque px-2 py-1 inline-flex items-center gap-1"
-            aria-label="Slippage settings"
-            title="Slippage settings"
-          >
-            <GearIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">{slippage}%</span>
-          </button>
+    <div className="swap-shell world-card p-4 sm:p-6">
+      <div className="swap-head">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="swap-mascot-stack" aria-hidden="true">
+            <img src="/tokens/toby.PNG" alt="" className="swap-mascot-toby" />
+            <img src="/tokens/sato.jpg" alt="" className="swap-mascot-sato" />
+          </div>
+          <div className="min-w-0">
+            <div className="world-kicker">SWAP GATE</div>
+            <h2 className="mt-1 text-xl sm:text-2xl font-black tracking-[-.04em]">Trade the pond</h2>
+            <div className="text-[11px] text-inkSub mt-1">TOBY · PATIENCE · TABOSHI · Base assets</div>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            setSlippageOpen(true);
+          }}
+          className="metal-button compact-metal swap-settings-button"
+          aria-label="Slippage settings"
+          title="Slippage settings"
+        >
+          <GearIcon className="w-4 h-4" />
+          <span>{slippage}%</span>
+        </button>
+      </div>
+
+      <div className="swap-status-row">
+        <span className={`route-status ${isOnBase ? "route-status-live" : ""}`}>
+          <span className="status-dot !mr-0" /> Base {isOnBase ? "connected" : "required"}
+        </span>
+        <span className="route-status">{quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
+        <span className="route-status">{feePct}% → TOBY burn</span>
       </div>
 
       {!isOnBase && (
-        <div className="mb-3 text-xs rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
-          You’re not on Base. <button onClick={ensureBase} className="underline">Switch to Base</button> to continue.
+        <div className="swap-alert mt-3">
+          <div><strong>Base network required.</strong><br /><span>Switch networks to quote and swap.</span></div>
+          <button onClick={ensureBase} className="metal-button compact-metal px-3">Switch</button>
         </div>
       )}
 
-      {/* Token In */}
-      <div className="space-y-2">
-        <label className="text-sm text-inkSub">Token In {inMeta.symbol === "ETH" ? "(ETH • Base)" : ""}</label>
-        <TokenSelect
-          user={address as Address | undefined}
-          value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          onChange={(a) => {
-            setTokenIn(eq(a, WETH) ? "ETH" : (a as Address));
-            setAmt("");
-          }}
-          exclude={tokenOut}
-          balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
-          forceBlur={slippageOpen || !!success}
-        />
-      </div>
+      <div className="swap-trade-stack mt-4">
+        <section className="trade-panel trade-panel-pay">
+          <div className="trade-panel-labels">
+            <span>You pay</span>
+            <span>
+              {balInRaw.value !== undefined ? `Balance ${Number(formatUnits(balInRaw.value, inMeta.decimals)).toLocaleString(undefined, { maximumFractionDigits: 6 })}` : "Balance —"}
+            </span>
+          </div>
 
-      {/* Swap sides */}
-      <div className="flex justify-center my-2">
+          <div className="trade-main-row">
+            <div className="trade-amount-wrap">
+              <input
+                value={amt}
+                onChange={(e) => setAmt(e.target.value)}
+                className="trade-amount-input"
+                placeholder="0"
+                inputMode="decimal"
+                autoComplete="off"
+                spellCheck={false}
+                name="swap-amount"
+                aria-label={`Amount of ${inMeta.symbol} to swap`}
+              />
+              <div className="trade-usd">≈ ${Number.isFinite(amtInUsd) ? amtInUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</div>
+            </div>
+            <div className="trade-token-side">
+              <TokenSelect
+                user={address as Address | undefined}
+                value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
+                onChange={(a) => {
+                  setTokenIn(eq(a, WETH) ? "ETH" : (a as Address));
+                  setAmt("");
+                }}
+                exclude={tokenOut}
+                balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
+                forceBlur={slippageOpen || !!success}
+              />
+              <button
+                className="max-button trade-max"
+                onClick={() => {
+                  if (!balInRaw.value) return;
+                  const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
+                  const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
+                  setAmt((safe > 0 ? safe : 0).toString());
+                }}
+              >MAX</button>
+            </div>
+          </div>
+
+          {connected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
+            <div className="trade-warning">Insufficient {inMeta.symbol === "ETH" ? "ETH on Base" : inMeta.symbol} balance.</div>
+          )}
+        </section>
+
         <button
-          className="pill pill-opaque px-3 py-1 text-sm"
+          className="metal-button swap-direction-button swap-direction-floating"
           onClick={() => {
             const prevIn = tokenIn, prevOut = tokenOut;
             setTokenIn(eq(prevOut, WETH) ? "ETH" : (prevOut as Address));
             setTokenOut(prevIn === "ETH" ? (WETH as Address) : (prevIn as Address));
             setAmt("");
           }}
-          aria-label="Swap sides"
-          title="Swap sides"
+          aria-label="Reverse swap direction"
+          title="Reverse swap direction"
         >
-          ↕
+          <span aria-hidden="true">↓↑</span>
         </button>
+
+        <section className="trade-panel trade-panel-receive">
+          <div className="trade-panel-labels">
+            <span>You receive</span>
+            <span>{quoteState === "ok" ? "Estimated" : quoteState === "loading" ? "Quoting…" : "Enter amount"}</span>
+          </div>
+          <div className="trade-main-row">
+            <div className="trade-amount-wrap min-w-0">
+              <div className={`trade-output ${quoteState === "loading" ? "quote-shimmer" : ""}`}>{receiveHuman}</div>
+              <div className="trade-usd">≈ ${Number.isFinite(receiveUsd) ? receiveUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</div>
+            </div>
+            <div className="trade-token-side">
+              <TokenSelect
+                user={address as Address | undefined}
+                value={tokenOut}
+                onChange={(v) => {
+                  const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
+                  setTokenOut(next);
+                  setAmt("");
+                }}
+                exclude={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
+                balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
+                forceBlur={slippageOpen || !!success}
+              />
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* Amount */}
-      <div>
-        <div className="flex items-center justify-between">
-          <label className="text-sm text-inkSub">Amount {inMeta.symbol === "ETH" ? "(ETH • Base)" : `(${inMeta.symbol})`}</label>
-          <div className="text-xs text-inkSub">
-            Bal: <span className="font-mono">
-              {balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : "—"}
-            </span>
-            <button
-              className="ml-2 underline"
-              onClick={() => {
-                if (!balInRaw.value) return;
-                const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-                const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
-                setAmt((safe > 0 ? safe : 0).toString());
-              }}
-            >
-              MAX
-            </button>
+      {quoteState === "loading" && amountInBig > 0n && (
+        <div className="pond-route-loader" aria-live="polite">
+          <div className="pond-route-line" />
+          <img src="/tokens/toby.PNG" alt="" className="route-toby" />
+          <img src="/tokens/sato.jpg" alt="" className="route-sato" />
+          <span>Finding the best pond route</span>
+        </div>
+      )}
+
+      {quoteState === "ok" && expectedOutMainHuman !== undefined && (
+        <div className="quote-receipt">
+          <div className="quote-receipt-row">
+            <span>Route</span>
+            <strong>{routeLabel}</strong>
+          </div>
+          <div className="quote-receipt-row">
+            <span>Minimum received</span>
+            <strong className="font-mono">{Number(minOutMainHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {outMeta.symbol}</strong>
+          </div>
+          <div className="quote-receipt-row">
+            <span>Slippage</span>
+            <strong>{slippage}%</strong>
+          </div>
+          <div className="quote-receipt-row quote-burn-row">
+            <span>Protocol burn</span>
+            <strong>{feePct}% of input → TOBY 🔥</strong>
           </div>
         </div>
+      )}
 
-        <input
-          value={amt}
-          onChange={(e) => setAmt(e.target.value)}
-          className="w-full glass rounded-pill px-4 py-3"
-          placeholder="0.0"
-          inputMode="decimal"
-          autoComplete="off"
-          spellCheck={false}
-          name="swap-amount"
-        />
-
-        {/* USD estimate under Amount */}
-        <div className="mt-2 text-xs text-inkSub">≈ ${Number.isFinite(amtInUsd) ? amtInUsd.toFixed(2) : "0.00"} USD</div>
-
-        {connected && balInRaw.value !== undefined && balInRaw.value < amountInBig && (
-          <div className="mt-1 text-xs text-warn">Insufficient {inMeta.symbol === "ETH" ? "ETH (Base)" : inMeta.symbol} balance.</div>
-        )}
-
-        {/* Approve (SWAPPER) */}
-        {showApproveButton && (
-          <div className="mt-3">
-            <button
-              onClick={onApprove}
-              className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60"
-              disabled={isApproving || !connected || !isOnBase || approveCooldown}
-              title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
-            >
-              {approveText}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Token Out & estimate */}
-      <div className="space-y-2 mt-4">
-        <label className="text-sm text-inkSub">Token Out {outMeta.symbol === "ETH" ? "(ETH • Base)" : ""}</label>
-        <TokenSelect
-          user={address as Address | undefined}
-          value={tokenOut}
-          onChange={(v) => {
-            const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
-            setTokenOut(next);
-            setAmt("");
-          }}
-          exclude={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
-          balance={balOutRaw.value !== undefined ? Number(formatUnits(balOutRaw.value, outMeta.decimals)).toFixed(6) : undefined}
-          forceBlur={slippageOpen || !!success}
-        />
-        <div className="text-xs text-inkSub">
-          {quoteState === "loading" && <>Querying routes…</>}
-          {quoteState === "noroute" && <>No route found for this pair/size.{quoteErr && <> <span className="text-warn"> ({quoteErr})</span></>}</>}
-          {quoteState === "ok" && expectedOutMainHuman !== undefined && (
-            <>
-              Est (after fee): <span className="font-mono">{expectedOutMainHuman.toFixed(6)}</span> {outMeta.symbol}
-              {" · "}1 {outMeta.symbol} ≈ ${outUsd.toFixed(4)}
-              {" · "}Min out: <span className="font-mono">{minOutMainHuman}</span>
-            </>
-          )}
-          {quoteState === "idle" && <>Enter an amount to get an estimate.</>}
+      {quoteState === "noroute" && amountInBig > 0n && (
+        <div className="swap-alert mt-3">
+          <div><strong>No route found.</strong><br /><span>Try a different amount or pair.{quoteErr ? ` ${quoteErr}` : ""}</span></div>
         </div>
-      </div>
+      )}
 
-      {/* Swap */}
+      {showApproveButton && (
+        <button
+          onClick={onApprove}
+          className="metal-button w-full approve-button mt-4 justify-center font-black disabled:opacity-60"
+          disabled={isApproving || !connected || !isOnBase || approveCooldown}
+          title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
+        >
+          <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
+          {approveText}
+        </button>
+      )}
+
       <button
         onClick={doSwap}
-        className="pill w-full justify-center font-semibold hover:opacity-90 disabled:opacity-60 mt-4"
+        className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
         disabled={disableSwap}
         title={disableReason ?? "Swap"}
       >
-        {disableReason ? disableReason : (sending ? "Submitting…" : bestV3 ? `Swap & Burn ${Number(feeBps) / 100}% 🔥 (V3 via SWAPPER)` : "Swap (via SWAPPER V2)")}
+        {!disableSwap && <span className="swap-button-shine" aria-hidden="true" />}
+        <span className="button-mini-medallion"><img src="/tokens/sato.jpg" alt="" /></span>
+        <span>{disableReason ? disableReason : sending ? "Sending through the pond…" : `Swap ${inMeta.symbol} → ${outMeta.symbol}`}</span>
+        {!disableSwap && <span className="swap-button-route">{bestV3 ? "V3" : "V2"}</span>}
       </button>
 
-      {preflightMsg && <div className="text-[11px] text-warn mt-2">{preflightMsg}</div>}
+      {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}
 
-      {/* Success Toast */}
+      <div className="swap-footnote">
+        <span>Quotes are estimates.</span>
+        <span>Transactions settle on Base.</span>
+      </div>
+
       {success && (
         <SuccessToast
           hash={success.hash}
@@ -961,27 +1014,27 @@ export default function SwapForm() {
         />
       )}
 
-      {/* Slippage modal */}
       {slippageOpen && (
         <Portal>
           <div className="fixed inset-0 z-[10000]">
-            <div className="absolute inset-0 z-0 bg-black/25 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
-            <div role="dialog" aria-modal="true" className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-[var(--line)] pointer-events-auto">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold">Slippage</h4>
-                <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
+            <div className="absolute inset-0 z-0 bg-[#1c2933]/25 backdrop-blur-[3px]" onClick={() => setSlippageOpen(false)} />
+            <div role="dialog" aria-modal="true" className="token-modal-card relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-5 w-[90%] max-w-sm pointer-events-auto">
+              <div className="flex items-center justify-between mb-4">
+                <div><div className="world-kicker">TRADE SETTINGS</div><h4 className="font-black text-xl mt-1">Slippage tolerance</h4></div>
+                <button className="metal-button compact-metal text-xs px-3" onClick={() => setSlippageOpen(false)}>Close</button>
               </div>
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[0.1, 0.5, 1, 2].map((v) => (
-                  <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-2 outline-[var(--accent)]" : ""}`}>
+                  <button key={v} onClick={() => setSlippage(v)} className={`metal-button justify-center px-3 py-2 text-xs font-black ${slippage === v ? "metal-button-selected" : ""}`}>
                     {v}%
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="glass rounded-pill px-3 py-2 w-full" />
-                <span className="text-sm text-inkSub">%</span>
+              <div className="slippage-custom">
+                <input type="number" min="0" step="0.1" value={slippage} onChange={(e) => setSlippage(Number(e.target.value))} className="bg-transparent outline-none w-full text-xl font-black" />
+                <span className="text-sm font-black text-inkSub">%</span>
               </div>
+              <p className="text-[11px] text-inkSub mt-3 leading-relaxed">Your transaction will revert rather than execute below the minimum received amount implied by this tolerance.</p>
             </div>
           </div>
         </Portal>
