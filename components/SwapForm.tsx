@@ -22,7 +22,6 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import { useInvalidateBurnTotal } from "@/lib/burn";
-import { getMiniSdk, isInFarcasterMiniApp } from "@/lib/miniapps";
 
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
@@ -58,6 +57,28 @@ const UniV2RouterAbi = [
   { type: "function", name: "getAmountsOut", stateMutability: "view",
     inputs: [{type:"uint256"}, {type:"address[]"}],
     outputs: [{type:"uint256[]"}] },
+] as const;
+
+// Official Uniswap SwapRouter02 deployment on Base. TABOSHI uses this direct
+// lane when the TobySwapper burn contract cannot execute its V3 fee leg.
+const SWAP_ROUTER_02 = "0x2626664c2603336E57B271c5C0b26F421741e481" as Address;
+const SwapRouter02Abi = [
+  {
+    type: "function",
+    name: "exactInput",
+    stateMutability: "payable",
+    inputs: [{
+      name: "params",
+      type: "tuple",
+      components: [
+        { name: "path", type: "bytes" },
+        { name: "recipient", type: "address" },
+        { name: "amountIn", type: "uint256" },
+        { name: "amountOutMinimum", type: "uint256" },
+      ],
+    }],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
 ] as const;
 
 /* ------------------------------ SWAPPER ABI ------------------------------ */
@@ -383,6 +404,7 @@ export default function SwapForm() {
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<TokenChoice>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
+  const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
@@ -435,6 +457,8 @@ export default function SwapForm() {
   }, [client]);
 
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
+  // Direct TABOSHI lane bypasses TobySwapper, so there is no burn fee to subtract.
+  const routeAmountIn = isTaboshiPair ? amountInBig : mainAmountIn;
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -448,7 +472,7 @@ export default function SwapForm() {
     (async () => {
       setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setBestFeePath(undefined);
 
-      if (!client || !isOnBase || mainAmountIn === 0n) { setQuoteState("idle"); return; }
+      if (!client || !isOnBase || routeAmountIn === 0n) { setQuoteState("idle"); return; }
       setQuoteState("loading");
       const myLatch = ++quoteLatch.current;
 
@@ -469,7 +493,7 @@ export default function SwapForm() {
                 address: QUOTER_V3 as Address,
                 abi: QuoterV3Abi as any,
                 functionName: "quoteExactInput",
-                args: [path, mainAmountIn],
+                args: [path, routeAmountIn],
               })) as [bigint];
               return { cand, amountOut };
             })), QUOTE_TIMEOUT_MS
@@ -480,14 +504,17 @@ export default function SwapForm() {
           }
         }
 
-        const v2 = await v2Quote(client, mainAmountIn, tokenIn, quoteTokenOut);
+        const v2 = isTaboshiPair ? undefined : await v2Quote(client, mainAmountIn, tokenIn, quoteTokenOut);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
         // The contract converts the fee to TOBY through Router02. Quote that
         // path too so the UI never offers a main route whose burn leg will fail.
         const feeAmount = amountInBig > mainAmountIn ? amountInBig - mainAmountIn : 0n;
         const actualIn = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-        if (eq(actualIn, TOBY)) {
+        if (isTaboshiPair) {
+          // TABOSHI's direct Uniswap lane bypasses TobySwapper entirely.
+          feePath = undefined;
+        } else if (eq(actualIn, TOBY)) {
           feePath = [TOBY as Address, TOBY as Address];
         } else if (feeAmount > 0n) {
           const feeQuote = await v2Quote(client, feeAmount, actualIn, TOBY as Address);
@@ -521,7 +548,7 @@ export default function SwapForm() {
       }
     })();
     return () => { alive = false; };
-  }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn]); // eslint-disable-line
+  }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn, routeAmountIn, isTaboshiPair]); // eslint-disable-line
 
   const expectedOutMainHuman = useMemo(() => {
     try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; } catch { return undefined; }
@@ -536,53 +563,33 @@ export default function SwapForm() {
   const tokenInAddr = inMeta.address as Address | undefined;
 
   const needsApproval = !!tokenInAddr && tokenIn !== "ETH";
-  const { value: allowanceToSwapper, isLoading: isAllowLoad, refetch: refetchAllowance } =
-    useStickyAllowance(tokenInAddr, address as Address | undefined, SWAPPER as Address);
-  const { approveMaxFlow: approveMaxToSwapper, isPending: isApproving } =
-    useApprove(tokenInAddr, SWAPPER as Address);
+  const approvalSpender = (isTaboshiPair ? SWAP_ROUTER_02 : SWAPPER) as Address;
+  const { value: allowanceToSpender, isLoading: isAllowLoad, refetch: refetchAllowance } =
+    useStickyAllowance(tokenInAddr, address as Address | undefined, approvalSpender);
+  const { approveMaxFlow: approveMaxToSpender, isPending: isApproving } =
+    useApprove(tokenInAddr, approvalSpender);
 
   const [approveCooldown, setApproveCooldown] = useState(false);
   const onApprove = useCallback(async () => {
     if (!needsApproval || !connected || !tokenInAddr) return;
     setApproveCooldown(true);
     try {
-      await approveMaxToSwapper(allowanceToSwapper);
+      await approveMaxToSpender(allowanceToSpender);
       setTimeout(() => { refetchAllowance(); setApproveCooldown(false); }, 2000);
     } catch { setApproveCooldown(false); }
-  }, [needsApproval, connected, tokenInAddr, approveMaxToSwapper, allowanceToSwapper, refetchAllowance]);
+  }, [needsApproval, connected, tokenInAddr, approveMaxToSpender, allowanceToSpender, refetchAllowance]);
 
   const showApproveButton =
-    needsApproval && amountInBig > 0n && (allowanceToSwapper ?? 0n) < amountInBig;
+    needsApproval && amountInBig > 0n && (allowanceToSpender ?? 0n) < amountInBig;
 
   const approveText =
     isApproving ? "Approving…" :
     isAllowLoad && !approveCooldown ? "Checking allowance…" :
-    (allowanceToSwapper ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
+    (allowanceToSpender ?? 0n) > 0n ? `Re-approve ${inMeta.symbol}` : `Approve ${inMeta.symbol}`;
 
   const [preflightMsg, setPreflightMsg] = useState<string | undefined>();
   const [sending, setSending] = useState(false);
   const [nativeSwapBusy, setNativeSwapBusy] = useState(false);
-  const [nativeSwapAvailable, setNativeSwapAvailable] = useState<boolean | null>(null);
-  const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const inMini = await isInFarcasterMiniApp();
-        if (!inMini) {
-          if (!cancelled) setNativeSwapAvailable(false);
-          return;
-        }
-        const sdk = await getMiniSdk();
-        if (!cancelled) setNativeSwapAvailable(typeof sdk?.actions?.swapToken === "function");
-      } catch {
-        if (!cancelled) setNativeSwapAvailable(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
   function feePathForExecution(actualIn: Address) {
     return buildFeePathFor(actualIn);
   }
@@ -593,56 +600,74 @@ export default function SwapForm() {
     invalidateBurnTotal();
   }
 
-  async function doFarcasterSwap() {
-    if (amountInBig === 0n) {
-      setPreflightMsg("Enter an amount first.");
+  async function doTaboshiDirectSwap() {
+    if (!connected || !address) { setPreflightMsg("Connect your wallet first."); return; }
+    if (!isOnBase) { await ensureBase(); return; }
+    if (!client) { setPreflightMsg("No Base RPC client available."); return; }
+    if (amountInBig === 0n) { setPreflightMsg("Enter an amount first."); return; }
+
+    // Router02 can wrap native ETH when the V3 path starts with WETH. For the
+    // reverse direction we intentionally return WETH rather than silently
+    // pretending it is native ETH; switching to WETH keeps the flow explicit.
+    if (tokenOut === "ETH") {
+      setTokenOut(WETH as Address);
+      setPreflightMsg("TABOSHI → ETH uses WETH on the direct V3 lane. I switched the receive token to WETH; swap again when the quote refreshes.");
+      return;
+    }
+
+    if (!bestV3 || quoteState !== "ok" || !quoteOutMain) {
+      setPreflightMsg("No live Uniswap V3 route is available for this TABOSHI pair right now.");
+      return;
+    }
+
+    if (tokenIn !== "ETH" && (allowanceToSpender ?? 0n) < amountInBig) {
+      setPreflightMsg(`Approve ${inMeta.symbol} for the direct Uniswap route first.`);
       return;
     }
 
     setPreflightMsg(undefined);
     setNativeSwapBusy(true);
     try {
-      if (!(await isInFarcasterMiniApp())) {
-        setNativeSwapAvailable(false);
-        setPreflightMsg("TABOSHI uses Farcaster's native swap route here. Open TobySwap inside Farcaster to use this route.");
-        return;
-      }
+      const path = encodeV3Path(bestV3.tokens, bestV3.fees);
+      const params = {
+        path,
+        recipient: address as Address,
+        amountIn: amountInBig,
+        amountOutMinimum: minOutMain,
+      };
 
-      const sdk = await getMiniSdk();
-      const swapToken = sdk?.actions?.swapToken;
-      if (typeof swapToken !== "function") {
-        setNativeSwapAvailable(false);
-        setPreflightMsg("This Farcaster client does not expose the native swap action yet. Update Farcaster and try again.");
-        return;
-      }
+      const sim = await withTimeout<any>((client.simulateContract as any)({
+        address: SWAP_ROUTER_02,
+        abi: SwapRouter02Abi,
+        functionName: "exactInput",
+        args: [params],
+        account: address as Address,
+        chain: base,
+        value: tokenIn === "ETH" ? amountInBig : 0n,
+      }), 10_000);
 
-      const result = await swapToken({
-        sellToken: toCaip19(tokenIn),
-        buyToken: toCaip19(tokenOut),
-        sellAmount: amountInBig.toString(),
+      const tx = await writeContractAsync(sim.request);
+      try { await client.waitForTransactionReceipt({ hash: tx as `0x${string}` }); } catch {}
+      try { await balInRaw.refetch?.(); } catch {}
+      try { await balOutRaw.refetch?.(); } catch {}
+
+      showSuccessToast({
+        hash: tx as `0x${string}`,
+        bought: quoteOutMain,
+        boughtDec: outMeta.decimals,
+        boughtSymbol: outMeta.symbol,
       });
-
-      if (result?.success) {
-        setPreflightMsg("Farcaster swap completed. This native TABOSHI route bypasses the TobySwap burn, so it does not add to your Burners rank.");
-        setAmt("");
-        try { await balInRaw.refetch?.(); } catch {}
-        try { await balOutRaw.refetch?.(); } catch {}
-      } else if (result?.reason === "rejected_by_user") {
-        setPreflightMsg("Farcaster swap cancelled.");
-      } else {
-        setPreflightMsg(
-          result?.error?.message ||
-          result?.error?.error ||
-          "Farcaster could not open a route for that pair. Refresh TobySwap in Farcaster and try again."
-        );
-      }
+      setAmt("");
+      setPreflightMsg("TABOSHI swapped directly through Uniswap V3 using your connected Farcaster wallet. This lane bypasses TobySwapper, so there is no TOBY burn or Burner rank credit.");
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || String(error || "");
-      setPreflightMsg(
-        message && message !== "[object Object]"
-          ? `Farcaster swap: ${message}`
-          : "Farcaster could not open its swap screen. Close and reopen TobySwap so Farcaster reloads the updated Mini App capabilities, then try again."
-      );
+      if (/allowance|transfer amount exceeds allowance|STF/i.test(message)) {
+        setPreflightMsg(`Approve ${inMeta.symbol} for Uniswap and try again.`);
+      } else if (/Too little received|price|slippage/i.test(message)) {
+        setPreflightMsg("The TABOSHI price moved before confirmation. Refresh the quote or raise slippage slightly and try again.");
+      } else {
+        setPreflightMsg(message && message !== "[object Object]" ? message : "The direct TABOSHI route could not be submitted. Refresh the quote and try again.");
+      }
     } finally {
       setNativeSwapBusy(false);
     }
@@ -669,7 +694,7 @@ export default function SwapForm() {
       const isEthIn = tokenIn === "ETH";
       const isEthOut = tokenOut === "ETH";
 
-      if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
+      if (!isEthIn && (allowanceToSpender ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
         setSending(false);
         return;
@@ -886,11 +911,13 @@ export default function SwapForm() {
     if (!isOnBase) return "Switch to Base";
     if (amountInBig === 0n) return "Enter amount";
     if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
-    if (nativeSwapBusy) return "Opening Farcaster…";
+    if (quoteState !== "ok" || !bestV3) return quoteState === "loading" ? "Finding TABOSHI route…" : "No V3 route";
+    if (needsApproval && (allowanceToSpender ?? 0n) < amountInBig) return `Approve ${inMeta.symbol} first`;
+    if (nativeSwapBusy) return "Submitting…";
     return null;
-  }, [connected, isOnBase, amountInBig, balInRaw.value, nativeSwapBusy]);
+  }, [connected, isOnBase, amountInBig, balInRaw.value, quoteState, bestV3, needsApproval, allowanceToSpender, inMeta.symbol, nativeSwapBusy]);
 
-  const routeLabel = isTaboshiPair ? "Farcaster native" : bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
+  const routeLabel = isTaboshiPair ? "Direct Uniswap V3" : bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
   const feePct = Number(feeBps) / 100;
   const receiveHuman = quoteState === "ok" && expectedOutMainHuman !== undefined
     ? expectedOutMainHuman.toLocaleString(undefined, { maximumFractionDigits: 6 })
@@ -932,8 +959,8 @@ export default function SwapForm() {
         <span className={`route-status ${isOnBase ? "route-status-live" : ""}`}>
           <span className="status-dot !mr-0" /> Base {isOnBase ? "connected" : "required"}
         </span>
-        <span className="route-status">{isTaboshiPair ? "Farcaster chooses live route" : quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
-        <span className="route-status">{isTaboshiPair ? "Native route · no burn" : `${feePct}% → TOBY burn`}</span>
+        <span className="route-status">{isTaboshiPair ? "Direct V3 · connected wallet" : quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
+        <span className="route-status">{isTaboshiPair ? "Direct route · no burn" : `${feePct}% → TOBY burn`}</span>
       </div>
 
       {!isOnBase && (
@@ -1041,12 +1068,12 @@ export default function SwapForm() {
         <div className="weth-route-callout">
           <span className="weth-route-orb"><img src="/tokens/toby.PNG" alt="" /></span>
           <div className="min-w-0 flex-1">
-            <strong>TABOSHI takes the Farcaster lane</strong>
-            <p>For TABOSHI, TobySwap hands the selected pair and amount to Farcaster&apos;s native swap screen so Farcaster can choose the live route.</p>
+            <strong>TABOSHI takes the direct V3 lane</strong>
+            <p>Farcaster&apos;s native swap screen cannot reliably resolve TABOSHI. TobySwap now executes TABOSHI directly against Uniswap V3 with your connected wallet instead.</p>
             <small>No TobySwap burn on this route · it will not increase your Burners rank.</small>
           </div>
           <span className="metal-button compact-metal pointer-events-none whitespace-nowrap">
-            {nativeSwapAvailable === null ? "Checking…" : nativeSwapAvailable ? "Farcaster ready" : "Farcaster only"}
+            Direct on Base
           </span>
         </div>
       )}
@@ -1076,7 +1103,7 @@ export default function SwapForm() {
           </div>
           <div className="quote-receipt-row quote-burn-row">
             <span>{isTaboshiPair ? "Burn credit" : "Protocol burn"}</span>
-            <strong>{isTaboshiPair ? "Native Farcaster route · no TobySwap burn" : `${feePct}% of input → TOBY 🔥`}</strong>
+            <strong>{isTaboshiPair ? "Direct Uniswap route · no TobySwap burn" : `${feePct}% of input → TOBY 🔥`}</strong>
           </div>
         </div>
       )}
@@ -1087,12 +1114,12 @@ export default function SwapForm() {
         </div>
       )}
 
-      {showApproveButton && !isTaboshiPair && (
+      {showApproveButton && (
         <button
           onClick={onApprove}
           className="metal-button w-full approve-button mt-4 justify-center font-black disabled:opacity-60"
           disabled={isApproving || !connected || !isOnBase || approveCooldown}
-          title={`Approve ${inMeta.symbol} for ${SWAPPER}`}
+          title={`Approve ${inMeta.symbol} for ${isTaboshiPair ? "Uniswap V3" : "TobySwapper"}`}
         >
           <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
           {approveText}
@@ -1101,15 +1128,15 @@ export default function SwapForm() {
 
       {isTaboshiPair ? (
         <button
-          onClick={doFarcasterSwap}
+          onClick={doTaboshiDirectSwap}
           className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
           disabled={!!nativeDisableReason}
-          title={nativeDisableReason ?? "Swap with Farcaster"}
+          title={nativeDisableReason ?? "Swap TABOSHI directly on Uniswap V3"}
         >
           {!nativeDisableReason && <span className="swap-button-shine" aria-hidden="true" />}
           <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
-          <span>{nativeDisableReason || `Swap ${inMeta.symbol} → ${outMeta.symbol} with Farcaster`}</span>
-          {!nativeDisableReason && <span className="swap-button-route">FC</span>}
+          <span>{nativeDisableReason || `Swap ${inMeta.symbol} → ${outMeta.symbol} direct`}</span>
+          {!nativeDisableReason && <span className="swap-button-route">V3</span>}
         </button>
       ) : (
         <button
@@ -1126,7 +1153,7 @@ export default function SwapForm() {
       )}
 
       {isTaboshiPair && (
-        <p className="mt-2 text-center text-[10px] font-bold leading-relaxed text-inkSub">Farcaster executes this trade outside the TobySwapper contract. No TOBY burn or Burner leaderboard credit is created.</p>
+        <p className="mt-2 text-center text-[10px] font-bold leading-relaxed text-inkSub">This TABOSHI trade executes directly through Uniswap V3 using your connected wallet. It bypasses the TobySwapper contract, so no TOBY burn or Burner leaderboard credit is created.</p>
       )}
 
       {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}
