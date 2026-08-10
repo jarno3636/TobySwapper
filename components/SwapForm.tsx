@@ -414,6 +414,11 @@ export default function SwapForm() {
   const [tokenOut, setTokenOut] = useState<TokenChoice>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
+  // USDC input uses the direct Uniswap V3 lane. The deployed TobySwapper contract
+  // requires its fee leg to resolve through V2, which is unreliable for small USDC
+  // amounts on Base. Direct V3 keeps USDC swaps usable with exact router approval.
+  const isUsdcDirect = eq(String(tokenIn), USDC);
+  const isDirectPair = isTaboshiPair || isUsdcDirect;
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
@@ -467,7 +472,7 @@ export default function SwapForm() {
 
   const mainAmountIn = useMemo(() => (amountInBig === 0n ? 0n : (amountInBig * (FEE_DENOM - feeBps)) / FEE_DENOM), [amountInBig, feeBps]);
   // Direct TABOSHI lane bypasses TobySwapper, so there is no burn fee to subtract.
-  const routeAmountIn = isTaboshiPair ? amountInBig : mainAmountIn;
+  const routeAmountIn = isDirectPair ? amountInBig : mainAmountIn;
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "noroute" | "ok">("idle");
   const [quoteErr, setQuoteErr] = useState<string | undefined>();
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
@@ -515,15 +520,15 @@ export default function SwapForm() {
           }
         }
 
-        const v2 = isTaboshiPair ? undefined : await v2Quote(client, mainAmountIn, tokenIn, quoteTokenOut);
+        const v2 = isDirectPair ? undefined : await v2Quote(client, mainAmountIn, tokenIn, quoteTokenOut);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
         // The contract converts the fee to TOBY through Router02. Quote that
         // path too so the UI never offers a main route whose burn leg will fail.
         const feeAmount = amountInBig > mainAmountIn ? amountInBig - mainAmountIn : 0n;
         const actualIn = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-        if (isTaboshiPair) {
-          // TABOSHI's direct Uniswap lane bypasses TobySwapper entirely.
+        if (isDirectPair) {
+          // Direct V3 lanes bypass TobySwapper entirely.
           feePath = undefined;
           burnTobyEstimate = undefined;
         } else if (eq(actualIn, TOBY)) {
@@ -564,7 +569,7 @@ export default function SwapForm() {
       }
     })();
     return () => { alive = false; };
-  }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn, routeAmountIn, isTaboshiPair]); // eslint-disable-line
+  }, [client, isOnBase, tokenIn, tokenOut, mainAmountIn, routeAmountIn, isDirectPair]); // eslint-disable-line
 
   const expectedOutMainHuman = useMemo(() => {
     try { return quoteOutMain ? Number(formatUnits(quoteOutMain, outMeta.decimals)) : undefined; } catch { return undefined; }
@@ -579,7 +584,7 @@ export default function SwapForm() {
   const tokenInAddr = inMeta.address as Address | undefined;
 
   const needsApproval = !!tokenInAddr && tokenIn !== "ETH";
-  const approvalSpender = (isTaboshiPair ? SWAP_ROUTER_02 : SWAPPER) as Address;
+  const approvalSpender = (isDirectPair ? SWAP_ROUTER_02 : SWAPPER) as Address;
   const { value: allowanceToSpender, isLoading: isAllowLoad, refetch: refetchAllowance } =
     useStickyAllowance(tokenInAddr, address as Address | undefined, approvalSpender);
   const { approveAmountFlow: approveToSpender, isPending: isApproving } =
@@ -597,7 +602,7 @@ export default function SwapForm() {
   }, [needsApproval, connected, tokenInAddr, approveToSpender, amountInBig, allowanceToSpender, refetchAllowance]);
 
   const showApproveButton =
-    needsApproval && amountInBig > 0n && (allowanceToSpender ?? 0n) < amountInBig;
+    needsApproval && amountInBig > 0n && quoteState === "ok" && (allowanceToSpender ?? 0n) < amountInBig;
 
   const approveText =
     isApproving ? "Approving…" :
@@ -622,7 +627,7 @@ export default function SwapForm() {
     try { await balOutRaw.refetch?.(); } catch {}
   }
 
-  async function doTaboshiDirectSwap() {
+  async function doDirectV3Swap() {
     if (!connected || !address) { setPreflightMsg("Connect your wallet first."); return; }
     if (!isOnBase) { await ensureBase(); return; }
     if (!client) { setPreflightMsg("No Base RPC client available."); return; }
@@ -633,12 +638,12 @@ export default function SwapForm() {
     // pretending it is native ETH; switching to WETH keeps the flow explicit.
     if (tokenOut === "ETH") {
       setTokenOut(WETH as Address);
-      setPreflightMsg("TABOSHI → ETH uses WETH on the direct V3 lane. I switched the receive token to WETH; swap again when the quote refreshes.");
+      setPreflightMsg("Direct V3 → ETH settles as WETH. I switched the receive token to WETH; I switched the receive token to WETH; swap again when the quote refreshes.");
       return;
     }
 
     if (!bestV3 || quoteState !== "ok" || !quoteOutMain) {
-      setPreflightMsg("No live Uniswap V3 route is available for this TABOSHI pair right now.");
+      setPreflightMsg("No live Uniswap V3 route is available for this pair right now.");
       return;
     }
 
@@ -680,15 +685,15 @@ export default function SwapForm() {
         boughtSymbol: outMeta.symbol,
       });
       setAmt("");
-      setPreflightMsg("TABOSHI swapped directly through Uniswap V3 using your connected Farcaster wallet. This lane bypasses TobySwapper, so there is no TOBY burn or Burner rank credit.");
+      setPreflightMsg("Swap confirmed through Uniswap V3. Direct lanes do not create TOBY burn or Burner rank credit.");
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || String(error || "");
       if (/allowance|transfer amount exceeds allowance|STF/i.test(message)) {
         setPreflightMsg(`Approve ${inMeta.symbol} for Uniswap and try again.`);
       } else if (/Too little received|price|slippage/i.test(message)) {
-        setPreflightMsg("The TABOSHI price moved before confirmation. Refresh the quote or raise slippage slightly and try again.");
+        setPreflightMsg("The price moved before confirmation. Refresh the quote or raise slippage slightly and try again.");
       } else {
-        setPreflightMsg(message && message !== "[object Object]" ? message : "The direct TABOSHI route could not be submitted. Refresh the quote and try again.");
+        setPreflightMsg(message && message !== "[object Object]" ? message : "The direct V3 route could not be submitted. Refresh the quote and try again.");
       }
     } finally {
       setNativeSwapBusy(false);
@@ -941,13 +946,13 @@ export default function SwapForm() {
     if (!isOnBase) return "Switch to Base";
     if (amountInBig === 0n) return "Enter amount";
     if ((balInRaw.value ?? 0n) < amountInBig) return "Insufficient balance";
-    if (quoteState !== "ok" || !bestV3) return quoteState === "loading" ? "Finding TABOSHI route…" : "No V3 route";
+    if (quoteState !== "ok" || !bestV3) return quoteState === "loading" ? "Finding V3 route…" : "No V3 route";
     if (needsApproval && (allowanceToSpender ?? 0n) < amountInBig) return `Approve ${inMeta.symbol} first`;
     if (nativeSwapBusy) return "Submitting…";
     return null;
   }, [connected, isOnBase, amountInBig, balInRaw.value, quoteState, bestV3, needsApproval, allowanceToSpender, inMeta.symbol, nativeSwapBusy]);
 
-  const routeLabel = isTaboshiPair ? "Direct Uniswap V3" : bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
+  const routeLabel = isDirectPair ? "Direct Uniswap V3" : bestV3 ? "Uniswap V3" : bestV2Path ? "Uniswap V2" : "Routing";
   const feePct = Number(feeBps) / 100;
   const receiveHuman = quoteState === "ok" && expectedOutMainHuman !== undefined
     ? expectedOutMainHuman.toLocaleString(undefined, { maximumFractionDigits: 6 })
@@ -989,8 +994,8 @@ export default function SwapForm() {
         <span className={`route-status ${isOnBase ? "route-status-live" : ""}`}>
           <span className="status-dot !mr-0" /> Base {isOnBase ? "connected" : "required"}
         </span>
-        <span className="route-status">{isTaboshiPair ? "Direct V3 · connected wallet" : quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
-        <span className="route-status">{isTaboshiPair ? "Direct route · no burn" : `${feePct}% → TOBY burn`}</span>
+        <span className="route-status">{isDirectPair ? "Direct V3 · connected wallet" : quoteState === "ok" ? `Best route · ${routeLabel}` : quoteState === "loading" ? "Searching liquidity…" : "Smart routing"}</span>
+        <span className="route-status">{isDirectPair ? "Direct route · no burn" : `${feePct}% → TOBY burn`}</span>
       </div>
 
       {!isOnBase && (
@@ -1094,13 +1099,13 @@ export default function SwapForm() {
         </section>
       </div>
 
-      {isTaboshiPair && (
+      {isDirectPair && (
         <div className="weth-route-callout">
           <span className="weth-route-orb"><img src="/tokens/toby.PNG" alt="" /></span>
           <div className="min-w-0 flex-1">
-            <strong>TABOSHI · Direct V3</strong>
-            <p>Trades straight through Uniswap on Base.</p>
-            <small>No TOBY burn · no Burner rank credit.</small>
+            <strong>{isTaboshiPair ? "TABOSHI · Direct V3" : "USDC · Direct V3"}</strong>
+            <p>{isTaboshiPair ? "Live Uniswap liquidity on Base." : "Reliable USDC routing on Base."}</p>
+            <small>Direct route · no burn credit.</small>
           </div>
           <span className="metal-button compact-metal pointer-events-none whitespace-nowrap">
             Direct on Base
@@ -1132,13 +1137,13 @@ export default function SwapForm() {
             <strong>{slippage}%</strong>
           </div>
           <div className="quote-receipt-row quote-burn-row">
-            <span>{isTaboshiPair ? "Burn credit" : "Protocol burn"}</span>
-            <strong>{isTaboshiPair ? "No burn on direct route" : quoteBurnToby ? `~${Number(formatUnits(quoteBurnToby, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} TOBY 🔥` : `${feePct}% of input → TOBY 🔥`}</strong>
+            <span>{isDirectPair ? "Burn credit" : "Protocol burn"}</span>
+            <strong>{isDirectPair ? "No burn on direct route" : quoteBurnToby ? `~${Number(formatUnits(quoteBurnToby, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} TOBY 🔥` : `${feePct}% of input → TOBY 🔥`}</strong>
           </div>
         </div>
       )}
 
-      {!isTaboshiPair && quoteState === "noroute" && amountInBig > 0n && (
+      {!isDirectPair && quoteState === "noroute" && amountInBig > 0n && (
         <div className="swap-alert mt-3">
           <div><strong>No route found.</strong><br /><span>Try a different amount or pair.{quoteErr ? ` ${quoteErr}` : ""}</span></div>
         </div>
@@ -1149,19 +1154,19 @@ export default function SwapForm() {
           onClick={onApprove}
           className="metal-button w-full approve-button mt-4 justify-center font-black disabled:opacity-60"
           disabled={isApproving || !connected || !isOnBase || approveCooldown}
-          title={`Approve ${inMeta.symbol} for ${isTaboshiPair ? "Uniswap V3" : "TobySwapper"}`}
+          title={`Approve ${inMeta.symbol} for ${isDirectPair ? "Uniswap V3" : "TobySwapper"}`}
         >
           <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
           {approveText}
         </button>
       )}
 
-      {isTaboshiPair ? (
+      {isDirectPair ? (
         <button
-          onClick={doTaboshiDirectSwap}
+          onClick={doDirectV3Swap}
           className="metal-button metal-button-primary swap-submit swap-submit-premium w-full justify-center font-black disabled:opacity-60 mt-4"
           disabled={!!nativeDisableReason}
-          title={nativeDisableReason ?? "Swap TABOSHI directly on Uniswap V3"}
+          title={nativeDisableReason ?? "Swap directly on Uniswap V3"}
         >
           {!nativeDisableReason && <span className="swap-button-shine" aria-hidden="true" />}
           <span className="button-mini-medallion"><img src="/tokens/toby.PNG" alt="" /></span>
@@ -1182,8 +1187,8 @@ export default function SwapForm() {
         </button>
       )}
 
-      {isTaboshiPair && (
-        <p className="taboshi-note">Direct Uniswap route on Base · no TOBY burn or leaderboard credit.</p>
+      {isDirectPair && (
+        <p className="taboshi-note">Direct Uniswap V3 · no TOBY burn or Burner rank credit.</p>
       )}
 
       {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}
