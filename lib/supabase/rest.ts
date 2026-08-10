@@ -5,7 +5,7 @@ type RestInit = RequestInit & { prefer?: string };
 export function hasSupabaseServerEnv() {
   return Boolean(
     (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY),
   );
 }
 
@@ -14,7 +14,7 @@ function baseUrl() {
 }
 
 function serviceKey() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 }
 
 export async function supabaseRest<T>(path: string, init: RestInit = {}): Promise<T> {
