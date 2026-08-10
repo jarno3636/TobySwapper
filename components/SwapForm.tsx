@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Address } from "viem";
 import {
-  formatUnits, parseUnits, isAddress,
+  formatUnits, parseUnits, parseEther, isAddress,
   encodePacked, encodeAbiParameters, getAddress,
 } from "viem";
 import { base } from "viem/chains";
@@ -1055,29 +1055,13 @@ export default function SwapForm() {
                 forceBlur={slippageOpen || !!success}
               />
               <button
-                type="button"
                 className="max-button trade-max"
-                disabled={balInRaw.value === undefined || balInRaw.value === 0n}
                 onClick={() => {
-                  const balance = balInRaw.value;
-                  if (balance === undefined || balance === 0n) return;
-
-                  // Never round token balances through JavaScript Number here.
-                  // Large balances can be converted to scientific notation or lose
-                  // precision, which then makes the amount parser reject the value.
-                  if (inMeta.address) {
-                    setAmt(formatUnits(balance, inMeta.decimals));
-                    return;
-                  }
-
-                  // Native ETH needs a small reserve for gas. Keep this calculation
-                  // entirely in bigint units as well so MAX is exact and reliable.
-                  const gasReserve = parseEther(GAS_BUFFER_ETH.toString());
-                  const spendable = balance > gasReserve ? balance - gasReserve : 0n;
-                  setAmt(formatUnits(spendable, 18));
+                  if (!balInRaw.value) return;
+                  const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
+                  const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
+                  setAmt((safe > 0 ? safe : 0).toString());
                 }}
-                aria-label={`Use maximum ${inMeta.symbol} balance`}
-                title={inMeta.address ? `Use full ${inMeta.symbol} balance` : "Use available ETH minus a small gas reserve"}
               >MAX</button>
             </div>
           </div>
