@@ -3,21 +3,25 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Address, erc20Abi, maxUint256 } from "viem";
 import {
+  usePublicClient,
   useReadContract,
   useWriteContract,
-  useWaitForTransactionReceipt,
 } from "wagmi";
-import { NATIVE_ETH, TokenAddress, isNative } from "@/lib/addresses";
+import { TokenAddress, isNative, USDC } from "@/lib/addresses";
 
-/** Sticky reader that avoids UI flicker while queries revalidate */
+/** Sticky reader that avoids UI flicker while queries revalidate. */
 export function useStickyAllowance(
   token?: TokenAddress,
   owner?: Address,
   spender?: Address
 ) {
-  // Native ETH has no allowance/approve concept
   if (isNative(token)) {
-    return { value: undefined as bigint | undefined, isLoading: false, error: undefined as unknown, refetch: () => {} };
+    return {
+      value: undefined as bigint | undefined,
+      isLoading: false,
+      error: undefined as unknown,
+      refetch: async () => ({ data: undefined }),
+    };
   }
 
   const enabled = Boolean(token && owner && spender);
@@ -29,8 +33,8 @@ export function useStickyAllowance(
     args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
     query: {
       enabled,
-      refetchInterval: 20_000,
-      staleTime: 15_000,
+      refetchInterval: 15_000,
+      staleTime: 8_000,
       refetchOnWindowFocus: false,
       retry: 2,
       placeholderData: (prev: unknown) => prev,
@@ -42,10 +46,8 @@ export function useStickyAllowance(
 
   useEffect(() => {
     if (typeof data === "bigint") {
-      if (lastGood.current !== data) {
-        lastGood.current = data;
-        setValue(data);
-      }
+      lastGood.current = data;
+      setValue(data);
     } else if (lastGood.current !== undefined) {
       setValue(lastGood.current);
     }
@@ -54,42 +56,61 @@ export function useStickyAllowance(
   return { value, isLoading: isFetching, error, refetch };
 }
 
+/**
+ * Approval flow with receipt confirmation.
+ *
+ * USDC gets an exact-spend approval by default instead of an unlimited approval.
+ * This keeps the allowance aligned to the amount the user is about to spend.
+ * Other tokens retain a max-approval option for lower-friction repeat swaps.
+ */
 export function useApprove(token?: TokenAddress, spender?: Address) {
-  const { writeContractAsync, data: writeHash, isPending: isWritePending } =
-    useWriteContract();
-  const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash: writeHash });
+  const { writeContractAsync, isPending: isWritePending } = useWriteContract();
+  const publicClient = usePublicClient();
+  const [isWaiting, setIsWaiting] = useState(false);
 
-  const approveMaxFlow = useCallback(
-    async (currentAllowance?: bigint) => {
-      if (!token || !spender) throw new Error("Missing token/spender");
-
-      if (isNative(token)) {
-        // Native ETH cannot be approved
-        throw new Error("ETH (native) does not support approvals");
-      }
-
-      // some wallets/erc20s require reset to 0 before max
-      if (currentAllowance && currentAllowance > 0n) {
-        await writeContractAsync({
-          address: token as Address,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [spender, 0n],
-        });
-      }
-      return writeContractAsync({
+  const sendAndWait = useCallback(async (amount: bigint) => {
+    if (!token || !spender || isNative(token)) throw new Error("Missing ERC-20 token/spender");
+    setIsWaiting(true);
+    try {
+      const hash = await writeContractAsync({
         address: token as Address,
         abi: erc20Abi,
         functionName: "approve",
-        args: [spender, maxUint256],
+        args: [spender, amount],
       });
-    },
-    [token, spender, writeContractAsync]
-  );
+      if (publicClient) {
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") throw new Error("Approval transaction reverted");
+      }
+      return hash;
+    } finally {
+      setIsWaiting(false);
+    }
+  }, [token, spender, writeContractAsync, publicClient]);
+
+  const approveAmountFlow = useCallback(async (requiredAmount: bigint, currentAllowance?: bigint) => {
+    if (!token || !spender) throw new Error("Missing token/spender");
+    if (isNative(token)) throw new Error("ETH (native) does not support approvals");
+    if (requiredAmount <= 0n) throw new Error("Enter an amount before approving");
+    if ((currentAllowance ?? 0n) >= requiredAmount) return undefined;
+
+    const exactForUsdc = String(token).toLowerCase() === String(USDC).toLowerCase();
+    const target = exactForUsdc ? requiredAmount : maxUint256;
+
+    try {
+      return await sendAndWait(target);
+    } catch (firstError) {
+      // Some ERC-20s require a zero reset before changing a non-zero allowance.
+      if ((currentAllowance ?? 0n) > 0n) {
+        await sendAndWait(0n);
+        return await sendAndWait(target);
+      }
+      throw firstError;
+    }
+  }, [token, spender, sendAndWait]);
 
   return {
-    approveMaxFlow,
+    approveAmountFlow,
     isPending: isWritePending || isWaiting,
-    txHash: writeHash,
   };
 }
