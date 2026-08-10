@@ -1,80 +1,118 @@
 import { NextResponse } from "next/server";
+import { isAddress } from "viem";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
-// Base mainnet WETH for ETH pricing
 const WETH_BASE = "0x4200000000000000000000000000000000000006";
+const USDC_BASE = "0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913";
+
+type PriceMap = Record<string, number>;
+
+const num = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+async function fetchJson(url: string, init?: RequestInit, timeoutMs = 6500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal, cache: "no-store" });
+    if (!res.ok) throw new Error(`${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function alchemyByAddress(addresses: string[]): Promise<PriceMap> {
+  if (!ALCHEMY_KEY || addresses.length === 0) return {};
+  try {
+    const j = await fetchJson("https://api.g.alchemy.com/prices/v1/tokens/by-address", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${ALCHEMY_KEY}`,
+      },
+      body: JSON.stringify({
+        addresses: addresses.map((address) => ({ network: "base-mainnet", address })),
+      }),
+    });
+
+    const out: PriceMap = {};
+    for (const row of j?.data ?? []) {
+      const address = String(row?.address ?? "").toLowerCase();
+      const usd = num(row?.prices?.find?.((p: any) => p?.currency === "usd")?.value)
+        ?? num(row?.price)
+        ?? num(row?.usdPrice);
+      if (address && usd) out[address] = usd;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+async function alchemyEth(): Promise<number | undefined> {
+  if (!ALCHEMY_KEY) return undefined;
+  try {
+    const j = await fetchJson("https://api.g.alchemy.com/prices/v1/tokens/by-symbol?symbols=ETH", {
+      headers: { authorization: `Bearer ${ALCHEMY_KEY}` },
+    });
+    const row = j?.data?.[0];
+    return num(row?.prices?.find?.((p: any) => p?.currency === "usd")?.value)
+      ?? num(row?.price)
+      ?? num(row?.usdPrice);
+  } catch {
+    return undefined;
+  }
+}
+
+async function dexPrice(address: string): Promise<number | undefined> {
+  try {
+    const j = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+    const pairs = (j?.pairs ?? []).filter((p: any) => p?.chainId === "base" && num(p?.priceUsd));
+    if (!pairs.length) return undefined;
+    pairs.sort((a: any, b: any) => (num(b?.liquidity?.usd) ?? 0) - (num(a?.liquidity?.usd) ?? 0));
+    return num(pairs[0]?.priceUsd);
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  // comma-separated list of addresses; allow literal "ETH"
-  const raw = (searchParams.get("addresses") || "").trim();
+  const raw = new URL(req.url).searchParams.get("addresses")?.trim() ?? "";
   if (!raw) return NextResponse.json({ prices: {} });
 
-  const addrs = raw.split(",").map(s => s.trim()).filter(Boolean);
-  const unique = Array.from(new Set(addrs));
+  const requested = Array.from(new Set(raw.split(",").map((s) => s.trim()).filter(Boolean)));
+  const normalizedAddresses = Array.from(new Set(
+    requested
+      .map((k) => k.toUpperCase() === "ETH" ? WETH_BASE : k)
+      .filter((k) => isAddress(k))
+      .map((k) => k.toLowerCase()),
+  ));
 
-  // map ETH → WETH address for pricing
-  const addrForPrice = (a: string) => (a.toUpperCase() === "ETH" ? WETH_BASE : a);
+  const alchemy = await alchemyByAddress(normalizedAddresses);
+  const ethFromAlchemy = requested.some((k) => k.toUpperCase() === "ETH") ? await alchemyEth() : undefined;
 
-  const out: Record<string, number> = {};
+  const prices: PriceMap = {};
+  for (const key of requested) {
+    const upper = key.toUpperCase();
+    const addr = upper === "ETH" ? WETH_BASE.toLowerCase() : key.toLowerCase();
 
-  // --- 1) Try Alchemy Market Data first (JSON-RPC) ---
-  async function getFromAlchemy(addr: string) {
-    if (!ALCHEMY_KEY) return undefined;
-    try {
-      const url = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`;
-      // Alchemy Market Data: alchemy_getTokenPrice (if not available, we’ll fallback)
-      const body = {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "alchemy_getTokenPrice",
-        params: [{ contractAddress: addr }],
-      };
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-        // small timeout guard
-        cache: "no-store",
-      });
-      if (!r.ok) return undefined;
-      const j = await r.json();
-      // a few possible shapes; keep this tolerant
-      const usd =
-        j?.result?.usdPrice ??
-        j?.result?.tokenPrice?.usdPrice ??
-        j?.result?.price ??
-        j?.result?.priceUsd;
-      if (usd && isFinite(Number(usd))) return Number(usd);
-      return undefined;
-    } catch {
-      return undefined;
-    }
+    let usd = upper === "ETH" ? ethFromAlchemy : alchemy[addr];
+    if (!usd) usd = alchemy[addr];
+    if (!usd) usd = await dexPrice(addr);
+
+    // USDC should remain useful even if every external price API is having a bad minute.
+    if (!usd && addr === USDC_BASE.toLowerCase()) usd = 1;
+    prices[upper === "ETH" ? "ETH" : addr] = usd ?? 0;
   }
 
-  // --- 2) Fallback: Dexscreener ---
-  async function getFromDexscreener(addr: string) {
-    try {
-      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`, {
-        cache: "no-store",
-      });
-      if (!r.ok) return undefined;
-      const j = await r.json();
-      const price = j?.pairs?.[0]?.priceUsd;
-      if (price && isFinite(Number(price))) return Number(price);
-      return undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  for (const a of unique) {
-    const addr = addrForPrice(a);
-    let usd = await getFromAlchemy(addr);
-    if (usd === undefined) usd = await getFromDexscreener(addr);
-    // If still undefined, return 0 to keep UI stable
-    out[a] = usd ?? 0;
-  }
-
-  return NextResponse.json({ prices: out }, { status: 200 });
+  return NextResponse.json(
+    { prices, updatedAt: new Date().toISOString() },
+    { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=120" } },
+  );
 }
