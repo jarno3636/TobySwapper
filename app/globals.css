@@ -628,3 +628,319 @@ a.link:hover, .link:hover { border-bottom-color: rgba(23,158,230,.72); opacity: 
 @media (prefers-reduced-motion:reduce) {
   .swap-mascot-toby,.route-toby,.route-sato,.swap-button-shine,.quote-shimmer { animation:none!important; }
 }
+
+/* ===== TobySwap hero + color-metal pass ===== */
+html { scroll-behavior: smooth; }
+
+.hero-poster-shell {
+  position: relative;
+  isolation: isolate;
+  padding-bottom: 27px;
+}
+.hero-poster-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(19,31,43,.10);
+  border-radius: 34px;
+  background: #fff;
+  box-shadow:
+    0 2px 0 rgba(255,255,255,1) inset,
+    0 -1px 0 rgba(17,31,43,.04) inset,
+    0 8px 0 rgba(25,38,49,.035),
+    0 24px 52px rgba(25,38,49,.11);
+}
+.hero-poster-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.78);
+}
+.hero-poster-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+.hero-glint {
+  position: absolute;
+  z-index: 3;
+  top: -55%;
+  left: -35%;
+  width: 22%;
+  height: 210%;
+  transform: rotate(17deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.70), transparent);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: hero-glint 6.8s ease-in-out infinite;
+}
+@keyframes hero-glint {
+  0%,60% { left:-35%; }
+  83%,100% { left:125%; }
+}
+.hero-status-rail {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(88%, 720px);
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(19,31,43,.11);
+  border-radius: 999px;
+  background: rgba(255,255,255,.93);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 -1px 0 rgba(10,25,37,.05) inset,
+    0 5px 0 rgba(25,38,49,.05),
+    0 13px 26px rgba(25,38,49,.13);
+}
+.hero-status {
+  min-width: 0;
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .085em;
+  white-space: nowrap;
+  border: 1px solid rgba(18,31,42,.065);
+  box-shadow: 0 1px 0 rgba(255,255,255,.95) inset;
+}
+.hero-status-blue { color:#0b7cc5; background:linear-gradient(180deg,#f8fdff,#e3f5ff); }
+.hero-status-red { color:#b93131; background:linear-gradient(180deg,#fffafa,#ffeded); }
+.hero-status-green { color:#258744; background:linear-gradient(180deg,#fbfffb,#e9f8ed); }
+.hero-status-cyan { color:#1689c7; background:linear-gradient(180deg,#fbfeff,#e6f7ff); }
+
+/* Colored glass edge on the swap card without turning it into a dark DeFi panel. */
+.swap-shell {
+  position: relative;
+  background:
+    radial-gradient(65% 34% at 8% 0%, rgba(255,91,91,.055), transparent 70%),
+    radial-gradient(65% 34% at 92% 0%, rgba(47,169,238,.085), transparent 70%),
+    linear-gradient(180deg,rgba(255,255,255,.97),rgba(250,251,249,.94));
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 0 0 1px rgba(27,41,52,.06),
+    0 9px 0 rgba(28,40,51,.032),
+    0 23px 48px rgba(28,40,51,.095);
+}
+.swap-shell::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  padding:1px;
+  background:linear-gradient(110deg,rgba(234,61,61,.28),rgba(255,255,255,0) 25%,rgba(47,169,238,.26) 55%,rgba(62,184,92,.25));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  pointer-events:none;
+}
+.trade-panel-pay {
+  border-color: rgba(224,63,63,.26);
+  background:
+    radial-gradient(85% 115% at 0% 0%,rgba(255,220,220,.48),transparent 57%),
+    radial-gradient(80% 80% at 100% 0%,rgba(255,255,255,.95),transparent 65%),
+    linear-gradient(180deg,#fffdfd,#f9f4f4);
+  box-shadow:0 1px 0 #fff inset,0 0 0 1px rgba(255,255,255,.60) inset,0 8px 20px rgba(140,51,51,.065);
+}
+.trade-panel-receive {
+  border-color: rgba(52,166,86,.27);
+  background:
+    radial-gradient(85% 115% at 0% 0%,rgba(219,250,226,.52),transparent 57%),
+    radial-gradient(80% 80% at 100% 0%,rgba(220,246,255,.72),transparent 65%),
+    linear-gradient(180deg,#fdfffd,#f3f9f5);
+  box-shadow:0 1px 0 #fff inset,0 0 0 1px rgba(255,255,255,.62) inset,0 8px 20px rgba(44,119,72,.065);
+}
+.trade-panel-pay .trade-panel-labels > span:first-child { color:#c13b3b; }
+.trade-panel-receive .trade-panel-labels > span:first-child { color:#2e9850; }
+
+/* Stronger polished metal treatment across white controls. */
+.metal-button,
+.pill-opaque,
+.pill-nav,
+.token-trigger,
+.world-link-card,
+.hero-status-rail {
+  isolation: isolate;
+}
+.metal-button::after,
+.pill-opaque::after,
+.pill-nav::after,
+.token-trigger::after {
+  content:"";
+  position:absolute;
+  z-index:1;
+  left:7%;
+  right:7%;
+  top:3px;
+  height:2px;
+  border-radius:999px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.98) 22%,rgba(255,255,255,.98) 78%,transparent);
+  pointer-events:none;
+}
+.metal-button > *, .pill-opaque > *, .pill-nav > *, .token-trigger > * { position:relative; z-index:2; }
+
+.swap-direction-floating {
+  color:#263a4b;
+  border-color:rgba(20,55,79,.16);
+  background:
+    radial-gradient(circle at 32% 22%,#fff 0 12%,transparent 13%),
+    linear-gradient(145deg,#ffffff 0%,#eef5f8 43%,#d7e5eb 66%,#fff 100%);
+  box-shadow:
+    0 2px 0 #fff inset,
+    0 -2px 2px rgba(20,55,79,.08) inset,
+    0 4px 0 rgba(30,65,88,.10),
+    0 9px 18px rgba(24,58,81,.16);
+}
+
+.max-button {
+  position: relative;
+  overflow: hidden;
+  color:#126ca2;
+  border-color:rgba(32,138,197,.20);
+  background:linear-gradient(180deg,#fff,#e7f6ff 50%,#d3ebf7);
+  box-shadow:0 1px 0 #fff inset,0 2px 0 rgba(26,97,135,.08),0 5px 10px rgba(26,97,135,.08);
+}
+
+.swap-submit-premium:not(:disabled) {
+  color:#fff;
+  text-shadow:0 1px 1px rgba(0,45,88,.26);
+  border-color:rgba(20,105,200,.38);
+  background:
+    radial-gradient(90% 120% at 50% -24%,rgba(255,255,255,.96),rgba(255,255,255,0) 39%),
+    linear-gradient(180deg,#53c5ff 0%,#168ff0 45%,#1565e6 76%,#0a4fc9 100%);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,.92) inset,
+    0 -2px 3px rgba(2,35,113,.20) inset,
+    0 5px 0 rgba(10,63,155,.32),
+    0 13px 24px rgba(20,103,210,.30),
+    0 0 26px rgba(66,177,255,.12);
+}
+.swap-submit-premium:not(:disabled):hover {
+  filter:saturate(1.08) brightness(1.035);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,.96) inset,
+    0 -2px 3px rgba(2,35,113,.20) inset,
+    0 6px 0 rgba(10,63,155,.30),
+    0 16px 30px rgba(20,103,210,.34),
+    0 0 30px rgba(66,177,255,.18);
+}
+.swap-submit-premium .swap-button-route {
+  color:#0d5fa4;
+  text-shadow:none;
+  background:rgba(255,255,255,.88);
+  border-color:rgba(255,255,255,.72);
+  box-shadow:0 1px 0 #fff inset,0 2px 6px rgba(8,67,137,.18);
+}
+.approve-button:not(:disabled) {
+  color:#9b4a10;
+  border-color:rgba(226,137,47,.26);
+  background:linear-gradient(180deg,#fff,#fff6e8 55%,#f6e0bf);
+  box-shadow:0 2px 0 #fff inset,0 4px 0 rgba(153,90,30,.08),0 9px 18px rgba(153,90,30,.12);
+}
+
+/* Floating app dock — image medallions can be swapped for custom Atlas/Swap art later. */
+.pond-dock-wrap {
+  position: fixed;
+  z-index: 45;
+  left: 0;
+  right: 0;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.pond-dock {
+  width: min(620px, 100%);
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(16,31,43,.13);
+  border-radius: 28px;
+  background:rgba(255,255,255,.91);
+  -webkit-backdrop-filter:blur(16px) saturate(1.18);
+  backdrop-filter:blur(16px) saturate(1.18);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,.96) inset,
+    0 -1px 0 rgba(17,31,43,.05) inset,
+    0 5px 0 rgba(21,35,46,.055),
+    0 18px 42px rgba(18,35,48,.20);
+  pointer-events:auto;
+}
+.pond-dock-item {
+  position:relative;
+  min-width:0;
+  min-height:60px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  border-radius:21px;
+  color:#53616a;
+  font-size:9px;
+  line-height:1;
+  font-weight:900;
+  text-align:center;
+  text-decoration:none;
+  transition:transform .14s ease,color .14s ease,box-shadow .14s ease,background .14s ease;
+}
+.pond-dock-item:hover { transform:translateY(-2px); color:#182a36; }
+.pond-dock-item:active { transform:translateY(1px); }
+.pond-dock-active {
+  color:#0e72c9;
+  border:1px solid rgba(30,131,229,.24);
+  background:
+    radial-gradient(120% 100% at 50% -15%,#fff,rgba(255,255,255,0) 58%),
+    linear-gradient(180deg,#f8fdff,#e2f3ff);
+  box-shadow:0 1px 0 #fff inset,0 3px 0 rgba(33,112,176,.08),0 7px 14px rgba(33,112,176,.11);
+}
+.pond-dock-icon {
+  position:relative;
+  display:block;
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  border:1px solid rgba(18,31,42,.09);
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 1px 0 #fff inset,0 2px 5px rgba(20,35,46,.10);
+}
+.pond-dock-blue,.pond-dock-cyan { background:linear-gradient(180deg,#f9fdff,#dff4ff); }
+.pond-dock-green { background:linear-gradient(180deg,#fbfffb,#e4f7e9); }
+.pond-dock-red { background:linear-gradient(180deg,#fffafa,#ffe8e8); }
+
+@media (max-width: 640px) {
+  .hero-poster-shell { padding-bottom: 22px; }
+  .hero-poster-frame { border-radius: 25px; }
+  .hero-status-rail { width:94%; padding:6px; gap:4px; }
+  .hero-status { min-height:27px; padding:0 6px; font-size:7px; letter-spacing:.055em; }
+  .hero-status .status-dot { width:6px; height:6px; margin-right:0; }
+  .pond-dock { border-radius:24px; padding:6px; gap:3px; }
+  .pond-dock-item { min-height:56px; border-radius:18px; font-size:8px; }
+  .pond-dock-icon { width:34px; height:34px; border-radius:12px; }
+}
+@media (max-width: 390px) {
+  .hero-status-red,.hero-status-green { display:none; }
+  .hero-status-rail { grid-template-columns:repeat(2,minmax(0,1fr)); width:78%; }
+  .pond-dock-item { font-size:7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior:auto; }
+  .hero-glint { animation:none!important; }
+}
