@@ -414,11 +414,9 @@ export default function SwapForm() {
   const [tokenOut, setTokenOut] = useState<TokenChoice>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
   const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
-  // USDC input uses the direct Uniswap V3 lane. The deployed TobySwapper contract
-  // requires its fee leg to resolve through V2, which is unreliable for small USDC
-  // amounts on Base. Direct V3 keeps USDC swaps usable with exact router approval.
-  const isUsdcDirect = eq(String(tokenIn), USDC);
-  const isDirectPair = isTaboshiPair || isUsdcDirect;
+  // Keep the direct V3 fallback scoped only to TABOSHI. USDC uses the normal
+  // TobySwapper route again so there is no separate "Direct on Base" lane.
+  const isDirectPair = isTaboshiPair;
   const [slippage, setSlippage] = useState<number>(0.5);
   const [slippageOpen, setSlippageOpen] = useState(false);
 
@@ -1118,8 +1116,8 @@ export default function SwapForm() {
         <div className="weth-route-callout">
           <span className="weth-route-orb"><img src="/tokens/toby.PNG" alt="" /></span>
           <div className="min-w-0 flex-1">
-            <strong>{isTaboshiPair ? "TABOSHI · Direct V3" : "USDC · Direct V3"}</strong>
-            <p>{isTaboshiPair ? "Live Uniswap liquidity on Base." : "Reliable USDC routing on Base."}</p>
+            <strong>TABOSHI · Direct V3</strong>
+            <p>Live Uniswap liquidity on Base.</p>
             <small>Direct route · no burn credit.</small>
           </div>
           <button
