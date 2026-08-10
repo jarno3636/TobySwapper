@@ -13,7 +13,7 @@ const iconMap: Record<string, string> = {
   USDC: "/tokens/usdc.PNG",
   TOBY: "/tokens/toby.PNG",
   PATIENCE: "/tokens/patience.PNG",
-  // TABOSHI removed
+  TABOSHI: "/tokens/taboshi.PNG",
 };
 
 const eq = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
@@ -24,8 +24,8 @@ const preferredAddressForSymbol: Partial<Record<string, Address>> = {
     "0x0000000000000000000000000000000000000000") as Address,
 };
 
-// Keep desired ordering (TABOSHI removed)
-const symbolOrder = ["ETH", "TOBY", "PATIENCE"];
+// Keep the most useful Base + Tobyworld assets together.
+const symbolOrder = ["ETH", "USDC", "TOBY", "PATIENCE", "TABOSHI"];
 
 export default function TokenSelect({
   user,
@@ -81,12 +81,8 @@ export default function TokenSelect({
   }, [balance, autoBal]);
 
   const availableTokens = useMemo(() => {
-    // Filter out USDC (per your original), the excluded address, and TABOSHI entirely
     const filtered = TOKENS.filter(
-      (t) =>
-        t.symbol !== "USDC" &&
-        t.symbol !== "TABOSHI" &&
-        (!exclude || !eq(t.address, String(exclude)))
+      (t) => !exclude || !eq(t.address, String(exclude))
     );
 
     const deduped: (typeof TOKENS)[number][] = [];
@@ -169,7 +165,7 @@ export default function TokenSelect({
       {/* Footer: icon + symbol + balance */}
       <div className="flex items-center justify-between pt-2 text-xs text-inkSub">
         <span className="inline-flex items-center gap-2">
-          <span className="relative inline-block w-5 h-5 rounded-full overflow-hidden border border-white/10">
+          <span className="relative inline-block w-5 h-5 rounded-full overflow-hidden border border-[var(--line)]">
             <Image
               src={iconMap[displaySymbol] ?? "/tokens/baseeth.PNG"}
               alt={displaySymbol}

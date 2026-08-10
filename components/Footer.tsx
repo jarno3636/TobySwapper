@@ -1,21 +1,16 @@
-// components/Footer.tsx
+import LinkMaybeMini from "@/components/LinkMaybeMini";
+
 export default function Footer() {
   return (
-    <footer className="mt-12 text-center text-xs text-ink-sub py-6 border-t border-white/10 glass rounded-t-2xl">
-      <p className="mb-2">
-        Fan Project · Not affiliated with the $TOBY project or its creator.
-      </p>
-      <p className="mb-2">
-        <a
-          href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-accent"
-        >
-          Swapper Contract
-        </a>
-      </p>
-      <p>Created in 2025 🐸</p>
+    <footer className="mx-auto mt-10 w-full max-w-6xl px-4 pb-10 text-center text-xs text-inkSub">
+      <div className="border-t border-[var(--line)] pt-6">
+        <p>Community-built Tobyworld utility · Base mainnet · Non-custodial swaps.</p>
+        <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2 font-semibold">
+          <LinkMaybeMini href="https://tobyworld.app" className="hover:text-[var(--ink)]">Tobyworld</LinkMaybeMini>
+          <LinkMaybeMini href="https://toadvault.xyz" className="hover:text-[var(--ink)]">ToadVault</LinkMaybeMini>
+          <LinkMaybeMini href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d" className="hover:text-[var(--ink)]">Contract</LinkMaybeMini>
+        </div>
+      </div>
     </footer>
   );
 }

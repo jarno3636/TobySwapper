@@ -51,7 +51,7 @@ export default function ShareCallout({ token = "$TOBY", siteUrl }: ShareCalloutP
 
   const buildLine = React.useCallback(() => {
     if (!burn) {
-      return `Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
+      return `Swap on TobySwap (Base). Auto-burn to ${token}. Spread the lore 🐸`;
     }
     return `${getRandomLead()}\n\nBurn Counter is at ${burn} 🔥`;
   }, [burn, token]);

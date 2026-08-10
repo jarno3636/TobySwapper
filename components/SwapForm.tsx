@@ -15,7 +15,7 @@ import {
 
 import TokenSelect from "./TokenSelect";
 import {
-  TOKENS, USDC, WETH, SWAPPER, TOBY, QUOTER_V3,
+  TOKENS, USDC, WETH, SWAPPER, TOBY, TABOSHI, QUOTER_V3,
 } from "@/lib/addresses";
 
 import { useUsdPriceSingle } from "@/lib/prices";
@@ -28,10 +28,6 @@ const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
 const FEE_DENOM = 10_000n;
 const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
-
-/* --------------------- Disable a specific token (TABOSHI) ------------------- */
-const TABOSHI = "0x3A1a33cf4553Db61F0db2c1e1721CD480b02789f" as Address;
-const isTaboshiAddr = (a?: string) => !!a && a.toLowerCase() === TABOSHI.toLowerCase();
 
 /* ------------------------------- Minimal ABIs ------------------------------- */
 const QuoterV3Abi = [
@@ -178,7 +174,7 @@ async function v3ExistingFees(client: any, a: Address, b: Address) {
 
 async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-  const hubs = [inAddr, WETH as Address, USDC as Address, tokenOut] as Address[];
+  const hubs = [inAddr, WETH as Address, USDC as Address, TOBY as Address, tokenOut] as Address[];
 
   const key = (a: Address,b: Address) => `${a.toLowerCase()}->${b.toLowerCase()}`;
   const edgeFees = new Map<string, number[]>();
@@ -201,6 +197,7 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
     if (path.length-1 >= maxHops) return;
     for (const nxt of hubs) {
       if (nxt.toLowerCase() === cur.toLowerCase()) continue;
+      if (path.some((used) => eq(used, nxt)) && !eq(nxt, tokenOut)) continue;
       const fees = edgeFees.get(key(cur,nxt));
       if (!fees) continue;
       for (const f of [...fees].sort((a,b)=>a-b)) dfs([...path, nxt], [...feePath, f]);
@@ -214,12 +211,25 @@ async function buildV3CandidatesPruned(client: any, tokenIn: Address|"ETH", toke
 /* ------------------------------ V2 helpers --------------------------------- */
 async function v2Quote(client: any, amountIn: bigint, tokenIn: Address|"ETH", tokenOut: Address) {
   const inAddr = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
-  const tryPaths: Address[][] = [
+  const rawPaths: Address[][] = [
     [inAddr, tokenOut],
     [inAddr, WETH as Address, tokenOut],
     [inAddr, USDC as Address, tokenOut],
+    [inAddr, TOBY as Address, tokenOut],
     [inAddr, WETH as Address, USDC as Address, tokenOut],
+    [inAddr, USDC as Address, WETH as Address, tokenOut],
   ];
+  // Remove repeated adjacent tokens and duplicate route shapes before asking Router02.
+  const seen = new Set<string>();
+  const tryPaths = rawPaths
+    .map((path) => path.filter((a, i) => i === 0 || !eq(a, path[i - 1])))
+    .filter((path) => path.length >= 2 && !eq(path[0], path[path.length - 1]))
+    .filter((path) => {
+      const key = path.map((a) => a.toLowerCase()).join(">");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   let best: { out: bigint; path: Address[] } | undefined;
   for (const path of tryPaths) {
     try {
@@ -243,6 +253,10 @@ function buildFeePathFor(tokenInAddr: Address): Address[] {
   const t = lc(tokenInAddr);
   if (eq(t, TOBY)) return [t as Address, TOBY as Address];
   if (eq(t, WETH)) return [WETH as Address, TOBY as Address];
+  // TABOSHI has a direct Sushi V2 TABOSHI/TOBY pool. The fee is only a small
+  // fraction of each trade, so using that direct pool is more reliable than
+  // assuming a TABOSHI/WETH V2 pool exists.
+  if (eq(t, TABOSHI)) return [t as Address, TOBY as Address];
   return [t as Address, WETH as Address, TOBY as Address];
 }
 
@@ -420,19 +434,13 @@ export default function SwapForm() {
   const [quoteOutMain, setQuoteOutMain] = useState<bigint | undefined>();
   const [bestV3, setBestV3] = useState<{ tokens: Address[]; fees: number[] } | undefined>();
   const [bestV2Path, setBestV2Path] = useState<Address[] | undefined>();
+  const [bestFeePath, setBestFeePath] = useState<Address[] | undefined>();
   const quoteLatch = useRef<number>(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined);
-
-      // Block TABOSHI entirely
-      if (isTaboshiAddr(tokenOut) || (typeof tokenIn === "string" && isTaboshiAddr(tokenIn))) {
-        setQuoteState("noroute");
-        setQuoteErr("This token is disabled in the app.");
-        return;
-      }
+      setQuoteErr(undefined); setQuoteOutMain(undefined); setBestV3(undefined); setBestV2Path(undefined); setBestFeePath(undefined);
 
       if (!client || !isOnBase || mainAmountIn === 0n || !isAddress(tokenOut)) { setQuoteState("idle"); return; }
       setQuoteState("loading");
@@ -442,6 +450,7 @@ export default function SwapForm() {
       let best: { tokens: Address[]; fees: number[] } | undefined;
       let v2Path: Address[] | undefined;
       let v2Out: bigint | undefined;
+      let feePath: Address[] | undefined;
 
       try {
         const cands = await buildV3CandidatesPruned(client, tokenIn, tokenOut);
@@ -467,8 +476,23 @@ export default function SwapForm() {
         const v2 = await v2Quote(client, mainAmountIn, tokenIn, tokenOut as Address);
         if (v2 && v2.out > 0n) { v2Out = v2.out; v2Path = v2.path; }
 
-        // Prefer V2 when it exists for ETH-in; otherwise keep bestV3 for fallback
-        if (tokenIn === "ETH" && v2Path && v2Out) {
+        // The contract converts the fee to TOBY through Router02. Quote that
+        // path too so the UI never offers a main route whose burn leg will fail.
+        const feeAmount = amountInBig > mainAmountIn ? amountInBig - mainAmountIn : 0n;
+        const actualIn = tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address);
+        if (eq(actualIn, TOBY)) {
+          feePath = [TOBY as Address, TOBY as Address];
+        } else if (feeAmount > 0n) {
+          const feeQuote = await v2Quote(client, feeAmount, actualIn, TOBY as Address);
+          if (!feeQuote?.path) throw new Error("No V2 route is available for the TOBY burn fee.");
+          feePath = feeQuote.path;
+        } else {
+          feePath = buildFeePathFor(actualIn);
+        }
+
+        // Native ETH input and ETH output use the contract's dedicated V2 paths.
+        // In the UI, WETH as tokenOut is the marker for native ETH output.
+        if ((tokenIn === "ETH" || eq(tokenOut, WETH)) && v2Path && v2Out) {
           best = undefined; bestOut = v2Out;
         } else if (v2Out && (!bestOut || v2Out > bestOut)) {
           best = undefined; bestOut = v2Out;
@@ -483,6 +507,7 @@ export default function SwapForm() {
         setQuoteOutMain(bestOut);
         setBestV3(best);
         setBestV2Path(best ? undefined : v2Path);
+        setBestFeePath(feePath);
         setQuoteState("ok");
       } else {
         setQuoteState("noroute");
@@ -542,12 +567,6 @@ export default function SwapForm() {
   }
 
   async function doSwap() {
-    // Block if TABOSHI is involved
-    if (isTaboshiAddr(tokenOut) || (typeof tokenIn === "string" && isTaboshiAddr(tokenIn))) {
-      setPreflightMsg("This token is disabled in the app.");
-      return;
-    }
-
     if (!connected || !isOnBase) { setPreflightMsg("Connect your wallet on Base to swap."); return; }
     if (amountInBig === 0n) return;
     if (!client) { setPreflightMsg("No RPC client available."); return; }
@@ -559,14 +578,14 @@ export default function SwapForm() {
     const decIn = inMeta.decimals;
     const decOut = outMeta.decimals;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
-    const pathForFeeSwap = feePathForExecution(inAddr);
+    const pathForFeeSwap = bestFeePath ?? feePathForExecution(inAddr);
     const minOutFee = 0n;
 
     try {
       if (quoteState !== "ok" || !quoteOutMain) { setPreflightMsg("No valid quote."); setSending(false); return; }
 
       const isEthIn = tokenIn === "ETH";
-      const isEthOut = outMeta.symbol === "ETH";
+      const isEthOut = eq(tokenOut, WETH);
 
       if (!isEthIn && (allowanceToSwapper ?? 0n) < amountInBig) {
         setPreflightMsg(`Approve ${inMeta.symbol} first.`);
@@ -574,7 +593,7 @@ export default function SwapForm() {
         return;
       }
 
-      const minOutMainV2 = 0n;
+      const minOutMainV2 = minOutMain;
 
       // ---- ETH-IN handling ----
       if (isEthIn) {
@@ -808,11 +827,6 @@ export default function SwapForm() {
           user={address as Address | undefined}
           value={tokenIn === "ETH" ? (WETH as Address) : (tokenIn as Address)}
           onChange={(a) => {
-            // Block TABOSHI selection
-            if (isTaboshiAddr(String(a))) {
-              setPreflightMsg("This token is disabled in the app.");
-              return;
-            }
             setTokenIn(eq(a, WETH) ? "ETH" : (a as Address));
             setAmt("");
           }}
@@ -828,11 +842,7 @@ export default function SwapForm() {
           className="pill pill-opaque px-3 py-1 text-sm"
           onClick={() => {
             const prevIn = tokenIn, prevOut = tokenOut;
-            if (isTaboshiAddr(String(prevOut))) {
-              setPreflightMsg("This token is disabled in the app.");
-              return;
-            }
-            setTokenIn(prevOut as Address);
+            setTokenIn(eq(prevOut, WETH) ? "ETH" : (prevOut as Address));
             setTokenOut(prevIn === "ETH" ? (WETH as Address) : (prevIn as Address));
             setAmt("");
           }}
@@ -905,10 +915,6 @@ export default function SwapForm() {
           user={address as Address | undefined}
           value={tokenOut}
           onChange={(v) => {
-            if (isTaboshiAddr(String(v))) {
-              setPreflightMsg("This token is disabled in the app.");
-              return;
-            }
             const next = isAddress(String(v)) ? (v as Address) : (WETH as Address);
             setTokenOut(next);
             setAmt("");
@@ -959,15 +965,15 @@ export default function SwapForm() {
       {slippageOpen && (
         <Portal>
           <div className="fixed inset-0 z-[10000]">
-            <div className="absolute inset-0 z-0 bg-black/80 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
-            <div role="dialog" aria-modal="true" className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-white/10 pointer-events-auto">
+            <div className="absolute inset-0 z-0 bg-black/25 backdrop-blur-sm" onClick={() => setSlippageOpen(false)} />
+            <div role="dialog" aria-modal="true" className="relative z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-strong rounded-2xl p-5 w-[90%] max-w-sm border border-[var(--line)] pointer-events-auto">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold">Slippage</h4>
                 <button className="pill pill-opaque px-3 py-1 text-xs" onClick={() => setSlippageOpen(false)}>Close</button>
               </div>
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[0.1, 0.5, 1, 2].map((v) => (
-                  <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-1 outline-white/20" : ""}`}>
+                  <button key={v} onClick={() => setSlippage(v)} className={`pill justify-center px-3 py-1 text-xs ${slippage === v ? "outline outline-2 outline-[var(--accent)]" : ""}`}>
                     {v}%
                   </button>
                 ))}

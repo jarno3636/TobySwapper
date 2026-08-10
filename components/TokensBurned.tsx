@@ -200,7 +200,7 @@ export default function TokensBurned() {
         </div>
 
         {/* Progress bar */}
-        <div className="mt-4 rounded-full h-3 overflow-hidden border border-white/10 bg-white/5">
+        <div className="mt-4 rounded-full h-3 overflow-hidden border border-[var(--line)] bg-black/[.035]">
           <div
             className="h-full transition-all ease-out duration-500"
             style={{
