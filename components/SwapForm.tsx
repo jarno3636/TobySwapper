@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Address } from "viem";
 import {
-  formatUnits, parseUnits, parseEther, isAddress,
+  formatUnits, parseUnits, isAddress,
   encodePacked, encodeAbiParameters, getAddress,
 } from "viem";
 import { base } from "viem/chains";
@@ -26,7 +26,6 @@ import { useInvalidateBurnTotal } from "@/lib/burn";
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
 const FEE_DENOM = 10_000n;
-const GAS_BUFFER_ETH = 0.0005;
 const QUOTE_TIMEOUT_MS = 12_000;
 
 /* ------------------------------- Minimal ABIs ------------------------------- */
@@ -1054,15 +1053,6 @@ export default function SwapForm() {
                 balance={balInRaw.value !== undefined ? Number(formatUnits(balInRaw.value, inMeta.decimals)).toFixed(6) : undefined}
                 forceBlur={slippageOpen || !!success}
               />
-              <button
-                className="max-button trade-max"
-                onClick={() => {
-                  if (!balInRaw.value) return;
-                  const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-                  const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
-                  setAmt((safe > 0 ? safe : 0).toString());
-                }}
-              >MAX</button>
             </div>
           </div>
 
