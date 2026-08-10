@@ -37,6 +37,8 @@ type Payload = {
   viewer?: Leader | null;
   persistent?: boolean;
   newEvents?: number;
+  syncMode?: string;
+  warning?: string;
   updatedAt?: string;
   error?: string;
   hint?: string;
@@ -255,7 +257,14 @@ export default function BurnerLeaderboard() {
         <LinkMaybeMini href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d">Contract ↗</LinkMaybeMini>
       </div>
 
-      {data?.updatedAt && <p className="burn-updated">Updated {new Date(data.updatedAt).toLocaleString()} · {data.source}{data.persistent ? " · persistent index" : " · live fallback"}</p>}
+      {data?.ok && data.warning && (
+        <div className="burn-sync-note" role="status">
+          <span>◌</span>
+          <p><strong>Showing remembered ranks.</strong> Live Base sync will retry automatically. <small>{data.warning}</small></p>
+        </div>
+      )}
+
+      {data?.updatedAt && <p className="burn-updated">Updated {new Date(data.updatedAt).toLocaleString()} · {data.source}{data.syncMode ? ` · ${data.syncMode}` : ""}{data.persistent ? " · persistent index" : " · live fallback"}</p>}
     </section>
   );
 }
