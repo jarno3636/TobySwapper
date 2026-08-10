@@ -668,10 +668,10 @@ export async function GET(request: Request) {
     if (neynarConfigured()) {
       try {
         const profiles = await fetchNeynarProfiles([
-          ...live.leaders.map((row) => row.address),
+          ...live.leaders.map((row: { address: Address }) => row.address),
           ...(live.viewer ? [live.viewer.address] : []),
         ]);
-        live.leaders = live.leaders.map((row) => ({ ...row, profile: profiles.get(row.address.toLowerCase()) }));
+        live.leaders = live.leaders.map((row: { address: Address }) => ({ ...row, profile: profiles.get(row.address.toLowerCase()) }));
         if (live.viewer) live.viewer = { ...live.viewer, profile: profiles.get(live.viewer.address.toLowerCase()) };
       } catch (error) {
         console.warn("Live Farcaster enrichment unavailable", error);
