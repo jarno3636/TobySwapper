@@ -15,7 +15,7 @@ import {
 
 import TokenSelect, { type TokenChoice } from "./TokenSelect";
 import {
-  TOKENS, USDC, WETH, SWAPPER, TOBY, TABOSHI, QUOTER_V3,
+  TOKENS, USDC, WETH, SWAPPER, TOBY, PATIENCE, TABOSHI, QUOTER_V3,
 } from "@/lib/addresses";
 
 import { useUsdPriceSingle } from "@/lib/prices";
@@ -575,7 +575,7 @@ export default function SwapForm() {
           return;
         }
         const sdk = await getMiniSdk();
-        if (!cancelled) setNativeSwapAvailable(typeof (sdk as any)?.actions?.swapToken === "function");
+        if (!cancelled) setNativeSwapAvailable(typeof sdk?.actions?.swapToken === "function");
       } catch {
         if (!cancelled) setNativeSwapAvailable(false);
       }
@@ -609,7 +609,7 @@ export default function SwapForm() {
       }
 
       const sdk = await getMiniSdk();
-      const swapToken = (sdk as any)?.actions?.swapToken;
+      const swapToken = sdk?.actions?.swapToken;
       if (typeof swapToken !== "function") {
         setNativeSwapAvailable(false);
         setPreflightMsg("This Farcaster client does not expose the native swap action yet. Update Farcaster and try again.");
@@ -630,10 +630,19 @@ export default function SwapForm() {
       } else if (result?.reason === "rejected_by_user") {
         setPreflightMsg("Farcaster swap cancelled.");
       } else {
-        setPreflightMsg(result?.error?.message || "Farcaster could not complete that swap. Try a different amount or pair.");
+        setPreflightMsg(
+          result?.error?.message ||
+          result?.error?.error ||
+          "Farcaster could not open a route for that pair. Refresh TobySwap in Farcaster and try again."
+        );
       }
     } catch (error: any) {
-      setPreflightMsg(error?.shortMessage || error?.message || "Unable to open Farcaster swap.");
+      const message = error?.shortMessage || error?.message || String(error || "");
+      setPreflightMsg(
+        message && message !== "[object Object]"
+          ? `Farcaster swap: ${message}`
+          : "Farcaster could not open its swap screen. Close and reopen TobySwap so Farcaster reloads the updated Mini App capabilities, then try again."
+      );
     } finally {
       setNativeSwapBusy(false);
     }
@@ -666,7 +675,14 @@ export default function SwapForm() {
         return;
       }
 
-      const minOutMainV2 = minOutMain;
+      // PATIENCE is fee-on-transfer. Router02's supporting-fee functions compare
+      // the recipient balance delta with amountOutMin, while getAmountsOut does not
+      // include PATIENCE transfer tax. Using the raw quote as amountOutMin can therefore
+      // revert with INSUFFICIENT_OUTPUT_AMOUNT even when the route itself is healthy.
+      // Keep the quote visible in the UI, but let Router02 execute PATIENCE V2 routes
+      // without a pre-tax minimum. Other V2 pairs keep the user's slippage minimum.
+      const patienceV2Route = eq(String(tokenIn), PATIENCE) || eq(String(tokenOut), PATIENCE);
+      const minOutMainV2 = patienceV2Route ? 0n : minOutMain;
 
       // ---- ETH-IN handling ----
       if (isEthIn) {
