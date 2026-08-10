@@ -40,7 +40,7 @@ const links = [
 
 export default function WorldLinks() {
   return (
-    <section className="world-card pond-side-card p-5 sm:p-6 lg:sticky lg:top-24">
+    <section className="world-card pond-side-card pond-explore p-5 sm:p-6 lg:sticky lg:top-24">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <div className="world-kicker">THE POND</div>
@@ -55,9 +55,10 @@ export default function WorldLinks() {
         </div>
       </div>
 
-      <div className="grid gap-3">
+      <div className="pond-path-line" aria-hidden="true" />
+      <div className="grid gap-3 pond-destination-grid">
         {links.map((item) => (
-          <LinkMaybeMini key={item.title} href={item.href} className="world-link-card group">
+          <LinkMaybeMini key={item.title} href={item.href} className={`world-link-card pond-destination pond-destination-${item.accent} group`}>
             <span className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl pond-link-icon pond-link-${item.accent}`}>
               <Image src={item.icon} alt="" fill sizes="48px" className="object-contain p-1" />
             </span>
