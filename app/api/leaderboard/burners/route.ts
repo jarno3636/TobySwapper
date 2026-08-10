@@ -84,26 +84,22 @@ type JsonRpcEnvelope<T> = {
 function normalizeRpcCandidate(value?: string) {
   const clean = value?.trim();
   if (!clean) return undefined;
-  if (/^https?:\/\//i.test(clean)) return clean;
-  return undefined;
+  return /^https?:\/\//i.test(clean) ? clean : undefined;
+}
+
+function alchemyEndpoint() {
+  const raw = process.env.ALCHEMY_API_KEY?.trim();
+  if (!raw) return undefined;
+  return /^https?:\/\//i.test(raw) ? raw : `https://base-mainnet.g.alchemy.com/v2/${raw}`;
 }
 
 function rpcEndpoints() {
-  const alchemyRaw = process.env.ALCHEMY_API_KEY?.trim();
-  const alchemy = alchemyRaw
-    ? /^https?:\/\//i.test(alchemyRaw)
-      ? alchemyRaw
-      : `https://base-mainnet.g.alchemy.com/v2/${alchemyRaw}`
-    : undefined;
-
   return Array.from(
     new Set(
       [
-        alchemy,
+        alchemyEndpoint(),
         normalizeRpcCandidate(process.env.BASE_RPC_URL),
         "https://mainnet.base.org",
-        "https://base-rpc.publicnode.com",
-        "https://1rpc.io/base",
       ].filter((value): value is string => Boolean(value)),
     ),
   );
@@ -113,37 +109,39 @@ function hexBlock(value: bigint) {
   return `0x${value.toString(16)}` as Hex;
 }
 
+async function rpcCallOnEndpoint<T>(endpoint: string, method: string, params: unknown[], id = 1): Promise<T> {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(18_000),
+  });
+
+  const text = await response.text();
+  let payload: JsonRpcEnvelope<T>;
+  try {
+    payload = JSON.parse(text) as JsonRpcEnvelope<T>;
+  } catch {
+    throw new Error(`HTTP ${response.status}: ${text.slice(0, 180) || "non-JSON RPC response"}`);
+  }
+
+  if (!response.ok) throw new Error(`HTTP ${response.status}: ${payload.error?.message || response.statusText}`);
+  if (payload.error) throw new Error(payload.error.message || `RPC ${payload.error.code || "error"}`);
+  if (!("result" in payload)) throw new Error("RPC response did not include a result");
+  return payload.result as T;
+}
+
 async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
   const errors: string[] = [];
-
   for (const endpoint of rpcEndpoints()) {
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-        cache: "no-store",
-        signal: AbortSignal.timeout(15_000),
-      });
-
-      const text = await response.text();
-      let payload: JsonRpcEnvelope<T>;
-      try {
-        payload = JSON.parse(text) as JsonRpcEnvelope<T>;
-      } catch {
-        throw new Error(`HTTP ${response.status}: ${text.slice(0, 160) || "non-JSON RPC response"}`);
-      }
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}: ${payload.error?.message || response.statusText}`);
-      if (payload.error) throw new Error(payload.error.message || `RPC ${payload.error.code || "error"}`);
-      if (!("result" in payload)) throw new Error("RPC response did not include a result");
-      return payload.result as T;
+      return await rpcCallOnEndpoint<T>(endpoint, method, params);
     } catch (error: any) {
       const host = (() => { try { return new URL(endpoint).host; } catch { return "rpc"; } })();
       errors.push(`${host}: ${error?.message || String(error)}`);
     }
   }
-
   throw new Error(`All Base RPC endpoints failed. ${errors.join(" | ").slice(0, 900)}`);
 }
 
@@ -153,13 +151,13 @@ async function getLatestBlockNumber() {
 }
 
 function parseSwapLog(log: RpcLog): SwapLog | null {
+  if (!log.topics?.[0] || log.topics[0].toLowerCase() !== SWAP_SUMMARY_TOPIC.toLowerCase()) return null;
   if (!log.topics?.[1] || !log.data) return null;
   try {
     const user = getAddress(`0x${log.topics[1].slice(-40)}`);
     const decoded = decodeAbiParameters(SWAP_SUMMARY_DATA, log.data);
-    const tobyBurned = decoded[4] as bigint;
     return {
-      args: { user, tobyBurned },
+      args: { user, tobyBurned: decoded[4] as bigint },
       blockNumber: log.blockNumber ? hexToBigInt(log.blockNumber) : null,
       transactionHash: log.transactionHash as `0x${string}`,
       logIndex: log.logIndex ? Number(hexToBigInt(log.logIndex)) : null,
@@ -169,45 +167,169 @@ function parseSwapLog(log: RpcLog): SwapLog | null {
   }
 }
 
-async function getLogsRange(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
-  const logs = await rpcCall<RpcLog[]>("eth_getLogs", [
-    {
-      address: SWAPPER,
-      topics: [SWAP_SUMMARY_TOPIC],
+type AlchemyTransfer = { hash?: Hex };
+type AlchemyTransfersResult = { transfers?: AlchemyTransfer[]; pageKey?: string };
+type RpcReceipt = { logs?: RpcLog[] } | null;
+
+async function alchemyCall<T>(method: string, params: unknown[]): Promise<T> {
+  const endpoint = alchemyEndpoint();
+  if (!endpoint) throw new Error("Alchemy is not configured");
+  return rpcCallOnEndpoint<T>(endpoint, method, params);
+}
+
+async function alchemyBatchReceipts(hashes: Hex[]): Promise<RpcReceipt[]> {
+  const endpoint = alchemyEndpoint();
+  if (!endpoint || hashes.length === 0) return [];
+
+  const all: RpcReceipt[] = [];
+  const batchSize = 40; // Alchemy recommends keeping JSON-RPC batches below 50.
+
+  for (let offset = 0; offset < hashes.length; offset += batchSize) {
+    const slice = hashes.slice(offset, offset + batchSize);
+    const requests = slice.map((hash, index) => ({
+      jsonrpc: "2.0",
+      id: index + 1,
+      method: "eth_getTransactionReceipt",
+      params: [hash],
+    }));
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(requests),
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`Alchemy receipt batch HTTP ${response.status}: ${text.slice(0, 180)}`);
+
+    const payload = JSON.parse(text) as Array<JsonRpcEnvelope<RpcReceipt>>;
+    if (!Array.isArray(payload)) throw new Error("Alchemy receipt batch returned an invalid response");
+    const byId = new Map(payload.map((item) => [Number(item.id), item]));
+    for (let i = 0; i < slice.length; i++) {
+      const item = byId.get(i + 1);
+      if (item?.error) throw new Error(item.error.message || "Alchemy receipt batch failed");
+      all.push(item?.result ?? null);
+    }
+  }
+  return all;
+}
+
+/**
+ * Historical backfill path for Alchemy Free tier.
+ * Base eth_getLogs is limited to 10 blocks on that plan, so walking 50k blocks
+ * is both slow and fragile. Asset Transfers can locate transactions that sent
+ * ETH/ERC20 assets into TobySwapper across the full range; then we inspect only
+ * those receipts and extract the canonical SwapSummary event.
+ */
+async function getSwapLogsViaAlchemyTransfers(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
+  const endpoint = alchemyEndpoint();
+  if (!endpoint) throw new Error("Alchemy is not configured");
+
+  const hashes = new Set<Hex>();
+  let pageKey: string | undefined;
+  let pages = 0;
+
+  do {
+    const filter: Record<string, unknown> = {
       fromBlock: hexBlock(fromBlock),
       toBlock: hexBlock(toBlock),
-    },
+      toAddress: SWAPPER,
+      category: ["external", "erc20"],
+      excludeZeroValue: false,
+      withMetadata: false,
+      maxCount: "0x3e8",
+      order: "asc",
+    };
+    if (pageKey) filter.pageKey = pageKey;
+
+    const result = await alchemyCall<AlchemyTransfersResult>("alchemy_getAssetTransfers", [filter]);
+    for (const transfer of result.transfers || []) {
+      if (transfer.hash) hashes.add(transfer.hash);
+    }
+    pageKey = result.pageKey;
+    pages += 1;
+    if (pages > 100) throw new Error("Alchemy transfer history exceeded the safe pagination limit");
+  } while (pageKey);
+
+  const txHashes = [...hashes];
+  const receipts = await alchemyBatchReceipts(txHashes);
+  const logs: SwapLog[] = [];
+
+  for (const receipt of receipts) {
+    for (const log of receipt?.logs || []) {
+      if (log.address?.toLowerCase() !== SWAPPER.toLowerCase()) continue;
+      const parsed = parseSwapLog(log);
+      if (parsed) logs.push(parsed);
+    }
+  }
+
+  return logs;
+}
+
+async function getLogsOnEndpoint(endpoint: string, fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
+  const logs = await rpcCallOnEndpoint<RpcLog[]>(endpoint, "eth_getLogs", [
+    { address: SWAPPER, topics: [SWAP_SUMMARY_TOPIC], fromBlock: hexBlock(fromBlock), toBlock: hexBlock(toBlock) },
   ]);
   return logs.map(parseSwapLog).filter((log): log is SwapLog => Boolean(log));
 }
 
-async function getAllSwapSummaryLogs(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
+async function getSwapLogsViaStandardRpc(fromBlock: bigint, toBlock: bigint): Promise<SwapLog[]> {
   if (fromBlock > toBlock) return [];
+  const errors: string[] = [];
 
-  // Small fixed windows are accepted by public Base RPCs and avoid enormous
-  // eth_getLogs payloads. If a provider is stricter, bisect until it succeeds.
-  const out: SwapLog[] = [];
-  const queue: Array<[bigint, bigint]> = [];
-  const initialSpan = 50_000n;
+  // Prefer a configured non-Alchemy RPC for normal ranges. Base recommends
+  // keeping eth_getLogs under 2,000 blocks; 1,000 leaves extra room.
+  const configured = normalizeRpcCandidate(process.env.BASE_RPC_URL);
+  const endpoints = Array.from(new Set([configured, "https://mainnet.base.org"].filter((v): v is string => Boolean(v))));
 
-  for (let start = fromBlock; start <= toBlock; start += initialSpan) {
-    const end = start + initialSpan - 1n > toBlock ? toBlock : start + initialSpan - 1n;
-    queue.push([start, end]);
-  }
-
-  while (queue.length) {
-    const [start, end] = queue.shift()!;
+  for (const endpoint of endpoints) {
     try {
-      out.push(...(await getLogsRange(start, end)));
-    } catch (error) {
-      const span = end - start + 1n;
-      if (span <= 1_000n) throw error;
-      const mid = start + span / 2n - 1n;
-      queue.unshift([mid + 1n, end], [start, mid]);
+      const out: SwapLog[] = [];
+      const span = 1_000n;
+      for (let start = fromBlock; start <= toBlock; start += span) {
+        const end = start + span - 1n > toBlock ? toBlock : start + span - 1n;
+        out.push(...(await getLogsOnEndpoint(endpoint, start, end)));
+      }
+      return out;
+    } catch (error: any) {
+      const host = (() => { try { return new URL(endpoint).host; } catch { return "rpc"; } })();
+      errors.push(`${host}: ${error?.message || String(error)}`);
     }
   }
 
-  return out;
+  // Last resort for an Alchemy Free-tier key: only use this for a short recent
+  // window. Ten blocks is their documented Base limit on Free.
+  const alchemy = alchemyEndpoint();
+  const range = toBlock - fromBlock + 1n;
+  if (alchemy && range <= 500n) {
+    try {
+      const out: SwapLog[] = [];
+      for (let start = fromBlock; start <= toBlock; start += 10n) {
+        const end = start + 9n > toBlock ? toBlock : start + 9n;
+        out.push(...(await getLogsOnEndpoint(alchemy, start, end)));
+      }
+      return out;
+    } catch (error: any) {
+      errors.push(`alchemy-10-block: ${error?.message || String(error)}`);
+    }
+  }
+
+  throw new Error(`Unable to read Base event logs. ${errors.join(" | ").slice(0, 800)}`);
+}
+
+async function getAllSwapSummaryLogs(fromBlock: bigint, toBlock: bigint): Promise<{ logs: SwapLog[]; mode: string }> {
+  if (fromBlock > toBlock) return { logs: [], mode: "already synced" };
+
+  if (alchemyEndpoint()) {
+    try {
+      return { logs: await getSwapLogsViaAlchemyTransfers(fromBlock, toBlock), mode: "Alchemy Transfers + receipts" };
+    } catch (error) {
+      console.warn("Alchemy historical transfer index failed; trying standard RPC", error);
+    }
+  }
+
+  return { logs: await getSwapLogsViaStandardRpc(fromBlock, toBlock), mode: "Base eth_getLogs" };
 }
 
 function normalizeStoredRow(row: StoredLeaderboardRow) {
@@ -246,7 +368,7 @@ async function syncIntoSupabase(latestBlock: bigint) {
   const remembered = state[0]?.last_scanned_block != null ? BigInt(state[0].last_scanned_block) : DEPLOYMENT_SCAN_BLOCK - 1n;
   const fromBlock = remembered + 1n > DEPLOYMENT_SCAN_BLOCK ? remembered + 1n : DEPLOYMENT_SCAN_BLOCK;
 
-  const logs = await getAllSwapSummaryLogs(fromBlock, latestBlock);
+  const { logs, mode } = await getAllSwapSummaryLogs(fromBlock, latestBlock);
   const rows = logs
     .filter((log) => log.args?.user && log.transactionHash && log.logIndex != null)
     .map((log) => ({
@@ -278,7 +400,7 @@ async function syncIntoSupabase(latestBlock: bigint) {
     }),
   });
 
-  return logs.length;
+  return { newEvents: logs.length, syncMode: mode, syncedFrom: fromBlock.toString(), syncedTo: latestBlock.toString() };
 }
 
 async function readStoredLeaderboard(viewerAddress?: string) {
@@ -373,7 +495,7 @@ export async function GET(request: Request) {
 
     if (hasSupabaseServerEnv()) {
       try {
-        const newEvents = await syncIntoSupabase(latestBlock);
+        const sync = await syncIntoSupabase(latestBlock);
         const stored = await readStoredLeaderboard(viewerAddress);
         return NextResponse.json(
           {
@@ -382,20 +504,41 @@ export async function GET(request: Request) {
             contract: SWAPPER,
             fromBlock: DEPLOYMENT_SCAN_BLOCK.toString(),
             toBlock: latestBlock.toString(),
-            newEvents,
+            ...sync,
             ...stored,
             persistent: true,
             updatedAt: new Date().toISOString(),
           },
           { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=180" } },
         );
-      } catch (supabaseError) {
-        console.warn("Persistent leaderboard unavailable; falling back to live chain aggregation", supabaseError);
+      } catch (supabaseError: any) {
+        console.warn("Persistent leaderboard sync unavailable; checking remembered leaderboard", supabaseError);
+        try {
+          const stored = await readStoredLeaderboard(viewerAddress);
+          if (stored.leaders.length > 0 || stored.swapEvents > 0) {
+            return NextResponse.json(
+              {
+                ok: true,
+                source: "Persistent Supabase index (live sync temporarily unavailable)",
+                contract: SWAPPER,
+                fromBlock: DEPLOYMENT_SCAN_BLOCK.toString(),
+                toBlock: latestBlock.toString(),
+                ...stored,
+                persistent: true,
+                warning: supabaseError?.message || "Live Base sync temporarily unavailable",
+                updatedAt: new Date().toISOString(),
+              },
+              { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=300" } },
+            );
+          }
+        } catch (storedError) {
+          console.warn("Remembered leaderboard was also unavailable", storedError);
+        }
       }
     }
 
-    const logs = await getAllSwapSummaryLogs(DEPLOYMENT_SCAN_BLOCK, latestBlock);
-    const live = aggregateLive(logs, viewerAddress);
+    const liveRead = await getAllSwapSummaryLogs(DEPLOYMENT_SCAN_BLOCK, latestBlock);
+    const live = aggregateLive(liveRead.logs, viewerAddress);
 
     return NextResponse.json(
       {
@@ -405,6 +548,7 @@ export async function GET(request: Request) {
         fromBlock: DEPLOYMENT_SCAN_BLOCK.toString(),
         toBlock: latestBlock.toString(),
         ...live,
+        syncMode: liveRead.mode,
         persistent: false,
         updatedAt: new Date().toISOString(),
       },
@@ -416,7 +560,7 @@ export async function GET(request: Request) {
       {
         ok: false,
         error: error?.message || "Unable to read burn events",
-        hint: "TobySwap tried multiple Base RPC providers. Check BASE_RPC_URL/ALCHEMY_API_KEY and TOBYSWAP_DEPLOYMENT_BLOCK if this persists.",
+        hint: "If ALCHEMY_API_KEY is configured, TobySwap now backfills through Alchemy Transfers + transaction receipts instead of large eth_getLogs ranges. Also verify TOBYSWAP_DEPLOYMENT_BLOCK if this persists.",
       },
       { status: 500, headers: { "Cache-Control": "no-store" } },
     );
