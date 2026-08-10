@@ -985,7 +985,7 @@ export default function SwapForm() {
           <div className="min-w-0">
             <div className="world-kicker">SWAP GATE</div>
             <h2 className="mt-1 text-xl sm:text-2xl font-black tracking-[-.04em]">Trade the pond</h2>
-            <div className="text-[11px] text-inkSub mt-1">TOBY · PATIENCE · TABOSHI · ETH · WETH · USDC</div>
+            <div className="text-[11px] text-inkSub mt-1">TOBY · PATIENCE · TABOSHI · ETH · WETH</div>
           </div>
         </div>
         <button
@@ -1055,13 +1055,29 @@ export default function SwapForm() {
                 forceBlur={slippageOpen || !!success}
               />
               <button
+                type="button"
                 className="max-button trade-max"
+                disabled={balInRaw.value === undefined || balInRaw.value === 0n}
                 onClick={() => {
-                  if (!balInRaw.value) return;
-                  const raw = Number(formatUnits(balInRaw.value, inMeta.decimals));
-                  const safe = inMeta.address ? raw : Math.max(0, raw - GAS_BUFFER_ETH);
-                  setAmt((safe > 0 ? safe : 0).toString());
+                  const balance = balInRaw.value;
+                  if (balance === undefined || balance === 0n) return;
+
+                  // Never round token balances through JavaScript Number here.
+                  // Large balances can be converted to scientific notation or lose
+                  // precision, which then makes the amount parser reject the value.
+                  if (inMeta.address) {
+                    setAmt(formatUnits(balance, inMeta.decimals));
+                    return;
+                  }
+
+                  // Native ETH needs a small reserve for gas. Keep this calculation
+                  // entirely in bigint units as well so MAX is exact and reliable.
+                  const gasReserve = parseEther(GAS_BUFFER_ETH.toString());
+                  const spendable = balance > gasReserve ? balance - gasReserve : 0n;
+                  setAmt(formatUnits(spendable, 18));
                 }}
+                aria-label={`Use maximum ${inMeta.symbol} balance`}
+                title={inMeta.address ? `Use full ${inMeta.symbol} balance` : "Use available ETH minus a small gas reserve"}
               >MAX</button>
             </div>
           </div>
