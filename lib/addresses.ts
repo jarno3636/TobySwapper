@@ -39,7 +39,6 @@ export type TokenInfo = { symbol: string; address: TokenAddress; decimals: numbe
 export const TOKENS: readonly TokenInfo[] = [
   { symbol: "ETH",      address: NATIVE_ETH, decimals: 18 }, // native Base ETH (gas)
   { symbol: "WETH",     address: WETH,       decimals: 18 }, // wrapped ETH (ERC-20)
-  { symbol: "USDC",     address: USDC,       decimals: 6  },
   { symbol: "TOBY",     address: TOBY,       decimals: 18 },
   { symbol: "PATIENCE", address: PATIENCE,   decimals: 18 },
   { symbol: "TABOSHI",  address: TABOSHI,    decimals: 18 },
