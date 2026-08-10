@@ -8,12 +8,12 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
 export const metadata = {
   metadataBase: new URL(SITE),
   title: "Toby Swapper",
-  description: "Swap ETH, USDC, TOBY, PATIENCE and TABOSHI on Base with an automatic TOBY burn.",
+  description: "Swap ETH, WETH, TOBY, PATIENCE and TABOSHI on Base with an automatic TOBY burn.",
   manifest: "/site.webmanifest",
   themeColor: "#faf9f6",
   openGraph: {
     title: "Toby Swapper",
-    description: "Swap across the Tobyworld pond on Base. TOBY, PATIENCE, TABOSHI, ETH and USDC.",
+    description: "Swap across the Tobyworld pond on Base. TOBY, PATIENCE, TABOSHI, ETH and WETH.",
     images: [`${SITE}/og/tobyswap-card-1200x630.png`],
   },
   twitter: {
