@@ -63,6 +63,21 @@ export const TABOSHI_SEEDS_BASESCAN =
 
 export function resolveSeedUri(value?: string | null) {
   if (!value) return null;
-  if (value.startsWith("ipfs://")) return `https://ipfs.io/ipfs/${value.slice(7)}`;
-  return value;
+  const v = value.trim();
+  if (v.startsWith("ipfs://ipfs/")) return `https://cloudflare-ipfs.com/ipfs/${v.slice(12)}`;
+  if (v.startsWith("ipfs://")) return `https://cloudflare-ipfs.com/ipfs/${v.slice(7)}`;
+  if (v.startsWith("ar://")) return `https://arweave.net/${v.slice(5)}`;
+  return v;
+}
+
+export function seedImageCandidates(value?: string | null) {
+  if (!value) return [] as string[];
+  const v = value.trim();
+  if (!v.startsWith("ipfs://")) return [resolveSeedUri(v)!].filter(Boolean);
+  const cidPath = v.replace(/^ipfs:\/\/(?:ipfs\/)?/, "");
+  return [
+    `https://cloudflare-ipfs.com/ipfs/${cidPath}`,
+    `https://ipfs.io/ipfs/${cidPath}`,
+    `https://gateway.pinata.cloud/ipfs/${cidPath}`,
+  ];
 }
