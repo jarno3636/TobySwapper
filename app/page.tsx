@@ -38,6 +38,7 @@ export default function Page() {
           <div className="hero-cta-deck">
             <a href="#swap" className="hero-cta hero-cta-primary"><span>↔</span><strong>Start a swap</strong><small>Find the best pond route</small></a>
             <a href="/burners" className="hero-cta hero-cta-fire"><span>🔥</span><strong>Climb the Burners</strong><small>See your onchain rank</small></a>
+            <a href="/taboshi1" className="hero-cta hero-cta-relic"><span>◈</span><strong>Taboshi 1 Relic</strong><small>View & send your ERC-1155</small></a>
             <a href="https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas" className="hero-cta hero-cta-world"><span>◎</span><strong>Open the Atlas</strong><small>Explore Tobyworld</small></a>
           </div>
         </section>
