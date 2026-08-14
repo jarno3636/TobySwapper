@@ -5,9 +5,9 @@ import LinkMaybeMini from "@/components/LinkMaybeMini";
 
 const links = [
   {
-    eyebrow: "RELIC",
-    title: "Taboshi 1",
-    copy: "See, send and explore the early twpot ERC-1155 relic.",
+    eyebrow: "LORE POUCH",
+    title: "Seeds & Leaves",
+    copy: "See your old leaf, new SEED, and Tobyworld wallet holdings.",
     href: "/taboshi1",
     icon: "/tokens/taboshi.PNG",
     accent: "green",
