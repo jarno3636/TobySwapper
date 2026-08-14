@@ -19,33 +19,14 @@ import PondDock from "@/components/PondDock";
 import ConnectPill from "@/components/ConnectPill";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 
-const TABOSHI1 = "0x5C0BF08936bcCfbb6af24B4648A9fb365cAa2F4e" as Address;
-const TOKEN_ID = 1n;
-const ZORA_URL = `https://zora.co/collect/base:${TABOSHI1.toLowerCase()}/1`;
-const BASESCAN_URL = `https://basescan.org/nft/${TABOSHI1.toLowerCase()}/1`;
-
-const ERC1155_ABI = [
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }, { name: "id", type: "uint256" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "safeTransferFrom",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "from", type: "address" },
-      { name: "to", type: "address" },
-      { name: "id", type: "uint256" },
-      { name: "amount", type: "uint256" },
-      { name: "data", type: "bytes" },
-    ],
-    outputs: [],
-  },
-] as const;
+import {
+  TABOSHI1_ADDRESS as TABOSHI1,
+  TABOSHI1_TOKEN_ID as TOKEN_ID,
+  TABOSHI1_ABI as ERC1155_ABI,
+  TABOSHI1_BASESCAN as BASESCAN_URL,
+  TABOSHI1_OPENSEA as MARKET_URL,
+  resolveIpfs,
+} from "@/lib/taboshi1";
 
 type TxState = "idle" | "sending" | "success" | "error";
 
@@ -76,7 +57,26 @@ export default function TaboshiOnePage() {
     query: { enabled: Boolean(address), refetchInterval: 20_000 },
   });
 
+  const uriRead = useReadContract({
+    address: TABOSHI1, abi: ERC1155_ABI, functionName: "uri",
+    args: [TOKEN_ID], chainId: base.id,
+  });
+  const supplyRead = useReadContract({
+    address: TABOSHI1, abi: ERC1155_ABI, functionName: "totalSupply",
+    args: [TOKEN_ID], chainId: base.id,
+  });
+  const [metadata, setMetadata] = useState<{ name?: string; description?: string; image?: string } | null>(null);
+
+  useEffect(() => {
+    const uri = typeof uriRead.data === "string" ? resolveIpfs(uriRead.data) : null;
+    if (!uri) return;
+    fetch(uri).then((r) => r.ok ? r.json() : null).then((data) => data && setMetadata(data)).catch(() => {});
+  }, [uriRead.data]);
+
   const balance = typeof balanceRead.data === "bigint" ? balanceRead.data : 0n;
+  const totalSupply = typeof supplyRead.data === "bigint" ? supplyRead.data : null;
+  const artwork = resolveIpfs(metadata?.image);
+
   const qty = useMemo(() => {
     try {
       if (!/^\d+$/.test(quantity.trim())) return 0n;
@@ -136,7 +136,7 @@ export default function TaboshiOnePage() {
             <p>Before the leaf became familiar, there was an early artifact in the pond. See yours. Send yours. Keep it simple.</p>
             <div className="taboshi1-hero-actions">
               <a href="#holdings" className="metal-button taboshi1-primary">View my relics</a>
-              <LinkMaybeMini href={ZORA_URL} className="metal-button">Trade on Zora ↗</LinkMaybeMini>
+              <LinkMaybeMini href={MARKET_URL} className="metal-button">Trade on Zora ↗</LinkMaybeMini>
             </div>
           </div>
           <div className="taboshi1-hero-art" aria-hidden="true">
@@ -156,7 +156,7 @@ export default function TaboshiOnePage() {
             </div>
 
             <div className="taboshi1-showcase">
-              <div className="taboshi1-token-art"><Image src="/tokens/taboshi.PNG" alt="Taboshi leaf" fill sizes="220px" className="object-contain p-7" /></div>
+              <div className="taboshi1-token-art">{artwork ? <img src={artwork} alt={metadata?.name || "twpot #1"} className="taboshi1-real-art" /> : <Image src="/tokens/taboshi.PNG" alt="Taboshi leaf" fill sizes="220px" className="object-contain p-7" />}</div>
               <div className="taboshi1-balance">
                 <small>YOU HOLD</small>
                 <strong>{isConnected ? (balanceRead.isLoading ? "…" : balance.toLocaleString()) : "—"}</strong>
@@ -170,11 +170,19 @@ export default function TaboshiOnePage() {
               <div className="taboshi1-owner"><span>Connected</span><strong>{shortAddress(address)}</strong><button onClick={() => balanceRead.refetch()}>Refresh</button></div>
             )}
 
+            <div className="taboshi1-onchain-facts">
+              <div><span>STANDARD</span><strong>ERC-1155</strong></div>
+              <div><span>NETWORK</span><strong>Base</strong></div>
+              <div><span>TOKEN ID</span><strong>#1</strong></div>
+              <div><span>SUPPLY</span><strong>{totalSupply === null ? "Onchain" : totalSupply.toLocaleString()}</strong></div>
+            </div>
+            <div className="taboshi1-contract-line"><span>CONTRACT</span><code>{shortAddress(TABOSHI1)}</code><b>LIVE ONCHAIN</b></div>
+
             <div className="taboshi1-link-row">
-              <LinkMaybeMini href={ZORA_URL} className="metal-button taboshi1-trade">Trade <span>↗</span></LinkMaybeMini>
+              <LinkMaybeMini href={MARKET_URL} className="metal-button taboshi1-trade">Trade <span>↗</span></LinkMaybeMini>
               <LinkMaybeMini href={BASESCAN_URL} className="metal-button">Onchain <span>↗</span></LinkMaybeMini>
             </div>
-            <p className="taboshi1-market-note">Trading opens the existing Zora collection market. TobySwap does not custody the NFT or set the market price.</p>
+            <p className="taboshi1-market-note">Trading opens the external collection market. TobySwap does not custody the NFT or set the market price.</p>
           </article>
 
           <article className="taboshi1-card taboshi1-send-card">
