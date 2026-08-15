@@ -272,7 +272,6 @@ export default function WalletPillInner() {
 
       await new Promise((resolve) => setTimeout(resolve, 160));
       if (targetConnector) await connectAsync({ connector: targetConnector });
-      else if (preferred) await connectAsync({ connector: preferred });
 
       if (typeof window !== "undefined") window.location.reload();
     } catch {
