@@ -22,6 +22,7 @@ import ConnectPill from "@/components/ConnectPill";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 import PondPulse from "@/components/PondPulse";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { useUsdPrices } from "@/lib/prices";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import {
   TABOSHI1_ADDRESS,
@@ -57,6 +58,24 @@ function compact(value?: bigint, decimals = 18) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
   if (n >= 1e3) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   return n.toLocaleString(undefined, { maximumSignificantDigits: 6 });
+}
+
+function usd(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) return "—";
+  if (value === 0) return "$0.00";
+  if (value < 0.01) return `<$0.01`;
+  return value.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value >= 1000 ? 0 : 2,
+  });
+}
+
+function atomicUsdValue(value: bigint, decimals: number, price?: number) {
+  if (!price || price <= 0) return undefined;
+  const amount = Number(formatUnits(value, decimals));
+  if (!Number.isFinite(amount)) return undefined;
+  return amount * price;
 }
 
 async function loadMetadata(uri: string | null, setter: (v: Metadata | null) => void) {
@@ -210,6 +229,10 @@ export default function TaboshiOnePage() {
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
   const patienceWallet = useTokenBalance(address, PATIENCE, { chainId: base.id });
   const taboshiWallet = useTokenBalance(address, TABOSHI, { chainId: base.id });
+  const { prices: pondPrices } = useUsdPrices([TOBY, PATIENCE, TABOSHI]);
+  const tobyUsd = pondPrices[TOBY.toLowerCase()];
+  const patienceUsd = pondPrices[PATIENCE.toLowerCase()];
+  const taboshiUsd = pondPrices[TABOSHI.toLowerCase()];
 
   useEffect(() => {
     void loadMetadata(
@@ -237,12 +260,12 @@ export default function TaboshiOnePage() {
   const seedArtwork = seedMetadata?.image || null;
 
   const assets = [
-    { key: "toby" as const, symbol: "TOBY", label: "Pond token", icon: "/tokens/toby.PNG", value: tobyWallet.value ?? 0n, decimals: tobyWallet.decimals, standard: "ERC-20", address: TOBY },
-    { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE },
-    { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI },
-    { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS },
-    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS },
-    { key: "lore" as const, symbol: "LORE DEED", label: "Veiled land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS },
+    { key: "toby" as const, symbol: "TOBY", label: "Pond token", icon: "/tokens/toby.PNG", value: tobyWallet.value ?? 0n, decimals: tobyWallet.decimals, standard: "ERC-20", address: TOBY, usdPrice: tobyUsd },
+    { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
+    { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
+    { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
+    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
+    { key: "lore" as const, symbol: "LORE DEED", label: "Veiled land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
   ];
 
   const selectedAsset = assets.find((asset) => asset.key === selected)!;
@@ -492,7 +515,14 @@ export default function TaboshiOnePage() {
                 <div className="seedleaf-asset-icon seedleaf-asset-image">
                   {asset.key === "seed" ? <SeedArt image={seedArtwork} name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : <img src={asset.icon!} alt={asset.symbol} />}
                 </div>
-                <div className="seedleaf-asset-copy"><span>{asset.label}</span><strong>{asset.symbol}</strong><b>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</b></div>
+                <div className="seedleaf-asset-copy">
+                  <span>{asset.label}</span>
+                  <strong>{asset.symbol}</strong>
+                  <b>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</b>
+                  <em className="seedleaf-usd-value">
+                    {!isConnected ? "USD VALUE" : asset.standard === "ERC-20" ? usd(atomicUsdValue(asset.value, asset.decimals, asset.usdPrice)) : "UNPRICED RELIC"}
+                  </em>
+                </div>
                 <span className="seedleaf-selected-mark" aria-hidden="true">✓</span>
               </button>
             ))}
@@ -506,6 +536,9 @@ export default function TaboshiOnePage() {
             <span>SELECTED FROM POUCH</span>
             <strong>{selectedAsset.symbol}</strong>
             <b>{isConnected ? `${selectedAsset.standard === "ERC-20" ? compact(selectedAsset.value, selectedAsset.decimals) : selectedAsset.value.toLocaleString()} available` : "Connect wallet"}</b>
+            {isConnected && selectedAsset.standard === "ERC-20" && (
+              <em>{usd(atomicUsdValue(selectedAsset.value, selectedAsset.decimals, selectedAsset.usdPrice))} wallet value</em>
+            )}
           </div>
           <div className="seedleaf-transfer-fields">
             <label className="taboshi1-label"><span>DESTINATION</span><input value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} placeholder="0x… wallet address" autoComplete="off" spellCheck={false} /></label>
