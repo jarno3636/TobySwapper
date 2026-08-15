@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { base } from "viem/chains";
 import { useReadContract } from "wagmi";
 import { composeCast, buildFarcasterComposeUrl, openInMini, SITE_URL } from "@/lib/miniapps";
+import { useUsdPriceSingle } from "@/lib/prices";
 import {
   OPEN_FAUCET_ADDRESS,
   OPEN_FAUCET_ABI,
@@ -36,9 +37,19 @@ function satsToBtc(value?: bigint) {
   return fraction ? `${wholePart}.${fraction}` : wholePart.toString();
 }
 
+const CBBTC_BASE = "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf";
+
+function money(value?: number) {
+  if (value === undefined || !Number.isFinite(value)) return "…";
+  if (value === 0) return "$0.00";
+  if (value < 0.01) return "<$0.01";
+  return value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: value >= 1000 ? 0 : 2 });
+}
+
 export default function PondPulse() {
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const cbBtcUsd = useUsdPriceSingle(CBBTC_BASE);
 
   const totalDrawsRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "totalDraws", chainId: base.id, query: { refetchInterval: 15_000 } });
   const retainedRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "retainedCbBTC", chainId: base.id, query: { refetchInterval: 15_000 } });
@@ -66,6 +77,8 @@ export default function PondPulse() {
   const opened = openedRead.data === true;
   const paused = pausedRead.data === true;
   const status = paused ? "QUIET" : opened ? "RUNNING" : "CANARY";
+  const retainedUsd = retained === undefined || !cbBtcUsd ? undefined : (Number(retained) / 100_000_000) * cbBtcUsd;
+  const depthUsd = currentPrice === undefined || !cbBtcUsd ? undefined : (Number(currentPrice) / 100_000_000) * cbBtcUsd;
 
   const castText = useMemo(() => {
     const leaves = history.leavesRetired === undefined ? "old leaves are returning" : `${whole(history.leavesRetired)} old leaves returned`;
@@ -114,13 +127,13 @@ export default function PondPulse() {
 
       <div className="pond-pulse-grid">
         <article className="pond-pulse-stat is-leaf"><span>OLD LEAVES RETURNED</span><strong>{compactWhole(history.leavesRetired)}</strong><small>{history.enhancedDraws === undefined ? "waiting for the draw mix" : `${whole(history.enhancedDraws)} enhanced draws`}</small></article>
-        <article className="pond-pulse-stat is-btc"><span>BTC IN THE TAP</span><strong>{retained === undefined ? "…" : `${compactWhole(retained)} sats`}</strong><small>{retained === undefined ? "cbBTC retained" : `${satsToBtc(retained)} cbBTC retained`}</small></article>
+        <article className="pond-pulse-stat is-btc"><span>BTC RETAINED</span><strong>{retained === undefined ? "…" : `${compactWhole(retained)} sats`}</strong><small>{retained === undefined ? "cbBTC retained by this contract" : `${satsToBtc(retained)} cbBTC · ${money(retainedUsd)}`}</small>{retained === 0n && <em>Retained is not lifetime paid-in BTC.</em>}</article>
         <article className="pond-pulse-stat is-seed"><span>SEEDS AWAKENED</span><strong>{compactWhole(seedSupply)}</strong><small>SEED minted by the Faucet</small></article>
-        <article className="pond-pulse-stat is-draw"><span>DRAWS</span><strong>{compactWhole(totalDraws)}</strong><small>{currentPrice === undefined ? "current depth loading" : `current depth · ${whole(currentPrice)} sats`}</small></article>
+        <article className="pond-pulse-stat is-draw"><span>DRAWS</span><strong>{compactWhole(totalDraws)}</strong><small>{currentPrice === undefined ? "current depth loading" : `current depth · ${whole(currentPrice)} sats · ${money(depthUsd)}`}</small></article>
       </div>
 
       <div className="pond-pulse-footer">
-        <div className="pond-pulse-whisper"><span>◌</span><p>Old-leaf retirement is recovered from the onchain draw mix—no history scan needed.</p></div>
+        <div className="pond-pulse-whisper"><span>◌</span><p>Old-leaf retirement is recovered from the draw mix. BTC shown here is what <code>retainedCbBTC()</code> currently reports—not gross lifetime cbBTC paid.</p></div>
         <div className="pond-pulse-actions">
           <button type="button" className="metal-button pond-pulse-cast" onClick={cast} disabled={sharing}>{sharing ? "Opening…" : "Cast the ripple"}</button>
           <button type="button" className="metal-button pond-pulse-copy" onClick={copy}>{copied ? "Copied ✓" : "Copy numbers"}</button>
