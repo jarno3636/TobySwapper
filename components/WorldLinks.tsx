@@ -7,7 +7,7 @@ const links = [
   {
     eyebrow: "LORE POUCH",
     title: "Seeds & Leaves",
-    copy: "See your old leaf, new SEED, and Tobyworld wallet holdings.",
+    copy: "Old leaves, new SEED, veiled Lore Deeds, and everything your wallet carries.",
     href: "/taboshi1",
     icon: "/tokens/taboshi.PNG",
     accent: "green",
