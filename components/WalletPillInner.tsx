@@ -79,14 +79,15 @@ export default function WalletPillInner() {
   const { address, isConnected, status: accountStatus } = useAccount();
   const chainId = useChainId();
 
-  const { connectors = [], connect, status: connectStatus, error, reset } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { connectors = [], connect, connectAsync, status: connectStatus, error, reset } = useConnect();
+  const { disconnect, disconnectAsync } = useDisconnect();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
 
   // Prefer best connector for the current environment
   const preferred = useMemo(() => choosePreferredConnector(connectors), [connectors]);
 
   const [farcaster, setFarcaster] = useState<FarcasterIdentity | null>(null);
+  const [changingWallet, setChangingWallet] = useState(false);
 
   // Prefer the signed-in Farcaster Mini App identity. On the regular web/Base
   // surface, fall back to a server-side wallet -> Farcaster lookup when Neynar
@@ -214,9 +215,29 @@ export default function WalletPillInner() {
     setOpen(false);
   };
 
+  const onChangeWallet = async () => {
+    if (changingWallet || connecting) return;
+    setChangingWallet(true);
+    setFarcaster(null);
+    setOpen(false);
+    try {
+      // Tear down Wagmi's cached connection first, then ask the active wallet
+      // provider for accounts again. This is important when the user changes
+      // accounts inside the host wallet while the mini app remains open.
+      await disconnectAsync();
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      if (preferred) await connectAsync({ connector: preferred });
+      // A hard refresh clears any token/NFT query cache tied to the old address.
+      if (typeof window !== "undefined") window.location.reload();
+    } catch {
+      setChangingWallet(false);
+    }
+  };
+
   const onDisconnect = () => {
     try {
       disconnect();
+      setFarcaster(null);
     } catch {}
     setOpen(false);
   };
@@ -263,6 +284,15 @@ export default function WalletPillInner() {
             </div>
           )}
           <div className="px-2 py-1.5 text-xs text-inkSub break-all">{address}</div>
+
+          <button
+            role="menuitem"
+            className="w-full text-left pill pill-opaque px-3 py-2 text-sm my-1"
+            onClick={onChangeWallet}
+            disabled={changingWallet}
+          >
+            {changingWallet ? "Changing wallet…" : "Change wallet"}
+          </button>
 
           <button
             role="menuitem"
