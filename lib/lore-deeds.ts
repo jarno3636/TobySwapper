@@ -50,9 +50,19 @@ export const LORE_DEEDS_ABI = [
   },
   {
     type: "function",
+    name: "communityMinted",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "maxSupply",
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
+
+/** Treasury + AMM reserve minted before the community mint opened. */
+export const LORE_INITIAL_SUPPLY = 1500n;
