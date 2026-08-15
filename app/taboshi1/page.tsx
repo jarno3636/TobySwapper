@@ -458,14 +458,16 @@ export default function TaboshiOnePage() {
         {!isConnected ? (
           <div className="taboshi1-connect seedleaf-connect lore-connect-card"><div><span className="taboshi1-kicker">YOUR POUCH IS CLOSED</span><p>Connect a Base wallet to see what has followed you through the pond.</p></div><ConnectPill /></div>
         ) : (
-          <div className="taboshi1-owner seedleaf-owner seedleaf-wallet-sync-row">
-            <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
-            <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-busy={syncingWallet}>
-              <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
-              {syncingWallet ? "Syncing…" : "Refresh wallet"}
-            </button>
-          </div>
-          {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
+          <>
+            <div className="taboshi1-owner seedleaf-owner seedleaf-wallet-sync-row">
+              <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
+              <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-busy={syncingWallet}>
+                <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
+                {syncingWallet ? "Syncing…" : "Refresh wallet"}
+              </button>
+            </div>
+            {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
+          </>
         )}
 
         <section className="seedleaf-all-assets lore-inventory-card">
