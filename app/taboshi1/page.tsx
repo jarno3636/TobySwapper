@@ -35,6 +35,7 @@ import {
 import {
   LORE_COLLECTION_ADDRESS,
   LORE_DEEDS_ABI,
+  LORE_INITIAL_SUPPLY,
 } from "@/lib/lore-deeds";
 
 type TxState = "idle" | "sending" | "success" | "error";
@@ -191,11 +192,12 @@ export default function TaboshiOnePage() {
     functionName: "totalMinted",
     chainId: base.id,
   });
-  const loreMaxRead = useReadContract({
+  const loreCommunityMintedRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
     abi: LORE_DEEDS_ABI,
-    functionName: "maxSupply",
+    functionName: "communityMinted",
     chainId: base.id,
+    query: { refetchInterval: 15_000 },
   });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
@@ -221,7 +223,8 @@ export default function TaboshiOnePage() {
   const loreBalance = typeof loreBalanceRead.data === "bigint" ? loreBalanceRead.data : 0n;
   const seedSupply = typeof seedSupplyRead.data === "bigint" ? seedSupplyRead.data : null;
   const loreMinted = typeof loreMintedRead.data === "bigint" ? loreMintedRead.data : null;
-  const loreMax = typeof loreMaxRead.data === "bigint" ? loreMaxRead.data : null;
+  const loreCommunityMinted = typeof loreCommunityMintedRead.data === "bigint" ? loreCommunityMintedRead.data : null;
+  const loreSupply = loreCommunityMinted === null ? loreMinted : LORE_INITIAL_SUPPLY + loreCommunityMinted;
   const loreRevealed = loreRevealedRead.data === true;
   const leafArtwork = resolveIpfs(leafMetadata?.image);
   const seedArtwork = seedMetadata?.image || null;
@@ -282,6 +285,7 @@ export default function TaboshiOnePage() {
       loreBalanceRead.refetch(),
       loreRevealedRead.refetch(),
       loreMintedRead.refetch(),
+      loreCommunityMintedRead.refetch(),
       tobyWallet.refetch(),
       patienceWallet.refetch(),
       taboshiWallet.refetch(),
@@ -376,7 +380,7 @@ export default function TaboshiOnePage() {
             <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">THE VEILED LAND</span><h2>Lore Land Deeds</h2></div><span className={`lore-soft-chip purple ${loreRevealed ? "is-live" : ""}`}>{loreRevealed ? "REVEALED" : "VEILED"}</span></div>
             <div className="taboshi1-showcase lore-deed-showcase"><div className="taboshi1-token-art lore-deed-token"><LoreDeedArt revealed={loreRevealed} /></div><div className="taboshi1-balance lore-deed-balance"><small>DEEDS HELD</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><span>{loreRevealed ? "Lore · awakened land" : "Lore · reveal coming soon"}</span></div></div>
             <div className="lore-whisper purple"><span>△</span><p>{loreRevealed ? "The veil has lifted. Your deed remains the key to the land it carries." : "The deed exists before the landscape is known. The land waits behind the veil."}</p></div>
-            <div className="lore-mini-stats"><span><small>AWAKENED</small><b>{loreMinted === null ? "—" : loreMinted.toLocaleString()}</b></span><span><small>HORIZON</small><b>{loreMax === null ? "4,000" : loreMax.toLocaleString()}</b></span></div>
+            <div className="lore-mini-stats"><span><small>COMMUNITY</small><b>{loreCommunityMinted === null ? "—" : loreCommunityMinted.toLocaleString()}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
           </article>
         </section>
 
