@@ -20,6 +20,7 @@ import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
 import ConnectPill from "@/components/ConnectPill";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
+import PondPulse from "@/components/PondPulse";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import {
@@ -432,6 +433,8 @@ export default function TaboshiOnePage() {
             <span className="taboshi1-triangle" />
           </div>
         </section>
+
+        <PondPulse />
 
         <section id="pouch" className="seedleaf-relic-triad scroll-mt-24">
           <article className="taboshi1-card seedleaf-relic-card seedleaf-seed-card lore-relic-panel">
