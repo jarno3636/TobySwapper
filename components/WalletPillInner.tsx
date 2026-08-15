@@ -76,7 +76,7 @@ type FarcasterIdentity = {
 export default function WalletPillInner() {
   const mounted = useMounted();
 
-  const { address, isConnected, status: accountStatus } = useAccount();
+  const { address, isConnected, status: accountStatus, connector: activeConnector } = useAccount();
   const chainId = useChainId();
 
   const { connectors = [], connect, connectAsync, status: connectStatus, error, reset } = useConnect();
@@ -152,6 +152,32 @@ export default function WalletPillInner() {
     };
   }, []);
 
+  // Some wallet hosts (notably embedded Base/Coinbase surfaces) can change the
+  // selected account without giving React enough time to invalidate every cached
+  // balance. Listen at the provider level too and rebuild the page on account change.
+  useEffect(() => {
+    if (!isConnected || !activeConnector) return;
+    let provider: any;
+    let disposed = false;
+    const onAccountsChanged = (accounts: unknown) => {
+      if (disposed || !Array.isArray(accounts)) return;
+      const next = typeof accounts[0] === "string" ? accounts[0] : "";
+      if (!next || !address || next.toLowerCase() !== address.toLowerCase()) {
+        if (typeof window !== "undefined") window.location.reload();
+      }
+    };
+    (async () => {
+      try {
+        provider = await activeConnector.getProvider();
+        if (!disposed && provider && typeof provider.on === "function") provider.on("accountsChanged", onAccountsChanged);
+      } catch {}
+    })();
+    return () => {
+      disposed = true;
+      try { if (provider && typeof provider.removeListener === "function") provider.removeListener("accountsChanged", onAccountsChanged); } catch {}
+    };
+  }, [activeConnector, address, isConnected]);
+
   // Soft switch to Base after connect
   useEffect(() => {
     if (!isConnected || chainId === base.id) return;
@@ -220,24 +246,46 @@ export default function WalletPillInner() {
     setChangingWallet(true);
     setFarcaster(null);
     setOpen(false);
+    const targetConnector = activeConnector || preferred;
+
     try {
-      // Tear down Wagmi's cached connection first, then ask the active wallet
-      // provider for accounts again. This is important when the user changes
-      // accounts inside the host wallet while the mini app remains open.
-      await disconnectAsync();
-      await new Promise((resolve) => setTimeout(resolve, 180));
-      if (preferred) await connectAsync({ connector: preferred });
-      // A hard refresh clears any token/NFT query cache tied to the old address.
+      // Keep hold of the current EIP-1193 provider before disconnecting. Coinbase/Base
+      // embedded browsers do not always show an account chooser on a plain reconnect.
+      let provider: any = null;
+      try { provider = targetConnector ? await targetConnector.getProvider() : null; } catch {}
+
+      if (targetConnector) {
+        try { await disconnectAsync({ connector: targetConnector }); } catch {}
+      } else {
+        try { await disconnectAsync(); } catch {}
+      }
+
+      // Ask the host wallet to surface its current account again. wallet_requestPermissions
+      // can show a chooser where supported; eth_requestAccounts is the safe fallback.
+      if (provider && typeof provider.request === "function") {
+        try {
+          await provider.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+        } catch {
+          try { await provider.request({ method: "eth_requestAccounts" }); } catch {}
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 160));
+      if (targetConnector) await connectAsync({ connector: targetConnector });
+      else if (preferred) await connectAsync({ connector: preferred });
+
       if (typeof window !== "undefined") window.location.reload();
     } catch {
       setChangingWallet(false);
     }
   };
 
-  const onDisconnect = () => {
+  const onDisconnect = async () => {
     try {
-      disconnect();
+      if (activeConnector) await disconnectAsync({ connector: activeConnector });
+      else disconnect();
       setFarcaster(null);
+      if (typeof window !== "undefined") window.setTimeout(() => window.location.reload(), 80);
     } catch {}
     setOpen(false);
   };
