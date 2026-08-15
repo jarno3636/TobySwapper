@@ -1355,3 +1355,12 @@ html { scroll-behavior: smooth; }
 .pond-pulse-footer{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}.pond-pulse-whisper{display:flex;align-items:center;gap:8px;color:#73868b;font-size:9px;line-height:1.4}.pond-pulse-whisper span{display:grid;width:24px;height:24px;place-items:center;flex:0 0 24px;border-radius:999px;background:#eef8fb;color:#35839e}.pond-pulse-whisper p{margin:0}.pond-pulse-actions{display:flex;gap:7px}.pond-pulse-actions .metal-button{min-height:38px;padding:0 13px;border-radius:13px;font-size:9px;white-space:nowrap}.pond-pulse-cast{color:#155f85!important;background:linear-gradient(180deg,#fff,#eaf7ff)!important}.pond-pulse-copy{color:#5f6f73!important}
 @media(max-width:820px){.pond-pulse-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pond-pulse-footer{align-items:flex-start;flex-direction:column}.pond-pulse-actions{width:100%}.pond-pulse-actions .metal-button{flex:1}}
 @media(max-width:520px){.pond-pulse{padding:16px;border-radius:25px}.pond-pulse-head{align-items:flex-start}.pond-pulse-title h2{font-size:27px}.pond-pulse-title p{max-width:180px}.pond-pulse-status{padding:0 9px}.pond-pulse-grid{gap:7px}.pond-pulse-stat{min-height:108px;padding:12px;border-radius:17px}.pond-pulse-stat strong{font-size:19px}.pond-pulse-whisper{font-size:8px}}
+
+
+/* Live USD value polish */
+.seedleaf-usd-value{display:block;margin-top:4px;font-style:normal;font-size:9px;font-weight:950;letter-spacing:.055em;color:#28765e}
+.seedleaf-asset-card.is-lore .seedleaf-usd-value,
+.seedleaf-asset-card:nth-last-child(-n+3) .seedleaf-usd-value{color:#8a7b73}
+.seedleaf-transfer-summary em{display:block;margin-top:3px;font-style:normal;font-size:10px;font-weight:850;color:#2f7962}
+.pond-pulse-stat em{display:block;margin-top:5px;font-style:normal;font-size:9px;line-height:1.35;color:#8a7265}
+.pond-pulse-whisper code{font-family:inherit;font-weight:950;color:#315e69;background:rgba(255,255,255,.58);padding:1px 4px;border-radius:6px}
