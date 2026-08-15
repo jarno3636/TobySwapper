@@ -1226,3 +1226,120 @@ html { scroll-behavior: smooth; }
 @media(max-width:980px){.seedleaf-relic-triad{grid-template-columns:1fr 1fr}.lore-deed-card{grid-column:1/-1}.lore-assets-grid,.lore-portal-assets{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.seedleaf-relic-triad{grid-template-columns:1fr}.lore-deed-card{grid-column:auto}.lore-connect-card{align-items:flex-start;flex-direction:column}.lore-assets-grid,.lore-portal-assets{grid-template-columns:repeat(2,minmax(0,1fr))}.lore-relic-panel{border-radius:25px}.lore-whisper{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.lore-relic-panel:before{animation:none}}
+
+/* Seeds & Leaves — pouch-first transfer polish */
+.seedleaf-asset-card{
+  appearance:none;
+  width:100%;
+  border:1px solid rgba(24,72,88,.11);
+  text-align:left;
+  isolation:isolate;
+  background:
+    radial-gradient(120% 100% at 20% -25%,rgba(255,255,255,.98) 0 42%,transparent 61%),
+    linear-gradient(145deg,rgba(255,255,255,.92),rgba(242,248,249,.84));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(72,116,128,.06),
+    0 5px 0 rgba(27,76,91,.035),
+    0 13px 26px rgba(19,66,82,.075);
+  backdrop-filter:blur(14px) saturate(1.08);
+  -webkit-backdrop-filter:blur(14px) saturate(1.08);
+}
+.seedleaf-asset-card:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:1px 2px auto 2px;
+  height:46%;
+  border-radius:18px 18px 46% 46%;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.16));
+  opacity:.78;
+}
+.seedleaf-asset-card:after{
+  content:"";
+  position:absolute;
+  inset:auto 12% 4px 12%;
+  height:1px;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(65,151,182,.20),transparent);
+}
+.seedleaf-asset-card:hover{transform:translateY(-2px);box-shadow:inset 0 2px 0 #fff,0 6px 0 rgba(27,76,91,.04),0 16px 30px rgba(19,66,82,.10)}
+.seedleaf-asset-card:active{transform:translateY(1px);box-shadow:inset 0 1px 0 #fff,0 2px 0 rgba(27,76,91,.05),0 8px 18px rgba(19,66,82,.07)}
+.seedleaf-asset-card.is-selected{
+  border-color:rgba(31,151,205,.38);
+  background:
+    radial-gradient(120% 100% at 20% -25%,rgba(255,255,255,1) 0 42%,transparent 61%),
+    linear-gradient(145deg,rgba(251,255,255,.98),rgba(226,247,255,.92));
+  box-shadow:inset 0 2px 0 #fff,0 5px 0 rgba(21,133,181,.08),0 16px 32px rgba(26,133,179,.14),0 0 0 3px rgba(58,177,226,.055);
+}
+.seedleaf-selected-mark{
+  position:absolute;
+  top:8px;
+  right:9px;
+  display:grid;
+  width:19px;
+  height:19px;
+  place-items:center;
+  border-radius:999px;
+  color:white;
+  font-size:9px;
+  font-weight:1000;
+  background:linear-gradient(180deg,#55c7f1,#168fc9);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 3px 8px rgba(19,126,172,.18);
+  opacity:0;
+  transform:scale(.75);
+  transition:.16s ease;
+}
+.seedleaf-asset-card.is-selected .seedleaf-selected-mark{opacity:1;transform:scale(1)}
+.seedleaf-asset-icon{
+  border:1px solid rgba(33,79,94,.075);
+  box-shadow:inset 0 1px 0 #fff,0 6px 14px rgba(18,66,81,.09);
+}
+.seedleaf-asset-copy{position:relative;z-index:1}
+.seedleaf-asset-copy b{font-variant-numeric:tabular-nums}
+.lore-inventory-card{background:radial-gradient(circle at 8% 0%,rgba(89,198,235,.08),transparent 28%),radial-gradient(circle at 95% 90%,rgba(123,100,178,.06),transparent 28%),linear-gradient(145deg,rgba(255,255,255,.97),rgba(247,252,251,.95))}
+.seedleaf-transfer-summary-polished{
+  margin-top:15px;
+  min-height:50px;
+  padding:11px 14px;
+  border-color:rgba(31,138,184,.14);
+  border-radius:17px;
+  background:radial-gradient(110% 130% at 20% -50%,#fff 0 42%,transparent 64%),linear-gradient(180deg,#f5fcff,#eaf7fb);
+  box-shadow:inset 0 1px 0 #fff,0 6px 16px rgba(25,112,148,.07);
+}
+.seedleaf-transfer-summary-polished strong{font-size:13px}
+.seedleaf-transfer-summary-polished b{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(18,95,127,.08)}
+.seedleaf-quick-selects{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}
+.seedleaf-quick-selects button{
+  position:relative;
+  overflow:hidden;
+  min-height:38px;
+  border:1px solid rgba(32,114,145,.13);
+  border-radius:13px;
+  color:#2f6678;
+  background:linear-gradient(180deg,#fff 0%,#f5fbfd 58%,#eaf5f8 100%);
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.07em;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.95),0 3px 0 rgba(26,99,126,.055),0 7px 14px rgba(19,87,111,.06);
+  transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;
+}
+.seedleaf-quick-selects button:before{content:"";position:absolute;left:10%;right:10%;top:2px;height:42%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0));pointer-events:none}
+.seedleaf-quick-selects button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(31,145,189,.24)}
+.seedleaf-quick-selects button:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 1px 0 #fff,0 1px 0 rgba(26,99,126,.06),0 4px 9px rgba(19,87,111,.05)}
+.seedleaf-quick-selects button:last-child{color:#24704b;border-color:rgba(55,145,91,.15);background:linear-gradient(180deg,#fff,#effaf2 60%,#e4f5e9)}
+.seedleaf-quick-selects button:disabled{opacity:.4;filter:saturate(.5)}
+.lore-transfer-card{overflow:hidden}
+.lore-transfer-card:before{content:"";position:absolute;inset:0 0 auto 0;height:84px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.74),transparent)}
+.lore-transfer-intro{max-width:430px;line-height:1.45}
+.lore-transfer-note{margin:9px 0 0!important;color:#7b8a8e!important}
+@media(max-width:620px){
+  .seedleaf-asset-card{min-height:104px;padding:11px;border-radius:20px}
+  .seedleaf-asset-card:before{border-radius:18px 18px 36% 36%}
+  .seedleaf-selected-mark{top:7px;right:7px}
+  .seedleaf-transfer-summary-polished{align-items:flex-start;flex-wrap:wrap}
+  .seedleaf-transfer-summary-polished b{margin-left:0;width:auto}
+  .seedleaf-quick-selects{gap:6px}
+  .seedleaf-quick-selects button{min-height:40px;border-radius:12px}
+}
