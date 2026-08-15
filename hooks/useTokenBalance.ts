@@ -63,14 +63,22 @@ export function useTokenBalance(
     query: {
       enabled: Boolean(userCS),
       refetchInterval: 15_000,
-      staleTime: 10_000,
-      refetchOnWindowFocus: false,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: "always",
       retry: 2,
-      placeholderData: (prev: any) => prev,
     },
   });
 
   const [fallback, setFallback] = useState<{ value?: bigint; decimals?: number }>({});
+
+  // Never carry a fallback balance from one wallet/account into another. This was
+  // especially visible in embedded Base wallet surfaces where the account could
+  // change while the page stayed mounted.
+  useEffect(() => {
+    setFallback({});
+  }, [scopeKey]);
 
   useEffect(() => {
     let cancelled = false;
