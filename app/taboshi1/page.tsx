@@ -8,6 +8,8 @@ import { base } from "viem/chains";
 import {
   useAccount,
   useChainId,
+  useConnect,
+  useDisconnect,
   usePublicClient,
   useReadContract,
   useSwitchChain,
@@ -120,11 +122,13 @@ function LoreDeedArt({ revealed }: { revealed?: boolean }) {
 }
 
 export default function TaboshiOnePage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const client = usePublicClient({ chainId: base.id });
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const { connectAsync, connectors } = useConnect();
+  const { disconnectAsync } = useDisconnect();
 
   const [selected, setSelected] = useState<AssetKind>("seed");
   const [recipient, setRecipient] = useState("");
@@ -133,6 +137,8 @@ export default function TaboshiOnePage() {
   const [txState, setTxState] = useState<TxState>("idle");
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [message, setMessage] = useState("");
+  const [syncingWallet, setSyncingWallet] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
   const [leafMetadata, setLeafMetadata] = useState<Metadata | null>(null);
   const [seedMetadata, setSeedMetadata] = useState<Metadata | null>(null);
 
@@ -261,6 +267,13 @@ export default function TaboshiOnePage() {
     }
   }, [loreTokenId]);
 
+  function setTransferPercent(percent: 25 | 50 | 75 | 100) {
+    if (isLore || selectedAsset.value <= 0n) return;
+    const raw = percent === 100 ? selectedAsset.value : (selectedAsset.value * BigInt(percent)) / 100n;
+    const adjusted = is1155 && raw === 0n ? 1n : raw;
+    setAmount(is1155 ? adjusted.toString() : formatUnits(adjusted, selectedAsset.decimals));
+  }
+
   const canSend = Boolean(
     address &&
       isAddress(recipient) &&
@@ -279,9 +292,12 @@ export default function TaboshiOnePage() {
   }, [selected]);
 
   async function refreshAll() {
-    await Promise.all([
+    await Promise.allSettled([
       leafBalanceRead.refetch(),
+      leafUriRead.refetch(),
       seedBalanceRead.refetch(),
+      seedUriRead.refetch(),
+      seedSupplyRead.refetch(),
       loreBalanceRead.refetch(),
       loreRevealedRead.refetch(),
       loreMintedRead.refetch(),
@@ -290,6 +306,61 @@ export default function TaboshiOnePage() {
       patienceWallet.refetch(),
       taboshiWallet.refetch(),
     ]);
+  }
+
+  async function syncWalletAndHoldings() {
+    if (syncingWallet) return;
+    setSyncingWallet(true);
+    setSyncMessage("Checking the wallet in the pond…");
+
+    try {
+      let providerAccounts: string[] = [];
+      const activeConnector = connector || connectors[0];
+
+      if (activeConnector) {
+        try {
+          const provider = await activeConnector.getProvider();
+          if (provider && typeof (provider as any).request === "function") {
+            const raw = await (provider as any).request({ method: "eth_accounts" });
+            if (Array.isArray(raw)) providerAccounts = raw.filter((value): value is string => typeof value === "string");
+          }
+        } catch {}
+
+        if (!providerAccounts.length) {
+          try {
+            const accounts = await activeConnector.getAccounts();
+            providerAccounts = accounts.map(String);
+          } catch {}
+        }
+      }
+
+      const liveAddress = providerAccounts[0];
+      const walletChanged = Boolean(liveAddress && address && liveAddress.toLowerCase() !== address.toLowerCase());
+
+      if (activeConnector && (walletChanged || (!liveAddress && isConnected))) {
+        setSyncMessage(walletChanged ? "New wallet found — reopening the pouch…" : "Reconnecting wallet…");
+        try { await disconnectAsync({ connector: activeConnector }); } catch {}
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        try { await connectAsync({ connector: activeConnector }); } catch {}
+        // Query keys throughout the app are address-scoped. A clean reload after the
+        // connector handshake guarantees no cached balance from the previous wallet survives.
+        if (typeof window !== "undefined") {
+          window.setTimeout(() => window.location.reload(), 120);
+          return;
+        }
+      }
+
+      await refreshAll();
+      setSyncMessage("Pouch refreshed from Base.");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("tobyswap:wallet-data-refreshed", { detail: { address } }));
+      }
+    } catch {
+      setSyncMessage("Could not refresh the pouch. Try Change wallet from the wallet menu.");
+    } finally {
+      setSyncingWallet(false);
+      if (typeof window !== "undefined") window.setTimeout(() => setSyncMessage(""), 3200);
+    }
   }
 
   async function transfer() {
@@ -387,45 +458,69 @@ export default function TaboshiOnePage() {
         {!isConnected ? (
           <div className="taboshi1-connect seedleaf-connect lore-connect-card"><div><span className="taboshi1-kicker">YOUR POUCH IS CLOSED</span><p>Connect a Base wallet to see what has followed you through the pond.</p></div><ConnectPill /></div>
         ) : (
-          <div className="taboshi1-owner seedleaf-owner"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong><button onClick={refreshAll}>Refresh</button></div>
+          <div className="taboshi1-owner seedleaf-owner seedleaf-wallet-sync-row">
+            <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
+            <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-busy={syncingWallet}>
+              <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
+              {syncingWallet ? "Syncing…" : "Refresh wallet"}
+            </button>
+          </div>
+          {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
         )}
 
         <section className="seedleaf-all-assets lore-inventory-card">
-          <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">WHAT YOU CARRY</span><h2>Your Tobyworld pouch</h2><p>Tokens, relics, and deeds gathered into one view.</p></div><span className="seedleaf-asset-count">{isConnected ? "LIVE" : "CLOSED"}</span></div>
+          <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">WHAT YOU CARRY</span><h2>Your Tobyworld pouch</h2><p>Tokens, relics, and deeds gathered into one view.</p></div>{isConnected ? (
+              <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-label="Refresh wallet and pouch balances">
+                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "SYNCING" : "REFRESH"}
+              </button>
+            ) : <span className="seedleaf-asset-count">CLOSED</span>}</div>
           <div className="seedleaf-assets-grid lore-assets-grid">
             {assets.map((asset) => (
-              <article key={asset.key} className={`seedleaf-asset-card ${selected === asset.key ? "is-selected" : ""} ${asset.key === "lore" ? "is-lore" : ""}`} onClick={() => setSelected(asset.key)}>
+              <button
+                key={asset.key}
+                type="button"
+                className={`seedleaf-asset-card ${selected === asset.key ? "is-selected" : ""} ${asset.key === "lore" ? "is-lore" : ""}`}
+                onClick={() => setSelected(asset.key)}
+                aria-pressed={selected === asset.key}
+                aria-label={`Select ${asset.symbol} for transfer`}
+              >
                 <div className="seedleaf-asset-icon seedleaf-asset-image">
                   {asset.key === "seed" ? <SeedArt image={seedArtwork} name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : <img src={asset.icon!} alt={asset.symbol} />}
                 </div>
                 <div className="seedleaf-asset-copy"><span>{asset.label}</span><strong>{asset.symbol}</strong><b>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</b></div>
-              </article>
+                <span className="seedleaf-selected-mark" aria-hidden="true">✓</span>
+              </button>
             ))}
           </div>
           <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Tap anything you carry to move it through the transfer portal.</div>
         </section>
 
         <section id="transfer" className="taboshi1-card seedleaf-transfer-card lore-transfer-card scroll-mt-24">
-          <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">PASS IT FORWARD</span><h2>Transfer portal</h2><p className="lore-transfer-intro">Choose an asset, name the destination, and send it across Base.</p></div><div className="taboshi1-send-orb">→</div></div>
-          <div className="seedleaf-portal-assets lore-portal-assets">
-            {assets.map((asset) => (
-              <button key={asset.key} type="button" className={selected === asset.key ? "active" : ""} onClick={() => setSelected(asset.key)}>
-                <span className="seedleaf-portal-icon">{asset.key === "seed" ? <SeedArt image={seedArtwork} name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : <img src={asset.icon!} alt="" />}</span>
-                <span><b>{asset.symbol}</b><small>{asset.label}</small></span>
-                <strong>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</strong>
-              </button>
-            ))}
+          <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">PASS IT FORWARD</span><h2>Transfer portal</h2><p className="lore-transfer-intro">Your pouch above chooses what moves through the portal.</p></div><div className="taboshi1-send-orb">→</div></div>
+          <div className="seedleaf-transfer-summary seedleaf-transfer-summary-polished">
+            <span>SELECTED FROM POUCH</span>
+            <strong>{selectedAsset.symbol}</strong>
+            <b>{isConnected ? `${selectedAsset.standard === "ERC-20" ? compact(selectedAsset.value, selectedAsset.decimals) : selectedAsset.value.toLocaleString()} available` : "Connect wallet"}</b>
           </div>
-          <div className="seedleaf-transfer-summary"><span>SELECTED</span><strong>{selectedAsset.symbol}</strong><b>{isLore ? "One deed" : is1155 ? "Whole units" : "Token amount"}</b></div>
           <div className="seedleaf-transfer-fields">
             <label className="taboshi1-label"><span>DESTINATION</span><input value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} placeholder="0x… wallet address" autoComplete="off" spellCheck={false} /></label>
             {isLore ? (
               <label className="taboshi1-label"><span>DEED TOKEN ID</span><input inputMode="numeric" value={loreTokenId} onChange={(event) => setLoreTokenId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 1017" /></label>
             ) : (
-              <label className="taboshi1-label"><span>AMOUNT</span><div className="taboshi1-quantity-row"><input inputMode="decimal" value={amount} onChange={(event) => setAmount(is1155 ? event.target.value.replace(/\D/g, "") : event.target.value.replace(/[^0-9.]/g, ""))} /><button type="button" onClick={() => setAmount(is1155 ? selectedAsset.value.toString() : formatUnits(selectedAsset.value, selectedAsset.decimals))} disabled={selectedAsset.value === 0n}>ALL</button></div></label>
+              <label className="taboshi1-label">
+                <span>AMOUNT</span>
+                <input inputMode="decimal" value={amount} onChange={(event) => setAmount(is1155 ? event.target.value.replace(/\D/g, "") : event.target.value.replace(/[^0-9.]/g, ""))} />
+                <div className="seedleaf-quick-selects" aria-label="Quick amount selection">
+                  {[25, 50, 75, 100].map((percent) => (
+                    <button key={percent} type="button" onClick={() => setTransferPercent(percent as 25 | 50 | 75 | 100)} disabled={selectedAsset.value === 0n}>
+                      {percent === 100 ? "MAX" : `${percent}%`}
+                    </button>
+                  ))}
+                </div>
+              </label>
             )}
           </div>
-          <p className="taboshi1-card-copy lore-transfer-note">{isLore ? "Enter the token ID printed on the Lore Deed you own. TobySwap checks ownership before asking your wallet to transfer it." : selectedAsset.standard === "ERC-1155" ? "Relics move as whole units directly from your wallet." : "Fungible Tobyworld assets transfer directly from your wallet."}</p>
+          <p className="taboshi1-card-copy lore-transfer-note">{isLore ? "Enter a deed ID you own; ownership is checked before transfer." : selectedAsset.standard === "ERC-1155" ? "Relics move in whole units." : "Sent directly from your connected wallet on Base."}</p>
           <button className="taboshi1-send-button" disabled={!canSend} onClick={transfer}><span>{txState === "sending" ? "Sending…" : !isConnected ? "Connect to send" : selectedAsset.value === 0n ? `Nothing to send yet` : isLore ? `Send Lore Deed` : `Send ${selectedAsset.symbol}`}</span><b>→</b></button>
           {message && <div className={`taboshi1-message ${txState === "success" ? "is-success" : "is-error"}`}><strong>{txState === "success" ? "Passed through the portal" : "The portal stayed closed"}</strong><span>{message}</span>{txHash && <LinkMaybeMini href={`https://basescan.org/tx/${txHash}`}>View transaction ↗</LinkMaybeMini>}</div>}
         </section>
