@@ -64,10 +64,10 @@ export function useTokenBalance(
       enabled: Boolean(userCS),
       // Balances are refreshed after writes and by the explicit wallet refresh UI.
       // A slow safety poll is enough and keeps RPC/provider load sane.
-      refetchInterval: 90_000,
+      refetchInterval: 120_000,
       refetchIntervalInBackground: false,
       staleTime: 30_000,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       refetchOnMount: true,
       retry: 1,
