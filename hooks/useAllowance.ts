@@ -33,10 +33,10 @@ export function useStickyAllowance(
     args: enabled ? ([owner as Address, spender as Address] as const) : undefined,
     query: {
       enabled,
-      refetchInterval: 15_000,
-      staleTime: 8_000,
-      refetchOnWindowFocus: false,
-      retry: 2,
+      refetchInterval: false,
+      staleTime: 30_000,
+      refetchOnWindowFocus: true,
+      retry: 1,
       placeholderData: (prev: unknown) => prev,
     },
   } as any);

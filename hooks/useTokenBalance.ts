@@ -62,12 +62,15 @@ export function useTokenBalance(
     scopeKey,
     query: {
       enabled: Boolean(userCS),
-      refetchInterval: 15_000,
-      staleTime: 0,
+      // Balances are refreshed after writes and by the explicit wallet refresh UI.
+      // A slow safety poll is enough and keeps RPC/provider load sane.
+      refetchInterval: 90_000,
+      refetchIntervalInBackground: false,
+      staleTime: 30_000,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      refetchOnMount: "always",
-      retry: 2,
+      refetchOnMount: true,
+      retry: 1,
     },
   });
 
