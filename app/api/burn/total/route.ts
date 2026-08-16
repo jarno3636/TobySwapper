@@ -21,7 +21,7 @@ const ERC20_DECIMALS_ABI = parseAbi([
   "function decimals() view returns (uint8)",
 ]);
 
-export const revalidate = 0;
+export const revalidate = 300;
 
 export async function GET() {
   try {
@@ -71,7 +71,7 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
         },
       }
     );
