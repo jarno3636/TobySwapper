@@ -81,6 +81,8 @@ export default function TokensBurned() {
   const mounted = useMounted();
   const visible = usePageVisible();
   const [rot, setRot] = useState(false);
+  const [refreshCooling, setRefreshCooling] = useState(false);
+  const refreshCooldownRef = useRef<number | null>(null);
 
   // ✅ NEW: shared-query invalidator so Share bar updates right away
   const invalidateBurnTotal = useInvalidateBurnTotal();
@@ -96,7 +98,7 @@ export default function TokensBurned() {
       refetchOnMount: false,
       refetchOnWindowFocus: false,
       staleTime: 60_000,
-      refetchInterval: 2 * 60_000,
+      refetchInterval: false,
       refetchIntervalInBackground: false,
     },
   });
@@ -139,8 +141,9 @@ export default function TokensBurned() {
   );
 
   const doRefresh = async () => {
-    if (isFetching) return;
+    if (isFetching || refreshCooling) return;
     setRot(true);
+    setRefreshCooling(true);
     try {
       const r = await refetch();
       // ✅ If the chain value changed, notify the shared query so Share updates immediately
@@ -149,6 +152,8 @@ export default function TokensBurned() {
       }
     } finally {
       setTimeout(() => setRot(false), 400);
+      if (refreshCooldownRef.current) window.clearTimeout(refreshCooldownRef.current);
+      refreshCooldownRef.current = window.setTimeout(() => setRefreshCooling(false), 30_000);
     }
   };
 
@@ -178,7 +183,7 @@ export default function TokensBurned() {
             onClick={doRefresh}
             className="pill pill-opaque text-sm gap-2 select-none active:scale-[0.97]"
             aria-label="Refresh burned amount"
-            disabled={isFetching}
+            disabled={isFetching || refreshCooling}
           >
             <span
               aria-hidden
@@ -190,7 +195,7 @@ export default function TokensBurned() {
             >
               🔥
             </span>
-            {isFetching ? "Refreshing…" : "Refresh"}
+            {isFetching ? "Refreshing…" : refreshCooling ? "Updated" : "Refresh"}
           </button>
         </div>
 

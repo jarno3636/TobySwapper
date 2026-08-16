@@ -88,6 +88,7 @@ export default function WalletPillInner() {
 
   const [farcaster, setFarcaster] = useState<FarcasterIdentity | null>(null);
   const [changingWallet, setChangingWallet] = useState(false);
+  const changeWalletLockRef = useRef(0);
 
   // Prefer the signed-in Farcaster Mini App identity. On the regular web/Base
   // surface, fall back to a server-side wallet -> Farcaster lookup when Neynar
@@ -257,7 +258,9 @@ export default function WalletPillInner() {
   };
 
   const onChangeWallet = async () => {
-    if (changingWallet || connecting) return;
+    const now = Date.now();
+    if (changingWallet || connecting || now < changeWalletLockRef.current) return;
+    changeWalletLockRef.current = now + 10_000;
     setChangingWallet(true);
     setFarcaster(null);
     setOpen(false);

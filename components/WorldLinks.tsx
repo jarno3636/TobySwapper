@@ -13,14 +13,6 @@ const links = [
     accent: "green",
   },
   {
-    eyebrow: "ONCHAIN",
-    title: "Pond Burners",
-    copy: "See the wallets that have burned the most TOBY through TobySwap.",
-    href: "/burners",
-    icon: "/tokens/patience.PNG",
-    accent: "red",
-  },
-  {
     eyebrow: "WORLD",
     title: "Tobyworld",
     copy: "Enter the official Tobyworld experience and follow the lore.",

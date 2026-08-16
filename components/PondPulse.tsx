@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { erc20Abi, type Address } from "viem";
 import { base } from "viem/chains";
 import { useReadContract } from "wagmi";
@@ -48,6 +48,8 @@ function shortAddress(value?: string) { return value ? `${value.slice(0, 6)}…$
 export default function PondPulse() {
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [refreshCooling, setRefreshCooling] = useState(false);
+  const refreshTimer = useRef<number | null>(null);
   const cbBtcUsd = useUsdPriceSingle(CBBTC_BASE);
   const taboshiUsd = useUsdPriceSingle(TABOSHI);
 
@@ -56,8 +58,8 @@ export default function PondPulse() {
     query: {
       staleTime: 60_000,
       refetchInterval: false,
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     },
   } as const;
   const totalDrawsRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "totalDraws", ...live });
@@ -116,7 +118,14 @@ export default function PondPulse() {
   }, [history.leavesRetired, taboshiBurned, taboshiRemaining, treasuryCbBtc, seedSupply]);
 
   async function refresh() {
-    await Promise.allSettled([totalDrawsRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
+    if (refreshCooling) return;
+    setRefreshCooling(true);
+    try {
+      await Promise.allSettled([totalDrawsRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
+    } finally {
+      if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+      refreshTimer.current = window.setTimeout(() => setRefreshCooling(false), 20_000);
+    }
   }
   async function cast() {
     setSharing(true);
@@ -132,7 +141,7 @@ export default function PondPulse() {
   }
 
   return (
-    <section className="pond-pulse" aria-label="Live Open Faucet statistics">
+    <section id="pond-pulse" className="pond-pulse" aria-label="Live Open Faucet statistics">
       <div className="pond-pulse-shine" aria-hidden="true" />
       <Image src="/tokens/toby.PNG" alt="" width={110} height={110} className="pond-pulse-toby" aria-hidden="true" />
       <div className="pond-pulse-head">
@@ -140,7 +149,7 @@ export default function PondPulse() {
           <div className="pond-pulse-orb"><Image src="/tokens/sato.PNG" alt="" fill sizes="54px" className="object-contain" /></div>
           <div><span>LIVE ON BASE · POND LEDGER</span><h2>Pond pulse</h2><p>Burned supply, treasury depth, seeds and draws — read straight from the pond.</p></div>
         </div>
-        <button type="button" className="pond-pulse-status" onClick={refresh} title="Refresh live stats"><i className={paused ? "is-quiet" : ""} />{status}<b>↻</b></button>
+        <button type="button" className="pond-pulse-status" onClick={refresh} disabled={refreshCooling} title={refreshCooling ? "Live stats refreshed — available again shortly" : "Refresh live stats"}><i className={paused ? "is-quiet" : ""} />{refreshCooling ? "SYNCED" : status}<b className={refreshCooling ? "is-cooling" : ""}>↻</b></button>
       </div>
 
       <div className="pond-pulse-feature-grid">
