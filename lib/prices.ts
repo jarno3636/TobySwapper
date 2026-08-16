@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type PriceMap = Record<string, number>;
-const TTL_MS = 60_000;
+const TTL_MS = 5 * 60_000;
 
 // Type guard so TS knows items are strings after filtering
 const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;
@@ -38,6 +38,21 @@ function loadCache(keys: string[]): PriceMap {
   return out;
 }
 
+function allFresh(keys: string[]) {
+  if (typeof window === "undefined" || keys.length === 0) return false;
+  const now = Date.now();
+  return keys.every((k) => {
+    try {
+      const raw = localStorage.getItem(`price:${k}`);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as { v: unknown; t: unknown };
+      return safeNum(parsed?.v) !== undefined && Number.isFinite(Number(parsed?.t)) && now - Number(parsed.t) < TTL_MS;
+    } catch {
+      return false;
+    }
+  });
+}
+
 function saveCache(map: PriceMap) {
   if (typeof window === "undefined") return;
   const t = Date.now();
@@ -68,6 +83,15 @@ export function useUsdPrices(addresses: (string | undefined)[]) {
   useEffect(() => {
     if (list.length === 0) {
       setData({});
+      return;
+    }
+
+    // If every requested price is still fresh in localStorage, use it and
+    // avoid hitting the Vercel price route at all on this mount/navigation.
+    if (allFresh(list)) {
+      const cached = loadCache(list);
+      setData(cached);
+      prevGood.current = cached;
       return;
     }
 

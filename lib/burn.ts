@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 type BurnResp = { ok: boolean; totalHuman: string };
 
 async function fetchBurnTotal(): Promise<string | null> {
-  const r = await fetch(`/api/burn/total?ts=${Date.now()}`, { cache: "no-store" });
+  const r = await fetch(`/api/burn/total`, { cache: "force-cache" });
   const j = (await r.json()) as BurnResp;
   if (!j?.ok) return null;
   // totalHuman might be "123,456.78" or plain; normalize to a string we can show
@@ -17,10 +17,12 @@ export function useBurnTotal() {
   return useQuery({
     queryKey: BURN_TOTAL_QK,
     queryFn: fetchBurnTotal,
-    // tune to your liking
-    staleTime: 10_000,           // was in your QueryClient defaults
-    refetchInterval: 15_000,     // periodically refresh so Share updates on its own
-    refetchOnWindowFocus: false, // keep your current behavior
+    // Public aggregate: it does not need a request every 15 seconds per visitor.
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   });
 }
 
