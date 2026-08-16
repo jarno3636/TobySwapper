@@ -53,7 +53,6 @@ export default function PondPulse() {
 
   const live = { chainId: base.id, query: { refetchInterval: 15_000 } } as const;
   const totalDrawsRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "totalDraws", ...live });
-  const retainedRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "retainedCbBTC", ...live });
   const treasuryRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "treasury", ...live });
   const priceRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "currentPrice", ...live });
   const openedRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "opened", ...live });
@@ -69,7 +68,6 @@ export default function PondPulse() {
   const treasuryCbBtcRead = useReadContract({ address: CBBTC_BASE, abi: erc20Abi, functionName: "balanceOf", args: [SEED_TREASURY], ...live });
 
   const totalDraws = typeof totalDrawsRead.data === "bigint" ? totalDrawsRead.data : undefined;
-  const retained = typeof retainedRead.data === "bigint" ? retainedRead.data : undefined;
   const treasuryCbBtc = typeof treasuryCbBtcRead.data === "bigint" ? treasuryCbBtcRead.data : undefined;
   const taboshiBurned = typeof taboshiBurnRead.data === "bigint" ? taboshiBurnRead.data : undefined;
   const taboshiRawSupply = typeof taboshiSupplyRead.data === "bigint" ? taboshiSupplyRead.data : undefined;
@@ -103,14 +101,14 @@ export default function PondPulse() {
     const burned =
       taboshiRemaining === undefined || taboshiBurned === undefined
         ? "Taboshi supply is counting"
-        : `${token18(taboshiRemaining)} TABOSHI remain · ${token18(taboshiBurned)} retired`;
+        : `${token18(taboshiRemaining)} TABOSHI remain · ${token18(taboshiBurned)} burned`;
     const btc = treasuryCbBtc === undefined ? "treasury cbBTC is gathering" : `${satsToBtc(treasuryCbBtc)} cbBTC in treasury`;
     const seeds = seedSupply === undefined ? "new seeds waking" : `${whole(seedSupply)} SEED awakened`;
     return `pond pulse 🌱\n\n${leaves}\n${burned}\n${btc}\n${seeds}\n\nold leaves return. new seeds wake.`;
   }, [history.leavesRetired, taboshiBurned, taboshiRemaining, treasuryCbBtc, seedSupply]);
 
   async function refresh() {
-    await Promise.allSettled([totalDrawsRead.refetch(), retainedRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
+    await Promise.allSettled([totalDrawsRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
   }
   async function cast() {
     setSharing(true);
@@ -132,7 +130,7 @@ export default function PondPulse() {
       <div className="pond-pulse-head">
         <div className="pond-pulse-title">
           <div className="pond-pulse-orb"><Image src="/tokens/sato.PNG" alt="" fill sizes="54px" className="object-contain" /></div>
-          <div><span>LIVE ON BASE · POND LEDGER</span><h2>Pond pulse</h2><p>Burns, treasury depth, seeds and draws — read straight from the pond.</p></div>
+          <div><span>LIVE ON BASE · POND LEDGER</span><h2>Pond pulse</h2><p>Burned supply, treasury depth, seeds and draws — read straight from the pond.</p></div>
         </div>
         <button type="button" className="pond-pulse-status" onClick={refresh} title="Refresh live stats"><i className={paused ? "is-quiet" : ""} />{status}<b>↻</b></button>
       </div>
@@ -144,9 +142,9 @@ export default function PondPulse() {
           <small>
             {taboshiBurned === undefined
               ? "Reading the dead wallet…"
-              : `${token18(taboshiBurned)} retired${burnedPct === undefined ? "" : ` · ${burnedPct.toFixed(2)}% burned`}`}
+              : `${token18(taboshiBurned)} burned${burnedPct === undefined ? "" : ` · ${burnedPct.toFixed(2)}% of supply`}`}
           </small>
-          <em>{money(remainingUsd)} effective supply value · {money(burnedUsd)} retired value</em>
+          <em>{money(remainingUsd)} effective supply value · {money(burnedUsd)} burned value</em>
         </article>
         <article className="pond-pulse-feature is-treasury">
           <span className="pond-pulse-kicker">₿ TREASURY DEPTH</span>
@@ -160,11 +158,10 @@ export default function PondPulse() {
         <article className="pond-pulse-stat is-leaf"><span>OLD LEAVES RETURNED</span><strong>{compactWhole(history.leavesRetired)}</strong><small>{history.enhancedDraws === undefined ? "waiting for the draw mix" : `${whole(history.enhancedDraws)} enhanced draws`}</small></article>
         <article className="pond-pulse-stat is-seed"><span>SEEDS AWAKENED</span><strong>{compactWhole(seedSupply)}</strong><small>SEED minted by the Faucet</small></article>
         <article className="pond-pulse-stat is-draw"><span>TOTAL DRAWS</span><strong>{compactWhole(totalDraws)}</strong><small>{currentPrice === undefined ? "current depth loading" : `depth · ${whole(currentPrice)} sats · ${money(depthUsd)}`}</small></article>
-        <article className="pond-pulse-stat is-btc"><span>FAUCET RETAINED</span><strong>{retained === undefined ? "…" : `${compactWhole(retained)} sats`}</strong><small>Contract-local retained cbBTC</small></article>
       </div>
 
       <div className="pond-pulse-footer">
-        <div className="pond-pulse-whisper"><span>◌</span><p><b>TABOSHI remaining</b> is the token contract&apos;s fixed total supply minus the live balance at <b>0x…dEaD</b>. Because TABOSHI cannot be minted, every token retired there reduces the effective supply shown here. <b>Treasury depth</b> is the live cbBTC balance at the Faucet-reported treasury.</p></div>
+        <div className="pond-pulse-whisper"><span>◌</span><p><b>TABOSHI remaining</b> is the token contract&apos;s fixed total supply minus the live balance at <b>0x…dEaD</b>. Because TABOSHI cannot be minted, every token burned there reduces the effective supply shown here. <b>Treasury depth</b> is the live cbBTC balance at the Faucet-reported treasury.</p></div>
         <div className="pond-pulse-actions"><button type="button" className="metal-button pond-pulse-cast" onClick={cast} disabled={sharing}>{sharing ? "Opening…" : "Cast the ripple"}</button><button type="button" className="metal-button pond-pulse-copy" onClick={copy}>{copied ? "Copied ✓" : "Copy pulse"}</button></div>
       </div>
     </section>
