@@ -113,6 +113,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json(
     { prices, updatedAt: new Date().toISOString() },
-    { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=120" } },
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
   );
 }
