@@ -158,6 +158,8 @@ export default function TaboshiOnePage() {
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [message, setMessage] = useState("");
   const [syncingWallet, setSyncingWallet] = useState(false);
+  const [refreshCooling, setRefreshCooling] = useState(false);
+  const refreshCooldownRef = useRef<number | null>(null);
   const [syncMessage, setSyncMessage] = useState("");
   const [leafMetadata, setLeafMetadata] = useState<Metadata | null>(null);
   const [seedMetadata, setSeedMetadata] = useState<Metadata | null>(null);
@@ -168,7 +170,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI1_TOKEN_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
   });
   const leafUriRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -183,7 +185,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI_SEED_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
   });
   const seedUriRead = useReadContract({
     address: TABOSHI_SEEDS_ADDRESS,
@@ -204,7 +206,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
   });
   const loreRevealedRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
@@ -223,7 +225,7 @@ export default function TaboshiOnePage() {
     abi: LORE_DEEDS_ABI,
     functionName: "communityMinted",
     chainId: base.id,
-    query: { staleTime: 60_000, refetchInterval: false, refetchOnWindowFocus: true },
+    query: { staleTime: 60_000, refetchInterval: false, refetchOnWindowFocus: false },
   });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
@@ -333,8 +335,9 @@ export default function TaboshiOnePage() {
   }
 
   async function syncWalletAndHoldings() {
-    if (syncingWallet) return;
+    if (syncingWallet || refreshCooling) return;
     setSyncingWallet(true);
+    setRefreshCooling(true);
     setSyncMessage("Checking the wallet in the pond…");
 
     try {
@@ -383,7 +386,13 @@ export default function TaboshiOnePage() {
       setSyncMessage("Could not refresh the pouch. Try Change wallet from the wallet menu.");
     } finally {
       setSyncingWallet(false);
-      if (typeof window !== "undefined") window.setTimeout(() => setSyncMessage(""), 3200);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => setSyncMessage(""), 3200);
+        if (refreshCooldownRef.current) window.clearTimeout(refreshCooldownRef.current);
+        refreshCooldownRef.current = window.setTimeout(() => setRefreshCooling(false), 12_000);
+      } else {
+        setRefreshCooling(false);
+      }
     }
   }
 
@@ -487,9 +496,9 @@ export default function TaboshiOnePage() {
           <>
             <div className="taboshi1-owner seedleaf-owner seedleaf-wallet-sync-row">
               <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
-              <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-busy={syncingWallet}>
+              <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-busy={syncingWallet}>
                 <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
-                {syncingWallet ? "Syncing…" : "Refresh wallet"}
+                {syncingWallet ? "Syncing…" : refreshCooling ? "Updated" : "Refresh wallet"}
               </button>
             </div>
             {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
@@ -498,8 +507,8 @@ export default function TaboshiOnePage() {
 
         <section className="seedleaf-all-assets lore-inventory-card">
           <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">WHAT YOU CARRY</span><h2>Your Tobyworld pouch</h2><p>Tokens, relics, and deeds gathered into one view.</p></div>{isConnected ? (
-              <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet} aria-label="Refresh wallet and pouch balances">
-                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "SYNCING" : "REFRESH"}
+              <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-label="Refresh wallet and pouch balances">
+                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "SYNCING" : refreshCooling ? "UPDATED" : "REFRESH"}
               </button>
             ) : <span className="seedleaf-asset-count">CLOSED</span>}</div>
           <div className="seedleaf-assets-grid lore-assets-grid">
