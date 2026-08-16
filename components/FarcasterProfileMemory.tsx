@@ -33,7 +33,12 @@ export default function FarcasterProfileMemory() {
         const user = context?.user;
         if (!user?.fid || cancelled) return;
 
-        await fetch("/api/profile/sync", {
+        const syncKey = `tobyswap:profile-synced:${address.toLowerCase()}:${Number(user.fid)}`;
+        try {
+          if (sessionStorage.getItem(syncKey)) return;
+        } catch {}
+
+        const response = await fetch("/api/profile/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -44,6 +49,9 @@ export default function FarcasterProfileMemory() {
             pfpUrl: safeUrl(user.pfpUrl),
           }),
         });
+        if (response.ok) {
+          try { sessionStorage.setItem(syncKey, "1"); } catch {}
+        }
       } catch {
         // Cosmetic profile memory must never block swapping or Mini App startup.
       }

@@ -95,8 +95,9 @@ export default function TokensBurned() {
       enabled: mounted && visible,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
-      staleTime: 8_000,
-      refetchInterval: 15_000,
+      staleTime: 60_000,
+      refetchInterval: 2 * 60_000,
+      refetchIntervalInBackground: false,
     },
   });
 

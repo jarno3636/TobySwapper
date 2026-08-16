@@ -121,9 +121,24 @@ export default function WalletPillInner() {
       }
 
       try {
-        const response = await fetch(`/api/farcaster/identity?address=${encodeURIComponent(address)}`, { cache: "no-store" });
+        const cacheKey = `tobyswap:fc:${address.toLowerCase()}`;
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.profile?.fid && Date.now() - Number(parsed.t || 0) < 6 * 60 * 60_000) {
+              if (!cancelled) setFarcaster(parsed.profile);
+              return;
+            }
+          }
+        } catch {}
+
+        const response = await fetch(`/api/farcaster/identity?address=${encodeURIComponent(address)}`, { cache: "force-cache" });
         const payload = await response.json();
-        if (!cancelled && response.ok && payload?.profile?.fid) setFarcaster(payload.profile);
+        if (!cancelled && response.ok && payload?.profile?.fid) {
+          setFarcaster(payload.profile);
+          try { sessionStorage.setItem(cacheKey, JSON.stringify({ profile: payload.profile, t: Date.now() })); } catch {}
+        }
       } catch {
         // Identity enrichment must never interfere with wallet connectivity.
       }

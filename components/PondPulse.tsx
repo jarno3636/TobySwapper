@@ -51,7 +51,15 @@ export default function PondPulse() {
   const cbBtcUsd = useUsdPriceSingle(CBBTC_BASE);
   const taboshiUsd = useUsdPriceSingle(TABOSHI);
 
-  const live = { chainId: base.id, query: { refetchInterval: 15_000 } } as const;
+  const live = {
+    chainId: base.id,
+    query: {
+      staleTime: 60_000,
+      refetchInterval: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+  } as const;
   const totalDrawsRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "totalDraws", ...live });
   const treasuryRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "treasury", ...live });
   const priceRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "currentPrice", ...live });

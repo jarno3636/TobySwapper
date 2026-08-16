@@ -165,7 +165,8 @@ export default function BurnerLeaderboard() {
     manual ? setRefreshing(true) : setLoading(true);
     try {
       const suffix = address ? `?address=${encodeURIComponent(address)}` : "";
-      const res = await fetch(`/api/leaderboard/burners${suffix}`, { cache: "no-store" });
+      const cacheBust = manual ? `${suffix ? "&" : "?"}refresh=${Date.now()}` : "";
+      const res = await fetch(`/api/leaderboard/burners${suffix}${cacheBust}`, { cache: manual ? "no-store" : "force-cache" });
       const json = (await res.json()) as Payload;
       setData(json);
     } catch (error: any) {
@@ -240,7 +241,6 @@ export default function BurnerLeaderboard() {
 
       <div className="burn-stat-grid" aria-label="Leaderboard totals">
         <div className="burn-stat burn-stat-fire"><span>🔥</span><small>Burn tracked</small><strong>{data?.ok ? `${prettyBurn(data.totalFromEvents || "0")} TOBY` : "—"}</strong></div>
-        <div className="burn-stat burn-stat-blue"><span>🐸</span><small>Burners</small><strong>{data?.ok ? number.format(data.uniqueBurners || 0) : "—"}</strong></div>
         <div className="burn-stat burn-stat-green"><span>↔</span><small>Swaps</small><strong>{data?.ok ? number.format(data.swapEvents || 0) : "—"}</strong></div>
       </div>
 
