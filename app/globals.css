@@ -1364,3 +1364,18 @@ html { scroll-behavior: smooth; }
 .seedleaf-transfer-summary em{display:block;margin-top:3px;font-style:normal;font-size:10px;font-weight:850;color:#2f7962}
 .pond-pulse-stat em{display:block;margin-top:5px;font-style:normal;font-size:9px;line-height:1.35;color:#8a7265}
 .pond-pulse-whisper code{font-family:inherit;font-weight:950;color:#315e69;background:rgba(255,255,255,.58);padding:1px 4px;border-radius:6px}
+
+/* Pond Pulse v2 — burn + treasury hero metrics */
+.pond-pulse-toby{position:absolute;right:-18px;bottom:-22px;width:110px;height:110px;object-fit:contain;opacity:.11;transform:rotate(-8deg);pointer-events:none;filter:drop-shadow(0 12px 14px rgba(24,94,116,.18))}
+.pond-pulse-feature-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:17px}
+.pond-pulse-feature{position:relative;overflow:hidden;min-height:142px;padding:17px 18px;border:1px solid rgba(18,76,94,.11);border-radius:23px;box-shadow:inset 0 2px 0 rgba(255,255,255,.92),0 4px 0 rgba(23,72,89,.035),0 12px 24px rgba(16,61,77,.07)}
+.pond-pulse-feature:before{content:"";position:absolute;inset:1px 3px auto;height:48%;border-radius:21px 21px 55% 55%;background:linear-gradient(180deg,rgba(255,255,255,.9),transparent);pointer-events:none}
+.pond-pulse-feature:after{content:"";position:absolute;width:100px;height:100px;right:-35px;bottom:-45px;border-radius:999px;opacity:.42;filter:blur(1px)}
+.pond-pulse-feature.is-burn{background:radial-gradient(circle at 92% 12%,rgba(238,96,70,.18),transparent 31%),linear-gradient(145deg,#fff,#fff2ed)}
+.pond-pulse-feature.is-burn:after{background:rgba(230,78,54,.18)}
+.pond-pulse-feature.is-treasury{background:radial-gradient(circle at 92% 12%,rgba(238,183,55,.22),transparent 31%),linear-gradient(145deg,#fff,#fff8e6)}
+.pond-pulse-feature.is-treasury:after{background:rgba(222,170,43,.22)}
+.pond-pulse-feature>*{position:relative;z-index:1}.pond-pulse-kicker{display:block;color:#6d7e83;font-size:9px;font-weight:1000;letter-spacing:.13em}.pond-pulse-feature strong{display:block;margin-top:11px;color:#092f3c;font-size:28px;line-height:1;letter-spacing:-.045em;font-variant-numeric:tabular-nums}.pond-pulse-feature small{display:block;margin-top:9px;color:#71858a;font-size:9px;font-weight:800}.pond-pulse-feature small b{font-weight:1000;color:#536d74}.pond-pulse-feature em{display:inline-flex;margin-top:8px;padding:5px 8px;border:1px solid rgba(35,106,80,.08);border-radius:999px;background:rgba(255,255,255,.62);color:#267054;font-size:9px;font-style:normal;font-weight:1000;box-shadow:inset 0 1px 0 #fff}
+.pond-pulse-whisper b{color:#315e69;font-weight:1000}
+.pond-pulse-status{transition:transform .15s ease,box-shadow .15s ease}.pond-pulse-status:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 #fff,0 4px 0 rgba(34,114,71,.05),0 10px 20px rgba(28,91,59,.08)}.pond-pulse-status:active{transform:translateY(1px)}
+@media(max-width:620px){.pond-pulse-feature-grid{grid-template-columns:1fr}.pond-pulse-feature{min-height:126px;padding:15px 16px}.pond-pulse-feature strong{font-size:25px}.pond-pulse-toby{width:90px;height:90px;right:-14px;bottom:-16px}}
