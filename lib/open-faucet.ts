@@ -24,6 +24,20 @@ export const OPEN_FAUCET_ABI = [
   },
   {
     type: "function",
+    name: "treasury",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "cbBTC",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
     name: "currentPrice",
     stateMutability: "view",
     inputs: [],
