@@ -1385,3 +1385,10 @@ html { scroll-behavior: smooth; }
 .pond-pulse-feature.is-burn strong{letter-spacing:-.035em}
 .pond-pulse-feature.is-burn small{font-weight:850}
 .pond-pulse-feature.is-burn em{color:#2f7658}
+
+
+/* Request guard + four-destination dock */
+.pond-dock-four{grid-template-columns:repeat(4,minmax(0,1fr));width:min(590px,100%)}
+.pond-pulse-status:disabled,.seedleaf-sync-button:disabled,.seedleaf-pouch-refresh:disabled,.pill:disabled{cursor:not-allowed;opacity:.68;filter:saturate(.78)}
+.pond-pulse-status b.is-cooling{opacity:.45;transform:rotate(22deg)}
+@media(max-width:480px){.pond-dock-four{gap:2px;padding:5px}.pond-dock-four .pond-dock-item{font-size:7px}.pond-dock-four .dock-art,.pond-dock-four .pond-dock-icon{width:36px;height:36px;border-radius:12px}}
