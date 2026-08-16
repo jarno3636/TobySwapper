@@ -63,6 +63,7 @@ export default function PondPulse() {
   const enhancedSeedsRead = useReadContract({ address: OPEN_FAUCET_ADDRESS, abi: OPEN_FAUCET_ABI, functionName: "ENHANCED_SEEDS_PER_DRAW", chainId: base.id });
   const seedSupplyRead = useReadContract({ address: TABOSHI_SEEDS_ADDRESS, abi: TABOSHI_SEEDS_ABI, functionName: "totalMinted", ...live });
   const taboshiBurnRead = useReadContract({ address: TABOSHI, abi: erc20Abi, functionName: "balanceOf", args: [DEAD_ADDRESS], ...live });
+  const taboshiSupplyRead = useReadContract({ address: TABOSHI, abi: erc20Abi, functionName: "totalSupply", ...live });
 
   const treasury = typeof treasuryRead.data === "string" ? treasuryRead.data as Address : undefined;
   const treasuryCbBtcRead = useReadContract({ address: CBBTC_BASE, abi: erc20Abi, functionName: "balanceOf", args: [SEED_TREASURY], ...live });
@@ -71,6 +72,13 @@ export default function PondPulse() {
   const retained = typeof retainedRead.data === "bigint" ? retainedRead.data : undefined;
   const treasuryCbBtc = typeof treasuryCbBtcRead.data === "bigint" ? treasuryCbBtcRead.data : undefined;
   const taboshiBurned = typeof taboshiBurnRead.data === "bigint" ? taboshiBurnRead.data : undefined;
+  const taboshiRawSupply = typeof taboshiSupplyRead.data === "bigint" ? taboshiSupplyRead.data : undefined;
+  const taboshiRemaining =
+    taboshiRawSupply === undefined || taboshiBurned === undefined
+      ? undefined
+      : taboshiRawSupply > taboshiBurned
+        ? taboshiRawSupply - taboshiBurned
+        : 0n;
   const currentPrice = typeof priceRead.data === "bigint" ? priceRead.data : undefined;
   const seedSupply = typeof seedSupplyRead.data === "bigint" ? seedSupplyRead.data : undefined;
   const standardSeeds = typeof standardSeedsRead.data === "bigint" ? standardSeedsRead.data : undefined;
@@ -83,18 +91,26 @@ export default function PondPulse() {
   const status = paused ? "QUIET" : opened ? "RUNNING" : "CANARY";
   const treasuryUsd = treasuryCbBtc === undefined || !cbBtcUsd ? undefined : (Number(treasuryCbBtc) / 1e8) * cbBtcUsd;
   const burnedUsd = taboshiBurned === undefined || !taboshiUsd ? undefined : (Number(taboshiBurned) / 1e18) * taboshiUsd;
+  const remainingUsd = taboshiRemaining === undefined || !taboshiUsd ? undefined : (Number(taboshiRemaining) / 1e18) * taboshiUsd;
+  const burnedPct =
+    taboshiBurned === undefined || taboshiRawSupply === undefined || taboshiRawSupply === 0n
+      ? undefined
+      : (Number(taboshiBurned) / Number(taboshiRawSupply)) * 100;
   const depthUsd = currentPrice === undefined || !cbBtcUsd ? undefined : (Number(currentPrice) / 1e8) * cbBtcUsd;
 
   const castText = useMemo(() => {
     const leaves = history.leavesRetired === undefined ? "old leaves are returning" : `${whole(history.leavesRetired)} Taboshi1 returned`;
-    const burned = taboshiBurned === undefined ? "Taboshi burn is counting" : `${token18(taboshiBurned)} TABOSHI sent to the dead wallet`;
+    const burned =
+      taboshiRemaining === undefined || taboshiBurned === undefined
+        ? "Taboshi supply is counting"
+        : `${token18(taboshiRemaining)} TABOSHI remain · ${token18(taboshiBurned)} retired`;
     const btc = treasuryCbBtc === undefined ? "treasury cbBTC is gathering" : `${satsToBtc(treasuryCbBtc)} cbBTC in treasury`;
     const seeds = seedSupply === undefined ? "new seeds waking" : `${whole(seedSupply)} SEED awakened`;
     return `pond pulse 🌱\n\n${leaves}\n${burned}\n${btc}\n${seeds}\n\nold leaves return. new seeds wake.`;
-  }, [history.leavesRetired, taboshiBurned, treasuryCbBtc, seedSupply]);
+  }, [history.leavesRetired, taboshiBurned, taboshiRemaining, treasuryCbBtc, seedSupply]);
 
   async function refresh() {
-    await Promise.allSettled([totalDrawsRead.refetch(), retainedRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
+    await Promise.allSettled([totalDrawsRead.refetch(), retainedRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
   }
   async function cast() {
     setSharing(true);
@@ -123,10 +139,14 @@ export default function PondPulse() {
 
       <div className="pond-pulse-feature-grid">
         <article className="pond-pulse-feature is-burn">
-          <span className="pond-pulse-kicker">🔥 TABOSHI BURNED</span>
-          <strong>{token18(taboshiBurned)}</strong>
-          <small>TABOSHI at <b>0x…dEaD</b></small>
-          <em>{money(burnedUsd)} current value</em>
+          <span className="pond-pulse-kicker">🍃 TABOSHI REMAINING</span>
+          <strong>{token18(taboshiRemaining)}</strong>
+          <small>
+            {taboshiBurned === undefined
+              ? "Reading the dead wallet…"
+              : `${token18(taboshiBurned)} retired${burnedPct === undefined ? "" : ` · ${burnedPct.toFixed(2)}% burned`}`}
+          </small>
+          <em>{money(remainingUsd)} effective supply value · {money(burnedUsd)} retired value</em>
         </article>
         <article className="pond-pulse-feature is-treasury">
           <span className="pond-pulse-kicker">₿ TREASURY DEPTH</span>
@@ -144,7 +164,7 @@ export default function PondPulse() {
       </div>
 
       <div className="pond-pulse-footer">
-        <div className="pond-pulse-whisper"><span>◌</span><p><b>Burned</b> is the live TABOSHI balance at the dead wallet. <b>Treasury depth</b> is the live cbBTC balance at the Faucet-reported treasury. These are current balances, not reconstructed lifetime totals.</p></div>
+        <div className="pond-pulse-whisper"><span>◌</span><p><b>TABOSHI remaining</b> is the token contract&apos;s fixed total supply minus the live balance at <b>0x…dEaD</b>. Because TABOSHI cannot be minted, every token retired there reduces the effective supply shown here. <b>Treasury depth</b> is the live cbBTC balance at the Faucet-reported treasury.</p></div>
         <div className="pond-pulse-actions"><button type="button" className="metal-button pond-pulse-cast" onClick={cast} disabled={sharing}>{sharing ? "Opening…" : "Cast the ripple"}</button><button type="button" className="metal-button pond-pulse-copy" onClick={copy}>{copied ? "Copied ✓" : "Copy pulse"}</button></div>
       </div>
     </section>
