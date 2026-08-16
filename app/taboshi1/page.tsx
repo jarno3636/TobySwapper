@@ -168,7 +168,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI1_TOKEN_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), refetchInterval: 20_000 },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
   });
   const leafUriRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -183,7 +183,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI_SEED_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), refetchInterval: 20_000 },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
   });
   const seedUriRead = useReadContract({
     address: TABOSHI_SEEDS_ADDRESS,
@@ -204,7 +204,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), refetchInterval: 20_000 },
+    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: true },
   });
   const loreRevealedRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
@@ -223,7 +223,7 @@ export default function TaboshiOnePage() {
     abi: LORE_DEEDS_ABI,
     functionName: "communityMinted",
     chainId: base.id,
-    query: { refetchInterval: 15_000 },
+    query: { staleTime: 60_000, refetchInterval: false, refetchOnWindowFocus: true },
   });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
