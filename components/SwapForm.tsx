@@ -682,7 +682,7 @@ export default function SwapForm() {
         boughtSymbol: outMeta.symbol,
       });
       setAmt("");
-      setPreflightMsg("Swap confirmed through Uniswap V3. Direct lanes do not create TOBY burn or Burner rank credit.");
+      setPreflightMsg("Swap confirmed through Uniswap V3. Direct TABOSHI lanes bypass the TobySwap burn.");
     } catch (error: any) {
       const message = error?.shortMessage || error?.message || String(error || "");
       if (/allowance|transfer amount exceeds allowance|STF/i.test(message)) {
@@ -1197,7 +1197,7 @@ export default function SwapForm() {
       )}
 
       {isDirectPair && (
-        <p className="taboshi-note">Direct Uniswap V3 · no TOBY burn or Burner rank credit.</p>
+        <p className="taboshi-note">Direct Uniswap V3 · no TOBY burn.</p>
       )}
 
       {preflightMsg && <div className="swap-alert mt-3 text-[11px]">{preflightMsg}</div>}

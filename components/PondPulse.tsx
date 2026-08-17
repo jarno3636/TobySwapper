@@ -50,6 +50,7 @@ export default function PondPulse() {
   const [copied, setCopied] = useState(false);
   const [refreshCooling, setRefreshCooling] = useState(false);
   const refreshTimer = useRef<number | null>(null);
+  const refreshLockUntil = useRef(0);
   const cbBtcUsd = useUsdPriceSingle(CBBTC_BASE);
   const taboshiUsd = useUsdPriceSingle(TABOSHI);
 
@@ -75,7 +76,7 @@ export default function PondPulse() {
   const taboshiSupplyRead = useReadContract({ address: TABOSHI, abi: erc20Abi, functionName: "totalSupply", ...live });
 
   const treasury = typeof treasuryRead.data === "string" ? treasuryRead.data as Address : undefined;
-  const treasuryCbBtcRead = useReadContract({ address: CBBTC_BASE, abi: erc20Abi, functionName: "balanceOf", args: [SEED_TREASURY], ...live });
+  const treasuryCbBtcRead = useReadContract({ address: CBBTC_BASE, abi: erc20Abi, functionName: "balanceOf", args: [treasury ?? SEED_TREASURY], ...live });
 
   const totalDraws = typeof totalDrawsRead.data === "bigint" ? totalDrawsRead.data : undefined;
   const treasuryCbBtc = typeof treasuryCbBtcRead.data === "bigint" ? treasuryCbBtcRead.data : undefined;
@@ -118,7 +119,9 @@ export default function PondPulse() {
   }, [history.leavesRetired, taboshiBurned, taboshiRemaining, treasuryCbBtc, seedSupply]);
 
   async function refresh() {
-    if (refreshCooling) return;
+    const now = Date.now();
+    if (refreshCooling || now < refreshLockUntil.current) return;
+    refreshLockUntil.current = now + 20_000;
     setRefreshCooling(true);
     try {
       await Promise.allSettled([totalDrawsRead.refetch(), treasuryRead.refetch(), treasuryCbBtcRead.refetch(), taboshiBurnRead.refetch(), taboshiSupplyRead.refetch(), priceRead.refetch(), openedRead.refetch(), pausedRead.refetch(), seedSupplyRead.refetch()]);
