@@ -1392,3 +1392,34 @@ html { scroll-behavior: smooth; }
 .pond-pulse-status:disabled,.seedleaf-sync-button:disabled,.seedleaf-pouch-refresh:disabled,.pill:disabled{cursor:not-allowed;opacity:.68;filter:saturate(.78)}
 .pond-pulse-status b.is-cooling{opacity:.45;transform:rotate(22deg)}
 @media(max-width:480px){.pond-dock-four{gap:2px;padding:5px}.pond-dock-four .pond-dock-item{font-size:7px}.pond-dock-four .dock-art,.pond-dock-four .pond-dock-icon{width:36px;height:36px;border-radius:12px}}
+
+
+/* 2026-08 request-safe UI polish */
+.hero-cta,.seedleaf-asset-card,.metal-button,.pond-pulse-status{
+  -webkit-tap-highlight-color:transparent;
+}
+.hero-cta:focus-visible,.seedleaf-asset-card:focus-visible,.metal-button:focus-visible,.pond-pulse-status:focus-visible{
+  outline:3px solid rgba(55,164,205,.28);
+  outline-offset:3px;
+}
+.hero-cta{position:relative;overflow:hidden;isolation:isolate}
+.hero-cta:after{content:"";position:absolute;z-index:-1;left:8%;right:8%;top:2px;height:42%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,0));pointer-events:none}
+.seedleaf-asset-card{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,filter .16s ease}
+.seedleaf-asset-card:hover{transform:translateY(-2px);filter:saturate(1.04);box-shadow:inset 0 1px 0 #fff,0 7px 0 rgba(19,83,105,.035),0 16px 28px rgba(15,61,77,.09)}
+.seedleaf-asset-card:active{transform:translateY(1px)}
+.seedleaf-sync-button,.seedleaf-pouch-refresh,.pond-pulse-status{min-height:42px}
+.pond-pulse-feature strong{overflow-wrap:anywhere}
+.pond-pulse-actions .metal-button{min-height:44px}
+@media(max-width:520px){
+  .hero-cta-deck{gap:8px}
+  .hero-cta{min-height:72px;padding:12px}
+  .hero-cta strong{font-size:12px}
+  .hero-cta small{font-size:9px;line-height:1.25}
+  .pond-pulse-title p{max-width:220px;line-height:1.35}
+  .pond-pulse-actions{gap:8px}
+  .pond-pulse-actions .metal-button{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero-glint,.swap-button-shine{animation:none!important}
+  .seedleaf-asset-card,.hero-cta,.metal-button,.pond-pulse-status{transition:none!important}
+}
