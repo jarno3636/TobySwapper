@@ -9,7 +9,7 @@ const links = [
     title: "Seeds & Leaves",
     copy: "Old leaves, new SEED, veiled Lore Deeds, and everything your wallet carries.",
     href: "/taboshi1",
-    icon: "/tokens/taboshi.PNG",
+    icon: "/seed.png",
     accent: "green",
   },
   {
