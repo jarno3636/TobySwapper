@@ -37,7 +37,6 @@ export default function Page() {
           </div>
           <div className="hero-cta-deck">
             <a href="#swap" className="hero-cta hero-cta-primary"><span>↔</span><strong>Start a swap</strong><small>Find the best pond route</small></a>
-            <a href="/taboshi1#pond-pulse" className="hero-cta hero-cta-fire"><span>◌</span><strong>Pond Pulse</strong><small>Live supply &amp; treasury signals</small></a>
             <a href="/taboshi1" className="hero-cta hero-cta-relic"><span>✦</span><strong>Seeds &amp; Leaves</strong><small>Open your onchain relic pouch</small></a>
             <a href="https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas" className="hero-cta hero-cta-world"><span>◎</span><strong>Open the Atlas</strong><small>Explore Tobyworld</small></a>
           </div>
