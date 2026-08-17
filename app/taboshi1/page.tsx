@@ -160,6 +160,7 @@ export default function TaboshiOnePage() {
   const [syncingWallet, setSyncingWallet] = useState(false);
   const [refreshCooling, setRefreshCooling] = useState(false);
   const refreshCooldownRef = useRef<number | null>(null);
+  const refreshLockUntilRef = useRef(0);
   const [syncMessage, setSyncMessage] = useState("");
   const [leafMetadata, setLeafMetadata] = useState<Metadata | null>(null);
   const [seedMetadata, setSeedMetadata] = useState<Metadata | null>(null);
@@ -335,7 +336,11 @@ export default function TaboshiOnePage() {
   }
 
   async function syncWalletAndHoldings() {
-    if (syncingWallet || refreshCooling) return;
+    const now = Date.now();
+    if (syncingWallet || refreshCooling || now < refreshLockUntilRef.current) return;
+    // Ref-based lock closes the tiny gap before React commits disabled state,
+    // so rapid taps cannot fan out duplicate RPC refresh bundles.
+    refreshLockUntilRef.current = now + 12_000;
     setSyncingWallet(true);
     setRefreshCooling(true);
     setSyncMessage("Checking the wallet in the pond…");
