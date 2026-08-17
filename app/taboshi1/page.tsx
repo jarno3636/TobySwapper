@@ -104,26 +104,12 @@ async function loadSeedMetadata(uri: string | null, setter: (v: Metadata | null)
   }
 }
 
-function SeedArt({ image, name }: { image?: string | null; name?: string }) {
-  const candidates = useMemo(() => seedImageCandidates(image), [image]);
-  const [index, setIndex] = useState(0);
-  useEffect(() => setIndex(0), [image]);
-
-  if (!candidates.length) {
-    return (
-      <div className="seedleaf-seed-fallback">
-        <span>✦</span>
-        <b>SEED</b>
-      </div>
-    );
-  }
-
+function SeedArt({ name }: { image?: string | null; name?: string }) {
   return (
     <img
-      src={candidates[Math.min(index, candidates.length - 1)]}
+      src="/seed.png"
       alt={name || "Taboshi Seed"}
-      className="taboshi1-real-art"
-      onError={() => setIndex((current) => Math.min(current + 1, candidates.length - 1))}
+      className="taboshi1-real-art seedleaf-canonical-seed-art"
     />
   );
 }
@@ -267,7 +253,7 @@ export default function TaboshiOnePage() {
     { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
     { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
     { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
-    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
+    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: "/seed.png", value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
     { key: "lore" as const, symbol: "LORE DEED", label: "Veiled land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
   ];
 
