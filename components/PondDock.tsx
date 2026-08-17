@@ -21,6 +21,7 @@ function AtlasDockIcon() {
   );
 }
 
+
 const items = [
   { id: "swap", label: "Swap", href: "/#swap", custom: "swap" as const },
   { id: "atlas", label: "Atlas", href: "https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas", custom: "atlas" as const },
@@ -38,7 +39,7 @@ export default function PondDock({ active = "swap" }: { active?: "swap" }) {
   return (
     <nav className="pond-dock-wrap" aria-label="TobySwap shortcuts">
       <div className="pond-dock-shine" aria-hidden="true" />
-      <div className="pond-dock pond-dock-four">
+      <div className="pond-dock">
         {items.map((item) => {
           const content = <><DockVisual item={item} /><span className="pond-dock-label">{item.label}</span></>;
           const className = `pond-dock-item ${active === item.id ? "pond-dock-active" : ""}`;
