@@ -68,14 +68,64 @@ function saveCache(map: PriceMap) {
   }
 }
 
-export function useUsdPrices(addresses: (string | undefined)[]) {
-  // Properly narrow to strings before mapping
-  const list = useMemo(
-    () => Array.from(new Set(addresses.filter(isStr).map(normKey))),
-    [addresses]
-  );
+type BatchWaiter = {
+  keys: string[];
+  resolve: (prices: PriceMap) => void;
+};
 
-  // seed with cached values to avoid 0-flash
+let pendingKeys = new Set<string>();
+let pendingWaiters: BatchWaiter[] = [];
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function requestPriceBatch(keys: string[]): Promise<PriceMap> {
+  return new Promise((resolve) => {
+    for (const key of keys) pendingKeys.add(key);
+    pendingWaiters.push({ keys, resolve });
+
+    if (pendingTimer) return;
+    pendingTimer = setTimeout(async () => {
+      const batch = Array.from(pendingKeys).sort();
+      const waiters = pendingWaiters;
+      pendingKeys = new Set<string>();
+      pendingWaiters = [];
+      pendingTimer = null;
+
+      let prices: PriceMap = {};
+      try {
+        const params = new URLSearchParams({ addresses: batch.join(",") });
+        // Allow the browser/CDN to honor the route's Cache-Control instead of
+        // forcing a new Vercel invocation on every call.
+        const res = await fetch(`/api/prices?${params.toString()}`);
+        if (res.ok) {
+          const json = await res.json();
+          const incoming = (json?.prices ?? {}) as Record<string, unknown>;
+          for (const key of batch) {
+            const value = safeNum(incoming[key]);
+            if (value !== undefined) prices[key] = value;
+          }
+        }
+      } catch {
+        // Each hook falls back to its last-known-good local cache below.
+      }
+
+      for (const waiter of waiters) {
+        const subset: PriceMap = {};
+        for (const key of waiter.keys) {
+          if (prices[key] !== undefined) subset[key] = prices[key];
+        }
+        waiter.resolve(subset);
+      }
+    }, 60);
+  });
+}
+
+export function useUsdPrices(addresses: (string | undefined)[]) {
+  // Convert unstable array literals from callers into a stable primitive key.
+  // Without this, [TOBY, PATIENCE, TABOSHI] is a new array every render and can
+  // repeatedly retrigger the pricing effect before the first request settles.
+  const listKey = addresses.filter(isStr).map(normKey).sort().filter((v, i, a) => i === 0 || v !== a[i - 1]).join(",");
+  const list = useMemo(() => (listKey ? listKey.split(",") : []), [listKey]);
+
   const [data, setData] = useState<PriceMap>(() => loadCache(list));
   const [loading, setLoading] = useState(false);
   const prevGood = useRef<PriceMap>(data);
@@ -83,50 +133,37 @@ export function useUsdPrices(addresses: (string | undefined)[]) {
   useEffect(() => {
     if (list.length === 0) {
       setData({});
+      prevGood.current = {};
       return;
     }
 
-    // If every requested price is still fresh in localStorage, use it and
-    // avoid hitting the Vercel price route at all on this mount/navigation.
-    if (allFresh(list)) {
-      const cached = loadCache(list);
-      setData(cached);
-      prevGood.current = cached;
-      return;
+    const cached = loadCache(list);
+    if (Object.keys(cached).length) {
+      setData((current) => ({ ...current, ...cached }));
+      prevGood.current = { ...prevGood.current, ...cached };
     }
+
+    if (allFresh(list)) return;
 
     let alive = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({ addresses: list.join(",") });
-        const res = await fetch(`/api/prices?${params.toString()}`, { cache: "no-store" });
-        const j = await res.json();
-        const incoming = (j?.prices ?? {}) as Record<string, unknown>;
-
-        const next: PriceMap = {};
-        for (const k of list) {
-          // prefer fresh; fall back to last good; then existing cache; finally 0
-          next[k] = safeNum(incoming[k]) ?? prevGood.current[k] ?? data[k] ?? 0;
-        }
-
-        if (alive) {
-          setData(next);
-          prevGood.current = next;
-          saveCache(next);
-        }
-      } catch {
-        // keep previous good data on network errors
-      } finally {
-        if (alive) setLoading(false);
+    setLoading(true);
+    void requestPriceBatch(list).then((incoming) => {
+      if (!alive) return;
+      const next: PriceMap = {};
+      for (const key of list) {
+        next[key] = incoming[key] ?? prevGood.current[key] ?? cached[key] ?? 0;
       }
-    })();
+      setData(next);
+      prevGood.current = next;
+      saveCache(next);
+    }).finally(() => {
+      if (alive) setLoading(false);
+    });
 
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list]); // depend only on list; internal fallbacks handle stale data
+  }, [listKey]);
 
   return { prices: data, isLoading: loading };
 }
