@@ -1423,3 +1423,12 @@ html { scroll-behavior: smooth; }
   .hero-glint,.swap-button-shine{animation:none!important}
   .seedleaf-asset-card,.hero-cta,.metal-button,.pond-pulse-status{transition:none!important}
 }
+
+
+/* Canonical SEED artwork — local /public/seed.png */
+.hero-cta-seeds{background:radial-gradient(circle at 12% 50%,rgba(25,188,190,.10),transparent 24%),linear-gradient(145deg,#fff 0%,#eefbfa 58%,#e7f7ed 100%)!important;border-color:rgba(32,151,142,.22)!important}
+.hero-cta-seeds .hero-cta-seed-icon{position:relative;overflow:hidden;padding:0;background:#08263a!important;border-color:rgba(33,170,164,.24)!important;box-shadow:inset 0 2px 2px rgba(255,255,255,.5),0 5px 12px rgba(20,103,111,.16)!important}
+.hero-cta-seeds .hero-cta-seed-icon img{object-fit:cover;transform:scale(1.06)}
+.hero-cta-seeds strong{color:#164a51}
+.seedleaf-canonical-seed-art{object-fit:cover!important;background:#08263a}
+.seedleaf-seed-art,.seeds-leaves-disc{overflow:hidden}
