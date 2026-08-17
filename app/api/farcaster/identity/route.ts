@@ -58,7 +58,7 @@ export async function GET(request: Request) {
           pfpUrl: user.pfp_url || undefined,
         },
       },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" } },
+      { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
     );
   } catch (error: any) {
     return NextResponse.json(
