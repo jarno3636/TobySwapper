@@ -86,7 +86,7 @@ export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("addresses")?.trim() ?? "";
   if (!raw) return NextResponse.json({ prices: {} });
 
-  const requested = Array.from(new Set(raw.split(",").map((s) => s.trim()).filter(Boolean)));
+  const requested = Array.from(new Set(raw.split(",").map((s) => s.trim()).filter(Boolean))).slice(0, 12);
   const normalizedAddresses = Array.from(new Set(
     requested
       .map((k) => k.toUpperCase() === "ETH" ? WETH_BASE : k)
@@ -113,6 +113,9 @@ export async function GET(req: Request) {
 
   return NextResponse.json(
     { prices, updatedAt: new Date().toISOString() },
-    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+    { headers: {
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+      "X-Robots-Tag": "noindex, nofollow",
+    } },
   );
 }
