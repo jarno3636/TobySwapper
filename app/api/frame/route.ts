@@ -9,7 +9,7 @@ export async function GET() {
     {
       version: "next",
       title: "Toby Swapper 🐸",
-      image: `${site}/api/frame/image`,
+      image: `${site}/og/tobyswap-card-1200x630.png`,
       imageAlt: "Swap on Base with 1% auto-burn to $TOBY.",
       buttons: [
         // IMPORTANT: open inside Farcaster
@@ -18,6 +18,6 @@ export async function GET() {
       ],
       postUrl: `${site}/api/frame/post`,
     },
-    { headers: { "Cache-Control": "no-store" } }
+    { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" } }
   );
 }
