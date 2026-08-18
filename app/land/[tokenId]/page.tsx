@@ -55,22 +55,8 @@ export default function LandPage() {
     chainId: base.id,
     query: { ...readQuery, enabled: tokenId !== null },
   });
-  const revealedRead = useReadContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "revealed", chainId: base.id, query: readQuery });
-  const nonceRead = useReadContract({
-    address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "transferNonce",
-    args: tokenId === null ? undefined : [tokenId], chainId: base.id, query: { ...readQuery, enabled: tokenId !== null },
-  });
-  const accountRead = useReadContract({
-    address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "accountOf",
-    args: tokenId === null ? undefined : [tokenId], chainId: base.id, query: { ...readQuery, enabled: tokenId !== null },
-  });
-  const forgeRead = useReadContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "communityMinter", chainId: base.id, query: readQuery });
 
   const owner = typeof ownerRead.data === "string" ? ownerRead.data as Address : undefined;
-  const revealed = revealedRead.data === true;
-  const transferNonce = typeof nonceRead.data === "bigint" ? nonceRead.data : undefined;
-  const boundAccount = typeof accountRead.data === "string" ? accountRead.data as Address : undefined;
-  const forge = typeof forgeRead.data === "string" && forgeRead.data !== "0x0000000000000000000000000000000000000000" ? forgeRead.data as Address : undefined;
 
   const ecosystem = useReadContracts({
     contracts: owner ? [
@@ -102,6 +88,7 @@ export default function LandPage() {
   }, [uriRead.data]);
 
   const image = resolveLoreUri(metadata?.image);
+  const hasArtwork = Boolean(image);
   const missing = tokenId === null || Boolean(ownerRead.error);
 
   return (
@@ -124,11 +111,11 @@ export default function LandPage() {
               <div className="land-hero-copy">
                 <span className="land-section-kicker">A PLACE IN TOBYWORLD</span>
                 <h1>{communityProfile?.communityName || metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
-                <p>{communityProfile?.description || metadata?.description || (revealed ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
+                <p>{communityProfile?.description || metadata?.description || (hasArtwork ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
-              <div className={`land-hero-art ${revealed ? "is-revealed" : ""}`}>
-                {image && revealed ? <img src={image} alt={metadata?.name || `Lore Land #${tokenId}`} /> : <>
+              <div className={`land-hero-art ${hasArtwork ? "is-revealed" : ""}`}>
+                {image ? <img src={image} alt={metadata?.name || `Lore Land #${tokenId}`} /> : <>
                   <span className="land-hero-moon" /><span className="land-hero-island" /><span className="land-hero-water" />
                   <span className="land-hero-rune">△</span>
                   <Image src="/tokens/toby.PNG" alt="" width={86} height={86} className="land-hero-frog" />
@@ -138,11 +125,11 @@ export default function LandPage() {
 
             <LandCommunityProfile tokenId={tokenId!} owner={owner} onProfile={setCommunityProfile} />
 
-            <LandIdentity tokenId={tokenId!} owner={owner} revealed={revealed} transferNonce={transferNonce} boundAccount={boundAccount} forge={forge} />
+            <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} />
 
             <div className="land-two-column">
               <LandGarden seedBalance={seed} />
-              <LandProductionPlaceholder revealed={revealed} />
+              <LandProductionPlaceholder revealed={hasArtwork} />
             </div>
 
             <LandRelics toby={toby} patience={patience} taboshi={taboshi} oldLeaf={oldLeaf} seed={seed} />
