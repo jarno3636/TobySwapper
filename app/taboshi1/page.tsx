@@ -21,6 +21,7 @@ import PondDock from "@/components/PondDock";
 import ConnectPill from "@/components/ConnectPill";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 import PondPulse from "@/components/PondPulse";
+import MyLoreDeeds from "@/components/land/MyLoreDeeds";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
@@ -516,7 +517,7 @@ export default function TaboshiOnePage() {
           <a href="/#swap"><span>↔</span><b>POND</b><small>Swap & contribute</small></a>
           <a href="#pouch"><span>◉</span><b>POUCH</b><small>What you carry</small></a>
           <a href="#land"><span>△</span><b>LAND</b><small>Your place</small></a>
-          <a href="#land"><span>✦</span><b>WORLD</b><small>Visit & explore</small></a>
+          <a href="/world"><span>✦</span><b>WORLD</b><small>Visit & explore</small></a>
         </nav>
 
         <section className="mytw-profile-card" aria-label="Your Tobyworld profile">
@@ -554,6 +555,7 @@ COMPLETION</span>
             <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed={loreRevealed} /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
+            <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
               <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
@@ -669,7 +671,7 @@ COMPLETION</span>
           <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector—tap an asset to choose it.</div>
         </section>
 
-        <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>Live ecosystem signals, kept separate from your personal profile so global activity is never mistaken for your contribution.</p></section>
+        <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
 
         <PondPulse />
 
