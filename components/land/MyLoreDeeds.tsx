@@ -14,7 +14,7 @@ type OwnedResponse = {
   complete?: boolean;
 };
 
-const CACHE_MS = 10 * 60_000;
+const CACHE_MS = 30 * 60_000;
 const memory = new Map<string, { at: number; data: OwnedResponse }>();
 const inflight = new Map<string, Promise<OwnedResponse>>();
 
@@ -25,7 +25,7 @@ function readCached(owner: Address): { at: number; data: OwnedResponse } | null 
   const hot = memory.get(ownerKey(owner));
   if (hot && Date.now() - hot.at < CACHE_MS) return hot;
   try {
-    const raw = sessionStorage.getItem(storageKey(owner));
+    const raw = localStorage.getItem(storageKey(owner));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed.at === "number") {
@@ -39,7 +39,7 @@ function readCached(owner: Address): { at: number; data: OwnedResponse } | null 
 function writeCached(owner: Address, data: OwnedResponse) {
   const entry = { at: Date.now(), data };
   memory.set(ownerKey(owner), entry);
-  try { sessionStorage.setItem(storageKey(owner), JSON.stringify(entry)); } catch {}
+  try { localStorage.setItem(storageKey(owner), JSON.stringify(entry)); } catch {}
 }
 
 function loadOwned(owner: Address) {
@@ -102,7 +102,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
   return (
     <div className="mytw-owned-deeds">
       <div className="mytw-owned-deeds-head">
-        <div><span>MY CANONICAL DEED{expectedCount === 1n ? "" : "S"}</span><strong>{loading ? "Finding your land…" : `${expectedCount.toLocaleString()} held`}</strong><small>{sorted.length > 0 ? "Your deed IDs are shown below" : "Finding token IDs"}</small></div>
+        <div><span>MY LORE DEED{expectedCount === 1n ? "" : "S"}</span><strong>{loading ? "Finding your land…" : `${expectedCount.toLocaleString()} held`}</strong><small>{sorted.length > 0 ? "Your deed IDs are shown below" : "Finding token IDs"}</small></div>
         <a href="/world">Explore World ↗</a>
       </div>
 
