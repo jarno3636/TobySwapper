@@ -142,6 +142,7 @@ export default function TaboshiOnePage() {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("1");
   const [loreTokenId, setLoreTokenId] = useState("");
+  const [visitDeedId, setVisitDeedId] = useState("");
   const [txState, setTxState] = useState<TxState>("idle");
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [message, setMessage] = useState("");
@@ -553,10 +554,14 @@ COMPLETION</span>
             <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed={loreRevealed} /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. The Land Engine is ready for whatever the canonical production system actually reveals." : "You do not carry a Lore Deed in this wallet yet. Nothing is invented here—the land module will follow the canonical contracts."}</p>
             <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
-            <button type="button" className="mytw-inline-action" disabled={loreBalance === 0n} onClick={() => { setSelected("lore"); document.getElementById("transfer")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
-              {loreBalance > 0n ? "Move a Lore Deed →" : "LAND ENGINE READY"}
+            <div className="mytw-land-engine-launch">
+              <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
+              <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
+            </div>
+            <button type="button" className="mytw-secondary-land-action" disabled={loreBalance === 0n} onClick={() => { setSelected("lore"); document.getElementById("transfer")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
+              {loreBalance > 0n ? "Move one of my deeds" : "No deed in this wallet yet"}
             </button>
-            <div className="mytw-production-slot"><span>PRODUCTION</span><b>AWAITING THE POND</b><small>Actual mechanics will appear only when canonical contracts expose them.</small></div>
+            <div className="mytw-production-slot"><span>PRODUCTION</span><b>AWAITING THE POND</b><small>The public Land Engine is live; economic mechanics remain canonical-only.</small></div>
           </article>
 
           <article className={`mytw-action-card mytw-seed-garden seed-stage-${seedStage.level}`}>
