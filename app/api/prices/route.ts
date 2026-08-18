@@ -55,21 +55,6 @@ async function alchemyByAddress(addresses: string[]): Promise<PriceMap> {
   }
 }
 
-async function alchemyEth(): Promise<number | undefined> {
-  if (!ALCHEMY_KEY) return undefined;
-  try {
-    const j = await fetchJson("https://api.g.alchemy.com/prices/v1/tokens/by-symbol?symbols=ETH", {
-      headers: { authorization: `Bearer ${ALCHEMY_KEY}` },
-    });
-    const row = j?.data?.[0];
-    return num(row?.prices?.find?.((p: any) => p?.currency === "usd")?.value)
-      ?? num(row?.price)
-      ?? num(row?.usdPrice);
-  } catch {
-    return undefined;
-  }
-}
-
 async function dexPrice(address: string): Promise<number | undefined> {
   try {
     const j = await fetchJson(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
@@ -95,16 +80,19 @@ export async function GET(req: Request) {
   ));
 
   const alchemy = await alchemyByAddress(normalizedAddresses);
-  const ethFromAlchemy = requested.some((k) => k.toUpperCase() === "ETH") ? await alchemyEth() : undefined;
+
+  // Only fall back to DexScreener for assets Alchemy did not price. Resolve the
+  // misses in parallel so one slow token cannot keep the whole Vercel function alive.
+  const missing = normalizedAddresses.filter((addr) => !alchemy[addr] && addr !== USDC_BASE.toLowerCase());
+  const dexPairs = await Promise.all(missing.map(async (addr) => [addr, await dexPrice(addr)] as const));
+  const dex: PriceMap = {};
+  for (const [addr, value] of dexPairs) if (value) dex[addr] = value;
 
   const prices: PriceMap = {};
   for (const key of requested) {
     const upper = key.toUpperCase();
     const addr = upper === "ETH" ? WETH_BASE.toLowerCase() : key.toLowerCase();
-
-    let usd = upper === "ETH" ? ethFromAlchemy : alchemy[addr];
-    if (!usd) usd = alchemy[addr];
-    if (!usd) usd = await dexPrice(addr);
+    let usd = alchemy[addr] ?? dex[addr];
 
     // USDC should remain useful even if every external price API is having a bad minute.
     if (!usd && addr === USDC_BASE.toLowerCase()) usd = 1;
@@ -114,7 +102,7 @@ export async function GET(req: Request) {
   return NextResponse.json(
     { prices, updatedAt: new Date().toISOString() },
     { headers: {
-      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800",
+      "Cache-Control": "public, s-maxage=900, stale-while-revalidate=3600",
       "X-Robots-Tag": "noindex, nofollow",
     } },
   );
