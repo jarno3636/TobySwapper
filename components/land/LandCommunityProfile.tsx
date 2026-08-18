@@ -16,6 +16,10 @@ const themes: Array<{ id: LandBannerTheme; label: string; note: string }> = [
   { id: "moon", label: "Moon", note: "Blue night over water" },
   { id: "lotus", label: "Lotus", note: "Soft bloom and sunrise" },
   { id: "ember", label: "Ember", note: "Warm ancient glow" },
+  { id: "tide", label: "Tide", note: "Bright cyan water" },
+  { id: "dusk", label: "Dusk", note: "Violet evening sky" },
+  { id: "bloom", label: "Bloom", note: "Pink garden light" },
+  { id: "gold", label: "Gold", note: "Warm sunlit relic" },
 ];
 
 export default function LandCommunityProfile({
@@ -113,7 +117,7 @@ export default function LandCommunityProfile({
   }
 
   return (
-    <section className={`land-community-card theme-${profile?.bannerTheme || bannerTheme}`}>
+    <section className={`land-community-card theme-${editing ? bannerTheme : (profile?.bannerTheme || bannerTheme)}`}>
       <div className="land-community-banner">
         <span className="land-community-banner-orb" />
         <span className="land-community-banner-hill h1" />
@@ -121,8 +125,8 @@ export default function LandCommunityProfile({
         <span className="land-community-banner-water" />
         <div className="land-community-banner-copy">
           <span className="land-section-kicker">COMMUNITY LAND</span>
-          <h2>{loading ? "Listening for a name…" : profile?.communityName || `Lore Land #${tokenId.toString()}`}</h2>
-          <p>{profile?.description || "A quiet place in Tobyworld, waiting for its keeper to leave a mark."}</p>
+          <h2>{loading ? "Listening for a name…" : editing ? (communityName.trim() || `Lore Land #${tokenId.toString()}`) : (profile?.communityName || `Lore Land #${tokenId.toString()}`)}</h2>
+          <p>{editing ? (description.trim() || "A quiet place in Tobyworld, waiting for its keeper to leave a mark.") : (profile?.description || "A quiet place in Tobyworld, waiting for its keeper to leave a mark.")}</p>
         </div>
       </div>
 
@@ -139,7 +143,7 @@ export default function LandCommunityProfile({
         <div className="land-community-editor">
           <label><span>LAND NAME</span><input value={communityName} maxLength={64} onChange={(event) => setCommunityName(event.target.value)} placeholder="The Mossy Hollow" /></label>
           <label><span>DESCRIPTION</span><textarea value={description} maxLength={280} onChange={(event) => setDescription(event.target.value)} placeholder="A small corner of the pond where the old leaves still whisper." /></label>
-          <div className="land-theme-picker"><span>LAND MOOD</span><div>{themes.map((theme) => <button key={theme.id} type="button" className={bannerTheme === theme.id ? "is-selected" : ""} onClick={() => setBannerTheme(theme.id)}><i className={`theme-swatch theme-${theme.id}`} /><b>{theme.label}</b><small>{theme.note}</small></button>)}</div></div>
+          <div className="land-theme-picker"><span>LAND MOOD</span><div>{themes.map((theme) => <button key={theme.id} type="button" className={bannerTheme === theme.id ? "is-selected" : ""} aria-pressed={bannerTheme === theme.id} onClick={() => setBannerTheme(theme.id)}><i className={`theme-swatch theme-${theme.id}`} /><b>{theme.label}</b><small>{theme.note}</small></button>)}</div></div>
           <button type="button" className="land-community-save" disabled={saving} onClick={save}>{saving ? "Setting the marker…" : "Save my land"}</button>
         </div>
       )}
