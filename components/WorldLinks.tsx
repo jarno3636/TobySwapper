@@ -7,10 +7,18 @@ const links = [
   {
     eyebrow: "YOUR WORLD",
     title: "My Tobyworld",
-    copy: "Your wallet profile—pouch, Seeds, relics, Lore Land, contributions and discoveries.",
+    copy: "Your wallet profile—pouch, Seeds, relics, Lore Land and your place in the world.",
     href: "/taboshi1",
     icon: "/seed.png",
     accent: "green",
+  },
+  {
+    eyebrow: "COMMUNITY WORLD",
+    title: "Explore Lands",
+    copy: "Wander named Lore Lands, search deed numbers, and visit community places.",
+    href: "/world",
+    icon: "/tokens/sato.PNG",
+    accent: "cyan",
   },
   {
     eyebrow: "WORLD",

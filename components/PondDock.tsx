@@ -24,7 +24,7 @@ function AtlasDockIcon() {
 
 const items = [
   { id: "swap", label: "Swap", href: "/#swap", custom: "swap" as const },
-  { id: "atlas", label: "Atlas", href: "https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas", custom: "atlas" as const },
+  { id: "world", label: "World", href: "/world", custom: "atlas" as const },
   { id: "hop", label: "Hop", href: "https://farcaster.xyz/miniapps/rTQGt2rMfgOF/toby-hop", icon: "/tokens/toby.PNG" },
   { id: "vault", label: "Vault", href: "https://toadvault.xyz", icon: "/tokens/patience.PNG" },
 ] as const;
@@ -35,7 +35,7 @@ function DockVisual({ item }: { item: (typeof items)[number] }) {
   return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/toby.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
 }
 
-export default function PondDock({ active }: { active?: "swap" }) {
+export default function PondDock({ active }: { active?: "swap" | "world" }) {
   return (
     <nav className="pond-dock-wrap" aria-label="TobySwap shortcuts">
       <div className="pond-dock-shine" aria-hidden="true" />
