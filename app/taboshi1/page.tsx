@@ -40,7 +40,6 @@ import {
 import {
   LORE_COLLECTION_ADDRESS,
   LORE_DEEDS_ABI,
-  LORE_INITIAL_SUPPLY,
   LEGACY_LORE_DEED_ADDRESS,
   LEGACY_LORE_DEED_ABI,
 } from "@/lib/lore-deeds";
@@ -209,25 +208,6 @@ export default function TaboshiOnePage() {
     chainId: base.id,
     query: { enabled: Boolean(address), staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, retry: false },
   });
-  const loreRevealedRead = useReadContract({
-    address: LORE_COLLECTION_ADDRESS,
-    abi: LORE_DEEDS_ABI,
-    functionName: "revealed",
-    chainId: base.id,
-  });
-  const loreMintedRead = useReadContract({
-    address: LORE_COLLECTION_ADDRESS,
-    abi: LORE_DEEDS_ABI,
-    functionName: "totalMinted",
-    chainId: base.id,
-  });
-  const loreCommunityMintedRead = useReadContract({
-    address: LORE_COLLECTION_ADDRESS,
-    abi: LORE_DEEDS_ABI,
-    functionName: "communityMinted",
-    chainId: base.id,
-    query: { staleTime: 60_000, refetchInterval: false, refetchOnWindowFocus: false },
-  });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
   const patienceWallet = useTokenBalance(address, PATIENCE, { chainId: base.id });
@@ -256,10 +236,7 @@ export default function TaboshiOnePage() {
   const loreBalance = typeof loreBalanceRead.data === "bigint" ? loreBalanceRead.data : 0n;
   const legacyLoreBalance = typeof legacyLoreBalanceRead.data === "bigint" ? legacyLoreBalanceRead.data : 0n;
   const seedSupply = typeof seedSupplyRead.data === "bigint" ? seedSupplyRead.data : null;
-  const loreMinted = typeof loreMintedRead.data === "bigint" ? loreMintedRead.data : null;
-  const loreCommunityMinted = typeof loreCommunityMintedRead.data === "bigint" ? loreCommunityMintedRead.data : null;
-  const loreSupply = loreCommunityMinted === null ? loreMinted : LORE_INITIAL_SUPPLY + loreCommunityMinted;
-  const loreRevealed = loreRevealedRead.data === true;
+  const loreRevealed = true;
   const leafArtwork = resolveIpfs(leafMetadata?.image);
 
   const assets = [
@@ -382,9 +359,6 @@ export default function TaboshiOnePage() {
       seedSupplyRead.refetch(),
       loreBalanceRead.refetch(),
       legacyLoreBalanceRead.refetch(),
-      loreRevealedRead.refetch(),
-      loreMintedRead.refetch(),
-      loreCommunityMintedRead.refetch(),
       tobyWallet.refetch(),
       patienceWallet.refetch(),
       taboshiWallet.refetch(),
@@ -552,7 +526,7 @@ COMPLETION</span>
             {profileSignals.map((item, index) => (
               <div key={item.key} className={`mytw-path-node ${item.found ? "is-found" : ""}`}>
                 <span className="mytw-path-icon">
-                  {item.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : item.key === "legacyLore" ? <span className="mytw-legacy-land-icon">△</span> : <img src={item.icon!} alt="" />}
+                  {item.key === "lore" ? <LoreDeedArt revealed /> : item.key === "legacyLore" ? <span className="mytw-legacy-land-icon">△</span> : <img src={item.icon!} alt="" />}
                 </span>
                 <b>{item.label}</b>
                 {index < profileSignals.length - 1 && <i aria-hidden="true">→</i>}
@@ -566,9 +540,9 @@ COMPLETION</span>
 
         <section id="next-path" className="mytw-action-grid scroll-mt-24">
           <article id="land" className="mytw-action-card mytw-land-card scroll-mt-24">
-            <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed={loreRevealed} /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
+            <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
-            <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
+            <div className="mytw-land-stats"><span><small>COLLECTION</small><b>CANONICAL</b></span><span><small>DEEDS HELD</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
             <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Tobyworld Market <small>preview</small></a></div>
             <div className="mytw-land-engine-launch">
@@ -630,10 +604,10 @@ COMPLETION</span>
           </article>
 
           <article className="taboshi1-card seedleaf-relic-card lore-deed-card lore-relic-panel canonical-land-card">
-            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">CANONICAL LAND</span><h2>Lore Land Deeds</h2></div><span className={`lore-soft-chip purple ${loreRevealed ? "is-live" : ""}`}>{loreRevealed ? "REVEALED" : "VEILED"}</span></div>
-            <div className="taboshi1-showcase lore-deed-showcase"><div className="taboshi1-token-art lore-deed-token"><LoreDeedArt revealed={loreRevealed} /></div><div className="taboshi1-balance lore-deed-balance"><small>DEEDS HELD</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><span>{loreRevealed ? "Lore · awakened land" : "Lore · reveal coming soon"}</span></div></div>
-            <div className="lore-whisper purple"><span>△</span><p>{loreRevealed ? "The veil has lifted. Your deed remains the key to the land it carries." : "The deed exists before the landscape is known. The land waits behind the veil."}</p></div>
-            <div className="lore-mini-stats"><span><small>COMMUNITY</small><b>{loreCommunityMinted === null ? "—" : loreCommunityMinted.toLocaleString()}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
+            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">CANONICAL LAND</span><h2>Lore Land Deeds</h2></div><span className="lore-soft-chip purple is-live">CANONICAL</span></div>
+            <div className="taboshi1-showcase lore-deed-showcase"><div className="taboshi1-token-art lore-deed-token"><LoreDeedArt revealed /></div><div className="taboshi1-balance lore-deed-balance"><small>DEEDS HELD</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><span>Canonical Lore Land · token IDs stay with the land</span></div></div>
+            <div className="lore-whisper purple"><span>△</span><p>Your canonical deed is the key to its persistent Tobyworld land number.</p></div>
+            <div className="lore-mini-stats"><span><small>TYPE</small><b>ERC-721</b></span><span><small>NETWORK</small><b>BASE</b></span></div>
           </article>
         </section>
 
@@ -669,7 +643,7 @@ COMPLETION</span>
                 aria-label={`Select ${asset.symbol} for transfer`}
               >
                 <div className="seedleaf-asset-icon seedleaf-asset-image">
-                  {asset.key === "seed" ? <SeedArt name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : <img src={asset.icon!} alt={asset.symbol} />}
+                  {asset.key === "seed" ? <SeedArt name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed /> : <img src={asset.icon!} alt={asset.symbol} />}
                 </div>
                 <div className="seedleaf-asset-copy">
                   <span>{asset.label}</span>
@@ -684,11 +658,11 @@ COMPLETION</span>
             ))}
             <div className={`seedleaf-asset-card legacy-land-asset ${legacyLoreBalance > 0n ? "is-held" : ""}`} aria-label="Old Lore Deed legacy asset">
               <div className="seedleaf-asset-icon legacy-land-asset-icon"><span>△</span></div>
-              <div className="seedleaf-asset-copy"><span>Legacy land relic</span><strong>OLD LORE DEED</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
+              <div className="seedleaf-asset-copy"><span>Previous land collection</span><strong>OLD LORE LAND</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
               <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
             </div>
           </div>
-          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. Old Lore Land stays with your collected assets. Lore Land is the deed that opens your place in the World.</div>
+          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. Old Lore Land stays as a history asset. Canonical Lore Land opens your place in the World.</div>
         </section>
 
         <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
