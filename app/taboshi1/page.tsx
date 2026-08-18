@@ -295,7 +295,7 @@ export default function TaboshiOnePage() {
     : holdingFlags.lore
       ? "A place in the world. Lore Land discovered."
       : holdingFlags.leaf
-        ? "The pond remembers you. An Old Leaf was discovered."
+        ? "An Old Leaf rests in your pouch."
         : holdingFlags.seed
           ? "Something has taken root. SEED discovered."
           : foundSignals > 0
@@ -310,7 +310,7 @@ export default function TaboshiOnePage() {
         ? { label: "Enter the Pond", href: "/#swap" }
         : holdingFlags.lore
           ? { label: "Visit your land", href: "#land" }
-          : { label: "Explore your discoveries", href: "#discoveries" };
+          : { label: "Explore your world", href: "#land" };
 
   const selectedAsset = assets.find((asset) => asset.key === selected)!;
   const is1155 = selectedAsset.standard === "ERC-1155";
@@ -424,7 +424,7 @@ export default function TaboshiOnePage() {
       }
 
       await refreshAll();
-      setSyncMessage("Pouch refreshed from Base.");
+      setSyncMessage("Your pouch is refreshed.");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("tobyswap:wallet-data-refreshed", { detail: { address } }));
       }
@@ -516,7 +516,7 @@ export default function TaboshiOnePage() {
           <a href="/#swap"><span>↔</span><b>POND</b><small>Swap & contribute</small></a>
           <a href="#pouch"><span>◉</span><b>POUCH</b><small>What you carry</small></a>
           <a href="#land"><span>△</span><b>LAND</b><small>Your place</small></a>
-          <a href="#discoveries"><span>✦</span><b>WORLD</b><small>Discover & explore</small></a>
+          <a href="#land"><span>✦</span><b>WORLD</b><small>Visit & explore</small></a>
         </nav>
 
         <section className="mytw-profile-card" aria-label="Your Tobyworld profile">
@@ -546,13 +546,13 @@ COMPLETION</span>
           </div>
 
           <div className="mytw-completion-track" aria-hidden="true"><span style={{ width: `${isConnected ? loreCompletion : 0}%` }} /></div>
-          <div className="mytw-profile-foot"><span>{isConnected ? `${foundSignals} of ${profileSignals.length} ecosystem signals discovered` : "Connect to reveal your profile"}</span><span>Community stat only · no reward implication</span></div>
+          <div className="mytw-profile-foot"><span>{isConnected ? `${foundSignals} of ${profileSignals.length} ecosystem signals discovered` : "Connect to reveal your profile"}</span><span>A playful community measure · nothing more</span></div>
         </section>
 
         <section id="next-path" className="mytw-action-grid scroll-mt-24">
           <article id="land" className="mytw-action-card mytw-land-card scroll-mt-24">
             <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed={loreRevealed} /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
-            <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. The Land Engine is ready for whatever the canonical production system actually reveals." : "You do not carry a Lore Deed in this wallet yet. Nothing is invented here—the land module will follow the canonical contracts."}</p>
+            <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
@@ -561,7 +561,7 @@ COMPLETION</span>
             <button type="button" className="mytw-secondary-land-action" disabled={loreBalance === 0n} onClick={() => { setSelected("lore"); document.getElementById("transfer")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
               {loreBalance > 0n ? "Move one of my deeds" : "No deed in this wallet yet"}
             </button>
-            <div className="mytw-production-slot"><span>PRODUCTION</span><b>AWAITING THE POND</b><small>The public Land Engine is live; economic mechanics remain canonical-only.</small></div>
+            <div className="mytw-production-slot"><span>BEYOND THE VEIL</span><b>AWAITING THE POND</b><small>Something about the land has not been revealed yet.</small></div>
           </article>
 
           <article className={`mytw-action-card mytw-seed-garden seed-stage-${seedStage.level}`}>
@@ -575,37 +575,27 @@ COMPLETION</span>
             <p>{seedStage.copy}</p>
             <div className="mytw-seed-actions">
               <LinkMaybeMini href="https://tobyworld.app/faucet/" className="mytw-inline-action is-primary">Get SEED →</LinkMaybeMini>
-              <span>Visual progression only · not yield</span>
+              <span>Your garden reflects the SEED you carry</span>
             </div>
             <div className="mytw-mystery-line"><span>?</span><p><b>What will grow here?</b><br/>The pond has not revealed everything yet.</p></div>
           </article>
 
           <article className="mytw-action-card mytw-contribution-card">
             <div className="mytw-action-head"><span className="mytw-symbol-orb">🔥</span><div><small>YOUR CONTRIBUTIONS</small><h2>Build a pond record</h2></div></div>
-            <p>TobySwap can give contribution—not trade size—the spotlight. Personal burn history will only show when it can be verified without expensive chain-wide rescans.</p>
+            <p>Your pond record can grow around the actions that matter—burns, swaps, SEED carried, and the land you keep.</p>
             <div className="mytw-contribution-lines">
-              <span><b>TOBY burns</b><em>Verified ledger next</em></span>
-              <span><b>Swap activity</b><em>Confirmed actions only</em></span>
+              <span><b>TOBY burns</b><em>Coming to your record</em></span>
+              <span><b>Swap activity</b><em>Your pond trail</em></span>
               <span><b>SEED held</b><em>{isConnected ? seedBalance.toLocaleString() : "—"}</em></span>
               <span><b>Lore Land</b><em>{isConnected ? loreBalance.toLocaleString() : "—"}</em></span>
             </div>
             <a href="/#swap" className="mytw-inline-action">Contribute through the Pond →</a>
           </article>
 
-          <article id="discoveries" className="mytw-action-card mytw-discoveries-card scroll-mt-24">
-            <div className="mytw-action-head"><span className="mytw-symbol-orb">✦</span><div><small>YOUR DISCOVERIES</small><h2>The pond remembers</h2></div></div>
-            <div className="mytw-discovery-grid">
-              {profileSignals.map((item) => (
-                <div key={item.key} className={`mytw-discovery ${item.found ? "is-found" : ""}`}>
-                  <span>{item.found ? "✓" : "·"}</span><div><b>{item.label}</b><small>{item.found ? item.note : "Not discovered in this wallet"}</small></div>
-                </div>
-              ))}
-            </div>
-            <p className="mytw-discovery-note">Discovery is derived locally from wallet state already being read on Base—no extra profile API request required.</p>
-          </article>
+
         </section>
 
-        <section className="mytw-section-heading"><span className="taboshi1-kicker">RELICS &amp; LAND</span><h2>Things the pond can verify</h2><p>Canonical balances and contract state, presented as discoveries rather than promises.</p></section>
+        <section className="mytw-section-heading"><span className="taboshi1-kicker">RELICS &amp; LAND</span><h2>The things that make up your world</h2><p>Seeds, old leaves, and land gathered into one place.</p></section>
 
         <section id="relics" className="seedleaf-relic-triad scroll-mt-24">
           <article className="taboshi1-card seedleaf-relic-card seedleaf-seed-card lore-relic-panel">
