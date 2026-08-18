@@ -9,17 +9,11 @@ function shortAddress(value?: string) {
 export default function LandIdentity({
   tokenId,
   owner,
-  revealed,
-  transferNonce,
-  boundAccount,
-  forge,
+  hasArtwork,
 }: {
   tokenId: bigint;
   owner?: Address;
-  revealed: boolean;
-  transferNonce?: bigint;
-  boundAccount?: Address;
-  forge?: Address;
+  hasArtwork: boolean;
 }) {
   return (
     <section className="land-identity-card">
@@ -27,16 +21,16 @@ export default function LandIdentity({
       <div className="land-identity-title-row">
         <div>
           <h1>Lore Land #{tokenId.toString()}</h1>
-          <p>{revealed ? "The veil has lifted over this place." : "A real deed. A place still waiting behind the veil."}</p>
+          <p>A persistent Tobyworld land number carried by the canonical deed.</p>
         </div>
-        <span className={`land-state-chip ${revealed ? "is-revealed" : ""}`}>{revealed ? "REVEALED" : "VEILED"}</span>
+        <span className="land-state-chip is-revealed">CANONICAL</span>
       </div>
 
-      <div className="land-identity-grid">
+      <div className="land-identity-grid land-identity-grid-simple">
         <div><small>KEEPER</small><strong>{shortAddress(owner)}</strong></div>
-        <div><small>TRAVELS</small><strong>{transferNonce === undefined ? "…" : transferNonce.toLocaleString()}</strong></div>
-        <div><small>LAND VAULT</small><strong>{shortAddress(boundAccount)}</strong></div>
-        <div><small>GENESIS FORGE</small><strong>{forge ? "BOUND" : "WAITING"}</strong></div>
+        <div><small>DEED</small><strong>#{tokenId.toString()}</strong></div>
+        <div><small>NETWORK</small><strong>BASE</strong></div>
+        <div><small>ART</small><strong>{hasArtwork ? "VISIBLE" : "VEILED"}</strong></div>
       </div>
     </section>
   );

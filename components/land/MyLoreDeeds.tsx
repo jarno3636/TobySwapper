@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
+import { LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
 
 type OwnedDeed = {
   tokenId: string;
   communityName?: string | null;
-  bannerTheme?: "moss" | "moon" | "lotus" | "ember";
+  bannerTheme?: "moss" | "moon" | "lotus" | "ember" | "tide" | "dusk" | "bloom" | "gold";
 };
 
 type OwnedResponse = {
@@ -18,7 +19,7 @@ const CACHE_MS = 30 * 60_000;
 const memory = new Map<string, { at: number; data: OwnedResponse }>();
 const inflight = new Map<string, Promise<OwnedResponse>>();
 
-function storageKey(owner: Address) { return `tobyswap:lore-deeds:${owner.toLowerCase()}`; }
+function storageKey(owner: Address) { return `tobyswap:canonical-lore-deeds:v2:${LORE_COLLECTION_ADDRESS.toLowerCase()}:${owner.toLowerCase()}`; }
 function ownerKey(owner: Address) { return owner.toLowerCase(); }
 
 function readCached(owner: Address): { at: number; data: OwnedResponse } | null {
