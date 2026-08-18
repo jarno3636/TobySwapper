@@ -35,7 +35,8 @@ export default function FarcasterProfileMemory() {
 
         const syncKey = `tobyswap:profile-synced:${address.toLowerCase()}:${Number(user.fid)}`;
         try {
-          if (sessionStorage.getItem(syncKey)) return;
+          const last = Number(localStorage.getItem(syncKey) || 0);
+          if (last && Date.now() - last < 24 * 60 * 60_000) return;
         } catch {}
 
         const response = await fetch("/api/profile/sync", {
@@ -50,7 +51,7 @@ export default function FarcasterProfileMemory() {
           }),
         });
         if (response.ok) {
-          try { sessionStorage.setItem(syncKey, "1"); } catch {}
+          try { localStorage.setItem(syncKey, String(Date.now())); } catch {}
         }
       } catch {
         // Cosmetic profile memory must never block swapping or Mini App startup.
