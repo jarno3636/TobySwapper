@@ -14,6 +14,7 @@ import LandGarden from "@/components/land/LandGarden";
 import LandRelics from "@/components/land/LandRelics";
 import LandProductionPlaceholder from "@/components/land/LandProductionPlaceholder";
 import LandShareActions from "@/components/land/LandShareActions";
+import LandExchangePreview from "@/components/world/LandExchangePreview";
 import LandCommunityProfile from "@/components/land/LandCommunityProfile";
 import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
@@ -145,6 +146,7 @@ export default function LandPage() {
             </div>
 
             <LandRelics toby={toby} patience={patience} taboshi={taboshi} oldLeaf={oldLeaf} seed={seed} />
+            <LandExchangePreview compact />
 
           </>
         )}
