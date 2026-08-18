@@ -5,9 +5,9 @@ import LinkMaybeMini from "@/components/LinkMaybeMini";
 
 const links = [
   {
-    eyebrow: "LORE POUCH",
-    title: "Seeds & Leaves",
-    copy: "Old leaves, new SEED, veiled Lore Deeds, and everything your wallet carries.",
+    eyebrow: "YOUR WORLD",
+    title: "My Tobyworld",
+    copy: "Your wallet profile—pouch, Seeds, relics, Lore Land, contributions and discoveries.",
     href: "/taboshi1",
     icon: "/seed.png",
     accent: "green",

@@ -35,7 +35,7 @@ function DockVisual({ item }: { item: (typeof items)[number] }) {
   return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/toby.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
 }
 
-export default function PondDock({ active = "swap" }: { active?: "swap" }) {
+export default function PondDock({ active }: { active?: "swap" }) {
   return (
     <nav className="pond-dock-wrap" aria-label="TobySwap shortcuts">
       <div className="pond-dock-shine" aria-hidden="true" />
