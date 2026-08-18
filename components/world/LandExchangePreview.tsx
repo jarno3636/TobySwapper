@@ -7,7 +7,7 @@ export default function LandExchangePreview({ compact = false }: { compact?: boo
       <div className="land-exchange-copy">
         <span>TOBYWORLD MARKET</span>
         <h2>SEED and land, one market.</h2>
-        <p>A simple Base marketplace for SEED, Old Lore Land, and Lore Land—with USDC, ETH, or TOBY payments.</p>
+        <p>A simple Base marketplace for SEED, Old Lore Land, and Canonical Lore Land—with USDC, ETH, or TOBY payments.</p>
       </div>
       <a href="/world/exchange">Open market →</a>
     </section>
