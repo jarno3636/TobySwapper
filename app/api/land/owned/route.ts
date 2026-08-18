@@ -25,15 +25,6 @@ async function profilesFor(tokenIds: string[]) {
   } catch { return new Map(); }
 }
 
-async function fallbackFromProfiles(owner: string) {
-  if (!hasSupabaseServerEnv()) return [];
-  try {
-    const rows = await supabaseRest<Array<{ token_id: string | number; community_name: string | null; banner_theme: string | null }>>(
-      `tobyswap_land_profiles?owner_address=eq.${encodeURIComponent(owner.toLowerCase())}&select=token_id,community_name,banner_theme&order=token_id.asc&limit=100`,
-    );
-    return rows.map((row) => ({ tokenId: String(row.token_id), communityName: row.community_name, bannerTheme: row.banner_theme }));
-  } catch { return []; }
-}
 
 export async function GET(request: Request) {
   const rawOwner = new URL(request.url).searchParams.get("owner") || "";
@@ -42,8 +33,7 @@ export async function GET(request: Request) {
   const key = process.env.ALCHEMY_API_KEY;
 
   if (!key) {
-    const deeds = await fallbackFromProfiles(owner);
-    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
+    return NextResponse.json({ deeds: [], complete: false }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   }
 
   try {
@@ -75,7 +65,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ deeds, complete: !pageKey }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch {
-    const deeds = await fallbackFromProfiles(owner);
-    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" } });
+    return NextResponse.json({ deeds: [], complete: false }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" } });
   }
 }
