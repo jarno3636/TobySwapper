@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createPublicClient, getAddress, http, isAddress, isHex, verifyMessage } from "viem";
+import { createPublicClient, getAddress, http, isAddress, isHex } from "viem";
 import { base } from "viem/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { landProfileMessage, normalizeLandTheme } from "@/lib/land-profile";
@@ -51,7 +51,27 @@ export async function POST(request: Request) {
     }
     if (!isHex(body.signature || "")) return NextResponse.json({ ok: false, error: "Invalid signature." }, { status: 400 });
     const message = landProfileMessage({ tokenId, communityName, description, bannerTheme, timestamp });
-    const valid = await verifyMessage({ address: signer, message, signature: body.signature });
+
+    // IMPORTANT: use the Public Client verification action instead of viem's
+    // standalone utility. Base App / Coinbase Smart Wallet can return ERC-1271
+    // or ERC-6492 smart-account signatures, which are not necessarily the
+    // standard 65-byte EOA signature shape. The standalone utility attempts to
+    // parse those as an EOA signature and can throw "invalid signature length".
+    // PublicClient.verifyMessage supports wallet/contract signature validation
+    // against Base while still working for normal EOA signatures.
+    let valid = false;
+    try {
+      valid = await client.verifyMessage({
+        address: signer,
+        message,
+        signature: body.signature,
+      });
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: "That wallet signature could not be verified. Please sign again." },
+        { status: 401 },
+      );
+    }
     if (!valid) return NextResponse.json({ ok: false, error: "The keeper signature did not match." }, { status: 401 });
 
     const owner = await client.readContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "ownerOf", args: [tokenId] });
