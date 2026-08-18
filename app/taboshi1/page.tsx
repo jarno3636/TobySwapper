@@ -106,10 +106,12 @@ async function loadSeedMetadata(uri: string | null, setter: (v: Metadata | null)
 
 function SeedArt({ name }: { image?: string | null; name?: string }) {
   return (
-    <img
+    <Image
       src="/seed.png"
       alt={name || "Taboshi Seed"}
-      className="taboshi1-real-art seedleaf-canonical-seed-art"
+      fill
+      sizes="(max-width: 680px) 180px, 220px"
+      className="taboshi1-real-art object-cover"
     />
   );
 }
@@ -253,7 +255,7 @@ export default function TaboshiOnePage() {
     { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
     { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
     { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
-    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: "/seed.png", value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
+    { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
     { key: "lore" as const, symbol: "LORE DEED", label: "Veiled land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
   ];
 
@@ -465,6 +467,19 @@ export default function TaboshiOnePage() {
             <div className="taboshi1-showcase seedleaf-seed-showcase"><div className="taboshi1-token-art seedleaf-seed-art"><SeedArt image={seedArtwork} name={seedMetadata?.name} /></div><div className="taboshi1-balance seedleaf-seed-balance"><small>IN YOUR POUCH</small><strong>{isConnected ? (seedBalanceRead.isLoading ? "…" : seedBalance.toLocaleString()) : "—"}</strong><span>SEED · the faucet's draw</span></div></div>
             <div className="lore-whisper"><span>✦</span><p>New seeds wake when the faucet runs. Supply grows only through the bound Faucet.</p></div>
             <div className="lore-mini-stats"><span><small>DRAWN</small><b>{seedSupply === null ? "—" : seedSupply.toLocaleString()}</b></span><span><small>FORM</small><b>WHOLE SEED</b></span></div>
+
+            <div className="seedleaf-faucet-callout">
+              <div className="seedleaf-faucet-copy">
+                <span className="seedleaf-faucet-kicker">THE FAUCET FLOWS</span>
+                <strong>A sip for every frog.</strong>
+                <p><b>Old frogs</b> can bring the old relic. <b>New frogs</b> can take their first sip. The faucet may not flow forever.</p>
+              </div>
+              <LinkMaybeMini href="https://tobyworld.app/faucet/" className="seedleaf-faucet-button">
+                <span className="seedleaf-faucet-button-art"><Image src="/seed.png" alt="" fill sizes="42px" className="object-cover" /></span>
+                <span><small>GET SEED</small><strong>Visit the Faucet</strong></span>
+                <b aria-hidden="true">↗</b>
+              </LinkMaybeMini>
+            </div>
           </article>
 
           <article className="taboshi1-card seedleaf-relic-card lore-relic-panel">
