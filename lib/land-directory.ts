@@ -2,18 +2,25 @@ export type WorldLandSummary = {
   tokenId: string;
   communityName: string | null;
   description: string | null;
-  bannerTheme: "moss" | "moon" | "lotus" | "ember";
-  ownerAddress: string | null;
+  bannerTheme: "moss" | "moon" | "lotus" | "ember" | "tide" | "dusk" | "bloom" | "gold";
   updatedAt: string | null;
 };
 
 let memory: { at: number; rows: WorldLandSummary[] } | null = null;
 let inflight: Promise<WorldLandSummary[]> | null = null;
 const MEMORY_MS = 20 * 60_000;
-const SESSION_KEY = "tobyswap:world-directory:v1";
+const SESSION_KEY = "tobyswap:world-directory:v2";
 
 function normalizeTheme(value: unknown): WorldLandSummary["bannerTheme"] {
-  return value === "moon" || value === "lotus" || value === "ember" ? value : "moss";
+  return value === "moon" ||
+    value === "lotus" ||
+    value === "ember" ||
+    value === "tide" ||
+    value === "dusk" ||
+    value === "bloom" ||
+    value === "gold"
+    ? value
+    : "moss";
 }
 
 function normalizeRows(input: unknown): WorldLandSummary[] {
@@ -24,7 +31,6 @@ function normalizeRows(input: unknown): WorldLandSummary[] {
       communityName: typeof (row?.community_name ?? row?.communityName) === "string" ? (row.community_name ?? row.communityName) : null,
       description: typeof row?.description === "string" ? row.description : null,
       bannerTheme: normalizeTheme(row?.banner_theme ?? row?.bannerTheme),
-      ownerAddress: typeof (row?.owner_address ?? row?.ownerAddress) === "string" ? (row.owner_address ?? row.ownerAddress) : null,
       updatedAt: typeof (row?.updated_at ?? row?.updatedAt) === "string" ? (row.updated_at ?? row.updatedAt) : null,
     }))
     .filter((row) => /^\d+$/.test(row.tokenId));
@@ -55,7 +61,7 @@ async function fetchDirectory(): Promise<WorldLandSummary[]> {
     let response: Response;
     if (url && key) {
       response = await fetch(
-        `${url}/rest/v1/tobyswap_land_profiles?select=token_id,owner_address,community_name,description,banner_theme,updated_at&order=updated_at.desc&limit=120`,
+        `${url}/rest/v1/tobyswap_land_profiles?select=token_id,community_name,description,banner_theme,updated_at&order=updated_at.desc&limit=120`,
         { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "force-cache" },
       );
     } else {
