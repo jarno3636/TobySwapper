@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
   if (!key) {
     const deeds = await fallbackFromProfiles(owner);
-    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
+    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   }
 
   try {
@@ -73,9 +73,9 @@ export async function GET(request: Request) {
       .sort((a, b) => Number(BigInt(a) - BigInt(b)))
       .map((tokenId) => ({ tokenId, communityName: profiles.get(tokenId)?.communityName || null, bannerTheme: profiles.get(tokenId)?.bannerTheme || "moss" }));
 
-    return NextResponse.json({ deeds, complete: !pageKey }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
+    return NextResponse.json({ deeds, complete: !pageKey }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch {
     const deeds = await fallbackFromProfiles(owner);
-    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=900" } });
+    return NextResponse.json({ deeds, complete: false }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" } });
   }
 }
