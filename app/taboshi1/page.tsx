@@ -41,6 +41,8 @@ import {
   LORE_COLLECTION_ADDRESS,
   LORE_DEEDS_ABI,
   LORE_INITIAL_SUPPLY,
+  LEGACY_LORE_DEED_ADDRESS,
+  LEGACY_LORE_DEED_ABI,
 } from "@/lib/lore-deeds";
 
 type TxState = "idle" | "sending" | "success" | "error";
@@ -199,6 +201,14 @@ export default function TaboshiOnePage() {
     chainId: base.id,
     query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
   });
+  const legacyLoreBalanceRead = useReadContract({
+    address: LEGACY_LORE_DEED_ADDRESS,
+    abi: LEGACY_LORE_DEED_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: base.id,
+    query: { enabled: Boolean(address), staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, retry: false },
+  });
   const loreRevealedRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
     abi: LORE_DEEDS_ABI,
@@ -244,6 +254,7 @@ export default function TaboshiOnePage() {
   const leafBalance = typeof leafBalanceRead.data === "bigint" ? leafBalanceRead.data : 0n;
   const seedBalance = typeof seedBalanceRead.data === "bigint" ? seedBalanceRead.data : 0n;
   const loreBalance = typeof loreBalanceRead.data === "bigint" ? loreBalanceRead.data : 0n;
+  const legacyLoreBalance = typeof legacyLoreBalanceRead.data === "bigint" ? legacyLoreBalanceRead.data : 0n;
   const seedSupply = typeof seedSupplyRead.data === "bigint" ? seedSupplyRead.data : null;
   const loreMinted = typeof loreMintedRead.data === "bigint" ? loreMintedRead.data : null;
   const loreCommunityMinted = typeof loreCommunityMintedRead.data === "bigint" ? loreCommunityMintedRead.data : null;
@@ -267,6 +278,7 @@ export default function TaboshiOnePage() {
     leaf: leafBalance > 0n,
     seed: seedBalance > 0n,
     lore: loreBalance > 0n,
+    legacyLore: legacyLoreBalance > 0n,
   };
 
   const profileSignals = [
@@ -275,7 +287,8 @@ export default function TaboshiOnePage() {
     { key: "taboshi", label: "TABOSHI", note: "Awakened leaf", icon: "/tokens/taboshi.PNG", found: holdingFlags.taboshi },
     { key: "leaf", label: "OLD LEAF", note: "History remembered", icon: leafArtwork || "/tokens/taboshi.PNG", found: holdingFlags.leaf },
     { key: "seed", label: "SEED", note: "Something planted", icon: "/seed.png", found: holdingFlags.seed },
-    { key: "lore", label: "LORE LAND", note: "A place in the world", icon: null, found: holdingFlags.lore },
+    { key: "legacyLore", label: "OLD LAND", note: "Legacy deed", icon: null, found: holdingFlags.legacyLore },
+    { key: "lore", label: "LORE LAND", note: "Canonical land", icon: null, found: holdingFlags.lore },
   ] as const;
 
   const foundSignals = profileSignals.filter((item) => item.found).length;
@@ -368,6 +381,7 @@ export default function TaboshiOnePage() {
       seedUriRead.refetch(),
       seedSupplyRead.refetch(),
       loreBalanceRead.refetch(),
+      legacyLoreBalanceRead.refetch(),
       loreRevealedRead.refetch(),
       loreMintedRead.refetch(),
       loreCommunityMintedRead.refetch(),
@@ -538,7 +552,7 @@ COMPLETION</span>
             {profileSignals.map((item, index) => (
               <div key={item.key} className={`mytw-path-node ${item.found ? "is-found" : ""}`}>
                 <span className="mytw-path-icon">
-                  {item.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : <img src={item.icon!} alt="" />}
+                  {item.key === "lore" ? <LoreDeedArt revealed={loreRevealed} /> : item.key === "legacyLore" ? <span className="mytw-legacy-land-icon">△</span> : <img src={item.icon!} alt="" />}
                 </span>
                 <b>{item.label}</b>
                 {index < profileSignals.length - 1 && <i aria-hidden="true">→</i>}
@@ -556,6 +570,7 @@ COMPLETION</span>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
+            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Land Exchange <small>preview</small></a></div>
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
               <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
@@ -614,8 +629,8 @@ COMPLETION</span>
             <div className="lore-whisper green"><span>◌</span><p>Before the seed, there was the leaf. An early relic carried forward from the first pond.</p></div>
           </article>
 
-          <article className="taboshi1-card seedleaf-relic-card lore-deed-card lore-relic-panel">
-            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">THE VEILED LAND</span><h2>Lore Land Deeds</h2></div><span className={`lore-soft-chip purple ${loreRevealed ? "is-live" : ""}`}>{loreRevealed ? "REVEALED" : "VEILED"}</span></div>
+          <article className="taboshi1-card seedleaf-relic-card lore-deed-card lore-relic-panel canonical-land-card">
+            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">CANONICAL LAND</span><h2>Lore Land Deeds</h2></div><span className={`lore-soft-chip purple ${loreRevealed ? "is-live" : ""}`}>{loreRevealed ? "REVEALED" : "VEILED"}</span></div>
             <div className="taboshi1-showcase lore-deed-showcase"><div className="taboshi1-token-art lore-deed-token"><LoreDeedArt revealed={loreRevealed} /></div><div className="taboshi1-balance lore-deed-balance"><small>DEEDS HELD</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><span>{loreRevealed ? "Lore · awakened land" : "Lore · reveal coming soon"}</span></div></div>
             <div className="lore-whisper purple"><span>△</span><p>{loreRevealed ? "The veil has lifted. Your deed remains the key to the land it carries." : "The deed exists before the landscape is known. The land waits behind the veil."}</p></div>
             <div className="lore-mini-stats"><span><small>COMMUNITY</small><b>{loreCommunityMinted === null ? "—" : loreCommunityMinted.toLocaleString()}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
@@ -667,8 +682,13 @@ COMPLETION</span>
                 <span className="seedleaf-selected-mark" aria-hidden="true">✓</span>
               </button>
             ))}
+            <div className={`seedleaf-asset-card legacy-land-asset ${legacyLoreBalance > 0n ? "is-held" : ""}`} aria-label="Old Lore Deed legacy asset">
+              <div className="seedleaf-asset-icon legacy-land-asset-icon"><span>△</span></div>
+              <div className="seedleaf-asset-copy"><span>Legacy land relic</span><strong>OLD LORE DEED</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
+              <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
+            </div>
           </div>
-          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector—tap an asset to choose it.</div>
+          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. The old land relic remains a completion tile; canonical Lore Land powers the land experience.</div>
         </section>
 
         <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
