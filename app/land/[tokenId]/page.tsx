@@ -14,6 +14,8 @@ import LandGarden from "@/components/land/LandGarden";
 import LandRelics from "@/components/land/LandRelics";
 import LandProductionPlaceholder from "@/components/land/LandProductionPlaceholder";
 import LandShareActions from "@/components/land/LandShareActions";
+import LandCommunityProfile from "@/components/land/LandCommunityProfile";
+import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI, resolveLoreUri } from "@/lib/lore-deeds";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
@@ -34,6 +36,7 @@ export default function LandPage() {
   const rawId = params?.tokenId || "";
   const tokenId = useMemo(() => (/^\d+$/.test(rawId) && BigInt(rawId) > 0n ? BigInt(rawId) : null), [rawId]);
   const [metadata, setMetadata] = useState<LoreMetadata | null>(null);
+  const [communityProfile, setCommunityProfile] = useState<LandProfile | null>(null);
 
   const ownerRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
@@ -105,7 +108,7 @@ export default function LandPage() {
       <main className="land-page mx-auto w-full max-w-5xl px-4 pb-32 pt-4 sm:px-6 sm:pt-6">
         <header className="land-topbar">
           <a href="/taboshi1" className="land-back">← My Tobyworld</a>
-          <span>PUBLIC LAND ENGINE · BASE</span>
+          <span>TOBYWORLD LAND</span>
         </header>
 
         {missing ? (
@@ -119,8 +122,8 @@ export default function LandPage() {
             <section className="land-hero">
               <div className="land-hero-copy">
                 <span className="land-section-kicker">A PLACE IN TOBYWORLD</span>
-                <h1>{metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
-                <p>{metadata?.description || (revealed ? "A canonical Lore Deed rendered through the TobySwap Land Engine." : "The deed is real. The landscape is still waiting for the canonical reveal.")}</p>
+                <h1>{communityProfile?.communityName || metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
+                <p>{communityProfile?.description || metadata?.description || (revealed ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
               <div className={`land-hero-art ${revealed ? "is-revealed" : ""}`}>
@@ -132,6 +135,8 @@ export default function LandPage() {
               </div>
             </section>
 
+            <LandCommunityProfile tokenId={tokenId!} owner={owner} onProfile={setCommunityProfile} />
+
             <LandIdentity tokenId={tokenId!} owner={owner} revealed={revealed} transferNonce={transferNonce} boundAccount={boundAccount} forge={forge} />
 
             <div className="land-two-column">
@@ -141,20 +146,6 @@ export default function LandPage() {
 
             <LandRelics toby={toby} patience={patience} taboshi={taboshi} oldLeaf={oldLeaf} seed={seed} />
 
-            <section className="land-discovery-module">
-              <div><span className="land-section-kicker">DISCOVERIES</span><h2>What the pond can verify</h2><p>These are observations from the current deed keeper&apos;s onchain state—not promises about future mechanics.</p></div>
-              <div className="land-discovery-list">
-                <span className={oldLeaf > 0n ? "is-found" : ""}>🍃 {oldLeaf > 0n ? "Old Leaf remembered" : "Old Leaf undiscovered"}</span>
-                <span className={seed > 0n ? "is-found" : ""}>🌱 {seed > 0n ? "SEED has taken root" : "The soil is quiet"}</span>
-                <span className={patience > 0n ? "is-found" : ""}>🔺 {patience > 0n ? "Patience carried" : "Patience awaits"}</span>
-                <span className={taboshi > 0n ? "is-found" : ""}>🐸 {taboshi > 0n ? "Taboshi discovered" : "Taboshi undiscovered"}</span>
-              </div>
-            </section>
-
-            <section className="land-world-next">
-              <span>WORLD LAYER</span><strong>This land page is the foundation.</strong><p>Community names, banners, visitors and exploration can layer on later without changing the canonical deed underneath.</p>
-              <a href="/taboshi1">Open My Tobyworld →</a>
-            </section>
           </>
         )}
       </main>
