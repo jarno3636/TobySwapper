@@ -108,7 +108,7 @@ export default function LandPage() {
       <main className="land-page mx-auto w-full max-w-5xl px-4 pb-32 pt-4 sm:px-6 sm:pt-6">
         <header className="land-topbar">
           <a href="/taboshi1" className="land-back">← My Tobyworld</a>
-          <span>TOBYWORLD LAND</span>
+          <a href="/world" className="land-world-link">Explore World ↗</a>
         </header>
 
         {missing ? (
@@ -150,7 +150,7 @@ export default function LandPage() {
         )}
       </main>
       <Footer />
-      <PondDock />
+      <PondDock active="world" />
     </MiniAppGate>
   );
 }
