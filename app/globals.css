@@ -1994,3 +1994,30 @@ button,a,select,input{touch-action:manipulation}
   .market-listing-tile{grid-template-columns:50px minmax(0,1fr)}
   .market-listing-tile>.market-asset-art{width:50px;height:50px}.market-listing-tile-price{grid-column:1/3;align-items:flex-start;min-width:0}.market-listing-tile-price strong{text-align:left}.market-listing-tile button{grid-column:1/3}
 }
+
+
+/* World atlas mirrors every land identity mood. */
+.world-land-card.theme-tide .world-land-scene{
+  background:linear-gradient(180deg,#d9fbf7 0 53%,#52c9c8 54%,#176d88 100%)
+}
+.world-land-card.theme-dusk .world-land-scene{
+  background:linear-gradient(180deg,#ddd1fa 0 53%,#7d78ad 54%,#2c3d68 100%)
+}
+.world-land-card.theme-bloom .world-land-scene{
+  background:linear-gradient(180deg,#ffe7f0 0 53%,#9ed9b7 54%,#4ca88d 100%)
+}
+.world-land-card.theme-gold .world-land-scene{
+  background:linear-gradient(180deg,#fff0bd 0 53%,#c8b768 54%,#59694e 100%)
+}
+.world-land-card.theme-tide .world-land-moon{background:#efffff;box-shadow:0 0 28px rgba(164,255,245,.72)}
+.world-land-card.theme-dusk .world-land-moon{background:#f7ebff;box-shadow:0 0 30px rgba(204,183,255,.70)}
+.world-land-card.theme-bloom .world-land-moon{background:#fff7df;box-shadow:0 0 28px rgba(255,186,213,.72)}
+.world-land-card.theme-gold .world-land-moon{background:#fff5b5;box-shadow:0 0 30px rgba(255,211,92,.76)}
+.world-land-card.theme-tide .world-land-hill{background:rgba(42,123,102,.70)}
+.world-land-card.theme-tide .world-land-hill.h2{background:rgba(36,139,112,.76)}
+.world-land-card.theme-dusk .world-land-hill{background:rgba(68,79,103,.76)}
+.world-land-card.theme-dusk .world-land-hill.h2{background:rgba(69,92,99,.80)}
+.world-land-card.theme-bloom .world-land-hill{background:rgba(85,142,93,.72)}
+.world-land-card.theme-bloom .world-land-hill.h2{background:rgba(113,159,91,.80)}
+.world-land-card.theme-gold .world-land-hill{background:rgba(91,110,61,.76)}
+.world-land-card.theme-gold .world-land-hill.h2{background:rgba(104,120,66,.82)}
