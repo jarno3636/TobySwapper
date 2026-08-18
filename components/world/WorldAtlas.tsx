@@ -34,7 +34,7 @@ export default function WorldAtlas() {
       </section>
 
       <section className="world-atlas-section">
-        <div className="world-atlas-head"><div><span>COMMUNITY LANDS</span><h2>{loading ? "Opening the atlas…" : `${filtered.length} place${filtered.length === 1 ? "" : "s"} to explore`}</h2></div><div className="world-atlas-head-actions"><a href="/taboshi1#land">My Land</a><a href="/world/exchange" className="is-exchange">Land Exchange</a></div></div>
+        <div className="world-atlas-head"><div><span>COMMUNITY LANDS</span><h2>{loading ? "Opening the atlas…" : `${filtered.length} place${filtered.length === 1 ? "" : "s"} to explore`}</h2></div><div className="world-atlas-head-actions"><a href="/taboshi1#land">My Land</a><a href="/world/exchange" className="is-exchange">Market</a></div></div>
         {!loading && filtered.length === 0 ? (
           <div className="world-empty"><span>△</span><h3>{lands.length === 0 ? "The atlas is waiting for its first names." : "No land matched that trail."}</h3><p>{lands.length === 0 ? "Landowners can name their place from their public land page." : "Try a deed number, land name, or keeper address."}</p></div>
         ) : (

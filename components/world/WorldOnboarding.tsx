@@ -43,7 +43,7 @@ export default function WorldOnboarding() {
         <div>
           <span className="land-section-kicker">FIND YOUR PLACE</span>
           <h2>{!isConnected ? "A new frog enters the world." : ownsLand ? `Your ${landCount === 1n ? "land is" : "lands are"} waiting.` : "Every frog starts somewhere."}</h2>
-          <p>{!isConnected ? "Explore first. Connect when you are ready to see what your wallet carries." : ownsLand ? `You carry ${landCount.toLocaleString()} canonical Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to see each deed number and visit your places.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Wander the atlas, tend your visual garden, or enter the pond.` : "Wander community lands, take a sip from the Faucet, or enter the pond. There is no required path."}</p>
+          <p>{!isConnected ? "Explore first. Connect when you are ready to see what your wallet carries." : ownsLand ? `You carry ${landCount.toLocaleString()} Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to see each deed number and visit your places.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Wander the atlas, tend your visual garden, or enter the pond.` : "Wander community lands, take a sip from the Faucet, or enter the pond. There is no required path."}</p>
         </div>
       </div>
 
