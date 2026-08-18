@@ -1,4 +1,4 @@
-export type LandBannerTheme = "moss" | "moon" | "lotus" | "ember";
+export type LandBannerTheme = "moss" | "moon" | "lotus" | "ember" | "tide" | "dusk" | "bloom" | "gold";
 
 export type LandCommunityProfile = {
   tokenId: string;
@@ -8,7 +8,7 @@ export type LandCommunityProfile = {
   updatedAt: string | null;
 };
 
-const THEMES: LandBannerTheme[] = ["moss", "moon", "lotus", "ember"];
+const THEMES: LandBannerTheme[] = ["moss", "moon", "lotus", "ember", "tide", "dusk", "bloom", "gold"];
 const memory = new Map<string, { at: number; profile: LandCommunityProfile | null }>();
 const MEMORY_MS = 15 * 60_000;
 
