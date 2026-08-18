@@ -5,11 +5,11 @@ export default function LandProductionPlaceholder({ revealed }: { revealed: bool
     <section className="land-module land-production-module">
       <div className="land-production-rune" aria-hidden="true">△</div>
       <div>
-        <span className="land-section-kicker">PRODUCTION</span>
-        <h2>{revealed ? "The land is revealed. Its economy is not assumed." : "Awaiting the pond"}</h2>
-        <p>When canonical contracts expose production, claim, harvest, epoch, rate, reward, or related mechanics, this module can plug into those real rules. Until then, nothing is invented.</p>
+        <span className="land-section-kicker">BEYOND THE VEIL</span>
+        <h2>{revealed ? "Something still sleeps beneath the land" : "The land keeps a secret"}</h2>
+        <p>The next part of this place has not been revealed. For now, the garden grows only in how it is seen.</p>
       </div>
-      <span className="land-production-status">CANONICAL ONLY</span>
+      <span className="land-production-status">NOT YET REVEALED</span>
     </section>
   );
 }

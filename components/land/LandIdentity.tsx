@@ -34,8 +34,8 @@ export default function LandIdentity({
 
       <div className="land-identity-grid">
         <div><small>KEEPER</small><strong>{shortAddress(owner)}</strong></div>
-        <div><small>GENERATION</small><strong>{transferNonce === undefined ? "…" : transferNonce.toLocaleString()}</strong></div>
-        <div><small>BOUND ACCOUNT</small><strong>{shortAddress(boundAccount)}</strong></div>
+        <div><small>TRAVELS</small><strong>{transferNonce === undefined ? "…" : transferNonce.toLocaleString()}</strong></div>
+        <div><small>LAND VAULT</small><strong>{shortAddress(boundAccount)}</strong></div>
         <div><small>GENESIS FORGE</small><strong>{forge ? "BOUND" : "WAITING"}</strong></div>
       </div>
     </section>

@@ -35,7 +35,7 @@ export default function LandRelics({
 
   return (
     <section className="land-module land-relics-module">
-      <div className="land-module-head"><div><span className="land-section-kicker">WHAT THIS LAND CARRIES</span><h2>Relics & signals</h2></div><span className="land-live-chip">LIVE · BASE</span></div>
+      <div className="land-module-head"><div><span className="land-section-kicker">KEEPER&apos;S POUCH</span><h2>Relics & signals</h2></div><span className="land-live-chip">CARRIED HERE</span></div>
       <div className="land-relic-grid">
         {items.map((item) => (
           <article key={item.label} className="land-relic-tile">

@@ -38,7 +38,7 @@ export default function LandGarden({ seedBalance }: { seedBalance: bigint }) {
       <div className="land-garden-copy">
         <strong>{stage.label}</strong>
         <p>{stage.copy}</p>
-        <small>Visual progression only · based on the keeper&apos;s live SEED balance · not yield or production.</small>
+        <small>A visual garden shaped by the SEED carried by this keeper.</small>
       </div>
       <div className="land-question"><span>?</span><div><b>What will grow here?</b><small>The pond has not revealed everything yet.</small></div></div>
     </section>
