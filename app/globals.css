@@ -1425,10 +1425,104 @@ html { scroll-behavior: smooth; }
 }
 
 
-/* Canonical SEED artwork — local /public/seed.png */
-.hero-cta-seeds{background:radial-gradient(circle at 12% 50%,rgba(25,188,190,.10),transparent 24%),linear-gradient(145deg,#fff 0%,#eefbfa 58%,#e7f7ed 100%)!important;border-color:rgba(32,151,142,.22)!important}
-.hero-cta-seeds .hero-cta-seed-icon{position:relative;overflow:hidden;padding:0;background:#08263a!important;border-color:rgba(33,170,164,.24)!important;box-shadow:inset 0 2px 2px rgba(255,255,255,.5),0 5px 12px rgba(20,103,111,.16)!important}
-.hero-cta-seeds .hero-cta-seed-icon img{object-fit:cover;transform:scale(1.06)}
-.hero-cta-seeds strong{color:#164a51}
-.seedleaf-canonical-seed-art{object-fit:cover!important;background:#08263a}
-.seedleaf-seed-art,.seeds-leaves-disc{overflow:hidden}
+/* Seeds & Leaves — Faucet path */
+.hero-cta-seed-art{
+  position:relative!important;
+  display:block;
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  overflow:hidden;
+  border-radius:14px;
+  background:#092e3d;
+  border:1px solid rgba(24,124,119,.20);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 7px 16px rgba(19,91,93,.16);
+}
+.hero-cta-relic{
+  background:
+    radial-gradient(circle at 90% 12%,rgba(81,218,179,.18),transparent 28%),
+    linear-gradient(145deg,#fff 0%,#f2fbf8 58%,#e7f7f1 100%)!important;
+  border-color:rgba(38,145,116,.20)!important;
+}
+
+.seedleaf-faucet-callout{
+  position:relative;
+  overflow:hidden;
+  margin-top:14px;
+  padding:14px;
+  border:1px solid rgba(44,139,119,.17);
+  border-radius:20px;
+  background:
+    radial-gradient(circle at 100% 0,rgba(63,211,184,.17),transparent 36%),
+    linear-gradient(145deg,rgba(255,255,255,.96),rgba(238,250,246,.94));
+  box-shadow:inset 0 1px 0 #fff,0 10px 24px rgba(18,73,76,.08);
+}
+.seedleaf-faucet-callout:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(115deg,transparent 0 43%,rgba(255,255,255,.58) 49%,transparent 56%);
+  transform:translateX(-90%);
+  animation:loreShine 9s ease-in-out infinite;
+}
+.seedleaf-faucet-copy{position:relative;z-index:1}
+.seedleaf-faucet-kicker{
+  display:block;
+  margin-bottom:3px;
+  color:#32826e;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.16em;
+}
+.seedleaf-faucet-copy>strong{
+  display:block;
+  color:#0b3945;
+  font-size:15px;
+  letter-spacing:-.02em;
+}
+.seedleaf-faucet-copy p{
+  margin:5px 0 0;
+  color:#657d82;
+  font-size:10px;
+  line-height:1.5;
+}
+.seedleaf-faucet-copy p b{color:#285c60}
+.seedleaf-faucet-button{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin-top:11px;
+  padding:9px 11px;
+  color:#0b3945;
+  text-decoration:none;
+  border:1px solid rgba(31,112,103,.18);
+  border-radius:16px;
+  background:linear-gradient(180deg,#fff 0%,#f8fffd 50%,#dff5ee 100%);
+  box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(31,112,103,.08),0 7px 14px rgba(16,77,78,.10);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.seedleaf-faucet-button:hover{transform:translateY(-1px);box-shadow:inset 0 2px 0 #fff,0 10px 20px rgba(16,77,78,.14)}
+.seedleaf-faucet-button:active{transform:translateY(1px)}
+.seedleaf-faucet-button-art{
+  position:relative;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  overflow:hidden;
+  border-radius:13px;
+  background:#092e3d;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 5px 10px rgba(11,62,69,.16);
+}
+.seedleaf-faucet-button>span:nth-child(2){display:flex;min-width:0;flex:1;flex-direction:column}
+.seedleaf-faucet-button small{color:#399078;font-size:8px;font-weight:950;letter-spacing:.13em}
+.seedleaf-faucet-button strong{margin-top:1px;font-size:12px}
+.seedleaf-faucet-button>b{font-size:17px;color:#2c9d82}
+@media(max-width:680px){
+  .seedleaf-faucet-callout{border-radius:18px}
+  .seedleaf-faucet-button{min-height:58px}
+}
+@media(prefers-reduced-motion:reduce){.seedleaf-faucet-callout:before{animation:none}}
