@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSiteUrl, getMiniUrl } from "@/lib/fc";
+import { getCachedBurnTotal } from "@/lib/server/burn-total";
 
 function compact(n: number) {
   if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.00$/, "") + "B";
@@ -8,17 +9,16 @@ function compact(n: number) {
   return String(n);
 }
 
-async function liveLine(site: string, token = "$TOBY") {
+async function liveLine(_site: string, token = "$TOBY") {
   try {
-    const res = await fetch(`${site}/api/burn/total`, { cache: "no-store" });
-    const j = await res.json();
-    if (j?.ok && j.totalHuman) {
-      const n = Number.parseFloat(j.totalHuman);
-      const pretty = Number.isFinite(n) ? compact(n) : j.totalHuman;
+    const total = await getCachedBurnTotal();
+    if (total?.totalHuman) {
+      const n = Number.parseFloat(total.totalHuman);
+      const pretty = Number.isFinite(n) ? compact(n) : total.totalHuman;
       return `🔥 I just helped burn ${pretty} ${token}. Swap → burn → spread the lore 🐸`;
     }
   } catch {}
-  return `🔥 Swap on TobySwap (Base). 1% auto-burn to ${token}. Spread the lore 🐸`;
+  return `🔥 Swap on TobySwap (Base). Spread the lore 🐸`;
 }
 
 export async function POST(req: Request) {
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       {
         version: "next",
         title: "Spread the Lore 🌀",
-        image: `${site}/api/frame/image`,
+        image: `${site}/og/tobyswap-card-1200x630.png`,
         imageAlt: "Share on Farcaster",
         buttons: [
           { label: "Open Composer", action: { type: "launch_url", url: farcasterHref } },
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       {
         version: "next",
         title: "Share to X 𝕏",
-        image: `${site}/api/frame/image`,
+        image: `${site}/og/tobyswap-card-1200x630.png`,
         imageAlt: "Share on X / Twitter",
         buttons: [
           { label: "Open Composer", action: { type: "launch_url", url: xHref } },
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       {
         version: "next",
         title: "🔥 Burn More, Swap More",
-        image: `${site}/api/frame/image`,
+        image: `${site}/og/tobyswap-card-1200x630.png`,
         imageAlt: "Keep the flames going — swap & burn to $TOBY.",
         buttons: [
           // IMPORTANT: use Mini App URL so it opens in-app
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     {
       version: "next",
       title: "Toby Swapper 🔥",
-      image: `${site}/api/frame/image`,
+      image: `${site}/og/tobyswap-card-1200x630.png`,
       imageAlt: "Swap. Burn. Spread the Lore.",
       buttons: [
         { label: "Spread the Lore",   action: "post" },
