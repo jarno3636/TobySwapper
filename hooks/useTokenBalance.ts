@@ -64,7 +64,7 @@ export function useTokenBalance(
       enabled: Boolean(userCS),
       // Balances are refreshed after writes and by the explicit wallet refresh UI.
       // A slow safety poll is enough and keeps RPC/provider load sane.
-      refetchInterval: 120_000,
+      refetchInterval: 180_000,
       refetchIntervalInBackground: false,
       staleTime: 30_000,
       refetchOnWindowFocus: false,
@@ -86,7 +86,7 @@ export function useTokenBalance(
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!userCS || !client) return;
+      if (!userCS || !client || isFetching) return;
 
       // If wagmi gave us both value & decimals, no fallback needed
       if (data?.value !== undefined && data?.decimals !== undefined) {
@@ -101,27 +101,20 @@ export function useTokenBalance(
           if (!cancelled) setFallback({ value: raw, decimals: 18 });
         } else {
           // ERC-20
-          const [raw, dec] = await Promise.all([
-            client.readContract({
-              address: tokenCS,        // 👈 checksummed
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: [userCS],
-            }) as Promise<bigint>,
-            client.readContract({
-              address: tokenCS,        // 👈 checksummed
-              abi: erc20Abi,
-              functionName: "decimals",
-            }) as Promise<number>,
-          ]);
-          if (!cancelled) setFallback({ value: raw, decimals: dec });
+          const raw = await client.readContract({
+            address: tokenCS,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [userCS],
+          }) as bigint;
+          if (!cancelled) setFallback({ value: raw, decimals: knownDecimals(token) });
         }
       } catch {
         if (!cancelled) setFallback({});
       }
     })();
     return () => { cancelled = true; };
-  }, [client, userCS, tokenCS, chainId, data?.value, data?.decimals, scopeKey]);
+  }, [client, userCS, tokenCS, chainId, data?.value, data?.decimals, scopeKey, isFetching, token]);
 
   const decimals = data?.decimals ?? fallback.decimals ?? knownDecimals(token);
 
