@@ -36,6 +36,34 @@ export const LORE_DEEDS_ABI = [
   },
   {
     type: "function",
+    name: "tokenURI",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "string" }],
+  },
+  {
+    type: "function",
+    name: "transferNonce",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "accountOf",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "communityMinter",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
     name: "revealed",
     stateMutability: "view",
     inputs: [],
@@ -66,3 +94,13 @@ export const LORE_DEEDS_ABI = [
 
 /** Treasury + AMM reserve minted before the community mint opened. */
 export const LORE_INITIAL_SUPPLY = 1500n;
+
+
+export function resolveLoreUri(value?: string | null) {
+  if (!value) return null;
+  const v = value.trim();
+  if (v.startsWith("ipfs://ipfs/")) return `https://cloudflare-ipfs.com/ipfs/${v.slice(12)}`;
+  if (v.startsWith("ipfs://")) return `https://cloudflare-ipfs.com/ipfs/${v.slice(7)}`;
+  if (v.startsWith("ar://")) return `https://arweave.net/${v.slice(5)}`;
+  return v;
+}
