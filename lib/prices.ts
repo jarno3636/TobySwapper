@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type PriceMap = Record<string, number>;
-const TTL_MS = 5 * 60_000;
+const TTL_MS = 15 * 60_000;
 
 // Type guard so TS knows items are strings after filtering
 const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;

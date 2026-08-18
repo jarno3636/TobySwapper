@@ -10,7 +10,7 @@ export type LandCommunityProfile = {
 
 const THEMES: LandBannerTheme[] = ["moss", "moon", "lotus", "ember"];
 const memory = new Map<string, { at: number; profile: LandCommunityProfile | null }>();
-const MEMORY_MS = 5 * 60_000;
+const MEMORY_MS = 15 * 60_000;
 
 export function normalizeLandTheme(value: unknown): LandBannerTheme {
   return THEMES.includes(value as LandBannerTheme) ? (value as LandBannerTheme) : "moss";
@@ -29,7 +29,7 @@ export async function readPublicLandProfile(tokenId: bigint): Promise<LandCommun
     if (url && key) {
       response = await fetch(
         `${url}/rest/v1/tobyswap_land_profiles?token_id=eq.${cacheKey}&select=token_id,community_name,description,banner_theme,updated_at&limit=1`,
-        { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store" },
+        { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "force-cache" },
       );
     } else {
       response = await fetch(`/api/land/profile?tokenId=${encodeURIComponent(cacheKey)}`, { cache: "force-cache" });

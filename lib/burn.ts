@@ -1,33 +1,52 @@
-// lib/burn.ts
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+"use client";
 
-type BurnResp = { ok: boolean; totalHuman: string };
+import { useEffect } from "react";
+import { formatUnits } from "viem";
+import { useReadContract } from "wagmi";
+import { base } from "wagmi/chains";
+import { SWAPPER } from "@/lib/addresses";
 
-async function fetchBurnTotal(): Promise<string | null> {
-  const r = await fetch(`/api/burn/total`, { cache: "force-cache" });
-  const j = (await r.json()) as BurnResp;
-  if (!j?.ok) return null;
-  // totalHuman might be "123,456.78" or plain; normalize to a string we can show
-  return j.totalHuman ?? null;
-}
+const BURN_ABI = [
+  { type: "function", name: "totalTobyBurned", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+] as const;
 
-export const BURN_TOTAL_QK = ["burnTotal"] as const;
-
+/**
+ * Burn total is read directly from Base in the browser. This intentionally avoids
+ * a TobySwap/Vercel API hop for a value that already lives onchain.
+ */
 export function useBurnTotal() {
-  return useQuery({
-    queryKey: BURN_TOTAL_QK,
-    queryFn: fetchBurnTotal,
-    // Public aggregate: it does not need a request every 15 seconds per visitor.
-    staleTime: 5 * 60_000,
-    refetchInterval: 5 * 60_000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
+  const read = useReadContract({
+    address: SWAPPER,
+    abi: BURN_ABI,
+    functionName: "totalTobyBurned",
+    chainId: base.id,
+    query: {
+      staleTime: 5 * 60_000,
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    },
   });
+
+  useEffect(() => {
+    const refresh = () => { void read.refetch(); };
+    window.addEventListener("tobyswap:burn-updated", refresh);
+    window.addEventListener("tobyswap:burn-display-refresh", refresh);
+    return () => {
+      window.removeEventListener("tobyswap:burn-updated", refresh);
+      window.removeEventListener("tobyswap:burn-display-refresh", refresh);
+    };
+  }, [read.refetch]);
+
+  return {
+    ...read,
+    data: typeof read.data === "bigint" ? formatUnits(read.data, 18) : null,
+  };
 }
 
-// Optional: handy helper to invalidate from anywhere (e.g., after a swap succeeds)
 export function useInvalidateBurnTotal() {
-  const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: BURN_TOTAL_QK });
+  return () => {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("tobyswap:burn-display-refresh"));
+  };
 }

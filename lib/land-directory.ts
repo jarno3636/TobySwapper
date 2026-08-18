@@ -33,7 +33,7 @@ function normalizeRows(input: unknown): WorldLandSummary[] {
 function readSession() {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { at?: number; rows?: unknown };
     if (typeof parsed.at !== "number" || Date.now() - parsed.at >= MEMORY_MS) return null;
@@ -44,7 +44,7 @@ function readSession() {
 
 function writeSession(rows: WorldLandSummary[]) {
   if (typeof window === "undefined") return;
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ at: Date.now(), rows })); } catch {}
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ at: Date.now(), rows })); } catch {}
 }
 
 async function fetchDirectory(): Promise<WorldLandSummary[]> {
