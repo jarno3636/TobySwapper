@@ -104,3 +104,17 @@ export function resolveLoreUri(value?: string | null) {
   if (v.startsWith("ar://")) return `https://arweave.net/${v.slice(5)}`;
   return v;
 }
+
+/** Legacy / pre-canonical Lore land relic supplied earlier in the ecosystem. */
+export const LEGACY_LORE_DEED_ADDRESS = LORE_SYSTEM_ADDRESS;
+
+/** Only the tiny read surface we need for asset-completion UI. */
+export const LEGACY_LORE_DEED_ABI = [
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;

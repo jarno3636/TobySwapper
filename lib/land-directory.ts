@@ -8,7 +8,9 @@ export type WorldLandSummary = {
 };
 
 let memory: { at: number; rows: WorldLandSummary[] } | null = null;
-const MEMORY_MS = 10 * 60_000;
+let inflight: Promise<WorldLandSummary[]> | null = null;
+const MEMORY_MS = 20 * 60_000;
+const SESSION_KEY = "tobyswap:world-directory:v1";
 
 function normalizeTheme(value: unknown): WorldLandSummary["bannerTheme"] {
   return value === "moon" || value === "lotus" || value === "ember" ? value : "moss";
@@ -28,9 +30,24 @@ function normalizeRows(input: unknown): WorldLandSummary[] {
     .filter((row) => /^\d+$/.test(row.tokenId));
 }
 
-export async function readWorldLandDirectory(): Promise<WorldLandSummary[]> {
-  if (memory && Date.now() - memory.at < MEMORY_MS) return memory.rows;
+function readSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: number; rows?: unknown };
+    if (typeof parsed.at !== "number" || Date.now() - parsed.at >= MEMORY_MS) return null;
+    const rows = normalizeRows(parsed.rows);
+    return { at: parsed.at, rows };
+  } catch { return null; }
+}
 
+function writeSession(rows: WorldLandSummary[]) {
+  if (typeof window === "undefined") return;
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ at: Date.now(), rows })); } catch {}
+}
+
+async function fetchDirectory(): Promise<WorldLandSummary[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -49,8 +66,18 @@ export async function readWorldLandDirectory(): Promise<WorldLandSummary[]> {
     const body = await response.json();
     const rows = normalizeRows(Array.isArray(body) ? body : body?.lands);
     memory = { at: Date.now(), rows };
+    writeSession(rows);
     return rows;
   } catch {
     return memory?.rows || [];
   }
+}
+
+export async function readWorldLandDirectory(): Promise<WorldLandSummary[]> {
+  if (memory && Date.now() - memory.at < MEMORY_MS) return memory.rows;
+  const session = readSession();
+  if (session) { memory = session; return session.rows; }
+  if (inflight) return inflight;
+  inflight = fetchDirectory().finally(() => { inflight = null; });
+  return inflight;
 }
