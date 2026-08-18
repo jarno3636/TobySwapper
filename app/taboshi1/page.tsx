@@ -268,7 +268,7 @@ export default function TaboshiOnePage() {
     { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
     { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
     { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
-    { key: "lore" as const, symbol: "LORE DEED", label: "Veiled land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
+    { key: "lore" as const, symbol: "LORE DEED", label: "Lore land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
   ];
 
   const holdingFlags = {
@@ -287,8 +287,8 @@ export default function TaboshiOnePage() {
     { key: "taboshi", label: "TABOSHI", note: "Awakened leaf", icon: "/tokens/taboshi.PNG", found: holdingFlags.taboshi },
     { key: "leaf", label: "OLD LEAF", note: "History remembered", icon: leafArtwork || "/tokens/taboshi.PNG", found: holdingFlags.leaf },
     { key: "seed", label: "SEED", note: "Something planted", icon: "/seed.png", found: holdingFlags.seed },
-    { key: "legacyLore", label: "OLD LAND", note: "Legacy deed", icon: null, found: holdingFlags.legacyLore },
-    { key: "lore", label: "LORE LAND", note: "Canonical land", icon: null, found: holdingFlags.lore },
+    { key: "legacyLore", label: "OLD LAND", note: "Earlier land", icon: null, found: holdingFlags.legacyLore },
+    { key: "lore", label: "LORE LAND", note: "Your place", icon: null, found: holdingFlags.lore },
   ] as const;
 
   const foundSignals = profileSignals.filter((item) => item.found).length;
@@ -570,7 +570,7 @@ COMPLETION</span>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>STATE</small><b>{loreRevealed ? "REVEALED" : "VEILED"}</b></span><span><small>SUPPLY</small><b>{loreSupply === null ? "—" : loreSupply.toLocaleString()}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
-            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Land Exchange <small>preview</small></a></div>
+            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Tobyworld Market <small>preview</small></a></div>
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
               <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
@@ -688,7 +688,7 @@ COMPLETION</span>
               <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
             </div>
           </div>
-          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. The old land relic remains a completion tile; canonical Lore Land powers the land experience.</div>
+          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. Old Lore Land stays with your collected assets. Lore Land is the deed that opens your place in the World.</div>
         </section>
 
         <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
