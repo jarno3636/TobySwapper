@@ -162,7 +162,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI1_TOKEN_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
+    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
   });
   const leafUriRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -177,7 +177,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI_SEED_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
+    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
   });
   const seedUriRead = useReadContract({
     address: TABOSHI_SEEDS_ADDRESS,
@@ -198,7 +198,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false },
+    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
   });
   const legacyLoreBalanceRead = useReadContract({
     address: LEGACY_LORE_DEED_ADDRESS,
@@ -206,7 +206,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, retry: false },
+    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true, retry: false },
   });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
