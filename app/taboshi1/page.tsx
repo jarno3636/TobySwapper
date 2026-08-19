@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Address } from "viem";
 import { erc20Abi, formatUnits, getAddress, isAddress, parseUnits } from "viem";
@@ -151,6 +152,7 @@ export default function TaboshiOnePage() {
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [message, setMessage] = useState("");
   const [syncingWallet, setSyncingWallet] = useState(false);
+  const [reconnectingWallet, setReconnectingWallet] = useState(false);
   const [refreshCooling, setRefreshCooling] = useState(false);
   const refreshCooldownRef = useRef<number | null>(null);
   const refreshLockUntilRef = useRef(0);
@@ -445,6 +447,40 @@ export default function TaboshiOnePage() {
     } catch {}
   }, []);
 
+  async function reconnectWalletSession() {
+    if (reconnectingWallet) return;
+    setReconnectingWallet(true);
+    setSyncMessage("Reconnecting to the Base wallet…");
+
+    const target = connector || connectors.find((item) =>
+      String(item.id).toLowerCase().includes("coinbase") ||
+      String(item.name || "").toLowerCase().includes("coinbase") ||
+      String(item.id).toLowerCase().includes("injected")
+    ) || connectors[0];
+
+    try {
+      if (connector) {
+        try { await disconnectAsync({ connector }); } catch {}
+      } else {
+        try { await disconnectAsync(); } catch {}
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      if (!target) throw new Error("No wallet connector is available.");
+      await connectAsync({ connector: target });
+      setSyncMessage("Wallet reconnected. Refreshing your pouch…");
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      await refreshAll();
+      window.dispatchEvent(new CustomEvent("tobyswap:wallet-data-refreshed", { detail: { at: Date.now(), reconnect: true } }));
+      setSyncMessage("Wallet reconnected ✓");
+    } catch (error: any) {
+      const text = String(error?.shortMessage || error?.message || "");
+      setSyncMessage(/reject|denied|cancel/i.test(text) ? "Wallet reconnect was cancelled." : "Reconnect did not finish. Tap Connect and choose your Base wallet.");
+    } finally {
+      setReconnectingWallet(false);
+      window.setTimeout(() => setSyncMessage(""), 3500);
+    }
+  }
+
   async function syncWalletAndHoldings() {
     const now = Date.now();
     if (syncingWallet || refreshCooling || now < refreshLockUntilRef.current) return;
@@ -559,10 +595,10 @@ export default function TaboshiOnePage() {
         </section>
 
         <nav className="mytw-world-nav" aria-label="My Tobyworld sections">
-          <a href="/#swap"><span>↔</span><b>POND</b><small>Swap & contribute</small></a>
+          <Link prefetch={false} href="/#swap"><span>↔</span><b>POND</b><small>Swap & contribute</small></Link>
           <a href="#pouch"><span>◉</span><b>POUCH</b><small>What you carry</small></a>
           <a href="#land"><span>△</span><b>LAND</b><small>Your place</small></a>
-          <a href="/world"><span>✦</span><b>WORLD</b><small>Visit & explore</small></a>
+          <Link prefetch={false} href="/world"><span>✦</span><b>WORLD</b><small>Visit & explore</small></Link>
         </nav>
 
         <section className="mytw-profile-card" aria-label="Your Tobyworld profile">
@@ -602,8 +638,8 @@ COMPLETION</span>
             <div className="mytw-land-stats"><span><small>COLLECTION</small><b>CANONICAL</b></span><span><small>DEEDS HELD</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
             <div className="mytw-land-quicklinks">
-              <a href="/world">Explore World</a>
-              <a href="/world/exchange">Tobyworld Market <small>live</small></a>
+              <Link prefetch={false} href="/world">Explore World</Link>
+              <Link prefetch={false} href="/world/exchange">Tobyworld Market <small>live</small></Link>
               <a href="#wallet-viewer" className="mytw-manual-wallet-link">View a wallet manually <small>no connect</small></a>
             </div>
             <div className="mytw-land-engine-launch">
@@ -641,7 +677,7 @@ COMPLETION</span>
               <span><b>SEED held</b><em>{isConnected ? seedBalance.toLocaleString() : "—"}</em></span>
               <span><b>Lore Land</b><em>{isConnected ? loreBalance.toLocaleString() : "—"}</em></span>
             </div>
-            <a href="/#swap" className="mytw-inline-action">Contribute through the Pond →</a>
+            <Link prefetch={false} href="/#swap" className="mytw-inline-action">Contribute through the Pond →</Link>
           </article>
 
 
@@ -712,10 +748,15 @@ COMPLETION</span>
           <>
             <div className="taboshi1-owner seedleaf-owner seedleaf-wallet-sync-row">
               <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
-              <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-busy={syncingWallet}>
-                <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
-                {syncingWallet ? "Refreshing…" : refreshCooling ? "Refreshed" : "Refresh pouch"}
-              </button>
+              <div className="seedleaf-wallet-session-actions">
+                <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling || reconnectingWallet} aria-busy={syncingWallet}>
+                  <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
+                  {syncingWallet ? "Refreshing…" : refreshCooling ? "Refreshed" : "Refresh pouch"}
+                </button>
+                <button type="button" className="seedleaf-reconnect-button" onClick={reconnectWalletSession} disabled={reconnectingWallet || syncingWallet}>
+                  {reconnectingWallet ? "Reconnecting…" : "Reconnect wallet"}
+                </button>
+              </div>
             </div>
             {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
             {address ? (
