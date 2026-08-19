@@ -2966,3 +2966,15 @@ button,a,select,input{touch-action:manipulation}
     text-align:left;
   }
 }
+
+/* Wallet recovery + token-bound vault controls */
+.seedleaf-wallet-session-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.seedleaf-reconnect-button{min-height:34px;padding:0 12px;border:1px solid rgba(31,86,90,.14);border-radius:12px;background:rgba(255,255,255,.78);color:#2e6468;font-size:8px;font-weight:950;letter-spacing:.055em;text-transform:uppercase}
+.seedleaf-reconnect-button:disabled{opacity:.52}
+.land-vault-actions{display:grid;gap:10px;margin-top:10px}
+.land-vault-actions .land-vault-send{margin-top:0}
+.land-vault-withdraw{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(180px,.9fr) minmax(150px,.65fr);align-items:end;gap:9px;padding:12px;border:1px solid rgba(34,84,89,.11);border-radius:17px;background:rgba(255,255,255,.68)}
+.land-vault-withdraw>div{align-self:center}.land-vault-withdraw strong{display:block;margin-top:3px;color:#17464d;font-size:11px}.land-vault-withdraw p{margin:4px 0 0;color:#7b9091;font-size:8px;line-height:1.45}
+.land-vault-withdraw label{display:flex;min-width:0;flex-direction:column;gap:4px}.land-vault-withdraw label>span{color:#789092;font-size:7px;font-weight:950;letter-spacing:.09em}.land-vault-withdraw input,.land-vault-withdraw button{height:44px;min-width:0;border:1px solid rgba(34,84,89,.13);border-radius:13px;background:#fff;color:#17444b;padding:0 10px;font-size:9px;font-weight:850}.land-vault-withdraw button{border:0;background:linear-gradient(180deg,#286f84,#1b5364);color:#fff;font-weight:950}.land-vault-withdraw button:disabled{opacity:.48}
+.market-approval-note{margin-top:9px;padding:10px 12px;border:1px solid rgba(33,91,91,.10);border-radius:14px;background:rgba(255,255,255,.55);display:flex;gap:8px;align-items:flex-start}.market-approval-note b{font-size:7px;letter-spacing:.09em;white-space:nowrap}.market-approval-note span{font-size:8px;line-height:1.45;color:#778c8e}
+@media(max-width:720px){.land-vault-withdraw{grid-template-columns:1fr}.land-vault-withdraw button{width:100%}.seedleaf-wallet-session-actions{justify-content:stretch}.seedleaf-wallet-session-actions>button{flex:1}}

@@ -3005,3 +3005,61 @@ html[data-theme="dark"] :is(
 ) {
   filter: none !important;
 }
+
+/* ==========================================================================
+   FINAL DARK-SURFACE PASS — no paper-white panels in dark mode
+   ========================================================================== */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card {
+  background:radial-gradient(circle at 94% 4%,rgba(76,188,158,.07),transparent 28%),linear-gradient(145deg,rgba(15,39,41,.985),rgba(8,27,29,.985)) !important;
+  border-color:rgba(159,224,212,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-blue,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-red,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-green,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-leaf,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-seed {
+  background:linear-gradient(150deg,rgba(22,48,50,.96),rgba(13,34,36,.98)) !important;
+  border-color:rgba(159,224,212,.09) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 17px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card.is-selected {
+  background:radial-gradient(circle at 20% 0%,rgba(75,196,159,.10),transparent 45%),linear-gradient(150deg,rgba(25,56,52,.98),rgba(14,38,38,.99)) !important;
+  border-color:rgba(76,205,163,.29) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 2px rgba(65,182,148,.06),0 9px 20px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(h1,h2,h3,h4,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy strong,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy b {color:#e8f8f4 !important}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(p,small,em),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-usd-value {color:#8ea5a2 !important}
+html[data-theme="dark"] .seedleaf-reconnect-button{background:rgba(18,45,47,.94)!important;border-color:rgba(159,224,212,.12)!important;color:#dff5f1!important}
+
+html[data-theme="dark"] .land-page :is(.land-hero,.land-identity-card,.land-garden-card,.land-production-card,.land-community-foot,.land-vault-card,.pouch-land-send),
+html[data-theme="dark"] .land-vault-card {
+  background:radial-gradient(circle at 92% 4%,rgba(77,188,156,.07),transparent 29%),linear-gradient(145deg,rgba(15,39,41,.985),rgba(8,27,29,.985)) !important;
+  border-color:rgba(159,224,212,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .land-vault-card :is(h1,h2,h3,h4,strong,b){color:#eaf8f5 !important}
+html[data-theme="dark"] .land-vault-card :is(p,small,span){color:#91a8a5}
+html[data-theme="dark"] .land-vault-address,
+html[data-theme="dark"] .land-vault-assets>div,
+html[data-theme="dark"] .land-vault-withdraw,
+html[data-theme="dark"] .land-vault-create-panel {background:rgba(18,44,46,.88)!important;border-color:rgba(159,224,212,.10)!important}
+html[data-theme="dark"] .land-vault-address button,
+html[data-theme="dark"] .land-vault-send :is(select,input),
+html[data-theme="dark"] .land-vault-withdraw input {background:#0c2022!important;color:#eaf8f5!important;border-color:rgba(159,224,212,.11)!important}
+html[data-theme="dark"] .land-vault-message{background:rgba(36,102,83,.20)!important;color:#bfe9dc!important}
+
+html[data-theme="dark"] .market-approval-note{background:rgba(18,44,46,.78)!important;border-color:rgba(159,224,212,.10)!important}
+html[data-theme="dark"] .market-approval-note b{color:#dff5f1!important}
+html[data-theme="dark"] .market-approval-note span{color:#8fa6a3!important}

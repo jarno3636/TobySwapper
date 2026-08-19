@@ -4,7 +4,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { useMemo, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, useAccount, useChainId, useReconnect } from "wagmi";
+import { WagmiProvider, useAccount, useChainId } from "wagmi";
 import {
   RainbowKitProvider,
   darkTheme,
@@ -18,6 +18,7 @@ import { wagmiConfig } from "@/lib/wallet";
 import FarcasterMiniBridge from "@/components/FarcasterMiniBridge";
 import FarcasterMiniAutoConnect from "@/components/FarcasterMiniAutoConnect";
 import FarcasterProfileMemory from "@/components/FarcasterProfileMemory";
+import WalletSessionResilience from "@/components/WalletSessionResilience";
 
 /* ---------------- React Query ---------------- */
 
@@ -48,16 +49,6 @@ const rkDarkTheme = darkTheme({
   borderRadius: "large",
   overlayBlur: "small",
 });
-
-/* ---------------- Auto reconnect ---------------- */
-
-function AutoReconnect() {
-  const { reconnect } = useReconnect();
-  useEffect(() => {
-    reconnect();
-  }, [reconnect]);
-  return null;
-}
 
 /* ---------------- Base chain soft gate ---------------- */
 
@@ -123,7 +114,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <AutoReconnect />
+        <WalletSessionResilience />
         <RainbowKitProvider
           theme={theme}
           initialChain={base}
