@@ -27,6 +27,7 @@ export default function LoreDeedArt({
   const [visible, setVisible] = useState(eager);
   const [result, setResult] = useState<LoreMetadataResult | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
+  const [proxyTried, setProxyTried] = useState(false);
   const [serverFallbackTried, setServerFallbackTried] = useState(false);
 
   const id = typeof tokenId === "bigint" ? tokenId : BigInt(tokenId);
@@ -71,6 +72,7 @@ export default function LoreDeedArt({
     if (!visible || typeof uriRead.data !== "string") return;
     let cancelled = false;
     setImageIndex(0);
+    setProxyTried(false);
     setServerFallbackTried(false);
     fetchLoreMetadataResult(uriRead.data).then((value) => {
       if (!cancelled) setResult(value);
@@ -136,7 +138,13 @@ export default function LoreDeedArt({
     },
     [result],
   );
-  const image = images[imageIndex] || null;
+  const directImage = images[imageIndex] || null;
+  const proxyImage =
+    visible && result && !directImage && !proxyTried
+      ? `/api/lore/image?tokenId=${id.toString()}`
+      : null;
+  const image = directImage || proxyImage;
+  const usingProxy = Boolean(proxyImage && !directImage);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
   const loading = visible && (uriRead.isLoading || (typeof uriRead.data === "string" && !result));
 
@@ -148,7 +156,10 @@ export default function LoreDeedArt({
           alt={metadataName}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          onError={() => setImageIndex((index) => index + 1)}
+          onError={() => {
+            if (usingProxy) setProxyTried(true);
+            else setImageIndex((index) => index + 1);
+          }}
         />
       ) : (
         <div className="canonical-deed-metadata-fallback">
@@ -164,7 +175,7 @@ export default function LoreDeedArt({
       <span className="canonical-deed-art-id">#{id.toString()}</span>
       {showStatus && typeof uriRead.data === "string" ? (
         <span className={`canonical-deed-source ${image ? "ready" : ""}`}>
-          {image ? "CANONICAL ART ✓" : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
+          {image ? (usingProxy ? "CANONICAL ART · CACHED ✓" : "CANONICAL ART ✓") : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
         </span>
       ) : null}
     </div>
