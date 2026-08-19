@@ -2514,3 +2514,342 @@ button,a,select,input{touch-action:manipulation}
   .watch-pouch-form button{min-height:44px}
   .watch-pouch-grid{grid-template-columns:1fr}
 }
+
+/* ==========================================================================
+   No-login public Tobyworld Pouch pages
+   ========================================================================== */
+
+.public-pouch-create-compact{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  margin-top:12px;
+  padding:13px;
+  border:1px solid rgba(28,97,94,.13);
+  border-radius:16px;
+  background:linear-gradient(155deg,#f8fffc,#eaf7f2);
+}
+.public-pouch-create-compact>div{display:flex;flex-direction:column;min-width:0}
+.public-pouch-create-compact strong{color:#20534f;font-size:10px}
+.public-pouch-create-compact span{margin-top:3px;color:#7d9290;font-size:8px;line-height:1.4}
+.public-pouch-create-compact button{
+  min-height:38px;padding:0 13px;border:0;border-radius:12px;
+  background:linear-gradient(180deg,#248f76,#18705f);color:#fff;
+  font-size:8px;font-weight:950;white-space:nowrap
+}
+.public-pouch-create-compact small{grid-column:1/-1;color:#3f726d;font-size:8px;font-weight:800}
+
+.public-pouch-editor{
+  width:min(920px,calc(100% - 24px));
+  margin:16px auto 0;
+  padding:18px;
+  border:1px solid rgba(27,89,94,.13);
+  border-radius:25px;
+  background:linear-gradient(155deg,rgba(255,255,255,.98),rgba(237,247,245,.96));
+  box-shadow:inset 0 1px 0 #fff,0 14px 32px rgba(20,66,71,.08);
+}
+.public-pouch-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.public-pouch-editor-head>div{min-width:0}
+.public-pouch-editor-head span{font-size:7px;font-weight:950;letter-spacing:.15em;color:#748c8d}
+.public-pouch-editor-head h3{margin:4px 0 5px;color:#17454c;font-size:20px}
+.public-pouch-editor-head p{margin:0;max-width:640px;color:#7a8e90;font-size:9px;line-height:1.5}
+.public-pouch-unverified{flex:0 0 auto;padding:7px 10px;border-radius:999px;background:#f0f2f2;color:#758486!important;letter-spacing:.08em!important}
+.public-pouch-create-main{width:100%;min-height:46px;margin-top:14px;border:0;border-radius:14px;background:linear-gradient(180deg,#24987b,#18725f);color:#fff;font-size:9px;font-weight:950;letter-spacing:.05em}
+.public-pouch-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+.public-pouch-field{display:flex;flex-direction:column;min-width:0;gap:5px}
+.public-pouch-field.wide{grid-column:1/-1}
+.public-pouch-field>span,.public-pouch-toggle>span>strong{font-size:7px;font-weight:950;letter-spacing:.1em;color:#778d8f}
+.public-pouch-field input,.public-pouch-field textarea{
+  width:100%;min-width:0;border:1px solid rgba(28,91,96,.13);border-radius:12px;background:#fff;color:#17444b;
+  font-size:10px;font-weight:700;outline:none
+}
+.public-pouch-field input{min-height:42px;padding:0 11px}
+.public-pouch-field textarea{min-height:78px;padding:10px 11px;resize:vertical}
+.public-pouch-themes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.public-pouch-themes button{
+  display:flex;align-items:center;justify-content:center;gap:5px;min-height:37px;border:1px solid rgba(28,91,96,.1);
+  border-radius:11px;background:#fff;color:#6f8586;font-size:7px;font-weight:900;text-transform:capitalize
+}
+.public-pouch-themes button.selected{border-color:rgba(31,137,116,.42);background:#edf9f4;color:#25645b;box-shadow:0 0 0 2px rgba(49,159,133,.07)}
+.pouch-theme-dot{width:9px;height:9px;border-radius:50%;background:#6fb6b2;box-shadow:inset 0 1px 1px rgba(255,255,255,.55)}
+.pouch-theme-dot.theme-moss{background:#79a36a}.pouch-theme-dot.theme-moon{background:#9990bd}.pouch-theme-dot.theme-lotus{background:#d89bad}.pouch-theme-dot.theme-ember{background:#bd7755}.pouch-theme-dot.theme-tide{background:#5c96b2}
+.public-pouch-toggle{display:flex;align-items:center;gap:9px;min-height:42px;padding:8px 10px;border:1px solid rgba(28,91,96,.1);border-radius:12px;background:#fff}
+.public-pouch-toggle input{width:16px;height:16px}
+.public-pouch-toggle>span{display:flex;flex-direction:column;gap:2px}
+.public-pouch-toggle small{font-size:7px;color:#8b999a}
+.public-pouch-editor-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.public-pouch-editor-actions button,.public-pouch-editor-actions a{
+  display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 11px;border:1px solid rgba(26,91,94,.12);
+  border-radius:11px;background:#fff;color:#326863;font-size:8px;font-weight:900;text-decoration:none
+}
+.public-pouch-editor-actions .primary{border:0;background:linear-gradient(180deg,#248f76,#18705f);color:#fff}
+.public-pouch-key-note{display:flex;gap:8px;margin-top:12px;padding:10px 11px;border-radius:12px;background:#fff7e9;color:#7d6b50;font-size:8px;line-height:1.45}
+.public-pouch-key-note strong{white-space:nowrap}
+.public-pouch-editor-message{margin-top:9px;padding:9px 11px;border-radius:11px;background:#e9f7f2;color:#326e65;font-size:8px;font-weight:850}
+
+.public-pouch-page{
+  min-height:100vh;padding:22px 0 96px;
+  background:
+    radial-gradient(circle at 12% 12%,rgba(139,221,211,.16),transparent 26%),
+    linear-gradient(180deg,#f5faf9,#edf5f3);
+}
+.public-pouch-page.theme-moss{background:radial-gradient(circle at 15% 12%,rgba(142,177,113,.2),transparent 28%),linear-gradient(180deg,#f7faf4,#eef4e9)}
+.public-pouch-page.theme-moon{background:radial-gradient(circle at 82% 8%,rgba(171,158,215,.2),transparent 29%),linear-gradient(180deg,#f8f7fc,#f0eef8)}
+.public-pouch-page.theme-lotus{background:radial-gradient(circle at 15% 12%,rgba(226,159,182,.18),transparent 27%),linear-gradient(180deg,#fff9fb,#f8eef2)}
+.public-pouch-page.theme-ember{background:radial-gradient(circle at 82% 9%,rgba(214,139,95,.18),transparent 28%),linear-gradient(180deg,#fff9f4,#f7eee7)}
+.public-pouch-page.theme-tide{background:radial-gradient(circle at 18% 10%,rgba(100,165,196,.18),transparent 28%),linear-gradient(180deg,#f5fafc,#eaf2f6)}
+.public-pouch-hero{
+  position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,300px);gap:18px;
+  width:min(920px,calc(100% - 24px));min-height:280px;margin:0 auto;padding:24px;overflow:hidden;
+  border:1px solid rgba(27,88,94,.13);border-radius:30px;background:rgba(255,255,255,.84);
+  box-shadow:inset 0 1px 0 #fff,0 18px 38px rgba(20,65,70,.08);isolation:isolate
+}
+.public-pouch-hero-orb{position:absolute;width:300px;height:300px;right:-90px;top:-120px;border-radius:50%;background:rgba(91,202,180,.12);filter:blur(2px)}
+.public-pouch-hero-copy{position:relative;z-index:2;align-self:center;min-width:0}
+.public-pouch-hero-copy>span{font-size:8px;font-weight:950;letter-spacing:.15em;color:#668889}
+.public-pouch-hero-copy h1{margin:7px 0 7px;color:#123e47;font-size:clamp(34px,7vw,64px);line-height:.94;overflow-wrap:anywhere}
+.public-pouch-hero-copy>p{max-width:590px;margin:0;color:#708486;font-size:11px;line-height:1.55}
+.public-pouch-hero-meta{display:flex;flex-direction:column;gap:2px;margin-top:13px}
+.public-pouch-hero-meta strong{color:#2b6263;font-size:10px}
+.public-pouch-hero-meta small{color:#8a999a;font-size:7px}
+.public-pouch-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+.public-pouch-links a{padding:7px 10px;border:1px solid rgba(29,91,96,.11);border-radius:999px;background:rgba(255,255,255,.76);color:#2e6964;font-size:7px;font-weight:900;text-decoration:none}
+.public-pouch-featured-deed{position:relative;z-index:2;align-self:stretch;display:flex;flex-direction:column;min-width:0;padding:9px;border:1px solid rgba(27,87,94,.11);border-radius:20px;background:rgba(255,255,255,.72);text-decoration:none}
+.public-pouch-featured-deed .canonical-deed-art{border-radius:14px}
+.public-pouch-featured-deed>span{margin:8px 2px 1px;color:#7a8f90;font-size:7px;font-weight:950;letter-spacing:.12em}
+.public-pouch-featured-deed>strong{margin:0 2px;color:#244f55;font-size:11px}
+.public-pouch-page>.watch-pouch-results{width:min(920px,calc(100% - 24px));margin:14px auto 0}
+.public-pouch-viewer-note{width:min(920px,calc(100% - 24px));margin:12px auto 0;padding:10px 13px;border-radius:13px;background:rgba(255,255,255,.72);color:#829293;font-size:8px;text-align:center}
+.public-pouch-footer-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:7px;width:min(920px,calc(100% - 24px));margin:15px auto 0}
+.public-pouch-footer-actions a{padding:8px 11px;border:1px solid rgba(27,87,94,.11);border-radius:999px;background:rgba(255,255,255,.8);color:#316964;font-size:8px;font-weight:900;text-decoration:none}
+.public-pouch-loading,.public-pouch-missing{width:min(700px,calc(100% - 24px));margin:16vh auto 0;padding:30px;border:1px solid rgba(27,87,94,.12);border-radius:25px;background:#fff;text-align:center;color:#557577}
+.public-pouch-missing span{font-size:8px;font-weight:950;letter-spacing:.15em;color:#7a9091}
+.public-pouch-missing h1{margin:7px 0;color:#17444b}
+.public-pouch-missing p{color:#819193;font-size:10px}
+.public-pouch-missing a{display:inline-flex;margin-top:8px;color:#246b61;font-size:9px;font-weight:900;text-decoration:none}
+
+@media(max-width:700px){
+  .public-pouch-hero{grid-template-columns:1fr;padding:18px;border-radius:25px}
+  .public-pouch-featured-deed{max-width:310px}
+  .public-pouch-editor-grid{grid-template-columns:1fr}
+  .public-pouch-field.wide{grid-column:auto}
+  .public-pouch-themes{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .public-pouch-create-compact{grid-template-columns:1fr}
+  .public-pouch-create-compact button{min-height:40px}
+  .public-pouch-editor{padding:15px;border-radius:21px}
+  .public-pouch-editor-head{display:block}
+  .public-pouch-unverified{display:inline-flex;margin-top:8px}
+  .public-pouch-editor-actions{display:grid;grid-template-columns:1fr 1fr}
+  .public-pouch-editor-actions>*{width:100%}
+  .public-pouch-key-note{flex-direction:column}
+}
+
+/* ==========================================================================
+   Premium My Tobyworld hierarchy — Pond Pulse → Pouch + Transfer
+   ========================================================================== */
+
+.mytw-pond-heading{
+  margin-top:22px;
+  margin-bottom:10px;
+}
+.mytw-pouch-transfer-shell{
+  position:relative;
+  margin-top:18px;
+  padding:12px;
+  border:1px solid rgba(31,91,97,.13);
+  border-radius:30px;
+  background:
+    radial-gradient(circle at 12% 5%,rgba(128,221,206,.13),transparent 28%),
+    radial-gradient(circle at 92% 94%,rgba(148,168,226,.1),transparent 30%),
+    linear-gradient(155deg,rgba(255,255,255,.96),rgba(236,247,245,.93));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    0 18px 38px rgba(18,67,72,.08);
+}
+.mytw-pouch-transfer-intro{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:14px;
+  padding:8px 8px 13px;
+}
+.mytw-pouch-transfer-intro>div{min-width:0}
+.mytw-pouch-transfer-intro h2{
+  margin:3px 0 4px;
+  color:#143f47;
+  font-size:22px;
+  line-height:1.05;
+}
+.mytw-pouch-transfer-intro p{
+  margin:0;
+  color:#788b8d;
+  font-size:9px;
+  line-height:1.45;
+}
+.mytw-pouch-transfer-intro>a{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:center;
+  min-height:42px;
+  padding:8px 12px;
+  border:1px solid rgba(29,93,97,.12);
+  border-radius:14px;
+  background:rgba(255,255,255,.88);
+  color:#2d6764;
+  font-size:8px;
+  font-weight:950;
+  line-height:1.1;
+  text-decoration:none;
+  box-shadow:inset 0 1px 0 #fff;
+}
+.mytw-pouch-transfer-intro>a small{
+  margin-top:3px;
+  color:#8b999a;
+  font-size:6px;
+  font-weight:850;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.mytw-pouch-transfer-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(300px,.88fr);
+  gap:12px;
+  align-items:start;
+}
+.mytw-pouch-transfer-grid>#pouch,
+.mytw-pouch-transfer-grid>#transfer{
+  min-width:0;
+  height:100%;
+  margin:0;
+}
+.mytw-pouch-transfer-grid>#pouch{
+  border-radius:23px;
+  background:
+    linear-gradient(155deg,rgba(255,255,255,.98),rgba(239,249,247,.95));
+}
+.mytw-pouch-transfer-grid>#transfer{
+  border-radius:23px;
+  position:sticky;
+  top:88px;
+  background:
+    radial-gradient(circle at 94% 4%,rgba(78,181,221,.13),transparent 28%),
+    linear-gradient(155deg,rgba(255,255,255,.98),rgba(241,248,249,.96));
+}
+.mytw-pouch-transfer-grid .seedleaf-assets-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.mytw-pouch-transfer-grid .seedleaf-asset-card{
+  min-height:86px;
+}
+.mytw-pouch-transfer-grid .seedleaf-transfer-fields{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.mytw-pouch-transfer-grid .seedleaf-transfer-summary{
+  border-radius:16px;
+}
+.mytw-pouch-transfer-grid .seedleaf-quick-selects{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.mytw-pouch-transfer-grid .taboshi1-send-button{
+  min-height:50px;
+}
+.mytw-land-quicklinks{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.mytw-manual-wallet-link{
+  background:
+    linear-gradient(180deg,rgba(244,250,249,.98),rgba(230,244,241,.96))!important;
+}
+.mytw-manual-wallet-link small{
+  display:block;
+  margin-top:2px;
+  color:#829597!important;
+  font-size:6px!important;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+/* Make the manual viewer feel like a purposeful alternate entry path. */
+#contract-wallet-viewer,
+#wallet-viewer{
+  position:relative;
+}
+#wallet-viewer:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Canonical deed art gets a quiet premium frame; actual NFT content stays untouched. */
+.canonical-deed-art.has-image{
+  background:#f3f7f6;
+  border:1px solid rgba(30,84,90,.11);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 8px 18px rgba(17,60,65,.08);
+}
+.canonical-deed-art.has-image img{
+  object-fit:contain;
+  background:
+    radial-gradient(circle at 50% 40%,rgba(236,246,243,.9),rgba(226,238,236,.88));
+}
+
+/* Cleaner status hierarchy. */
+.canonical-deed-source.ready{
+  background:rgba(19,102,78,.84);
+  border:1px solid rgba(255,255,255,.22);
+}
+.land-metadata-row{
+  border-top:1px solid rgba(30,87,92,.08);
+  margin-top:8px;
+  padding-top:9px;
+}
+
+/* So the Pouch and portal still read well on a phone. */
+@media(max-width:860px){
+  .mytw-pouch-transfer-grid{
+    grid-template-columns:1fr;
+  }
+  .mytw-pouch-transfer-grid>#transfer{
+    position:relative;
+    top:auto;
+  }
+}
+@media(max-width:620px){
+  .mytw-pouch-transfer-shell{
+    margin-inline:-2px;
+    padding:9px;
+    border-radius:25px;
+  }
+  .mytw-pouch-transfer-intro{
+    align-items:flex-start;
+    flex-direction:column;
+    padding:7px 6px 11px;
+  }
+  .mytw-pouch-transfer-intro>a{
+    width:100%;
+    align-items:flex-start;
+  }
+  .mytw-pouch-transfer-grid .seedleaf-assets-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .mytw-land-quicklinks{
+    grid-template-columns:1fr;
+  }
+}
+@media(max-width:410px){
+  .mytw-pouch-transfer-grid .seedleaf-assets-grid{
+    grid-template-columns:1fr;
+  }
+}
