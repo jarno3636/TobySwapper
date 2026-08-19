@@ -57,12 +57,12 @@ export const MARKETPLACE_PAYMENTS = [
   { id: "TOBY" as const, label: "TOBY", address: TOBY, decimals: 18 },
 ] as const;
 
-/** One percent marketplace fee. Settlement remains disabled until the market contract is deployed. */
+/** One percent marketplace fee enforced by the live Base settlement contract. */
 export const MARKETPLACE_FEE_BPS = 100 as const;
 export const MARKETPLACE_FEE_PERCENT = MARKETPLACE_FEE_BPS / 100;
 
-/** Set once the audited marketplace contract is deployed. */
-export const MARKETPLACE_CONTRACT = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT || "";
+/** Live Tobyworld marketplace deployment on Base. */
+export const MARKETPLACE_CONTRACT = "0x4F1D4C06Bbc9438A2AbB6558dfDd940B65588011" as const;
 export const MARKETPLACE_FEE_RECIPIENT = process.env.NEXT_PUBLIC_MARKETPLACE_FEE_RECIPIENT || "";
 
 export type TobyworldListing = {
@@ -80,4 +80,4 @@ export type TobyworldListing = {
 };
 
 /** UI + database groundwork only. Turn this on with the audited settlement contract. */
-export const LAND_EXCHANGE_ENABLED = false as const;
+export const LAND_EXCHANGE_ENABLED = true as const;

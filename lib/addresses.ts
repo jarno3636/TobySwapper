@@ -11,7 +11,7 @@ export type TokenAddress = Address | typeof NATIVE_ETH;
 
 /* ------------------------------- Core tokens ------------------------------- */
 export const WETH: Address = "0x4200000000000000000000000000000000000006";
-export const USDC: Address = "0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913";
+export const USDC: Address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 /* ----------------------------- Tobyworld tokens ---------------------------- */
 export const TOBY: Address     = "0xb8D98a102b0079B69FFbc760C8d857A31653e56e";
