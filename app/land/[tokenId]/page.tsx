@@ -19,7 +19,8 @@ import LandExchangePreview from "@/components/world/LandExchangePreview";
 import LandCommunityProfile from "@/components/land/LandCommunityProfile";
 import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
-import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI, resolveLoreUri } from "@/lib/lore-deeds";
+import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
+import { fetchLoreMetadata, loreImage, type LoreMetadata } from "@/lib/lore-metadata";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
@@ -31,7 +32,6 @@ const readQuery = {
   retry: 1,
 } as const;
 
-type LoreMetadata = { name?: string; description?: string; image?: string; attributes?: Array<{ trait_type?: string; value?: unknown }> };
 
 export default function LandPage() {
   const params = useParams<{ tokenId: string }>();
@@ -93,17 +93,18 @@ export default function LandPage() {
   const seed = typeof values[4]?.result === "bigint" ? values[4].result : 0n;
 
   useEffect(() => {
-    const uri = typeof uriRead.data === "string" ? resolveLoreUri(uriRead.data) : null;
-    if (!uri) { setMetadata(null); return; }
+    if (typeof uriRead.data !== "string") {
+      setMetadata(null);
+      return;
+    }
     let cancelled = false;
-    fetch(uri, { cache: "force-cache" })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (!cancelled && data) setMetadata(data); })
-      .catch(() => { if (!cancelled) setMetadata(null); });
+    fetchLoreMetadata(uriRead.data).then((data) => {
+      if (!cancelled) setMetadata(data);
+    });
     return () => { cancelled = true; };
   }, [uriRead.data]);
 
-  const image = resolveLoreUri(metadata?.image);
+  const image = loreImage(metadata);
   const hasArtwork = Boolean(image);
   const missing = tokenId === null || Boolean(ownerRead.error);
 
