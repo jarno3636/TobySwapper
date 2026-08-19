@@ -10,6 +10,7 @@ import MiniAppGate from "@/components/MiniAppGate";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
 import LandIdentity from "@/components/land/LandIdentity";
+import LandVault from "@/components/land/LandVault";
 import LandGarden from "@/components/land/LandGarden";
 import LandRelics from "@/components/land/LandRelics";
 import LandProductionPlaceholder from "@/components/land/LandProductionPlaceholder";
@@ -54,6 +55,21 @@ export default function LandPage() {
     args: tokenId === null ? undefined : [tokenId],
     chainId: base.id,
     query: { ...readQuery, enabled: tokenId !== null },
+  });
+  const travelRead = useReadContract({
+    address: LORE_COLLECTION_ADDRESS,
+    abi: LORE_DEEDS_ABI,
+    functionName: "transferNonce",
+    args: tokenId === null ? undefined : [tokenId],
+    chainId: base.id,
+    query: { ...readQuery, enabled: tokenId !== null },
+  });
+  const genesisRead = useReadContract({
+    address: LORE_COLLECTION_ADDRESS,
+    abi: LORE_DEEDS_ABI,
+    functionName: "genesisSealed",
+    chainId: base.id,
+    query: readQuery,
   });
 
   const owner = typeof ownerRead.data === "string" ? ownerRead.data as Address : undefined;
@@ -125,7 +141,9 @@ export default function LandPage() {
 
             <LandCommunityProfile tokenId={tokenId!} owner={owner} onProfile={setCommunityProfile} />
 
-            <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} />
+            <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} travels={typeof travelRead.data === "bigint" ? travelRead.data : 0n} genesisSealed={genesisRead.data === true} />
+
+            <LandVault tokenId={tokenId!} owner={owner} />
 
             <div className="land-two-column">
               <LandGarden seedBalance={seed} />
