@@ -10,6 +10,7 @@ import MiniAppGate from "@/components/MiniAppGate";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
 import LandIdentity from "@/components/land/LandIdentity";
+import LoreDeedArt from "@/components/land/LoreDeedArt";
 import LandVault from "@/components/land/LandVault";
 import LandGarden from "@/components/land/LandGarden";
 import LandRelics from "@/components/land/LandRelics";
@@ -20,7 +21,7 @@ import LandCommunityProfile from "@/components/land/LandCommunityProfile";
 import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
-import { fetchLoreMetadata, loreImage, type LoreMetadata } from "@/lib/lore-metadata";
+import { fetchLoreMetadataResult, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
@@ -38,6 +39,7 @@ export default function LandPage() {
   const rawId = params?.tokenId || "";
   const tokenId = useMemo(() => (/^\d+$/.test(rawId) && BigInt(rawId) > 0n ? BigInt(rawId) : null), [rawId]);
   const [metadata, setMetadata] = useState<LoreMetadata | null>(null);
+  const [metadataResult, setMetadataResult] = useState<LoreMetadataResult | null>(null);
   const [communityProfile, setCommunityProfile] = useState<LandProfile | null>(null);
 
   const ownerRead = useReadContract({
@@ -95,17 +97,25 @@ export default function LandPage() {
   useEffect(() => {
     if (typeof uriRead.data !== "string") {
       setMetadata(null);
+      setMetadataResult(null);
       return;
     }
     let cancelled = false;
-    fetchLoreMetadata(uriRead.data).then((data) => {
-      if (!cancelled) setMetadata(data);
+    fetchLoreMetadataResult(uriRead.data).then((result) => {
+      if (!cancelled) {
+        setMetadata(result.metadata);
+        setMetadataResult(result);
+      }
     });
     return () => { cancelled = true; };
   }, [uriRead.data]);
 
-  const image = loreImage(metadata);
-  const hasArtwork = Boolean(image);
+  const hasArtwork = Boolean(
+    metadataResult?.directImage ||
+    metadata?.image ||
+    metadata?.image_url ||
+    metadata?.imageUrl
+  );
   const missing = tokenId === null || Boolean(ownerRead.error);
 
   return (
@@ -131,12 +141,26 @@ export default function LandPage() {
                 <p>{communityProfile?.description || metadata?.description || (hasArtwork ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
-              <div className={`land-hero-art ${hasArtwork ? "is-revealed" : ""}`}>
-                {image ? <img src={image} alt={metadata?.name || `Lore Land #${tokenId}`} /> : <>
-                  <span className="land-hero-moon" /><span className="land-hero-island" /><span className="land-hero-water" />
-                  <span className="land-hero-rune">△</span>
-                  <Image src="/tokens/toby.PNG" alt="" width={86} height={86} className="land-hero-frog" />
-                </>}
+              <div className="land-hero-deed-wrap">
+                <div className="land-hero-deed-label">
+                  <span>CANONICAL LORE DEED</span>
+                  <strong>#{tokenId!.toString()}</strong>
+                </div>
+                <LoreDeedArt
+                  tokenId={tokenId!}
+                  label={metadata?.name}
+                  className="land-hero-canonical-deed"
+                  eager
+                  showStatus
+                />
+                {typeof uriRead.data === "string" ? (
+                  <div className="land-metadata-row">
+                    <span>{metadataResult?.error ? "Metadata needs attention" : "Canonical tokenURI connected"}</span>
+                    {metadataResult?.resolvedMetadataUri && !metadataResult.resolvedMetadataUri.startsWith("data:") ? (
+                      <a href={metadataResult.resolvedMetadataUri} target="_blank" rel="noreferrer">View metadata ↗</a>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </section>
 
