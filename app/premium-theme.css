@@ -883,3 +883,313 @@ html[data-theme="dark"] .land-hero-canonical-deed img {
   }
 }
 
+
+/* ==========================================================================
+   DARK MODE UNIFICATION PASS — match the successful Explore-a-Wallet card
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --dark-card: rgba(10, 30, 32, .92);
+  --dark-card-raised: rgba(16, 38, 40, .94);
+  --dark-card-soft: rgba(20, 44, 46, .82);
+  --dark-copy: #edf8f6;
+  --dark-copy-soft: #a3b8b6;
+  --dark-copy-muted: #78918f;
+  --dark-line: rgba(159, 224, 212, .17);
+  --dark-line-soft: rgba(159, 224, 212, .10);
+  --dark-accent: #53c9ac;
+}
+
+/* The Explore-a-Wallet card is the reference material:
+   deep teal glass, bright title, soft gray copy, green primary action. */
+html[data-theme="dark"] :is(
+  .watch-pouch-card,
+  .mytw-section-heading,
+  .mytw-pond-heading,
+  .mytw-pouch-transfer-shell,
+  .mytw-path-grid,
+  .mytw-profile-card,
+  .mytw-find-place,
+  .mytw-profile-shell,
+  .mytw-world-card,
+  .mytw-world-link,
+  .seedleaf-lore-section,
+  .taboshi1-lore-strip
+) {
+  background:
+    radial-gradient(circle at 94% 6%, rgba(68, 177, 158, .08), transparent 34%),
+    linear-gradient(155deg, rgba(13, 37, 39, .96), rgba(8, 27, 29, .96)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 16px 34px rgba(0,0,0,.21) !important;
+}
+
+/* Turn stubborn light cards into proper dark glass. */
+html[data-theme="dark"] :is(
+  .world-link-card,
+  .world-path-card,
+  .mytw-path-card,
+  .mytw-profile-asset,
+  .mytw-profile-tile,
+  .mytw-action-card,
+  .mytw-land-card,
+  .mytw-land-quicklinks a,
+  .taboshi1-lore-link,
+  .taboshi1-lore-strip a,
+  .taboshi1-stat,
+  .taboshi1-mini-card,
+  .taboshi1-token-card,
+  .seedleaf-lore-card,
+  .seedleaf-stat-card,
+  .seedleaf-info-card
+) {
+  background:
+    linear-gradient(160deg, rgba(19, 43, 45, .92), rgba(12, 31, 33, .94)) !important;
+  border-color: var(--dark-line-soft) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 9px 20px rgba(0,0,0,.14) !important;
+}
+
+/* Fix the exact white cards visible in screenshots even when selectors differ. */
+html[data-theme="dark"] a[class*="world"],
+html[data-theme="dark"] a[class*="lore"],
+html[data-theme="dark"] div[class*="profile"] > div[class*="card"],
+html[data-theme="dark"] div[class*="path"] > a,
+html[data-theme="dark"] div[class*="path"] > div {
+  border-color: var(--dark-line-soft);
+}
+
+/* Headings and descriptions: do not rely on inherited light-page colors. */
+html[data-theme="dark"] :is(
+  .mytw-section-heading h2,
+  .mytw-section-heading h3,
+  .mytw-profile-card h2,
+  .mytw-profile-card h3,
+  .mytw-find-place h2,
+  .mytw-find-place h3,
+  .world-link-card h2,
+  .world-link-card h3,
+  .taboshi1-lore-link h3,
+  .taboshi1-lore-strip strong,
+  .mytw-action-card h2,
+  .mytw-land-card h2
+) {
+  color: var(--dark-copy) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-section-heading p,
+  .mytw-profile-card p,
+  .mytw-find-place p,
+  .world-link-card p,
+  .taboshi1-lore-link p,
+  .mytw-action-card p,
+  .mytw-land-card p
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+/* Small uppercase labels stay visible but subordinate. */
+html[data-theme="dark"] :is(
+  .mytw-section-heading span,
+  .mytw-profile-card > span,
+  .world-link-card > span,
+  .taboshi1-kicker,
+  .mytw-kicker,
+  .seedleaf-kicker
+) {
+  color: #8fb1ad !important;
+}
+
+/* Profile / completion area in screenshot: remove white sheet and make assets readable. */
+html[data-theme="dark"] .mytw-profile-card,
+html[data-theme="dark"] .mytw-find-place,
+html[data-theme="dark"] .mytw-profile-shell {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(93, 198, 182, .09), transparent 28%),
+    linear-gradient(155deg, rgba(13, 36, 38, .97), rgba(8, 26, 28, .97)) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset,
+  .mytw-profile-tile
+) {
+  background: rgba(18, 42, 44, .88) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset strong,
+  .mytw-profile-tile strong
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset small,
+  .mytw-profile-tile small,
+  .mytw-profile-footer,
+  .mytw-profile-note
+) {
+  color: var(--dark-copy-muted) !important;
+}
+
+/* The circular Lore Completion area becomes a dark glass orb rather than white. */
+html[data-theme="dark"] :is(
+  .mytw-completion,
+  .mytw-completion-orb,
+  .mytw-profile-score,
+  .mytw-lore-completion
+) {
+  background:
+    radial-gradient(circle at 36% 22%, rgba(255,255,255,.07), transparent 24%),
+    linear-gradient(145deg, rgba(24, 57, 59, .96), rgba(12, 34, 36, .98)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 10px 22px rgba(0,0,0,.17) !important;
+}
+
+/* Four-way Pond / Pouch / Land / World shortcuts. */
+html[data-theme="dark"] :is(
+  .mytw-path-grid,
+  .mytw-path-chain
+) {
+  background:
+    linear-gradient(155deg, rgba(15, 38, 40, .94), rgba(9, 28, 30, .95)) !important;
+  border-color: var(--dark-line) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-path-card,
+  .mytw-path-chain a,
+  .mytw-path-chain > div
+) {
+  background: rgba(17, 41, 43, .86) !important;
+  color: var(--dark-copy) !important;
+  border-color: var(--dark-line-soft) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-path-card strong,
+  .mytw-path-chain strong
+) {
+  color: #dff6f1 !important;
+}
+html[data-theme="dark"] :is(
+  .mytw-path-card small,
+  .mytw-path-chain small
+) {
+  color: #809896 !important;
+}
+
+/* Explore / external world cards from screenshot. */
+html[data-theme="dark"] :is(
+  .world-link-card,
+  .taboshi1-lore-link
+) {
+  min-height: 132px;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(80, 176, 159, .08), transparent 26%),
+    linear-gradient(160deg, rgba(16, 39, 41, .96), rgba(9, 28, 30, .96)) !important;
+}
+
+html[data-theme="dark"] :is(
+  .world-link-card:hover,
+  .taboshi1-lore-link:hover
+) {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(86, 192, 170, .12), transparent 28%),
+    linear-gradient(160deg, rgba(22, 49, 51, .98), rgba(12, 34, 36, .98)) !important;
+  border-color: var(--dark-line) !important;
+}
+
+/* White icon wells in those cards were okay, but use translucent pale glass instead. */
+html[data-theme="dark"] :is(
+  .world-link-card-icon,
+  .taboshi1-lore-icon,
+  .mytw-path-icon
+) {
+  background: rgba(229, 247, 243, .09) !important;
+  border-color: rgba(209, 244, 237, .12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 7px 14px rgba(0,0,0,.13) !important;
+}
+
+/* Arrow buttons: smoked glass, never glowing white circles. */
+html[data-theme="dark"] :is(
+  .world-link-card-arrow,
+  .taboshi1-lore-arrow,
+  .mytw-action-arrow,
+  .mytw-link-arrow
+) {
+  background:
+    linear-gradient(180deg, rgba(37, 70, 72, .96), rgba(19, 44, 46, .98)) !important;
+  border-color: var(--dark-line) !important;
+  color: #dff7f2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 7px 15px rgba(0,0,0,.16) !important;
+}
+
+/* Connect-state card from screenshot. */
+html[data-theme="dark"] :is(
+  .mytw-connect-card,
+  .mytw-quiet-card,
+  .seedleaf-wallet-empty,
+  .seedleaf-empty-wallet
+) {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(69, 170, 151, .08), transparent 30%),
+    linear-gradient(155deg, rgba(14, 37, 39, .97), rgba(8, 27, 29, .97)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-connect-card h2,
+  .mytw-connect-card strong,
+  .mytw-quiet-card h2,
+  .mytw-quiet-card strong
+) {
+  color: var(--dark-copy) !important;
+}
+html[data-theme="dark"] :is(
+  .mytw-connect-card p,
+  .mytw-quiet-card p
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+/* Generic last-resort correction for old light gradients on My Tobyworld.
+   Keep deliberately bright asset artwork itself untouched. */
+html[data-theme="dark"] .taboshi1-page :is(
+  section,
+  article
+)[style*="background"] {
+  color: var(--dark-copy);
+}
+
+/* Improve card separation on the dark background without making it busy. */
+html[data-theme="dark"] .taboshi1-page > section + section,
+html[data-theme="dark"] .taboshi1-page > div + section {
+  margin-top: 18px;
+}
+
+/* Do not change NFT/token images. */
+html[data-theme="dark"] :is(
+  .seedleaf-asset-card img,
+  .mytw-profile-asset img,
+  .mytw-profile-tile img,
+  .world-link-card img,
+  .taboshi1-lore-link img
+) {
+  filter: none !important;
+}
+
