@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 
 export default function LandExchangePreview({ compact = false }: { compact?: boolean }) {
@@ -9,7 +10,7 @@ export default function LandExchangePreview({ compact = false }: { compact?: boo
         <h2>SEED and land, one market.</h2>
         <p>A simple Base marketplace for SEED, Old Lore Land, and Canonical Lore Land—with USDC, ETH, or TOBY payments.</p>
       </div>
-      <a href="/world/exchange">Open market →</a>
+      <Link prefetch={false} href="/world/exchange">Open market →</Link>
     </section>
   );
 }

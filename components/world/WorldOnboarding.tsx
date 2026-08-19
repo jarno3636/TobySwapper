@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useAccount, useReadContract } from "wagmi";
 import { base } from "wagmi/chains";
@@ -50,8 +51,8 @@ export default function WorldOnboarding() {
       <div className="world-onboarding-paths">
         <a href="#atlas" className="world-path-card is-explore"><span>◌</span><strong>Explore Land</strong><small>Wander the community atlas</small><b>↓</b></a>
         {!ownsLand && <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer" className="world-path-card is-seed"><span className="world-path-seed"><Image src="/seed.png" alt="" fill sizes="44px" className="object-cover" /></span><strong>{seedCount > 0n ? "Visit the Faucet" : "Get SEED"}</strong><small>{seedCount > 0n ? "The faucet may not flow forever" : "A beginning for new frogs"}</small><b>↗</b></a>}
-        {!ownsLand && <a href="/#swap" className="world-path-card is-pond"><span>⇄</span><strong>Enter the Pond</strong><small>TOBY · PATIENCE · TABOSHI</small><b>→</b></a>}
-        {ownsLand && <a href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Land</strong><small>See deed IDs and visit your places</small><b>→</b></a>}
+        {!ownsLand && <Link prefetch={false} href="/#swap" className="world-path-card is-pond"><span>⇄</span><strong>Enter the Pond</strong><small>TOBY · PATIENCE · TABOSHI</small><b>→</b></Link>}
+        {ownsLand && <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Land</strong><small>See deed IDs and visit your places</small><b>→</b></Link>}
       </div>
     </section>
   );

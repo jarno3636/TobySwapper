@@ -161,10 +161,24 @@ export default function MarketplaceShell() {
         await wait(hash);
       }
     } else {
-      const approved = await publicClient.readContract({ address: asset.address, abi: ERC721_MARKET_ABI, functionName: "getApproved", args: [tokenId] });
-      if (String(approved).toLowerCase() !== MARKETPLACE_ADDRESS.toLowerCase()) {
+      // One collection-level approval replaces a fresh approval transaction for
+      // every deed listing. The marketplace still moves only assets covered by a
+      // live listing, while future listings become a single wallet confirmation.
+      const approvedForAll = await publicClient.readContract({
+        address: asset.address,
+        abi: ERC721_MARKET_ABI,
+        functionName: "isApprovedForAll",
+        args: [address, MARKETPLACE_ADDRESS],
+      });
+      if (!approvedForAll) {
         setBusy("approving");
-        const hash = await writeContractAsync({ address: asset.address, abi: ERC721_MARKET_ABI, functionName: "approve", args: [MARKETPLACE_ADDRESS, tokenId], chainId: base.id });
+        const hash = await writeContractAsync({
+          address: asset.address,
+          abi: ERC721_MARKET_ABI,
+          functionName: "setApprovalForAll",
+          args: [MARKETPLACE_ADDRESS, true],
+          chainId: base.id,
+        });
         await wait(hash);
       }
     }
@@ -307,9 +321,10 @@ export default function MarketplaceShell() {
         </div>
         {mode === "wanted" && <label className="market-note-field"><span>OPTIONAL NOTE</span><textarea value={note} onChange={(e) => setNote(e.target.value.slice(0, 180))} placeholder="Low deed number, specific community history, open to offers…" /></label>}
         {mode === "sale" && <div className="market-listing-summary"><div><small>YOU HOLD</small><strong>{heldByKind[selectedAsset].toLocaleString()} {chosenAsset.shortLabel}</strong></div><div><small>MARKET FEE</small><strong>{validPrice ? `${feePreview.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedPayment}` : `${MARKETPLACE_FEE_PERCENT}%`}</strong></div><div><small>YOU RECEIVE</small><strong>{validPrice ? `${receivePreview.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${selectedPayment}` : "—"}</strong></div></div>}
+        {mode === "sale" && <div className="market-approval-note"><b>ONE-TIME MARKET PERMISSION</b><span>The first listing from an asset collection may require one approval. After that, future listings from that collection are one wallet transaction until you revoke permission.</span></div>}
         <button type="button" className="market-list-button is-live" disabled={Boolean(busy)} onClick={() => {
           if (mode === "sale") {
-            setConfirm({ title: "List this asset?", body: `${selectedAsset === "seed" ? `${assetDetail || "0"} SEED` : `${chosenAsset.shortLabel} #${assetDetail || "—"}`} for ${price || "—"} ${selectedPayment}. The market charges 1% only if it sells.`, confirmLabel: "Approve & list", run: createListing });
+            setConfirm({ title: "List this asset?", body: `${selectedAsset === "seed" ? `${assetDetail || "0"} SEED` : `${chosenAsset.shortLabel} #${assetDetail || "—"}`} for ${price || "—"} ${selectedPayment}. The market charges 1% only if it sells.`, confirmLabel: "Continue to wallet", run: createListing });
           } else {
             setConfirm({ title: "Post this Wanted request?", body: `Looking for ${selectedAsset === "seed" ? `${assetDetail || "0"} SEED` : `${chosenAsset.shortLabel} #${assetDetail || "—"}`} with a budget up to ${price || "—"} ${selectedPayment}. No funds are locked.`, confirmLabel: "Sign & post", run: postRequest });
           }
