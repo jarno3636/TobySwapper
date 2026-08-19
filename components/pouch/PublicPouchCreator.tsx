@@ -6,6 +6,8 @@ import {
   POUCH_THEMES,
   makeEditSecret,
   readLocalPouchEditor,
+  readLocalPouchEditorBySlug,
+  readPublicPouchProfileByWallet,
   rememberLocalPouchEditor,
   rememberPublicPouchProfile,
   type LocalPouchEditor,
@@ -34,6 +36,8 @@ export default function PublicPouchCreator({
   const [editing, setEditing] = useState(Boolean(initialEditor && initialProfile));
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
+  const [discovering, setDiscovering] = useState(!initialProfile);
+  const [existingWithoutKey, setExistingWithoutKey] = useState<PublicPouchProfile | null>(null);
 
   const [pageName, setPageName] = useState(initialProfile?.pageName || "My Tobyworld Pouch");
   const [description, setDescription] = useState(initialProfile?.description || "");
@@ -45,10 +49,59 @@ export default function PublicPouchCreator({
   const [websiteUrl, setWebsiteUrl] = useState(initialProfile?.websiteUrl || "");
 
   useEffect(() => {
-    if (initialEditor) return;
-    const stored = readLocalPouchEditor(walletAddress);
-    if (stored) setEditor(stored);
-  }, [initialEditor, walletAddress]);
+    let cancelled = false;
+
+    async function discover() {
+      setDiscovering(true);
+
+      const walletEditor = initialEditor || readLocalPouchEditor(walletAddress);
+      const existingProfile =
+        initialProfile ||
+        (await readPublicPouchProfileByWallet(walletAddress));
+
+      if (cancelled) return;
+
+      if (existingProfile) {
+        setProfile(existingProfile);
+        setPageName(existingProfile.pageName);
+        setDescription(existingProfile.description || "");
+        setTheme(existingProfile.theme);
+        setFeaturedDeed(existingProfile.featuredDeed || "");
+        setShowWallet(existingProfile.showWallet);
+        setXUrl(existingProfile.xUrl || "");
+        setFarcasterUrl(existingProfile.farcasterUrl || "");
+        setWebsiteUrl(existingProfile.websiteUrl || "");
+
+        // Prefer the wallet-bound editor key, then the slug-bound backup.
+        const matchingEditor =
+          walletEditor?.slug === existingProfile.slug
+            ? walletEditor
+            : readLocalPouchEditorBySlug(existingProfile.slug);
+
+        if (matchingEditor) {
+          rememberLocalPouchEditor(walletAddress, matchingEditor);
+          setEditor(matchingEditor);
+          setExistingWithoutKey(null);
+        } else {
+          setEditor(null);
+          setExistingWithoutKey(existingProfile);
+        }
+      } else if (walletEditor) {
+        // Old local state with no surviving public row should not silently
+        // create a second identity. Clear it from component state and allow a
+        // fresh create only after the public lookup confirms no row exists.
+        setEditor(null);
+        setExistingWithoutKey(null);
+      }
+
+      setDiscovering(false);
+    }
+
+    void discover();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialEditor, initialProfile, walletAddress]);
 
   const publicUrl = useMemo(
     () => (editor?.slug ? absoluteProfileUrl(editor.slug) : ""),
@@ -87,6 +140,12 @@ export default function PublicPouchCreator({
       });
       const result = await response.json();
       if (!response.ok || !result?.ok || !result?.slug) {
+        if (result?.existing && result?.slug) {
+          const existing = await readPublicPouchProfileByWallet(walletAddress, true);
+          if (existing) setExistingWithoutKey(existing);
+          setMessage("This wallet already has a public Pouch. Open the existing page.");
+          return;
+        }
         throw new Error(result?.error || "The page could not be created.");
       }
 
@@ -173,6 +232,43 @@ export default function PublicPouchCreator({
     }
   }
 
+  if (discovering) {
+    return compact ? (
+      <div className="public-pouch-create-compact is-loading">
+        <div>
+          <strong>Checking for this wallet&apos;s public page…</strong>
+          <span>One wallet can have one Tobyworld Pouch.</span>
+        </div>
+      </div>
+    ) : (
+      <section className="public-pouch-editor">
+        <div className="public-pouch-editor-message">Checking this wallet&apos;s public Pouch…</div>
+      </section>
+    );
+  }
+
+  if (existingWithoutKey) {
+    return (
+      <div className={compact ? "public-pouch-existing-compact" : "public-pouch-existing"}>
+        <div>
+          <span>PUBLIC POUCH FOUND</span>
+          <strong>{existingWithoutKey.pageName}</strong>
+          <small>
+            This wallet already has one public page. TobySwap will not create a duplicate.
+          </small>
+        </div>
+        <div className="public-pouch-existing-actions">
+          <a href={`/p/${existingWithoutKey.slug}`}>Open page ↗</a>
+          <span>
+            {existingWithoutKey.verified
+              ? "Verified wallet owners can recover editing."
+              : "Editing requires the original private edit key until wallet verification is added."}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (!editor && compact) {
     return (
       <div className="public-pouch-create-compact">
@@ -184,6 +280,34 @@ export default function PublicPouchCreator({
           {busy ? "Creating…" : "Create page"}
         </button>
         {message ? <small>{message}</small> : null}
+      </div>
+    );
+  }
+
+  if (compact && editor && profile) {
+    return (
+      <div className="public-pouch-manage-compact">
+        <div>
+          <span>YOUR PUBLIC POUCH</span>
+          <strong>{profile.pageName}</strong>
+          <small>Same wallet · same page · no duplicate profile</small>
+        </div>
+        <div>
+          <a href={`/p/${profile.slug}`}>Open ↗</a>
+          <button type="button" onClick={() => setEditing(true)}>Edit</button>
+        </div>
+        {editing ? (
+          <button
+            type="button"
+            className="public-pouch-expand-editor"
+            onClick={() => {
+              setEditing(false);
+              window.location.href = `/p/${profile.slug}`;
+            }}
+          >
+            Edit from public page →
+          </button>
+        ) : null}
       </div>
     );
   }
