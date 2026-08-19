@@ -43,11 +43,11 @@ function writeCached(owner: Address, data: OwnedResponse) {
   try { localStorage.setItem(storageKey(owner), JSON.stringify(entry)); } catch {}
 }
 
-function loadOwned(owner: Address, expectedCount: bigint) {
+function loadOwned(owner: Address) {
   const key = ownerKey(owner);
   const existing = inflight.get(key);
   if (existing) return existing;
-  const request = fetch(`/api/land/owned?owner=${encodeURIComponent(owner)}&count=${expectedCount.toString()}`, { cache: "force-cache" })
+  const request = fetch(`/api/land/owned?owner=${encodeURIComponent(owner)}`, { cache: "force-cache" })
     .then(async (response) => {
       if (!response.ok) throw new Error("deeds unavailable");
       return response.json() as Promise<OwnedResponse>;
@@ -62,35 +62,67 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   useEffect(() => {
-    if (!owner || expectedCount === 0n) { setDeeds([]); setComplete(true); return; }
+    function onWalletRefresh() {
+      if (!owner) return;
+      memory.delete(ownerKey(owner));
+      try { localStorage.removeItem(storageKey(owner)); } catch {}
+      setRefreshNonce((value) => value + 1);
+    }
+
+    window.addEventListener("tobyswap:wallet-data-refreshed", onWalletRefresh);
+    return () => window.removeEventListener("tobyswap:wallet-data-refreshed", onWalletRefresh);
+  }, [owner]);
+
+  useEffect(() => {
+    if (!owner || expectedCount === 0n) {
+      setDeeds([]);
+      setComplete(true);
+      return;
+    }
+
+    const expected = Number(expectedCount > 999n ? 999n : expectedCount);
     const cached = readCached(owner);
-    if (cached && Date.now() - cached.at < CACHE_MS) {
-      const cachedDeeds = cached.data.deeds || [];
-      // Only trust the cached token-id list when it still matches the live
-      // canonical ERC721 balance. This keeps navigation fast without hiding a
-      // newly acquired/sold deed behind a stale browser cache.
-      if (BigInt(cachedDeeds.length) === expectedCount) {
-        setDeeds(cachedDeeds);
-        setComplete(cached.data.complete !== false);
-        return;
-      }
+
+    // Only reuse cached deed IDs when they still agree with the live canonical
+    // balance. This prevents a cached empty result surviving route navigation.
+    if (
+      refreshNonce === 0 &&
+      cached &&
+      Date.now() - cached.at < CACHE_MS &&
+      (cached.data.deeds || []).length === expected
+    ) {
+      setDeeds(cached.data.deeds || []);
+      setComplete(cached.data.complete !== false);
+      return;
     }
 
     let cancelled = false;
     setLoading(true);
-    loadOwned(owner, expectedCount)
+
+    loadOwned(owner)
       .then((data) => {
         if (cancelled) return;
         setDeeds(data.deeds || []);
         setComplete(data.complete !== false);
         writeCached(owner, data);
       })
-      .catch(() => { if (!cancelled) { setDeeds([]); setComplete(false); } })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [owner, expectedCount]);
+      .catch(() => {
+        if (!cancelled) {
+          setDeeds([]);
+          setComplete(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, expectedCount, refreshNonce]);
 
   const count = Number(expectedCount > 999n ? 999n : expectedCount);
   const missingCount = Math.max(0, count - deeds.length);
