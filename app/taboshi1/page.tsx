@@ -22,6 +22,7 @@ import ConnectPill from "@/components/ConnectPill";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 import PondPulse from "@/components/PondPulse";
 import MyLoreDeeds from "@/components/land/MyLoreDeeds";
+import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
@@ -156,6 +157,9 @@ export default function TaboshiOnePage() {
   const [syncMessage, setSyncMessage] = useState("");
   const [leafMetadata, setLeafMetadata] = useState<Metadata | null>(null);
   const [seedMetadata, setSeedMetadata] = useState<Metadata | null>(null);
+  const [watchInput, setWatchInput] = useState("");
+  const [watchAddress, setWatchAddress] = useState<Address | null>(null);
+  const [watchError, setWatchError] = useState("");
 
   const leafBalanceRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -400,6 +404,46 @@ export default function TaboshiOnePage() {
     return () => window.clearTimeout(timer);
   }, [address, isConnected]);
 
+  function openReadOnlyPouch() {
+    const candidate = watchInput.trim();
+    if (!isAddress(candidate)) {
+      setWatchError("Enter a valid 0x Base wallet address.");
+      return;
+    }
+
+    const normalized = getAddress(candidate);
+    setWatchAddress(normalized);
+    setWatchInput(normalized);
+    setWatchError("");
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("wallet", normalized);
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  }
+
+  function closeReadOnlyPouch() {
+    setWatchAddress(null);
+    setWatchError("");
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("wallet");
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  }
+
+  useEffect(() => {
+    try {
+      const value = new URL(window.location.href).searchParams.get("wallet");
+      if (value && isAddress(value)) {
+        const normalized = getAddress(value);
+        setWatchAddress(normalized);
+        setWatchInput(normalized);
+      }
+    } catch {}
+  }, []);
+
   async function syncWalletAndHoldings() {
     const now = Date.now();
     if (syncingWallet || refreshCooling || now < refreshLockUntilRef.current) return;
@@ -622,6 +666,40 @@ COMPLETION</span>
             <div className="lore-mini-stats"><span><small>TYPE</small><b>ERC-721</b></span><span><small>NETWORK</small><b>BASE</b></span></div>
           </article>
         </section>
+
+        <section className="watch-pouch-card">
+          <div className="watch-pouch-copy">
+            <span className="taboshi1-kicker">EXPLORE A WALLET</span>
+            <h2>View any Tobyworld pouch</h2>
+            <p>
+              No connection needed. Enter a public Base address to see its Tobyworld assets
+              and canonical Lore Deeds in read-only mode.
+            </p>
+          </div>
+          <div className="watch-pouch-form">
+            <input
+              value={watchInput}
+              onChange={(event) => {
+                setWatchInput(event.target.value.trim());
+                if (watchError) setWatchError("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") openReadOnlyPouch();
+              }}
+              placeholder="0x… wallet address"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Wallet address to view"
+            />
+            <button type="button" onClick={openReadOnlyPouch}>View pouch</button>
+          </div>
+          {watchError ? <div className="watch-pouch-error">{watchError}</div> : null}
+          <small className="watch-pouch-privacy">Public onchain data only · no signature · no wallet permissions</small>
+        </section>
+
+        {watchAddress ? (
+          <WalletAssetViewer owner={watchAddress} onClose={closeReadOnlyPouch} />
+        ) : null}
 
         {!isConnected ? (
           <div className="taboshi1-connect seedleaf-connect lore-connect-card"><div><span className="taboshi1-kicker">YOUR WORLD IS QUIET</span><p>Connect a Base wallet to assemble your Tobyworld profile.</p></div><ConnectPill /></div>
