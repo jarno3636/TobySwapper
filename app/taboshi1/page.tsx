@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Address } from "viem";
 import { erc20Abi, formatUnits, getAddress, isAddress, parseUnits } from "viem";
 import { base } from "viem/chains";
@@ -27,6 +27,7 @@ import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
 import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
+import { listenForPondRecord, readPondRecord, type PondRecord } from "@/lib/pond-record";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import {
   TABOSHI1_ADDRESS,
@@ -121,6 +122,37 @@ function SeedArt({ name }: { image?: string | null; name?: string }) {
   );
 }
 
+
+function PondFlameSvg() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" className="mytw-pond-flame-svg">
+      <defs>
+        <linearGradient id="pondFlameOuter" x1="15" y1="8" x2="48" y2="56" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffdb82" />
+          <stop offset=".48" stopColor="#ff8358" />
+          <stop offset="1" stopColor="#df3d45" />
+        </linearGradient>
+        <linearGradient id="pondFlameInner" x1="31" y1="25" x2="31" y2="53" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fff4b8" />
+          <stop offset="1" stopColor="#62d7cf" />
+        </linearGradient>
+      </defs>
+      <path fill="url(#pondFlameOuter)" d="M34.8 5.5c2.2 9.1-3.1 13.1-1.1 19.2 1.2 3.8 4.4 4.9 6 1.5 1.3-2.7.2-5.4-.8-7.4 9.7 6.1 14.8 14.9 12.2 24.7C49.4 53 41.4 58.7 31.7 58.7 20.4 58.7 12 51 12 40.4c0-9.2 5.4-15.9 11.1-22 1.1 5 3.4 8.4 6.5 7 4.4-2 1.3-10.8 5.2-19.9Z"/>
+      <path fill="url(#pondFlameInner)" d="M31.4 30.1c.8 5.2-4.7 7.1-4.7 12.8 0 4.1 2.7 7.2 6.8 7.2 4.3 0 7-3.1 7-7.3 0-4.7-3.1-8.3-9.1-12.7Z"/>
+      <path fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="1.5" strokeLinecap="round" d="M18.8 39c.3-5.7 3.3-10 6.5-13.7"/>
+    </svg>
+  );
+}
+
+function PondWaveSvg() {
+  return (
+    <svg viewBox="0 0 80 28" aria-hidden="true" className="mytw-wave-svg">
+      <path d="M2 17c8-9 16-9 24 0s16 9 24 0 16-9 28 0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+      <path d="M10 24c6-5 12-5 18 0s12 5 18 0 12-5 22 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity=".42"/>
+    </svg>
+  );
+}
+
 function LoreDeedArt({ revealed }: { revealed?: boolean }) {
   return (
     <div className={`lore-deed-art ${revealed ? "is-revealed" : "is-veiled"}`} aria-label="Lore Land Deed">
@@ -163,6 +195,7 @@ export default function TaboshiOnePage() {
   const [watchInput, setWatchInput] = useState("");
   const [watchAddress, setWatchAddress] = useState<Address | null>(null);
   const [watchError, setWatchError] = useState("");
+  const [pondRecord, setPondRecord] = useState<PondRecord>(() => readPondRecord());
 
   const leafBalanceRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -224,6 +257,14 @@ export default function TaboshiOnePage() {
   const tobyUsd = pondPrices[TOBY.toLowerCase()];
   const patienceUsd = pondPrices[PATIENCE.toLowerCase()];
   const taboshiUsd = pondPrices[TABOSHI.toLowerCase()];
+
+  useEffect(() => {
+    if (!address) {
+      setPondRecord(readPondRecord());
+      return;
+    }
+    return listenForPondRecord(address, setPondRecord);
+  }, [address]);
 
   useEffect(() => {
     void loadMetadata(
@@ -310,6 +351,19 @@ export default function TaboshiOnePage() {
         : holdingFlags.lore
           ? { label: "Visit your land", href: "#land" }
           : { label: "Explore your world", href: "#land" };
+
+  const recordedSwaps = pondRecord.swaps.length;
+  const pondRouteSwaps = pondRecord.swaps.filter((item) => item.route === "pond").length;
+  const recordedBurn = pondRecord.swaps.reduce((sum, item) => sum + (Number(item.burnToby || 0) || 0), 0);
+  const uniquePairs = new Set(pondRecord.swaps.map((item) => `${item.tokenIn}>${item.tokenOut}`)).size;
+  const carryingSignals = foundSignals;
+  const pondPoints = Math.min(9999, carryingSignals * 90 + recordedSwaps * 35 + Math.min(Number(seedBalance), 500) + Number(loreBalance) * 125);
+  const pondRank = pondPoints >= 1400 ? "POND KEEPER" : pondPoints >= 700 ? "TRAIL MAKER" : pondPoints >= 280 ? "SEED TENDER" : pondPoints > 0 ? "POND WALKER" : "NEW ARRIVAL";
+  const nextMilestone = pondPoints >= 1400 ? 2000 : pondPoints >= 700 ? 1400 : pondPoints >= 280 ? 700 : 280;
+  const milestoneProgress = Math.min(100, Math.round((pondPoints / nextMilestone) * 100));
+  const lastPondAction = pondRecord.swaps[0]?.at
+    ? new Date(pondRecord.swaps[0].at).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : "No trail yet";
 
   const selectedAsset = assets.find((asset) => asset.key === selected)!;
   const is1155 = selectedAsset.standard === "ERC-1155";
@@ -668,16 +722,41 @@ COMPLETION</span>
             <div className="mytw-mystery-line"><span>?</span><p><b>What will grow here?</b><br/>The pond has not revealed everything yet.</p></div>
           </article>
 
-          <article className="mytw-action-card mytw-contribution-card">
-            <div className="mytw-action-head"><span className="mytw-symbol-orb">🔥</span><div><small>YOUR CONTRIBUTIONS</small><h2>Build a pond record</h2></div></div>
-            <p>Your pond record can grow around the actions that matter—burns, swaps, SEED carried, and the land you keep.</p>
-            <div className="mytw-contribution-lines">
-              <span><b>TOBY burns</b><em>Coming to your record</em></span>
-              <span><b>Swap activity</b><em>Your pond trail</em></span>
-              <span><b>SEED held</b><em>{isConnected ? seedBalance.toLocaleString() : "—"}</em></span>
-              <span><b>Lore Land</b><em>{isConnected ? loreBalance.toLocaleString() : "—"}</em></span>
+          <article className="mytw-action-card mytw-contribution-card mytw-pond-record">
+            <div className="mytw-record-aurora" aria-hidden="true" />
+            <div className="mytw-action-head mytw-record-head">
+              <span className="mytw-symbol-orb mytw-flame-orb"><PondFlameSvg /></span>
+              <div><small>YOUR POND RECORD</small><h2>{isConnected ? pondRank : "Build a pond record"}</h2></div>
+              <span className="mytw-record-score"><small>POND SCORE</small><strong>{isConnected ? pondPoints.toLocaleString() : "—"}</strong></span>
             </div>
-            <Link prefetch={false} href="/#swap" className="mytw-inline-action">Contribute through the Pond →</Link>
+            <p>{isConnected ? "Your live holdings and confirmed TobySwap activity shape this little record of your path through the pond." : "Connect your wallet to turn holdings and confirmed TobySwap activity into a living pond record."}</p>
+
+            <div className="mytw-record-hero">
+              <div className="mytw-record-ring" style={{ "--record-progress": `${milestoneProgress * 3.6}deg` } as CSSProperties}>
+                <div><strong>{isConnected ? `${milestoneProgress}%` : "?"}</strong><small>TO NEXT MARK</small></div>
+              </div>
+              <div className="mytw-record-story">
+                <span className="mytw-record-kicker"><PondWaveSvg /> POND TRAIL</span>
+                <strong>{recordedSwaps > 0 ? `${recordedSwaps} confirmed swap${recordedSwaps === 1 ? "" : "s"}` : "Your trail begins here"}</strong>
+                <small>{recordedSwaps > 0 ? `${uniquePairs} route${uniquePairs === 1 ? "" : "s"} explored · last ripple ${lastPondAction}` : "Your first confirmed in-app swap will leave a ripple."}</small>
+              </div>
+            </div>
+
+            <div className="mytw-record-stat-grid">
+              <div><span className="mytw-record-stat-icon">↝</span><small>SWAPS</small><strong>{isConnected ? recordedSwaps.toLocaleString() : "—"}</strong><em>{pondRouteSwaps ? `${pondRouteSwaps} through Pond` : "confirmed here"}</em></div>
+              <div><span className="mytw-record-stat-icon">△</span><small>LORE LAND</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><em>{loreBalance > 0n ? "place anchored" : "not discovered"}</em></div>
+              <div><span className="mytw-record-stat-icon">✦</span><small>SEED HELD</small><strong>{isConnected ? seedBalance.toLocaleString() : "—"}</strong><em>{seedStage.label}</em></div>
+              <div><span className="mytw-record-stat-icon">◉</span><small>SIGNALS</small><strong>{isConnected ? `${foundSignals}/${profileSignals.length}` : "—"}</strong><em>{loreCompletion}% discovered</em></div>
+            </div>
+
+            <div className="mytw-record-burn-line">
+              <span><PondFlameSvg /></span>
+              <div><small>RECORDED TOBY BURN ESTIMATE</small><strong>{isConnected && recordedBurn > 0 ? `${recordedBurn.toLocaleString(undefined, { maximumFractionDigits: 2 })} TOBY` : "No recorded burn yet"}</strong></div>
+              <em>from confirmed Pond swaps on this device</em>
+            </div>
+
+            <div className="mytw-record-progress"><span style={{ width: `${isConnected ? milestoneProgress : 0}%` }} /></div>
+            <div className="mytw-record-foot"><small>{isConnected ? `${Math.max(0, nextMilestone - pondPoints).toLocaleString()} points to the next pond mark` : "Connect to reveal your mark"}</small><Link prefetch={false} href="/#swap" className="mytw-inline-action">Make a ripple →</Link></div>
           </article>
 
 
