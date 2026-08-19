@@ -28,7 +28,6 @@ export default function LoreDeedArt({
   const [result, setResult] = useState<LoreMetadataResult | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [proxyTried, setProxyTried] = useState(false);
-  const [serverFallbackTried, setServerFallbackTried] = useState(false);
 
   const id = typeof tokenId === "bigint" ? tokenId : BigInt(tokenId);
 
@@ -73,61 +72,11 @@ export default function LoreDeedArt({
     let cancelled = false;
     setImageIndex(0);
     setProxyTried(false);
-    setServerFallbackTried(false);
     fetchLoreMetadataResult(uriRead.data).then((value) => {
       if (!cancelled) setResult(value);
     });
     return () => { cancelled = true; };
   }, [uriRead.data, visible]);
-
-  useEffect(() => {
-    if (
-      !visible ||
-      serverFallbackTried ||
-      !result ||
-      (!result.error && (result.metadata || result.directImage))
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    setServerFallbackTried(true);
-
-    fetch(`/api/lore/metadata?tokenId=${id.toString()}`, { cache: "force-cache" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Lore metadata fallback unavailable.");
-        return response.json();
-      })
-      .then((body) => {
-        if (cancelled) return;
-        const metadata =
-          body?.metadata && typeof body.metadata === "object"
-            ? body.metadata
-            : null;
-
-        setResult({
-          metadata,
-          sourceUri: typeof body?.tokenUri === "string" ? body.tokenUri : result.sourceUri,
-          resolvedMetadataUri:
-            typeof body?.metadataUri === "string" ? body.metadataUri : result.resolvedMetadataUri,
-          directImage:
-            typeof body?.image === "string" && !metadata ? body.image : null,
-          error:
-            metadata || body?.image
-              ? null
-              : typeof body?.error === "string"
-                ? body.error
-                : result.error,
-        });
-        setImageIndex(0);
-      })
-      .catch(() => {})
-      .finally(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, result, serverFallbackTried, visible]);
 
   const images = useMemo(
     () => {
