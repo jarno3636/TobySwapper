@@ -500,7 +500,7 @@ export default function TaboshiOnePage() {
             <h1>My Tobyworld</h1>
             <p>Your wallet becomes a living Tobyworld profile—what you carry, what you have discovered, where your land waits, and what you can do next.</p>
             <div className="taboshi1-hero-actions">
-              <a href="#pouch" className="metal-button taboshi1-primary">Enter your world</a>
+              <a href="#pouch" className="metal-button taboshi1-primary">Open my pouch</a>
               <a href="#next-path" className="metal-button">Find my next path ↓</a>
             </div>
           </div>
@@ -556,7 +556,7 @@ COMPLETION</span>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>COLLECTION</small><b>CANONICAL</b></span><span><small>DEEDS HELD</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
-            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Tobyworld Market <small>preview</small></a></div>
+            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Tobyworld Market <small>live</small></a></div>
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
               <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
@@ -717,7 +717,7 @@ COMPLETION</span>
         <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
       </div>
       <Footer />
-      <PondDock />
+      <PondDock active="pouch" />
     </MiniAppGate>
   );
 }
