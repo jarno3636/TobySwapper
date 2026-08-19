@@ -7,6 +7,9 @@ import type { Address } from "viem";
 export const LORE_COLLECTION_ADDRESS =
   "0x0495601Af6f86efb14C9D478eA46b2Aa09cB164A" as Address;
 
+/** Clear alias used by land-vault and marketplace components. */
+export const CANONICAL_LORE_LAND = LORE_COLLECTION_ADDRESS;
+
 /** Previous Lore Land collection. Kept as a historical/tradable asset. */
 export const OLD_LORE_COLLECTION_ADDRESS =
   "0x08f74Dd2913d7A7a4C7339B9106AE14654265b62" as Address;
@@ -40,49 +43,6 @@ export const LORE_DEEDS_ABI = [
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ name: "", type: "string" }],
-  },
-
-  {
-    type: "function",
-    name: "accountOf",
-    stateMutability: "view",
-    inputs: [{ name: "tokenId", type: "uint256" }],
-    outputs: [{ name: "", type: "address" }],
-  },
-  {
-    type: "function",
-    name: "createAccount",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "tokenId", type: "uint256" }],
-    outputs: [{ name: "account", type: "address" }],
-  },
-  {
-    type: "function",
-    name: "transferNonce",
-    stateMutability: "view",
-    inputs: [{ name: "", type: "uint256" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "revealed",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "genesisSealed",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "royaltyInfo",
-    stateMutability: "view",
-    inputs: [{ name: "tokenId", type: "uint256" }, { name: "salePrice", type: "uint256" }],
-    outputs: [{ name: "receiver", type: "address" }, { name: "royaltyAmount", type: "uint256" }],
   },
   {
     type: "function",
@@ -123,6 +83,41 @@ export const LORE_DEEDS_ABI = [
   },
   {
     type: "function",
+    name: "accountOf",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "createAccount",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "account", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "transferNonce",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "genesisSealed",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "revealed",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
     name: "safeTransferFrom",
     stateMutability: "nonpayable",
     inputs: [
@@ -149,3 +144,6 @@ export function resolveLoreUri(value?: string | null) {
   if (v.startsWith("ar://")) return `https://arweave.net/${v.slice(5)}`;
   return v;
 }
+
+/** Clear alias for components that use the canonical-only name. */
+export const CANONICAL_LORE_ABI = LORE_DEEDS_ABI;
