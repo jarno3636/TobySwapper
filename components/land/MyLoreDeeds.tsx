@@ -59,7 +59,7 @@ function loadOwned(owner: Address) {
   return request;
 }
 
-export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?: Address; expectedCount: bigint; revealed: boolean }) {
+export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly = false }: { owner?: Address; expectedCount: bigint; revealed: boolean; readOnly?: boolean }) {
   const [deeds, setDeeds] = useState<OwnedDeed[]>([]);
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(true);
@@ -167,7 +167,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
   return (
     <div className="mytw-owned-deeds">
       <div className="mytw-owned-deeds-head">
-        <div><span>MY LORE DEED{expectedCount === 1n ? "" : "S"}</span><strong>{loading ? "Finding your land…" : `${expectedCount.toLocaleString()} held`}</strong><small>{sorted.length > 0 ? "Your deed IDs are shown below" : "Finding token IDs"}</small></div>
+        <div><span>{readOnly ? "LORE DEEDS" : `MY LORE DEED${expectedCount === 1n ? "" : "S"}`}</span><strong>{loading ? "Finding land…" : `${expectedCount.toLocaleString()} held`}</strong><small>{sorted.length > 0 ? (readOnly ? "Canonical deed IDs held by this wallet" : "Your deed IDs are shown below") : "Finding token IDs"}</small></div>
         <a href="/world">Explore World ↗</a>
       </div>
 
@@ -186,7 +186,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
                 </div>
                 <div className="mytw-deed-tile-actions">
                   <a href={`/land/${deed.tokenId}`}>Visit</a>
-                  <button type="button" onClick={() => sendToDeed(deed.tokenId)}>Send assets</button>
+                  {!readOnly ? <button type="button" onClick={() => sendToDeed(deed.tokenId)}>Send assets</button> : null}
                   <button type="button" onClick={() => copyTokenId(deed.tokenId)}>
                     {copied === deed.tokenId ? "Copied" : "Copy ID"}
                   </button>
@@ -208,7 +208,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
         <p className="mytw-deed-note">Showing the deed IDs currently found for this wallet. You can still open any known deed below.</p>
       )}
 
-      {sorted.length > 0 ? (
+      {sorted.length > 0 && !readOnly ? (
         <PouchLandTransfer deedIds={sorted.map((deed) => deed.tokenId)} />
       ) : null}
     </div>
