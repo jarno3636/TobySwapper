@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
 import LoreDeedArt from "@/components/land/LoreDeedArt";
@@ -47,7 +48,7 @@ export default function PublicPouchPage({ slug }: { slug: string }) {
           <span>THE POND IS QUIET</span>
           <h1>Public Pouch not found</h1>
           <p>This page may have moved or never existed.</p>
-          <a href="/taboshi1">Explore a wallet →</a>
+          <Link prefetch={false} href="/taboshi1">Explore a wallet →</Link>
         </section>
       </main>
     );
@@ -77,11 +78,11 @@ export default function PublicPouchPage({ slug }: { slug: string }) {
         </div>
 
         {profile.featuredDeed ? (
-          <a href={`/land/${profile.featuredDeed}`} className="public-pouch-featured-deed">
+          <Link prefetch={false} href={`/land/${profile.featuredDeed}`} className="public-pouch-featured-deed">
             <LoreDeedArt tokenId={profile.featuredDeed} eager />
             <span>HOME LAND</span>
             <strong>Lore Land #{profile.featuredDeed}</strong>
-          </a>
+          </Link>
         ) : null}
       </section>
 
@@ -100,9 +101,9 @@ export default function PublicPouchPage({ slug }: { slug: string }) {
       )}
 
       <div className="public-pouch-footer-actions">
-        <a href="/taboshi1">View another wallet</a>
-        <a href="/world">Explore Tobyworld</a>
-        <a href="/world/exchange">Market</a>
+        <Link prefetch={false} href="/taboshi1">View another wallet</Link>
+        <Link prefetch={false} href="/world">Explore Tobyworld</Link>
+        <Link prefetch={false} href="/world/exchange">Market</Link>
       </div>
     </main>
   );
