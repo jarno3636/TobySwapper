@@ -62,11 +62,11 @@ export function useTokenBalance(
     scopeKey,
     query: {
       enabled: Boolean(userCS),
-      // Wallet pages should always be fresh when revisited, but should not poll in
-      // the background. These reads go directly to Base RPC, not through Vercel.
+      // Route navigation in embedded Base wallets can preserve a connected
+      // connector while leaving an empty cached balance behind. Refresh once on
+      // mount/reconnect and rely on the explicit Pouch refresh after that.
       refetchInterval: false,
-      refetchIntervalInBackground: false,
-      staleTime: 0,
+      staleTime: 15_000,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       refetchOnMount: "always",
