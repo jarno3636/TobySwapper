@@ -1,12 +1,13 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, useAccount, useChainId, useReconnect } from "wagmi";
 import {
   RainbowKitProvider,
+  darkTheme,
   lightTheme,
   useChainModal,
   useConnectModal,
@@ -34,9 +35,16 @@ const queryClient = new QueryClient({
 
 /* ---------------- RainbowKit Theme ---------------- */
 
-const rkTheme = lightTheme({
+const rkLightTheme = lightTheme({
   accentColor: "#179ee6",
   accentColorForeground: "#ffffff",
+  borderRadius: "large",
+  overlayBlur: "small",
+});
+
+const rkDarkTheme = darkTheme({
+  accentColor: "#55c8d8",
+  accentColorForeground: "#071719",
   borderRadius: "large",
   overlayBlur: "small",
 });
@@ -99,7 +107,18 @@ function ChainGate({ children }: { children: ReactNode }) {
 /* ---------------- ROOT PROVIDERS ---------------- */
 
 export default function Providers({ children }: { children: ReactNode }) {
-  const theme = useMemo(() => rkTheme, []);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const read = () => setDark(document.documentElement.dataset.theme === "dark");
+    read();
+
+    const onTheme = () => read();
+    window.addEventListener("tobyswap:theme-change", onTheme);
+    return () => window.removeEventListener("tobyswap:theme-change", onTheme);
+  }, []);
+
+  const theme = useMemo(() => (dark ? rkDarkTheme : rkLightTheme), [dark]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,9 +1,24 @@
 import "./globals.css";
+import "./premium-theme.css";
 import Brand from "@/components/Brand";
 import Background from "@/components/Background";
 import Providers from "./providers";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://tobyswap.vercel.app";
+
+const themeBoot = `
+(function () {
+  try {
+    var saved = localStorage.getItem("tobyswap-theme");
+    var theme = saved === "dark" || saved === "light"
+      ? saved
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (_) {
+    document.documentElement.dataset.theme = "light";
+  }
+})();`;
 
 export const metadata = {
   metadataBase: new URL(SITE),
@@ -41,8 +56,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
+        <meta name="theme-color" content="#faf9f6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
@@ -52,11 +69,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="fc:frame" content={JSON.stringify(miniAppEmbed)} />
       </head>
       <body suppressHydrationWarning>
+        <a className="skip-link" href="#app-main">Skip to content</a>
         <Providers>
           <Background />
           <div className="relative z-10 flex w-full flex-col items-center">
             <Brand />
-            <main className="w-full">{children}</main>
+            <main id="app-main" className="w-full">{children}</main>
           </div>
         </Providers>
       </body>
