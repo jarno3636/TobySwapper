@@ -600,7 +600,11 @@ COMPLETION</span>
             <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
             <div className="mytw-land-stats"><span><small>COLLECTION</small><b>CANONICAL</b></span><span><small>DEEDS HELD</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
-            <div className="mytw-land-quicklinks"><a href="/world">Explore World</a><a href="/world/exchange">Tobyworld Market <small>live</small></a></div>
+            <div className="mytw-land-quicklinks">
+              <a href="/world">Explore World</a>
+              <a href="/world/exchange">Tobyworld Market <small>live</small></a>
+              <a href="#wallet-viewer" className="mytw-manual-wallet-link">View a wallet manually <small>no connect</small></a>
+            </div>
             <div className="mytw-land-engine-launch">
               <label><span>VISIT A DEED</span><input inputMode="numeric" value={visitDeedId} onChange={(event) => setVisitDeedId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 742" /></label>
               <a className={`mytw-inline-action ${!visitDeedId ? "is-disabled" : ""}`} href={visitDeedId ? `/land/${visitDeedId}` : undefined} aria-disabled={!visitDeedId}>Visit Land →</a>
@@ -667,7 +671,7 @@ COMPLETION</span>
           </article>
         </section>
 
-        <section className="watch-pouch-card">
+        <section id="wallet-viewer" className="watch-pouch-card scroll-mt-24">
           <div className="watch-pouch-copy">
             <span className="taboshi1-kicker">EXPLORE A WALLET</span>
             <h2>View any Tobyworld pouch</h2>
@@ -716,80 +720,93 @@ COMPLETION</span>
           </>
         )}
 
-        <section id="pouch" className="seedleaf-all-assets lore-inventory-card scroll-mt-24">
-          <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">YOUR POUCH</span><h2>Everything you carry</h2><p>Choose an asset here to move it through the transfer portal.</p></div>{isConnected ? (
-              <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-label="Refresh wallet and pouch balances">
-                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "REFRESHING" : refreshCooling ? "REFRESHED" : "REFRESH POUCH"}
-              </button>
-            ) : <span className="seedleaf-asset-count">CLOSED</span>}</div>
-          <div className="seedleaf-assets-grid lore-assets-grid">
-            {assets.map((asset) => (
-              <button
-                key={asset.key}
-                type="button"
-                className={`seedleaf-asset-card ${selected === asset.key ? "is-selected" : ""} ${asset.key === "lore" ? "is-lore" : ""}`}
-                onClick={() => setSelected(asset.key)}
-                aria-pressed={selected === asset.key}
-                aria-label={`Select ${asset.symbol} for transfer`}
-              >
-                <div className="seedleaf-asset-icon seedleaf-asset-image">
-                  {asset.key === "seed" ? <SeedArt name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed /> : <img src={asset.icon!} alt={asset.symbol} />}
-                </div>
-                <div className="seedleaf-asset-copy">
-                  <span>{asset.label}</span>
-                  <strong>{asset.symbol}</strong>
-                  <b>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</b>
-                  <em className="seedleaf-usd-value">
-                    {!isConnected ? "USD VALUE" : asset.standard === "ERC-20" ? usd(atomicUsdValue(asset.value, asset.decimals, asset.usdPrice)) : "UNPRICED RELIC"}
-                  </em>
-                </div>
-                <span className="seedleaf-selected-mark" aria-hidden="true">✓</span>
-              </button>
-            ))}
-            <div className={`seedleaf-asset-card legacy-land-asset ${legacyLoreBalance > 0n ? "is-held" : ""}`} aria-label="Old Lore Deed legacy asset">
-              <div className="seedleaf-asset-icon legacy-land-asset-icon"><span>△</span></div>
-              <div className="seedleaf-asset-copy"><span>Previous land collection</span><strong>OLD LORE LAND</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
-              <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
-            </div>
-          </div>
-          <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. Old Lore Land stays as a history asset. Canonical Lore Land opens your place in the World.</div>
-        </section>
-
         <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
 
         <PondPulse />
 
-        <section id="transfer" className="taboshi1-card seedleaf-transfer-card lore-transfer-card scroll-mt-24">
-          <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">PASS IT FORWARD</span><h2>Transfer portal</h2><p className="lore-transfer-intro">Your pouch above chooses what moves through the portal.</p></div><div className="taboshi1-send-orb">→</div></div>
-          <div className="seedleaf-transfer-summary seedleaf-transfer-summary-polished">
+        <section className="mytw-pouch-transfer-shell" aria-label="Pouch and transfer tools">
+          <div className="mytw-pouch-transfer-intro">
+            <div>
+              <span className="taboshi1-kicker">POUCH TO PORTAL</span>
+              <h2>Carry it. Choose it. Move it.</h2>
+              <p>Your Pouch selects the asset. The Transfer Portal handles the destination.</p>
+            </div>
+            <a href="#wallet-viewer">View another wallet <small>without connecting</small></a>
+          </div>
+
+          <div className="mytw-pouch-transfer-grid">
+            <section id="pouch" className="seedleaf-all-assets lore-inventory-card scroll-mt-24">
+            <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">YOUR POUCH</span><h2>Everything you carry</h2><p>Choose an asset here to move it through the transfer portal.</p></div>{isConnected ? (
+            <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-label="Refresh wallet and pouch balances">
+            <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "REFRESHING" : refreshCooling ? "REFRESHED" : "REFRESH POUCH"}
+            </button>
+            ) : <span className="seedleaf-asset-count">CLOSED</span>}</div>
+            <div className="seedleaf-assets-grid lore-assets-grid">
+            {assets.map((asset) => (
+            <button
+            key={asset.key}
+            type="button"
+            className={`seedleaf-asset-card ${selected === asset.key ? "is-selected" : ""} ${asset.key === "lore" ? "is-lore" : ""}`}
+            onClick={() => setSelected(asset.key)}
+            aria-pressed={selected === asset.key}
+            aria-label={`Select ${asset.symbol} for transfer`}
+            >
+            <div className="seedleaf-asset-icon seedleaf-asset-image">
+            {asset.key === "seed" ? <SeedArt name="SEED" /> : asset.key === "lore" ? <LoreDeedArt revealed /> : <img src={asset.icon!} alt={asset.symbol} />}
+            </div>
+            <div className="seedleaf-asset-copy">
+            <span>{asset.label}</span>
+            <strong>{asset.symbol}</strong>
+            <b>{isConnected ? (asset.standard === "ERC-20" ? compact(asset.value, asset.decimals) : asset.value.toLocaleString()) : "—"}</b>
+            <em className="seedleaf-usd-value">
+            {!isConnected ? "USD VALUE" : asset.standard === "ERC-20" ? usd(atomicUsdValue(asset.value, asset.decimals, asset.usdPrice)) : "UNPRICED RELIC"}
+            </em>
+            </div>
+            <span className="seedleaf-selected-mark" aria-hidden="true">✓</span>
+            </button>
+            ))}
+            <div className={`seedleaf-asset-card legacy-land-asset ${legacyLoreBalance > 0n ? "is-held" : ""}`} aria-label="Old Lore Deed legacy asset">
+            <div className="seedleaf-asset-icon legacy-land-asset-icon"><span>△</span></div>
+            <div className="seedleaf-asset-copy"><span>Previous land collection</span><strong>OLD LORE LAND</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
+            <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
+            </div>
+            </div>
+            <div className="seedleaf-assets-note"><span className="seedleaf-note-dot" />Your pouch is also your transfer selector. Old Lore Land stays as a history asset. Canonical Lore Land opens your place in the World.</div>
+            </section>
+
+            <section id="transfer" className="taboshi1-card seedleaf-transfer-card lore-transfer-card scroll-mt-24">
+            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">PASS IT FORWARD</span><h2>Transfer portal</h2><p className="lore-transfer-intro">Your pouch above chooses what moves through the portal.</p></div><div className="taboshi1-send-orb">→</div></div>
+            <div className="seedleaf-transfer-summary seedleaf-transfer-summary-polished">
             <span>SELECTED FROM POUCH</span>
             <strong>{selectedAsset.symbol}</strong>
             <b>{isConnected ? `${selectedAsset.standard === "ERC-20" ? compact(selectedAsset.value, selectedAsset.decimals) : selectedAsset.value.toLocaleString()} available` : "Connect wallet"}</b>
             {isConnected && selectedAsset.standard === "ERC-20" && (
-              <em>{usd(atomicUsdValue(selectedAsset.value, selectedAsset.decimals, selectedAsset.usdPrice))} wallet value</em>
+            <em>{usd(atomicUsdValue(selectedAsset.value, selectedAsset.decimals, selectedAsset.usdPrice))} wallet value</em>
             )}
-          </div>
-          <div className="seedleaf-transfer-fields">
+            </div>
+            <div className="seedleaf-transfer-fields">
             <label className="taboshi1-label"><span>DESTINATION</span><input value={recipient} onChange={(event) => setRecipient(event.target.value.trim())} placeholder="0x… wallet address" autoComplete="off" spellCheck={false} /></label>
             {isLore ? (
-              <label className="taboshi1-label"><span>DEED TOKEN ID</span><input inputMode="numeric" value={loreTokenId} onChange={(event) => setLoreTokenId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 1017" /></label>
+            <label className="taboshi1-label"><span>DEED TOKEN ID</span><input inputMode="numeric" value={loreTokenId} onChange={(event) => setLoreTokenId(event.target.value.replace(/\D/g, ""))} placeholder="e.g. 1017" /></label>
             ) : (
-              <label className="taboshi1-label">
-                <span>AMOUNT</span>
-                <input inputMode="decimal" value={amount} onChange={(event) => setAmount(is1155 ? event.target.value.replace(/\D/g, "") : event.target.value.replace(/[^0-9.]/g, ""))} />
-                <div className="seedleaf-quick-selects" aria-label="Quick amount selection">
-                  {[25, 50, 75, 100].map((percent) => (
-                    <button key={percent} type="button" onClick={() => setTransferPercent(percent as 25 | 50 | 75 | 100)} disabled={selectedAsset.value === 0n}>
-                      {percent === 100 ? "MAX" : `${percent}%`}
-                    </button>
-                  ))}
-                </div>
-              </label>
+            <label className="taboshi1-label">
+            <span>AMOUNT</span>
+            <input inputMode="decimal" value={amount} onChange={(event) => setAmount(is1155 ? event.target.value.replace(/\D/g, "") : event.target.value.replace(/[^0-9.]/g, ""))} />
+            <div className="seedleaf-quick-selects" aria-label="Quick amount selection">
+            {[25, 50, 75, 100].map((percent) => (
+            <button key={percent} type="button" onClick={() => setTransferPercent(percent as 25 | 50 | 75 | 100)} disabled={selectedAsset.value === 0n}>
+            {percent === 100 ? "MAX" : `${percent}%`}
+            </button>
+            ))}
+            </div>
+            </label>
             )}
+            </div>
+            <p className="taboshi1-card-copy lore-transfer-note">{isLore ? "Enter a deed ID you own; ownership is checked before transfer." : selectedAsset.standard === "ERC-1155" ? "Relics move in whole units." : "Sent directly from your connected wallet on Base."}</p>
+            <button className="taboshi1-send-button" disabled={!canSend} onClick={transfer}><span>{txState === "sending" ? "Sending…" : !isConnected ? "Connect to send" : selectedAsset.value === 0n ? `Nothing to send yet` : isLore ? `Send Lore Deed` : `Send ${selectedAsset.symbol}`}</span><b>→</b></button>
+            {message && <div className={`taboshi1-message ${txState === "success" ? "is-success" : "is-error"}`}><strong>{txState === "success" ? "Passed through the portal" : "The portal stayed closed"}</strong><span>{message}</span>{txHash && <LinkMaybeMini href={`https://basescan.org/tx/${txHash}`}>View transaction ↗</LinkMaybeMini>}</div>}
+            </section>
           </div>
-          <p className="taboshi1-card-copy lore-transfer-note">{isLore ? "Enter a deed ID you own; ownership is checked before transfer." : selectedAsset.standard === "ERC-1155" ? "Relics move in whole units." : "Sent directly from your connected wallet on Base."}</p>
-          <button className="taboshi1-send-button" disabled={!canSend} onClick={transfer}><span>{txState === "sending" ? "Sending…" : !isConnected ? "Connect to send" : selectedAsset.value === 0n ? `Nothing to send yet` : isLore ? `Send Lore Deed` : `Send ${selectedAsset.symbol}`}</span><b>→</b></button>
-          {message && <div className={`taboshi1-message ${txState === "success" ? "is-success" : "is-error"}`}><strong>{txState === "success" ? "Passed through the portal" : "The portal stayed closed"}</strong><span>{message}</span>{txHash && <LinkMaybeMini href={`https://basescan.org/tx/${txHash}`}>View transaction ↗</LinkMaybeMini>}</div>}
         </section>
 
         <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
