@@ -1658,3 +1658,846 @@ html[data-theme="dark"] .taboshi1-page :is(
   }
 }
 
+
+/* ==========================================================================
+   2026-08 DARK SYSTEM DEEP DIVE
+   Exact World / Exchange / remaining My Tobyworld selectors.
+   Reference material: Explore-a-Wallet dark glass.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --tw-night-bg: #071416;
+  --tw-night-card: rgba(12, 32, 34, .95);
+  --tw-night-card-2: rgba(17, 40, 42, .94);
+  --tw-night-card-3: rgba(22, 47, 49, .90);
+  --tw-night-line: rgba(159, 224, 212, .15);
+  --tw-night-line-soft: rgba(159, 224, 212, .085);
+  --tw-night-copy: #eef9f6;
+  --tw-night-copy-soft: #a1b7b4;
+  --tw-night-copy-muted: #78918f;
+  --tw-night-green: #58c9a9;
+  --tw-night-cyan: #72c8df;
+  --tw-night-purple: #b3a3dc;
+  --tw-night-gold: #e0b172;
+  --tw-night-red: #ec9283;
+  --tw-night-shadow: 0 17px 38px rgba(0,0,0,.22);
+  --tw-night-shadow-soft: 0 8px 20px rgba(0,0,0,.14);
+}
+
+/* --------------------------------------------------------------------------
+   WORLD PAGE — shell / topbar / hero
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-page,
+html[data-theme="dark"] .exchange-page {
+  color: var(--tw-night-copy) !important;
+}
+
+html[data-theme="dark"] .world-topbar > a {
+  color: #9eb8b5 !important;
+}
+html[data-theme="dark"] .world-topbar > span {
+  color: #708b89 !important;
+}
+
+html[data-theme="dark"] .world-hero,
+html[data-theme="dark"] .exchange-hero {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 82% 5%, rgba(76, 190, 158, .12), transparent 29%),
+    radial-gradient(circle at 4% 100%, rgba(64, 139, 184, .10), transparent 32%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 24px 52px rgba(0,0,0,.24) !important;
+}
+html[data-theme="dark"] .exchange-hero {
+  background:
+    radial-gradient(circle at 86% 2%, rgba(200, 133, 73, .11), transparent 32%),
+    radial-gradient(circle at 0 100%, rgba(73, 190, 161, .11), transparent 32%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+}
+html[data-theme="dark"] .world-hero::before,
+html[data-theme="dark"] .world-onboarding::before {
+  background:
+    linear-gradient(115deg, transparent 0 45%, rgba(194,240,232,.055) 50%, transparent 56%) !important;
+  opacity: .55;
+}
+html[data-theme="dark"] .world-hero h1,
+html[data-theme="dark"] .exchange-hero h1 {
+  color: var(--tw-night-copy) !important;
+  text-shadow: 0 3px 24px rgba(0,0,0,.18);
+}
+html[data-theme="dark"] .world-hero-copy > p,
+html[data-theme="dark"] .exchange-hero p {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-hero-actions > a,
+html[data-theme="dark"] .exchange-hero-actions > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 64, 63, .97), rgba(17, 47, 46, .98)) !important;
+  color: #e1f7f2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 7px 15px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .world-hero-actions > a:hover,
+html[data-theme="dark"] .exchange-hero-actions > a:hover {
+  background:
+    linear-gradient(180deg, rgba(37, 76, 74, .98), rgba(21, 55, 54, .98)) !important;
+  border-color: rgba(130, 220, 195, .22) !important;
+}
+html[data-theme="dark"] .land-section-kicker {
+  color: #86aaa6 !important;
+}
+
+/* World hero art remains an illustration, but belongs to the night system. */
+html[data-theme="dark"] .world-hero-art {
+  filter: saturate(.82) brightness(.82);
+}
+html[data-theme="dark"] .world-hero-sun {
+  opacity: .68;
+  box-shadow: 0 0 48px rgba(202, 235, 216, .16) !important;
+}
+html[data-theme="dark"] .exchange-gate-ring {
+  border-color: rgba(219, 163, 104, .28) !important;
+}
+html[data-theme="dark"] .exchange-gate-ring.r2 {
+  border-color: rgba(95, 203, 183, .24) !important;
+}
+html[data-theme="dark"] .exchange-gate-rune {
+  color: #d98d7b !important;
+  text-shadow: 0 8px 20px rgba(0,0,0,.23) !important;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD ONBOARDING
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-onboarding,
+html[data-theme="dark"] .world-onboarding.has-land {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(69, 180, 151, .09), transparent 31%),
+    linear-gradient(145deg, rgba(13, 35, 37, .97), rgba(8, 26, 28, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .world-onboarding-frog {
+  background:
+    linear-gradient(145deg, rgba(29, 63, 65, .96), rgba(15, 42, 44, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 8px 18px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] .world-onboarding-intro h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .world-onboarding-intro p {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-path-card,
+html[data-theme="dark"] .world-path-card.is-seed,
+html[data-theme="dark"] .world-path-card.is-pond,
+html[data-theme="dark"] .world-path-card.is-land,
+html[data-theme="dark"] .world-path-card.is-explore {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(20, 45, 47, .94), rgba(13, 33, 35, .96)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .world-path-card:hover {
+  background:
+    linear-gradient(150deg, rgba(27, 56, 58, .97), rgba(16, 39, 41, .98)) !important;
+  border-color: var(--tw-night-line) !important;
+}
+html[data-theme="dark"] .world-path-card > span:first-child {
+  background:
+    linear-gradient(145deg, rgba(31, 68, 70, .96), rgba(16, 45, 47, .98)) !important;
+  color: var(--tw-night-cyan) !important;
+}
+html[data-theme="dark"] .world-path-card strong {
+  color: #e8f7f4 !important;
+}
+html[data-theme="dark"] .world-path-card small {
+  color: #839a98 !important;
+}
+html[data-theme="dark"] .world-path-card > b {
+  color: var(--tw-night-green) !important;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD SEARCH / ATLAS
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-search-panel,
+html[data-theme="dark"] .world-atlas-section,
+html[data-theme="dark"] .world-official-atlas {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 178, 153, .065), transparent 28%),
+    linear-gradient(145deg, rgba(13, 35, 37, .97), rgba(8, 26, 28, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy > span,
+  .world-atlas-head span,
+  .world-official-atlas span
+) {
+  color: #83a6a2 !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy h2,
+  .world-atlas-head h2,
+  .world-official-atlas h2
+) {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy p,
+  .world-official-atlas p
+) {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-search-field,
+html[data-theme="dark"] .world-deed-jump label {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(17, 41, 43, .86) !important;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .world-search-field > span,
+html[data-theme="dark"] .world-deed-jump label > span {
+  color: #789390 !important;
+}
+html[data-theme="dark"] .world-search-field input,
+html[data-theme="dark"] .world-deed-jump input {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .world-deed-jump > a,
+html[data-theme="dark"] .world-atlas-head-actions > a,
+html[data-theme="dark"] .world-atlas-head > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 66, 63, .97), rgba(17, 48, 46, .98)) !important;
+  color: #dff6f1 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 13px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .world-atlas-head-actions > .is-exchange {
+  border-color: rgba(213, 168, 104, .19) !important;
+  background:
+    linear-gradient(180deg, rgba(72, 57, 40, .94), rgba(50, 40, 31, .97)) !important;
+  color: #e6be86 !important;
+}
+
+/* World land cards: preserve scene colors, darken the information surface. */
+html[data-theme="dark"] .world-land-card {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(12, 31, 33, .97) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    0 10px 24px rgba(0,0,0,.17) !important;
+}
+html[data-theme="dark"] .world-land-card:hover {
+  border-color: var(--tw-night-line) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 15px 30px rgba(0,0,0,.22) !important;
+}
+html[data-theme="dark"] .world-land-scene {
+  filter: saturate(.76) brightness(.77);
+}
+html[data-theme="dark"] .world-land-moon {
+  opacity: .72;
+}
+html[data-theme="dark"] .world-land-id,
+html[data-theme="dark"] .world-land-copy small {
+  color: #78918f !important;
+}
+html[data-theme="dark"] .world-land-copy h3 {
+  color: #edf8f5 !important;
+}
+html[data-theme="dark"] .world-land-copy p {
+  color: #9db1af !important;
+}
+html[data-theme="dark"] .world-land-copy > div {
+  border-top-color: var(--tw-night-line-soft) !important;
+}
+html[data-theme="dark"] .world-land-copy b {
+  color: var(--tw-night-green) !important;
+}
+html[data-theme="dark"] .world-empty {
+  border-color: rgba(141, 210, 197, .15) !important;
+  background: rgba(15, 38, 40, .64) !important;
+}
+html[data-theme="dark"] .world-empty h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .world-empty p {
+  color: #8fa6a3 !important;
+}
+html[data-theme="dark"] .world-official-atlas > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(31, 68, 66, .98), rgba(18, 49, 48, .98)) !important;
+  color: #dcf6ef !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 14px rgba(0,0,0,.14) !important;
+}
+
+/* Exchange preview on World page */
+html[data-theme="dark"] .land-exchange-preview {
+  border-color: rgba(211, 160, 100, .16) !important;
+  background:
+    radial-gradient(circle at 0 100%, rgba(69, 177, 151, .08), transparent 31%),
+    radial-gradient(circle at 100% 0%, rgba(201, 139, 76, .09), transparent 34%),
+    linear-gradient(145deg, rgba(16, 37, 38, .98), rgba(10, 28, 30, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .land-exchange-copy > span {
+  color: #c39867 !important;
+}
+html[data-theme="dark"] .land-exchange-copy h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .land-exchange-copy p {
+  color: #9dacaa !important;
+}
+html[data-theme="dark"] .land-exchange-preview > a {
+  border-color: rgba(211, 160, 100, .17) !important;
+  background:
+    linear-gradient(180deg, rgba(75, 57, 39, .96), rgba(51, 40, 31, .98)) !important;
+  color: #e4bb86 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 7px 14px rgba(0,0,0,.14) !important;
+}
+
+/* --------------------------------------------------------------------------
+   EXCHANGE / MARKET — whole app surface system
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .marketplace-stack {
+  color: var(--tw-night-copy);
+}
+html[data-theme="dark"] .market-compose-card,
+html[data-theme="dark"] .market-compose-card.is-wanted,
+html[data-theme="dark"] .market-listings-card,
+html[data-theme="dark"] .market-compose-card-v2 {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(73, 177, 151, .06), transparent 28%),
+    linear-gradient(150deg, rgba(13, 35, 37, .98), rgba(8, 26, 28, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .market-compose-card.is-wanted {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(145, 111, 192, .085), transparent 28%),
+    linear-gradient(150deg, rgba(16, 34, 39, .98), rgba(9, 26, 29, .98)) !important;
+}
+html[data-theme="dark"] .market-compose-copy > span,
+html[data-theme="dark"] .market-listings-head span:first-child {
+  color: #82a6a2 !important;
+}
+html[data-theme="dark"] .market-compose-copy h2,
+html[data-theme="dark"] .market-listings-head h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .market-compose-copy p,
+html[data-theme="dark"] .market-listings-head p {
+  color: var(--tw-night-copy-soft) !important;
+}
+
+/* Asset choice tiles */
+html[data-theme="dark"] .market-asset-choice {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(155deg, rgba(20, 45, 47, .94), rgba(13, 33, 35, .96)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .market-asset-choice:hover {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(155deg, rgba(27, 55, 57, .97), rgba(16, 39, 41, .98)) !important;
+}
+html[data-theme="dark"] .market-asset-choice.is-selected {
+  border-color: rgba(83, 201, 169, .29) !important;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(75, 195, 158, .09), transparent 40%),
+    linear-gradient(155deg, rgba(24, 54, 50, .97), rgba(14, 38, 37, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 0 0 2px rgba(75, 195, 158, .04),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .market-asset-choice small,
+html[data-theme="dark"] .market-asset-choice em {
+  color: #849b98 !important;
+}
+html[data-theme="dark"] .market-asset-choice strong {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-asset-choice > b {
+  background: rgba(33, 70, 66, .88) !important;
+  color: #63cbae !important;
+}
+html[data-theme="dark"] .market-held-line,
+html[data-theme="dark"] .market-asset-choice:not(.is-selected) .market-held-line {
+  color: #75a99d !important;
+}
+
+/* Market mode selector */
+html[data-theme="dark"] .market-mode-switch {
+  border-color: var(--tw-night-line) !important;
+  background: rgba(11, 30, 32, .92) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-mode-switch button {
+  color: #819a97 !important;
+}
+html[data-theme="dark"] .market-mode-switch button b {
+  color: #aac0bd !important;
+}
+html[data-theme="dark"] .market-mode-switch button.is-active {
+  border-color: rgba(79, 197, 165, .25) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 67, 61, .98), rgba(17, 48, 46, .98)) !important;
+  color: #dff8f1 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 7px 16px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .market-mode-switch button.is-active b {
+  color: #e9faf6 !important;
+}
+
+/* Market form controls */
+html[data-theme="dark"] .market-compose-row label > span,
+html[data-theme="dark"] .market-filterbar label > span,
+html[data-theme="dark"] .market-note-field > span {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-compose-row select,
+html[data-theme="dark"] .market-filterbar select,
+html[data-theme="dark"] .market-filterbar input,
+html[data-theme="dark"] .market-note-field textarea {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(18, 43, 45, .98), rgba(11, 31, 33, .99)) !important;
+  color: #eaf8f5 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-compose-row select:focus,
+html[data-theme="dark"] .market-filterbar select:focus,
+html[data-theme="dark"] .market-filterbar input:focus,
+html[data-theme="dark"] .market-note-field textarea:focus {
+  border-color: rgba(79, 198, 165, .35) !important;
+  box-shadow: 0 0 0 3px rgba(79, 198, 165, .075) !important;
+}
+html[data-theme="dark"] .market-fee-pill,
+html[data-theme="dark"] .market-fee-badge {
+  border-color: rgba(218, 170, 94, .18) !important;
+  background:
+    linear-gradient(180deg, rgba(70, 55, 35, .96), rgba(47, 40, 30, .98)) !important;
+  color: #e1b879 !important;
+}
+html[data-theme="dark"] .market-list-button:not(.is-live) {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(34, 54, 56, .92), rgba(20, 39, 41, .96)) !important;
+  color: #849b98 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-list-button:not(.is-live) b {
+  background: rgba(255,255,255,.045) !important;
+  color: #839b98 !important;
+}
+
+/* Filters */
+html[data-theme="dark"] .market-filterbar {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(13, 34, 36, .82) !important;
+}
+html[data-theme="dark"] .market-history-toggle button {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(21, 46, 48, .97), rgba(13, 34, 36, .98)) !important;
+  color: #a5bab7 !important;
+}
+
+/* Marketplace rule strip */
+html[data-theme="dark"] .market-rules-strip {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(12, 32, 34, .78) !important;
+}
+html[data-theme="dark"] .market-rules-strip span {
+  background: rgba(20, 44, 46, .80) !important;
+}
+html[data-theme="dark"] .market-rules-strip b {
+  color: #e3f5f1 !important;
+}
+html[data-theme="dark"] .market-rules-strip small {
+  color: #849a98 !important;
+}
+
+/* Listings */
+html[data-theme="dark"] .market-listing-tile,
+html[data-theme="dark"] .market-listing-tile.status-sold,
+html[data-theme="dark"] .market-listing-tile.status-expired,
+html[data-theme="dark"] .market-listing-tile.wanted-tile {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(20, 44, 46, .95), rgba(12, 32, 34, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 8px 18px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .market-listing-tile.status-sold {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(134, 102, 188, .08), transparent 35%),
+    linear-gradient(150deg, rgba(21, 42, 47, .95), rgba(13, 30, 35, .97)) !important;
+}
+html[data-theme="dark"] .market-listing-tile.status-expired {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(190, 132, 72, .07), transparent 35%),
+    linear-gradient(150deg, rgba(23, 41, 39, .95), rgba(14, 30, 31, .97)) !important;
+}
+html[data-theme="dark"] .market-listing-tile-copy small,
+html[data-theme="dark"] .market-listing-tile-copy p,
+html[data-theme="dark"] .market-listing-tile-price small {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-listing-tile-copy h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-listing-tile-price strong {
+  color: #73d2b8 !important;
+}
+html[data-theme="dark"] .market-listing-tile button:not(.market-action) {
+  background: rgba(31, 54, 55, .90) !important;
+  color: #899d9a !important;
+}
+html[data-theme="dark"] .market-action.secondary {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 50, 51, .92) !important;
+  color: #a2b8b5 !important;
+}
+html[data-theme="dark"] .market-history-note {
+  background: rgba(24, 47, 49, .72) !important;
+  color: #8da2a0 !important;
+}
+html[data-theme="dark"] .market-listing-summary > div {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(20, 44, 46, .80) !important;
+}
+html[data-theme="dark"] .market-listing-summary small {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-listing-summary strong {
+  color: #e2f4f0 !important;
+}
+
+/* Market empty state */
+html[data-theme="dark"] .market-empty-clean h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-empty-clean p {
+  color: #94aaa7 !important;
+}
+html[data-theme="dark"] .market-empty-clean a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 66, 63, .97), rgba(17, 48, 46, .98)) !important;
+  color: #dff7f1 !important;
+}
+html[data-theme="dark"] .market-empty-stack .market-asset-art {
+  border-color: rgba(9, 27, 29, .92) !important;
+}
+
+/* Status badges remain colored, but tuned to night surfaces. */
+html[data-theme="dark"] .market-status-badge.status-active {
+  background: rgba(50, 142, 109, .20) !important;
+  color: #82d9b4 !important;
+}
+html[data-theme="dark"] .market-status-badge.status-sold {
+  background: rgba(122, 96, 173, .22) !important;
+  color: #c2ade9 !important;
+}
+html[data-theme="dark"] .market-status-badge.status-cancelled {
+  background: rgba(110, 129, 128, .17) !important;
+  color: #9eb0ae !important;
+}
+html[data-theme="dark"] .market-status-badge.status-expired {
+  background: rgba(167, 112, 57, .18) !important;
+  color: #e0b177 !important;
+}
+html[data-theme="dark"] .market-status-badge.wanted {
+  background: rgba(142, 95, 182, .22) !important;
+  color: #d0a7ec !important;
+}
+
+/* Market confirmation / result modals */
+html[data-theme="dark"] .market-modal,
+html[data-theme="dark"] .market-modal.error,
+html[data-theme="dark"] .market-modal.info,
+html[data-theme="dark"] .market-confirm-modal {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(70, 169, 147, .06), transparent 30%),
+    linear-gradient(155deg, rgba(17, 41, 43, .99), rgba(9, 28, 30, .99)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow: 0 28px 70px rgba(0,0,0,.42) !important;
+}
+html[data-theme="dark"] .market-modal.error {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(172, 75, 65, .09), transparent 30%),
+    linear-gradient(155deg, rgba(38, 30, 31, .99), rgba(17, 27, 29, .99)) !important;
+}
+html[data-theme="dark"] .market-modal.info {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(115, 88, 163, .10), transparent 30%),
+    linear-gradient(155deg, rgba(28, 31, 42, .99), rgba(13, 27, 30, .99)) !important;
+}
+html[data-theme="dark"] .market-modal h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .market-modal p {
+  color: #9db2af !important;
+}
+html[data-theme="dark"] .market-modal > a {
+  color: #6fc9b0 !important;
+}
+html[data-theme="dark"] .market-modal-share button,
+html[data-theme="dark"] .market-confirm-back {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(23, 49, 51, .94) !important;
+  color: #aec2bf !important;
+}
+html[data-theme="dark"] .market-modal-mark {
+  background: rgba(48, 133, 105, .20) !important;
+  color: #80d4b1 !important;
+}
+html[data-theme="dark"] .market-modal.error .market-modal-mark {
+  background: rgba(159, 73, 63, .18) !important;
+  color: #ee9d90 !important;
+}
+html[data-theme="dark"] .market-modal.info .market-modal-mark {
+  background: rgba(116, 90, 163, .20) !important;
+  color: #c4afe9 !important;
+}
+
+/* --------------------------------------------------------------------------
+   REMAINING MY TOBYWORLD / TABOSHI1 LIGHT SURFACES
+   -------------------------------------------------------------------------- */
+
+/* Original lore hero family */
+html[data-theme="dark"] .taboshi1-page .lore-pouch-hero,
+html[data-theme="dark"] .taboshi1-page .taboshi1-hero {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 83% 18%, rgba(58, 144, 180, .12), transparent 24%),
+    radial-gradient(circle at 72% 92%, rgba(72, 157, 99, .09), transparent 27%),
+    linear-gradient(135deg, rgba(15, 38, 40, .98), rgba(8, 27, 29, .98)) !important;
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-hero h1,
+  .taboshi1-card h2,
+  .seedleaf-section-head h2
+) {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-hero p,
+  .seedleaf-section-head p
+) {
+  color: #9fb4b1 !important;
+}
+
+/* Remaining relic trio / old deed */
+html[data-theme="dark"] .taboshi1-page .lore-deed-card,
+html[data-theme="dark"] .taboshi1-page .lore-deed-showcase,
+html[data-theme="dark"] .taboshi1-page .lore-deed-token {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    radial-gradient(circle at 82% 15%, rgba(111, 87, 160, .09), transparent 30%),
+    linear-gradient(145deg, rgba(18, 39, 44, .98), rgba(10, 28, 31, .98)) !important;
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-deed-balance strong,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card h2,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-deed-balance small,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card p {
+  color: #93aaa7 !important;
+}
+
+/* Owned deeds shell and old chip fallback */
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(145deg, rgba(18, 42, 44, .90), rgba(11, 30, 32, .92)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head span,
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head > div small {
+  color: #78918f !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head strong {
+  color: #e3f5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head > a {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 52, 53, .92) !important;
+  color: #a9c4bf !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-moon,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-lotus,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-ember {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(70, 180, 151, .07), transparent 38%),
+    linear-gradient(145deg, rgba(22, 47, 49, .95), rgba(13, 34, 36, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main small,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main strong i {
+  color: #7e9794 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main strong {
+  color: #e8f7f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main em,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main > b {
+  color: #6bc9ae !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-copy-deed {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 50, 52, .94) !important;
+  color: #92aaa7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-fallback {
+  background: rgba(20, 45, 47, .70) !important;
+  color: #8fa5a2 !important;
+}
+
+/* Legacy land tile was explicitly forced light with !important in globals. */
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(91, 116, 107, .08), transparent 38%),
+    linear-gradient(145deg, rgba(20, 42, 43, .95), rgba(13, 32, 34, .97)) !important;
+  border-color: rgba(153, 197, 188, .11) !important;
+}
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset.is-held {
+  border-color: rgba(91, 176, 139, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-legacy-land-icon {
+  background:
+    linear-gradient(145deg, rgba(40, 57, 57, .96), rgba(23, 39, 40, .98)) !important;
+  color: #91a19f !important;
+}
+
+/* Wallet sync strip */
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-row {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(17, 41, 43, .95), rgba(10, 29, 31, .97)) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-copy strong {
+  color: #e7f7f3 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-copy span {
+  color: #889f9c !important;
+}
+
+/* Buttons/primary actions in Taboshi1 that were still hard-coded white. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-primary,
+  .seedleaf-connect,
+  .lore-connect-card button
+) {
+  border-color: rgba(102, 207, 175, .19) !important;
+  background:
+    linear-gradient(180deg, #2b957a, #1d705d) !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 8px 18px rgba(0,0,0,.17) !important;
+}
+
+/* Generic Taboshi1 text catches for old structures, but NOT art/images. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-card-copy,
+  .lore-transfer-note,
+  .lore-transfer-intro,
+  .lore-whisper
+) {
+  color: #99afac !important;
+}
+
+/* --------------------------------------------------------------------------
+   Consistency / hover / mobile
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] :is(
+  .world-path-card,
+  .world-land-card,
+  .market-asset-choice,
+  .market-listing-tile,
+  .mytw-deed-chip
+) {
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    box-shadow .16s ease !important;
+}
+
+@media(max-width:620px) {
+  html[data-theme="dark"] .world-search-panel,
+  html[data-theme="dark"] .world-atlas-section,
+  html[data-theme="dark"] .market-compose-card,
+  html[data-theme="dark"] .market-listings-card,
+  html[data-theme="dark"] .world-onboarding,
+  html[data-theme="dark"] .land-exchange-preview {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.03),
+      0 12px 26px rgba(0,0,0,.17) !important;
+  }
+}
+
+/* Never recolor actual user/NFT/token artwork. */
+html[data-theme="dark"] :is(
+  .canonical-deed-art img,
+  .land-hero-canonical-deed img,
+  .market-asset-art img,
+  .world-onboarding img,
+  .land-exchange-mark img,
+  .seedleaf-asset-image img,
+  .taboshi1-real-art
+) {
+  filter: none !important;
+}
+
