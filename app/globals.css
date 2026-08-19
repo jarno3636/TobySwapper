@@ -2021,3 +2021,69 @@ button,a,select,input{touch-action:manipulation}
 .world-land-card.theme-bloom .world-land-hill.h2{background:rgba(113,159,91,.80)}
 .world-land-card.theme-gold .world-land-hill{background:rgba(91,110,61,.76)}
 .world-land-card.theme-gold .world-land-hill.h2{background:rgba(104,120,66,.82)}
+
+/* ==========================================================================
+   2026-08 market clarity + wallet hydration pass
+   ========================================================================== */
+
+/* Keep illustrated market surfaces in their own lane so copy never sits under art. */
+.exchange-hero-clean{overflow:hidden;isolation:isolate}
+.exchange-hero-clean .exchange-hero-copy{position:relative;z-index:4;min-width:0}
+.exchange-hero-clean .exchange-hero-copy h1,.exchange-hero-clean .exchange-hero-copy p{max-width:620px}
+.exchange-hero-clean .exchange-hero-art{position:relative;z-index:1;min-width:0;overflow:hidden;border-radius:24px}
+.exchange-hero-clean .exchange-seed,.exchange-hero-clean .exchange-frog{object-fit:contain}
+
+.marketplace-stack{gap:14px}
+.market-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:6px;border:1px solid rgba(31,83,91,.10);border-radius:22px;background:rgba(236,245,244,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.market-mode-switch button{display:flex;min-width:0;min-height:68px;flex-direction:column;align-items:flex-start;justify-content:center;padding:11px 14px;border:1px solid transparent;border-radius:17px;background:transparent;color:#75898c;text-align:left;transition:transform .15s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease}
+.market-mode-switch button span{font-size:7px;font-weight:950;letter-spacing:.15em}
+.market-mode-switch button strong{margin-top:2px;color:#4b676c;font-size:13px;line-height:1.15}
+.market-mode-switch button small{margin-top:2px;font-size:8px;line-height:1.35}
+.market-mode-switch button.is-active{border-color:rgba(31,130,109,.18);background:linear-gradient(180deg,#fff,#e9f7f2);box-shadow:inset 0 1px 0 #fff,0 7px 16px rgba(22,91,80,.08);color:#28806b}
+.market-mode-switch button.is-active strong{color:#155e50}
+.market-mode-switch button:active{transform:translateY(1px)}
+
+.market-request-compose{overflow:hidden;background:radial-gradient(circle at 96% 0,rgba(71,197,165,.13),transparent 32%),linear-gradient(145deg,#fff,#f5fbf9)}
+.market-request-badge{display:flex;min-width:92px;flex-direction:column;align-items:center;justify-content:center;padding:10px 12px;border:1px solid rgba(76,104,179,.16);border-radius:16px;background:linear-gradient(180deg,#fff,#f0f2fb);box-shadow:inset 0 1px 0 #fff,0 7px 16px rgba(48,65,126,.07)}
+.market-request-badge b{color:#4c5f9d;font-size:13px}.market-request-badge small{margin-top:2px;color:#858da5;font-size:7px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.market-request-note{display:flex;min-width:0;flex-direction:column;gap:5px;margin-top:9px}
+.market-request-note>span{color:#71878a;font-size:8px;font-weight:950;letter-spacing:.1em}
+.market-request-note input{width:100%;height:44px;padding:0 12px;border:1px solid rgba(32,81,89,.14);border-radius:14px;outline:none;background:#fff;color:#173f47;font-size:11px;font-weight:700;box-shadow:inset 0 1px 2px rgba(20,58,64,.03)}
+.market-request-note input:focus{border-color:rgba(34,153,126,.48);box-shadow:0 0 0 3px rgba(34,153,126,.08)}
+.market-request-button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:52px;margin-top:11px;padding:0 14px;border:1px solid rgba(34,138,113,.20);border-radius:16px;background:linear-gradient(180deg,#fafffd,#dff4ec);color:#176b58;font-size:10px;font-weight:950;box-shadow:inset 0 1px 0 #fff,0 8px 18px rgba(24,107,89,.09)}
+.market-request-button:disabled{opacity:.55;box-shadow:none}
+.market-request-button b{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#fff;color:#2d806d;font-size:7px;letter-spacing:.1em}
+.market-request-message{margin-top:8px;padding:9px 11px;border-radius:12px;background:#eef7f4;color:#52706b;font-size:9px;line-height:1.4}
+.market-request-message.is-success{background:#e5f7ef;color:#26705d}.market-request-message.is-error{background:#fff0ed;color:#a14e43}
+
+.market-request-tile{position:relative;overflow:hidden}
+.market-request-tile:before{content:"WANTED";position:absolute;right:-25px;top:10px;transform:rotate(37deg);width:90px;padding:3px 0;text-align:center;background:rgba(85,102,173,.09);color:#6674a8;font-size:6px;font-weight:950;letter-spacing:.15em;pointer-events:none}
+.market-request-tile .market-listing-tile-copy em{display:block;max-width:360px;margin-top:5px;color:#6f8386;font-size:8px;line-height:1.4;font-style:normal;overflow-wrap:anywhere}
+.market-request-intent{grid-column:2/4;display:flex;align-items:center;min-height:34px;padding:0 10px;border-radius:10px;background:#f2f5fa;color:#7a84a1;font-size:7px;font-weight:950;letter-spacing:.08em}
+.market-request-cancel{background:#fff1ee!important;color:#9c574d!important}
+.market-empty-clean button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:14px;background:linear-gradient(180deg,#fff,#eaf7f4);border:1px solid rgba(32,123,104,.18);color:#226b5d;text-decoration:none;font-size:10px;font-weight:900}
+
+/* Asset buttons remain legible even with long labels / large balances. */
+.seedleaf-assets-grid{align-items:stretch}
+.seedleaf-asset-card{overflow:hidden;min-width:0}
+.seedleaf-asset-icon{flex:0 0 auto}
+.seedleaf-asset-copy{min-width:0;overflow:hidden}
+.seedleaf-asset-copy strong,.seedleaf-asset-copy b,.seedleaf-asset-copy em{max-width:100%;overflow-wrap:anywhere}
+.seedleaf-asset-card .seedleaf-selected-mark{flex:0 0 auto}
+
+@media(max-width:760px){
+  .exchange-hero-clean .exchange-hero-art{min-height:175px!important;margin-top:8px}
+  .exchange-hero-clean .exchange-seed{left:24%;top:20%;width:66px;height:66px}
+  .exchange-hero-clean .exchange-frog{right:22%;bottom:10%;width:62px;height:62px}
+  .market-mode-switch{grid-template-columns:1fr 1fr}
+  .market-mode-switch button{min-height:62px;padding:9px 11px}
+  .market-mode-switch button small{display:none}
+  .market-request-intent{grid-column:1/3}
+}
+@media(max-width:430px){
+  .market-mode-switch{grid-template-columns:1fr}
+  .market-mode-switch button{min-height:56px}
+  .market-request-badge{align-self:flex-start;min-width:0;flex-direction:row;gap:6px}
+  .market-request-badge small{margin-top:0}
+}
+@media(prefers-reduced-motion:reduce){.market-mode-switch button{transition:none}}
