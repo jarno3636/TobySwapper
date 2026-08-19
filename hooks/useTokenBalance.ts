@@ -62,14 +62,14 @@ export function useTokenBalance(
     scopeKey,
     query: {
       enabled: Boolean(userCS),
-      // Balances are refreshed after writes and by the explicit wallet refresh UI.
-      // A slow safety poll is enough and keeps RPC/provider load sane.
-      refetchInterval: 180_000,
+      // Wallet pages should always be fresh when revisited, but should not poll in
+      // the background. These reads go directly to Base RPC, not through Vercel.
+      refetchInterval: false,
       refetchIntervalInBackground: false,
-      staleTime: 30_000,
+      staleTime: 0,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
-      refetchOnMount: true,
+      refetchOnMount: "always",
       retry: 1,
     },
   });
