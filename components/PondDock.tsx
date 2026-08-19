@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 
 function SwapDockIcon() {
@@ -43,7 +44,7 @@ export default function PondDock({ active }: { active?: "swap" | "pouch" | "worl
         {items.map((item) => {
           const content = <><DockVisual item={item} /><span className="pond-dock-label">{item.label}</span></>;
           const className = `pond-dock-item ${active === item.id ? "pond-dock-active" : ""}`;
-          if (item.href.startsWith("/")) return <a key={item.id} className={className} href={item.href}>{content}</a>;
+          if (item.href.startsWith("/")) return <Link key={item.id} className={className} href={item.href} prefetch={false}>{content}</Link>;
           return <LinkMaybeMini key={item.id} href={item.href} className={className}>{content}</LinkMaybeMini>;
         })}
       </div>

@@ -16,7 +16,7 @@ export default function Brand() {
   return (
     <header className="app-header">
       <div className="app-header-inner">
-        <Link href="/" prefetch className="brand-lockup group">
+        <Link href="/" prefetch={false} className="brand-lockup group">
           <span className="brand-medallion relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
             <Image src="/tokens/toby.PNG" alt="Toby" fill sizes="44px" className="object-contain p-[2px]" priority />
           </span>
@@ -28,7 +28,7 @@ export default function Brand() {
 
         <nav className="header-quick-nav" aria-label="Primary">
           {quickLinks.map((item) => (
-            <Link key={item.href} href={item.href} className="header-quick-link">
+            <Link prefetch={false} key={item.href} href={item.href} className="header-quick-link">
               {item.label}
             </Link>
           ))}
