@@ -22,6 +22,7 @@ import { useUsdPriceSingle } from "@/lib/prices";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useStickyAllowance, useApprove } from "@/hooks/useAllowance";
 import { useInvalidateBurnTotal } from "@/lib/burn";
+import { recordConfirmedSwap } from "@/lib/pond-record";
 
 /* ---------------------------------- Config --------------------------------- */
 const SAFE_MODE_MINOUT_ZERO = false; // keep for V3; V2 uses 0 minOut below
@@ -618,6 +619,20 @@ export default function SwapForm() {
   async function afterTxConfirmed(txHash: `0x${string}`) {
     const pc = client;
     if (pc) { try { await pc.waitForTransactionReceipt({ hash: txHash }); } catch {} }
+    if (address) {
+      try {
+        recordConfirmedSwap(address as Address, {
+          hash: txHash,
+          at: Date.now(),
+          tokenIn: inMeta.symbol,
+          tokenOut: outMeta.symbol,
+          amountIn: formatUnits(amountInBig, inMeta.decimals),
+          amountOut: quoteOutMain ? formatUnits(quoteOutMain, outMeta.decimals) : undefined,
+          burnToby: quoteBurnToby ? formatUnits(quoteBurnToby, 18) : undefined,
+          route: "pond",
+        });
+      } catch {}
+    }
     invalidateBurnTotal();
     if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("tobyswap:burn-updated", { detail: { hash: txHash } }));
     try { await balInRaw.refetch?.(); } catch {}
@@ -672,6 +687,17 @@ export default function SwapForm() {
 
       const tx = await writeContractAsync(sim.request);
       try { await client.waitForTransactionReceipt({ hash: tx as `0x${string}` }); } catch {}
+      try {
+        recordConfirmedSwap(address as Address, {
+          hash: tx as `0x${string}`,
+          at: Date.now(),
+          tokenIn: inMeta.symbol,
+          tokenOut: outMeta.symbol,
+          amountIn: formatUnits(amountInBig, inMeta.decimals),
+          amountOut: quoteOutMain ? formatUnits(quoteOutMain, outMeta.decimals) : undefined,
+          route: "direct",
+        });
+      } catch {}
       try { await balInRaw.refetch?.(); } catch {}
       try { await balOutRaw.refetch?.(); } catch {}
 
