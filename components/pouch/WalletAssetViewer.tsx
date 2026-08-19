@@ -6,6 +6,7 @@ import { formatUnits, type Address } from "viem";
 import { base } from "viem/chains";
 import { useReadContract } from "wagmi";
 import MyLoreDeeds from "@/components/land/MyLoreDeeds";
+import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { TABOSHI1_ABI, TABOSHI1_ADDRESS, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
@@ -31,9 +32,11 @@ function compact(value?: bigint, decimals = 18) {
 export default function WalletAssetViewer({
   owner,
   onClose,
+  profileMode = false,
 }: {
   owner: Address;
   onClose?: () => void;
+  profileMode?: boolean;
 }) {
   const toby = useTokenBalance(owner, TOBY, { chainId: base.id });
   const patience = useTokenBalance(owner, PATIENCE, { chainId: base.id });
@@ -109,9 +112,9 @@ export default function WalletAssetViewer({
     <div className="watch-pouch-results">
       <div className="watch-pouch-results-head">
         <div>
-          <span>READ-ONLY POUCH</span>
+          <span>{profileMode ? "TOBYWORLD POUCH" : "READ-ONLY POUCH"}</span>
           <strong>{`${owner.slice(0, 8)}…${owner.slice(-6)}`}</strong>
-          <small>Public Base holdings · no wallet connection required</small>
+          <small>{profileMode ? "Live public holdings on Base" : "Public Base holdings · no wallet connection required"}</small>
         </div>
         {onClose ? <button type="button" onClick={onClose}>Close</button> : null}
       </div>
@@ -139,10 +142,15 @@ export default function WalletAssetViewer({
         <MyLoreDeeds owner={owner} expectedCount={loreCount} revealed readOnly />
       ) : null}
 
-      <div className="watch-pouch-note">
-        This is a public, read-only view. Connecting a wallet is only required to transfer,
-        trade, edit land, or move assets into a Land Vault.
-      </div>
+      {!profileMode ? (
+        <>
+          <PublicPouchCreator walletAddress={owner} compact />
+          <div className="watch-pouch-note">
+            This is a public, read-only view. Connecting a wallet is only required to transfer,
+            trade, edit canonical land, or move assets into a Land Vault.
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
