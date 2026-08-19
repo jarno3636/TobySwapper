@@ -2402,3 +2402,30 @@ button,a,select,input{touch-action:manipulation}
   .land-vault-create-panel .land-vault-wake{width:100%}
   .land-metadata-row{align-items:flex-start;flex-direction:column}
 }
+
+/* Land Vault — embedded wallet freeze recovery */
+.land-vault-create-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:170px;
+}
+.land-vault-create-actions .land-vault-wake{
+  width:100%;
+  min-width:0;
+}
+.land-vault-check{
+  min-height:40px;
+  border:1px solid rgba(26,101,93,.16);
+  border-radius:13px;
+  background:rgba(255,255,255,.9);
+  color:#28665f;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.05em;
+  box-shadow:inset 0 1px 0 #fff;
+}
+.land-vault-check:disabled{opacity:.52}
+@media(max-width:620px){
+  .land-vault-create-actions{width:100%}
+}
