@@ -61,15 +61,62 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
 
   const isKeeper = Boolean(address && owner && address.toLowerCase() === owner.toLowerCase());
 
-  async function wakeVault() {
-    if (!client) return;
+  async function createVault() {
+    if (!client || !address) return;
     try {
-      setBusy("wake"); setMessage("");
-      const hash = await writeContractAsync({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "createAccount", args: [tokenId], chainId: base.id });
-      await client.waitForTransactionReceipt({ hash });
-      setDeployed(true); setMessage("Land Vault is awake.");
-    } catch { setMessage("The Land Vault could not be created."); }
-    finally { setBusy(""); }
+      setBusy("create");
+      setMessage("Checking the canonical vault…");
+
+      // Simulate first. This gives Base smart wallets a fully formed request
+      // and lets us surface the real contract failure before asking for a signature.
+      const simulation = await client.simulateContract({
+        address: LORE_COLLECTION_ADDRESS,
+        abi: LORE_DEEDS_ABI,
+        functionName: "createAccount",
+        args: [tokenId],
+        account: address,
+      });
+
+      setMessage("Confirm Create Land Vault in your wallet.");
+      const hash = await writeContractAsync(simulation.request as any);
+      const receipt = await client.waitForTransactionReceipt({ hash });
+
+      if (receipt.status !== "success") {
+        throw new Error("The vault transaction reverted.");
+      }
+
+      const code = vault ? await client.getBytecode({ address: vault }) : undefined;
+      const ready = Boolean(code && code !== "0x");
+      setDeployed(ready);
+
+      setMessage(
+        ready
+          ? "Land Vault ready. This deed can now manage assets held by its token-bound account."
+          : "The transaction confirmed, but the vault account is not visible yet. Refresh in a moment.",
+      );
+    } catch (error: any) {
+      const text = String(
+        error?.shortMessage ||
+        error?.details ||
+        error?.cause?.shortMessage ||
+        error?.message ||
+        "",
+      );
+
+      if (/reject|denied|cancel/i.test(text)) {
+        setMessage("Vault creation was cancelled in your wallet.");
+      } else if (/already|deployed|create2/i.test(text)) {
+        setMessage("This Land Vault may already exist. Refresh the page to re-check it.");
+      } else if (/nonexistent|not minted|invalid token/i.test(text)) {
+        setMessage("The canonical contract does not recognize this Lore Deed as minted.");
+      } else {
+        setMessage(
+          "The canonical ERC-6551 registry rejected vault creation. No assets moved. Try again, and if it repeats we can inspect the transaction error.",
+        );
+      }
+    } finally {
+      setBusy("");
+    }
   }
 
   async function sendToLand() {
@@ -97,13 +144,91 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
 
   return (
     <section className="land-vault-card">
-      <div className="land-vault-head"><div><span className="land-section-kicker">LAND VAULT</span><h2>What this land carries</h2><p>Give this land a pouch of its own — a place for SEED, relics, and pond assets to live with the deed.</p></div><span className={`land-vault-state ${deployed ? "awake" : "sleeping"}`}>{deployed ? "AWAKE" : "SLEEPING"}</span></div>
-      <div className="land-vault-address"><span>VAULT</span><code>{vault ? `${vault.slice(0, 8)}…${vault.slice(-6)}` : "Resolving…"}</code>{vault && <button onClick={() => navigator.clipboard.writeText(vault)}>Copy</button>}</div>
-      <div className="land-vault-assets">{balances.map((asset) => <div key={asset.id}><small>{asset.id}</small><strong>{asset.decimals ? Number(formatUnits(asset.value, asset.decimals)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : asset.value.toLocaleString()}</strong></div>)}</div>
-      {!deployed && isKeeper && <button className="land-vault-wake" onClick={wakeVault} disabled={Boolean(busy)}>{busy === "wake" ? "Waking vault…" : "Wake Land Vault"}</button>}
-      {deployed && isKeeper && <div className="land-vault-send"><label><span>SEND TO LAND</span><select value={selected} onChange={(e) => setSelected(e.target.value as VaultAsset)}>{assets.map((asset) => <option key={asset.id}>{asset.id}</option>)}</select></label><label><span>AMOUNT</span><input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} /></label><button onClick={sendToLand} disabled={Boolean(busy)}>{busy === "send" ? "Moving…" : `Send to #${tokenId}`}</button></div>}
-      <p className="land-vault-foot">What lives here travels with the land account. Only move assets here when you mean to make them part of this place.</p>
-      {message && <div className="land-vault-message">{message}</div>}
+      <div className="land-vault-head">
+        <div>
+          <span className="land-section-kicker">LAND VAULT</span>
+          <h2>Your deed&apos;s onchain wallet</h2>
+          <p>
+            Every canonical Lore Deed has a deterministic ERC-6551 account. Once deployed,
+            the current deed owner can use that account to manage assets held with the land.
+          </p>
+        </div>
+        <span className={`land-vault-state ${deployed ? "awake" : "sleeping"}`}>
+          {deployed ? "READY" : deployed === false ? "NOT DEPLOYED" : "CHECKING"}
+        </span>
+      </div>
+
+      <div className="land-vault-address">
+        <span>VAULT ADDRESS</span>
+        <code>{vault ? `${vault.slice(0, 8)}…${vault.slice(-6)}` : "Resolving…"}</code>
+        {vault ? <button onClick={() => navigator.clipboard.writeText(vault)}>Copy</button> : null}
+      </div>
+
+      {deployed ? (
+        <>
+          <div className="land-vault-assets">
+            {balances.map((asset) => (
+              <div key={asset.id}>
+                <small>{asset.id}</small>
+                <strong>
+                  {asset.decimals
+                    ? Number(formatUnits(asset.value, asset.decimals)).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                    : asset.value.toLocaleString()}
+                </strong>
+              </div>
+            ))}
+          </div>
+
+          {isKeeper ? (
+            <div className="land-vault-send">
+              <label>
+                <span>SEND TO LAND</span>
+                <select value={selected} onChange={(e) => setSelected(e.target.value as VaultAsset)}>
+                  {assets.map((asset) => <option key={asset.id}>{asset.id}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>AMOUNT</span>
+                <input
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                />
+              </label>
+              <button onClick={sendToLand} disabled={Boolean(busy)}>
+                {busy === "send" ? "Moving…" : `Send to #${tokenId}`}
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="land-vault-create-panel">
+          <div>
+            <strong>Create the Land Vault</strong>
+            <p>
+              This deploys the deed&apos;s already-determined token-bound account. It does not
+              change the deed, mint anything, or move any assets.
+            </p>
+          </div>
+          {isKeeper ? (
+            <button
+              className="land-vault-wake"
+              onClick={createVault}
+              disabled={Boolean(busy) || !vault}
+            >
+              {busy === "create" ? "Creating…" : "Create Land Vault"}
+            </button>
+          ) : (
+            <span className="land-vault-owner-note">Only the connected deed owner gets the creation shortcut here.</span>
+          )}
+        </div>
+      )}
+
+      <p className="land-vault-foot">
+        The vault address is deterministic even before deployment. For safety, TobySwap only enables
+        asset management here after the account contract is confirmed on Base.
+      </p>
+      {message ? <div className="land-vault-message">{message}</div> : null}
     </section>
   );
 }
