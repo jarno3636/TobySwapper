@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { makeBaseClient } from "@/lib/rpc";
@@ -85,6 +85,19 @@ export function PouchLandTransfer({
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!deedIds.includes(deedId) && deedIds[0]) setDeedId(deedIds[0]);
+  }, [deedId, deedIds]);
+
+  useEffect(() => {
+    function onSelect(event: Event) {
+      const tokenId = String((event as CustomEvent<{ tokenId?: string }>).detail?.tokenId || "");
+      if (tokenId && deedIds.includes(tokenId)) setDeedId(tokenId);
+    }
+    window.addEventListener("tobyswap:select-land-vault", onSelect);
+    return () => window.removeEventListener("tobyswap:select-land-vault", onSelect);
+  }, [deedIds]);
 
   const selected = useMemo(
     () => assets.find((asset) => asset.id === assetId) || assets[0],
@@ -182,13 +195,13 @@ export function PouchLandTransfer({
   if (!isConnected || deedIds.length === 0) return null;
 
   return (
-    <section className="pouch-land-send">
+    <section id="land-vault-send" className="pouch-land-send scroll-mt-24">
       <div className="pouch-land-send-head">
         <div>
           <span>SEND TO YOUR LAND</span>
           <h2>Pack a Lore Deed</h2>
           <p>
-            Move Tobyworld assets from this wallet into the token-bound vault attached to one of your deeds.
+            Choose one of your deeds and pack Tobyworld assets into its token-bound vault.
           </p>
         </div>
         <div className="pouch-land-send-badge">ONCHAIN</div>
@@ -252,7 +265,7 @@ export function PouchLandTransfer({
       {message ? <div className="pouch-land-send-message">{message}</div> : null}
 
       <p className="pouch-land-send-note">
-        Assets sent here belong to the deed's ERC-6551 vault. Whoever owns the deed controls that vault through the canonical Lore system.
+        Important: these assets move into the deed’s ERC-6551 vault. If ownership of the deed changes, control of that vault follows the canonical Lore system.
       </p>
     </section>
   );

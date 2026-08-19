@@ -1,6 +1,7 @@
 "use client";
 
 import { PouchLandTransfer } from "@/components/land/PouchLandTransfer";
+import LoreDeedArt from "@/components/land/LoreDeedArt";
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
@@ -64,10 +65,21 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
   const [complete, setComplete] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
-    function onWalletRefresh() {
+    function onWalletRefresh(event: Event) {
       if (!owner) return;
+
+      // Automatic route-return refreshes should update live balances without
+      // re-running the Alchemy ownership endpoint. If the live deed balance
+      // changed, the expectedCount/cache-length check below already triggers
+      // a fresh ownership lookup. Manual "Refresh Pouch" still clears it.
+      const automatic = Boolean(
+        (event as CustomEvent<{ automatic?: boolean }>).detail?.automatic,
+      );
+      if (automatic) return;
+
       memory.delete(ownerKey(owner));
       try { localStorage.removeItem(storageKey(owner)); } catch {}
       setRefreshNonce((value) => value + 1);
@@ -128,6 +140,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
   const count = Number(expectedCount > 999n ? 999n : expectedCount);
   const missingCount = Math.max(0, count - deeds.length);
   const sorted = useMemo(() => [...deeds].sort((a, b) => Number(a.tokenId) - Number(b.tokenId)), [deeds]);
+  const visibleDeeds = sorted.slice(0, visibleCount);
 
   async function copyTokenId(tokenId: string) {
     try {
@@ -135,6 +148,18 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
       setCopied(tokenId);
       window.setTimeout(() => setCopied((current) => current === tokenId ? null : current), 1400);
     } catch {}
+  }
+
+  function sendToDeed(tokenId: string) {
+    window.dispatchEvent(
+      new CustomEvent("tobyswap:select-land-vault", { detail: { tokenId } }),
+    );
+    window.setTimeout(() => {
+      document.getElementById("land-vault-send")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 40);
   }
 
   if (!owner || expectedCount === 0n) return null;
@@ -147,18 +172,34 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
       </div>
 
       {sorted.length > 0 ? (
-        <div className="mytw-deed-strip">
-          {sorted.map((deed) => (
-            <div key={deed.tokenId} className={`mytw-deed-chip theme-${deed.bannerTheme || "moss"}`}>
-              <a href={`/land/${deed.tokenId}`} className="mytw-deed-main">
-                <span className="mytw-deed-chip-rune">△</span>
-                <span><small>{deed.communityName || "LORE LAND"}</small><strong><i>DEED</i> #{deed.tokenId}</strong><em>{revealed ? "Visit land" : "Veiled land"}</em></span>
-                <b>→</b>
-              </a>
-              <button type="button" className="mytw-copy-deed" onClick={() => copyTokenId(deed.tokenId)} aria-label={`Copy Lore Deed token ID ${deed.tokenId}`}>{copied === deed.tokenId ? "COPIED" : "COPY ID"}</button>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="mytw-deed-gallery">
+            {visibleDeeds.map((deed, index) => (
+              <article key={deed.tokenId} className={`mytw-deed-tile theme-${deed.bannerTheme || "moss"}`}>
+                <a href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
+                  <LoreDeedArt tokenId={deed.tokenId} label={deed.communityName || undefined} eager={index < 2} />
+                </a>
+                <div className="mytw-deed-tile-copy">
+                  <small>{deed.communityName || "LORE LAND"}</small>
+                  <strong>Deed #{deed.tokenId}</strong>
+                  <span>{revealed ? "Canonical land" : "Veiled land"}</span>
+                </div>
+                <div className="mytw-deed-tile-actions">
+                  <a href={`/land/${deed.tokenId}`}>Visit</a>
+                  <button type="button" onClick={() => sendToDeed(deed.tokenId)}>Send assets</button>
+                  <button type="button" onClick={() => copyTokenId(deed.tokenId)}>
+                    {copied === deed.tokenId ? "Copied" : "Copy ID"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+          {sorted.length > visibleCount ? (
+            <button type="button" className="mytw-deed-more" onClick={() => setVisibleCount((count) => count + 6)}>
+              Show {Math.min(6, sorted.length - visibleCount)} more deeds
+            </button>
+          ) : null}
+        </>
       ) : !loading ? (
         <div className="mytw-deed-fallback">Your wallet carries land. Enter a known deed number below to open it.</div>
       ) : null}
@@ -166,6 +207,10 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
       {!complete && missingCount > 0 && sorted.length > 0 && (
         <p className="mytw-deed-note">Showing the deed IDs currently found for this wallet. You can still open any known deed below.</p>
       )}
+
+      {sorted.length > 0 ? (
+        <PouchLandTransfer deedIds={sorted.map((deed) => deed.tokenId)} />
+      ) : null}
     </div>
   );
 }
