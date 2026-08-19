@@ -2501,3 +2501,507 @@ html[data-theme="dark"] :is(
   filter: none !important;
 }
 
+/* ==========================================================================
+   2026-08 FINAL CONTRAST SYSTEM
+   --------------------------------------------------------------------------
+   Dark mode intentionally uses TWO surface contexts:
+   1) deep pond glass = light text
+   2) frosted paper islands = dark teal text
+
+   This section is intentionally last. It resolves the remaining white-on-white
+   cases caused by the broad dark-mode heading rules earlier in this file.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  /* Frosted paper islands used inside the night experience. */
+  --paper-surface: rgba(247, 251, 249, .965);
+  --paper-surface-soft: rgba(240, 248, 245, .95);
+  --paper-surface-blue: rgba(239, 249, 251, .965);
+  --paper-surface-green: rgba(240, 249, 242, .965);
+  --paper-surface-gold: rgba(253, 247, 232, .965);
+  --paper-surface-lilac: rgba(247, 243, 251, .965);
+  --paper-ink: #123f47;
+  --paper-ink-strong: #0b3540;
+  --paper-copy: #667f82;
+  --paper-copy-soft: #809396;
+  --paper-label: #729093;
+  --paper-line: rgba(19, 67, 74, .11);
+  --paper-line-strong: rgba(19, 67, 74, .16);
+  --paper-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 15px 34px rgba(0,0,0,.17);
+
+  /* Night glass used for the surrounding experience. */
+  --pond-surface: rgba(10, 31, 33, .94);
+  --pond-surface-raised: rgba(16, 39, 41, .94);
+  --pond-ink: #eef9f6;
+  --pond-copy: #a1b7b4;
+  --pond-label: #83a19e;
+}
+
+/* ==========================================================================
+   MY TOBYWORLD / POUCH — frosted holdings stay light, but get dark ink
+   ========================================================================== */
+
+/* The large holdings/pouch card shown in the screenshot. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(78, 197, 165, .075), transparent 28%),
+    linear-gradient(150deg, var(--paper-surface), var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  h1,h2,h3,h4,strong,b
+) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  p,small,em
+) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  .taboshi1-kicker,.seedleaf-section-head span,.seedleaf-asset-copy span
+) {
+  color: var(--paper-label) !important;
+}
+
+/* Individual asset tiles remain subtly colored rather than turning dark. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card {
+  border-color: var(--paper-line) !important;
+  background: linear-gradient(150deg,#ffffff,#f4f8f7) !important;
+  color: var(--paper-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 7px 17px rgba(21,65,72,.07) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-blue {
+  background: linear-gradient(145deg,#fff,#edf8fc) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-red {
+  background: linear-gradient(145deg,#fff,#fbefef) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-green,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-leaf {
+  background: linear-gradient(145deg,#fff,#edf7ef) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-seed {
+  background: linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card.is-selected {
+  border-color: rgba(39, 143, 110, .27) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 2px rgba(44, 153, 117, .06),
+    0 8px 18px rgba(23,85,67,.09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy span {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy strong {
+  color: #24545b !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy b {
+  color: #0d3c46 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-usd-value {
+  color: #39775f !important;
+}
+
+/* ==========================================================================
+   LAND PAGE — preserve intentional light cards inside the night shell
+   ========================================================================== */
+
+/* Main land hero/share card from screenshot. */
+html[data-theme="dark"] .land-page .land-hero {
+  background:
+    radial-gradient(circle at 88% 4%, rgba(84, 222, 185, .13), transparent 28%),
+    radial-gradient(circle at 3% 100%, rgba(92,155,229,.08), transparent 30%),
+    linear-gradient(145deg, rgba(250,253,251,.985), rgba(240,249,246,.97)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-hero h1 {
+  color: var(--paper-ink-strong) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .land-page .land-hero-copy > p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-hero .land-section-kicker {
+  color: #6d9992 !important;
+}
+
+/* Share buttons: primary can stay dark, secondary buttons are paper with dark text. */
+html[data-theme="dark"] .land-page .land-share-actions button {
+  background: linear-gradient(180deg,#ffffff,#edf6f3) !important;
+  border-color: var(--paper-line) !important;
+  color: #174a53 !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 6px 14px rgba(20,65,71,.08) !important;
+}
+html[data-theme="dark"] .land-page .land-share-actions button:first-child {
+  background: linear-gradient(180deg,#175263,#0c3a47) !important;
+  border-color: #0d3a46 !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    0 8px 18px rgba(8,48,57,.18) !important;
+}
+
+/* Deed identity card. */
+html[data-theme="dark"] .land-page .land-identity-card {
+  background:
+    radial-gradient(circle at 98% 0, rgba(102,179,155,.08), transparent 28%),
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card :is(h1,h2,h3,h4,strong,b) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card :is(p,small,em) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card .land-section-kicker {
+  color: #73918f !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid > div {
+  background: rgba(255,255,255,.78) !important;
+  border-color: var(--paper-line) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid strong {
+  color: #194c55 !important;
+}
+
+/* Community banner card: scene remains colored; the footer remains readable paper. */
+html[data-theme="dark"] .land-page .land-community-card {
+  background: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot {
+  background: linear-gradient(180deg,#ffffff,#f3f8f6) !important;
+  color: var(--paper-ink) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot strong {
+  color: #2d625b !important;
+}
+
+/* Garden module is deliberately a bright illustrated island. */
+html[data-theme="dark"] .land-page .land-garden-card,
+html[data-theme="dark"] .land-page .land-module.land-garden-card {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(72, 190, 139, .09), transparent 31%),
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-green)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy > strong {
+  color: #215a4f !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy small {
+  color: var(--paper-copy-soft) !important;
+}
+html[data-theme="dark"] .land-page .land-question {
+  background: rgba(247,252,249,.86) !important;
+  border-color: rgba(45,120,93,.18) !important;
+}
+html[data-theme="dark"] .land-page .land-question > span {
+  background: #dff2e8 !important;
+  color: #408262 !important;
+}
+html[data-theme="dark"] .land-page .land-question b {
+  color: #275d50 !important;
+}
+html[data-theme="dark"] .land-page .land-question small {
+  color: #758b8b !important;
+}
+
+/* "Beyond the Veil" remains a pale lilac mystery card with dark purple/teal copy. */
+html[data-theme="dark"] .land-page .land-production-card,
+html[data-theme="dark"] .land-page .land-production-module {
+  background:
+    radial-gradient(circle at 100% 0,rgba(104,76,167,.13),transparent 40%),
+    linear-gradient(145deg,#fcfbfd,var(--paper-surface-lilac)) !important;
+  border-color: rgba(104,76,167,.13) !important;
+  color: #3e3b56 !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-production-rune {
+  color: #8a72b5 !important;
+}
+html[data-theme="dark"] .land-page .land-production-module h2 {
+  color: #473b60 !important;
+}
+html[data-theme="dark"] .land-page .land-production-module p {
+  color: #716c80 !important;
+}
+html[data-theme="dark"] .land-page .land-production-status {
+  background: #eee8f8 !important;
+  color: #725e98 !important;
+}
+
+/* Relics / discovery light modules should use paper ink. */
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) {
+  background:
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) :is(h1,h2,h3,h4,strong,b) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) :is(p,small,em) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile {
+  background: rgba(255,255,255,.72) !important;
+  border-color: var(--paper-line) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile strong {
+  color: #315d65 !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile b {
+  color: #103d47 !important;
+}
+
+/* Deed artwork frame: keep the actual NFT art exactly as delivered. */
+html[data-theme="dark"] .land-page .land-hero-deed-wrap {
+  background: rgba(249,252,251,.94) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label span {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label strong {
+  color: #244e56 !important;
+}
+
+/* ==========================================================================
+   POND PULSE — intentional pale data ledger with strong readable metrics
+   ========================================================================== */
+
+html[data-theme="dark"] .pond-pulse {
+  background:
+    radial-gradient(circle at 8% 0%,rgba(70,186,229,.11),transparent 30%),
+    radial-gradient(circle at 92% 100%,rgba(243,194,69,.09),transparent 30%),
+    linear-gradient(145deg,rgba(249,252,251,.985),rgba(239,247,245,.97)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .pond-pulse-shine {
+  background: linear-gradient(180deg,rgba(255,255,255,.72),transparent) !important;
+}
+html[data-theme="dark"] .pond-pulse-title span {
+  color: #3f7b8e !important;
+}
+html[data-theme="dark"] .pond-pulse-title h2 {
+  color: var(--paper-ink-strong) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-title p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .pond-pulse-orb {
+  background: linear-gradient(145deg,#fff,#e8f5f8) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 7px 16px rgba(21,111,150,.08) !important;
+}
+
+/* Running status remains a light green capsule with dark green copy. */
+html[data-theme="dark"] .pond-pulse-status {
+  background: linear-gradient(180deg,#fff,#edf7ef) !important;
+  border-color: rgba(45,137,87,.15) !important;
+  color: #27744d !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 7px 15px rgba(28,91,59,.06) !important;
+}
+html[data-theme="dark"] .pond-pulse-status b {
+  color: #567f8a !important;
+}
+
+/* Big feature metrics: burn and treasury. */
+html[data-theme="dark"] .pond-pulse-feature {
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 10px 23px rgba(17,62,71,.07) !important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-burn {
+  background:
+    radial-gradient(circle at 92% 12%,rgba(238,96,70,.14),transparent 31%),
+    linear-gradient(145deg,#fff,#fbeee9) !important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-treasury {
+  background:
+    radial-gradient(circle at 92% 12%,rgba(238,183,55,.17),transparent 31%),
+    linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .pond-pulse-kicker {
+  color: #637b80 !important;
+}
+html[data-theme="dark"] .pond-pulse-feature strong {
+  color: #0b3641 !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-feature small {
+  color: #687f83 !important;
+}
+html[data-theme="dark"] .pond-pulse-feature small b {
+  color: #4d686e !important;
+}
+html[data-theme="dark"] .pond-pulse-feature em {
+  background: rgba(255,255,255,.67) !important;
+  border-color: var(--paper-line) !important;
+  color: #2d7056 !important;
+  box-shadow: inset 0 1px 0 #fff !important;
+}
+
+/* Smaller ledger blocks. */
+html[data-theme="dark"] .pond-pulse-stat,
+html[data-theme="dark"] .pond-pulse-stat.is-leaf,
+html[data-theme="dark"] .pond-pulse-stat.is-btc,
+html[data-theme="dark"] .pond-pulse-stat.is-seed,
+html[data-theme="dark"] .pond-pulse-stat.is-draw {
+  border-color: var(--paper-line) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 8px 17px rgba(18,61,69,.055) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat {
+  background: linear-gradient(150deg,#fff,#f4f8f8) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-leaf {
+  background: linear-gradient(145deg,#fff,#edf7ef) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-btc {
+  background: linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-seed {
+  background: linear-gradient(145deg,#fff,#edf7fb) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-draw {
+  background: linear-gradient(145deg,#fff,#f3eff8) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat span {
+  color: #607b80 !important;
+}
+html[data-theme="dark"] .pond-pulse-stat strong {
+  color: #0c3742 !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-stat small {
+  color: #74898c !important;
+}
+html[data-theme="dark"] .pond-pulse-stat em {
+  color: #76665e !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper,
+html[data-theme="dark"] .pond-pulse-whisper p {
+  color: #657f83 !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper b,
+html[data-theme="dark"] .pond-pulse-whisper code {
+  color: #315e69 !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper code {
+  background: rgba(255,255,255,.64) !important;
+}
+
+/* ==========================================================================
+   WORLD / EXCHANGE — make sure no light card inherits white typography
+   ========================================================================== */
+
+/* If a World land scene uses a light information footer, force paper ink. */
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy {
+  background: rgba(12,31,33,.97) !important;
+}
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy h3 {
+  color: #edf8f5 !important;
+}
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy p {
+  color: #9fb4b1 !important;
+}
+
+/* Marketplace asset artwork itself is unchanged; dark surrounding copy stays bright. */
+html[data-theme="dark"] .exchange-page :is(
+  .market-compose-card,.market-listings-card,.market-listing-tile,.market-asset-choice
+) :is(h1,h2,h3,h4,strong,b) {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .exchange-page :is(
+  .market-compose-card,.market-listings-card,.market-listing-tile,.market-asset-choice
+) :is(p,small,em) {
+  color: #93aaa7 !important;
+}
+
+/* ==========================================================================
+   GENERIC SAFETY NETS — scoped, not global
+   ========================================================================== */
+
+/* Any deliberate paper island inside the land page gets paper typography. */
+html[data-theme="dark"] .land-page :is(
+  .land-identity-card,
+  .land-garden-card,
+  .land-production-card,
+  .land-community-foot,
+  .land-hero
+) {
+  --local-ink: var(--paper-ink);
+  --local-copy: var(--paper-copy);
+}
+
+/* Do not let earlier broad dark-mode heading rules override paper headings. */
+html[data-theme="dark"] .land-page :is(
+  .land-identity-card,
+  .land-garden-card,
+  .land-production-card,
+  .land-community-foot,
+  .land-hero
+) :is(h1,h2,h3,h4,strong,b) {
+  text-shadow: none !important;
+}
+
+/* Keep all real ecosystem/NFT/token art unfiltered. */
+html[data-theme="dark"] :is(
+  .canonical-deed-art img,
+  .land-hero-canonical-deed img,
+  .seedleaf-asset-image img,
+  .taboshi1-real-art,
+  .market-asset-art img
+) {
+  filter: none !important;
+}
