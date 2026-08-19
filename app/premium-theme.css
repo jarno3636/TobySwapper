@@ -1193,3 +1193,468 @@ html[data-theme="dark"] :is(
   filter: none !important;
 }
 
+
+/* ==========================================================================
+   TABOSHI1 / MY TOBYWORLD — COMPLETE DARK MODE PASS
+   Uses exact page classes from app/taboshi1/page.tsx so no remaining light
+   cards inherit pale/white text in dark mode.
+   ========================================================================== */
+
+/* HERO -------------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-hero {
+  background:
+    radial-gradient(circle at 14% 10%, rgba(55, 162, 190, .14), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(75, 180, 126, .12), transparent 28%),
+    linear-gradient(145deg, rgba(16, 40, 42, .98), rgba(8, 27, 29, .98)) !important;
+  border-color: rgba(160, 225, 214, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 20px 44px rgba(0,0,0,.24) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-hero::before {
+  background:
+    linear-gradient(120deg, rgba(255,255,255,.045), transparent 36%, rgba(79, 194, 177, .045)) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-hero .taboshi1-kicker {
+  color: #8fb9b4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero h1 {
+  color: #f1fbf8 !important;
+  text-shadow: 0 2px 18px rgba(0,0,0,.20);
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero p {
+  color: #a8bcba !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero-art::after {
+  background: radial-gradient(circle, rgba(81, 207, 191, .10), transparent 68%) !important;
+}
+
+/* The actual seed/frog art remains bright, but its disc sits in a dark jewel frame. */
+html[data-theme="dark"] .taboshi1-page .taboshi1-relic-disc {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.08), transparent 24%),
+    linear-gradient(145deg, rgba(30, 61, 62, .96), rgba(11, 30, 32, .98)) !important;
+  border-color: rgba(167, 226, 216, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 13px 28px rgba(0,0,0,.20) !important;
+}
+
+/* PRIMARY FOUR-WAY NAV ---------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav {
+  background:
+    linear-gradient(155deg, rgba(14, 37, 39, .96), rgba(8, 27, 29, .96)) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 14px 30px rgba(0,0,0,.18) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a {
+  color: #e8f7f4 !important;
+  border-color: rgba(159, 224, 212, .055) !important;
+  background: rgba(18, 43, 45, .62) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a:hover {
+  background: rgba(24, 53, 55, .90) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a::before {
+  background: linear-gradient(115deg, transparent 0 42%, rgba(173,235,224,.08) 49%, transparent 57%) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a > span {
+  background:
+    linear-gradient(145deg, rgba(30, 65, 67, .96), rgba(17, 45, 47, .98)) !important;
+  color: #72cbd4 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 5px 10px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav b {
+  color: #dff5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav small {
+  color: #819a97 !important;
+}
+
+/* POND PROFILE ------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-profile-card {
+  background:
+    radial-gradient(circle at 94% 4%, rgba(63, 177, 150, .10), transparent 28%),
+    radial-gradient(circle at 4% 100%, rgba(65, 146, 179, .08), transparent 30%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-card::before {
+  background: linear-gradient(90deg, transparent, rgba(173,235,224,.10), transparent) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-head h2 {
+  color: #effaf7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-head p {
+  color: #a4b9b7 !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb {
+  background:
+    radial-gradient(circle at 38% 27%, rgba(255,255,255,.08) 0 11%, transparent 13%),
+    linear-gradient(145deg, rgba(27, 60, 62, .98), rgba(11, 35, 37, .98)) !important;
+  border-color: rgba(123, 207, 193, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 9px 20px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb strong {
+  color: #effaf7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb span {
+  color: #8da6a3 !important;
+}
+
+/* Asset path nodes should be readable even while "not found". */
+html[data-theme="dark"] .taboshi1-page .mytw-path-node {
+  background: rgba(17, 41, 43, .82) !important;
+  border-color: rgba(159, 224, 212, .08) !important;
+  opacity: .72 !important;
+  filter: saturate(.62) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node.is-found {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(77, 190, 151, .08), transparent 44%),
+    rgba(21, 47, 46, .95) !important;
+  border-color: rgba(96, 199, 159, .18) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 7px 15px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-icon {
+  background: rgba(227, 245, 241, .08) !important;
+  box-shadow: 0 5px 10px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node b {
+  color: #b8ceca !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node.is-found b {
+  color: #e6f7f3 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node i {
+  color: #577674 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-track {
+  background: rgba(4, 18, 19, .70) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.28) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-foot {
+  color: #7f9996 !important;
+}
+
+/* ACTION GRID: land / garden / contribution ------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+html[data-theme="dark"] .taboshi1-page .mytw-land-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-card {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(74, 170, 151, .07), transparent 29%),
+    linear-gradient(145deg, rgba(15, 38, 40, .97), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card::before {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-head small {
+  color: #88a5a2 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-head h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card > p {
+  color: #9eb4b1 !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(.mytw-action-icon,.mytw-symbol-orb) {
+  background:
+    linear-gradient(145deg, rgba(29, 62, 64, .96), rgba(16, 42, 44, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 14px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats span,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines span,
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line {
+  background: rgba(19, 44, 46, .82) !important;
+  border-color: rgba(159, 224, 212, .08) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats small,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines em {
+  color: #819a96 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats b,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines b,
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line b {
+  color: #dcefeb !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-inline-action,
+html[data-theme="dark"] .taboshi1-page .mytw-inline-action.is-primary {
+  background:
+    linear-gradient(180deg, rgba(31, 68, 66, .98), rgba(18, 49, 48, .98)) !important;
+  color: #dff8f1 !important;
+  border-color: rgba(106, 205, 172, .17) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 6px 12px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot {
+  background: rgba(29, 35, 44, .58) !important;
+  border-color: rgba(169, 151, 205, .16) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot span,
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot small {
+  color: #928aa6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot b {
+  color: #c8bddb !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch label {
+  background: rgba(17, 41, 43, .88) !important;
+  border-color: rgba(159, 224, 212, .10) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch label span {
+  color: #879e9b !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch input {
+  color: #eaf7f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-secondary-land-action {
+  color: #9cb3af !important;
+}
+
+/* Keep garden as an illustrated scene, but darken it enough to belong. */
+html[data-theme="dark"] .taboshi1-page .mytw-garden {
+  background:
+    linear-gradient(180deg,#183f43 0%,#1d4a40 57%,#385642 58%,#263f31 100%) !important;
+  border-color: rgba(119, 201, 170, .12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-garden::before {
+  background: rgba(198, 241, 229, .14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-stage-label {
+  color: #83c8a8 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-seed-actions > span {
+  color: #829894 !important;
+}
+
+/* RELICS ------------------------------------------------------------------ */
+html[data-theme="dark"] .taboshi1-page .lore-relic-panel,
+html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-seed-card,
+html[data-theme="dark"] .taboshi1-page .canonical-land-card {
+  background:
+    radial-gradient(circle at 90% 5%, rgba(68, 163, 145, .065), transparent 30%),
+    linear-gradient(145deg, rgba(15, 38, 40, .98), rgba(9, 28, 30, .98)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-relic-panel::before {
+  background:
+    linear-gradient(115deg, transparent 0 42%, rgba(184,238,227,.055) 49%, transparent 57%) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-showcase {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(74, 184, 122, .08), transparent 35%),
+    rgba(17, 42, 44, .88) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-token-art {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255,255,255,.07), rgba(27, 59, 54, .92) 48%, rgba(16, 40, 37, .98)) !important;
+  border-color: rgba(151, 218, 197, .12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 8px 18px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance small {
+  color: #86a49b !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance strong {
+  color: #e6f7f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance span,
+html[data-theme="dark"] .taboshi1-page .lore-whisper,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-intro {
+  color: #96aaa7 !important;
+}
+
+/* WALLET STATE ------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .taboshi1-connect,
+html[data-theme="dark"] .taboshi1-page .lore-connect-card,
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner {
+  background:
+    linear-gradient(155deg, rgba(15, 38, 40, .96), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-connect p,
+html[data-theme="dark"] .taboshi1-page .lore-connect-card p {
+  color: #a1b5b2 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner span {
+  color: #829b98 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner strong {
+  color: #e6f7f3 !important;
+}
+
+/* POUCH + TRANSFER --------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-shell {
+  background:
+    radial-gradient(circle at 10% 5%, rgba(64, 181, 158, .08), transparent 30%),
+    radial-gradient(circle at 92% 95%, rgba(94, 106, 172, .06), transparent 32%),
+    linear-gradient(155deg, rgba(13, 36, 38, .97), rgba(8, 27, 29, .97)) !important;
+  border-color: rgba(159, 224, 212, .15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro p {
+  color: #9eb3b0 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro > a {
+  background: rgba(19, 44, 46, .90) !important;
+  border-color: rgba(159, 224, 212, .10) !important;
+  color: #dff5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card {
+  background:
+    radial-gradient(circle at 96% 0, rgba(76, 151, 143, .055), transparent 24%),
+    linear-gradient(145deg, rgba(16, 40, 42, .97), rgba(10, 29, 31, .97)) !important;
+  border-color: rgba(159, 224, 212, .12) !important;
+}
+
+/* Exact Pouch asset cards */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-lore {
+  background:
+    linear-gradient(150deg, rgba(22, 48, 50, .94), rgba(14, 35, 37, .96)) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 8px 17px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-selected {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(75, 196, 159, .10), transparent 45%),
+    linear-gradient(150deg, rgba(25, 56, 52, .97), rgba(15, 39, 38, .98)) !important;
+  border-color: rgba(76, 205, 163, .28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 2px rgba(65, 182, 148, .06),
+    0 9px 20px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-copy strong {
+  color: #e8f8f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-usd-value,
+html[data-theme="dark"] .taboshi1-page .seedleaf-assets-note {
+  color: #889f9c !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-pouch-refresh,
+html[data-theme="dark"] .taboshi1-page .seedleaf-sync-button {
+  background:
+    linear-gradient(180deg, rgba(31, 67, 65, .98), rgba(18, 49, 47, .98)) !important;
+  color: #dff7f1 !important;
+  border-color: rgba(113, 210, 179, .16) !important;
+}
+
+/* Transfer controls */
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-summary {
+  background: rgba(18, 43, 45, .84) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-label {
+  color: #8ca4a1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-fields :is(input,select) {
+  background: #0c2022 !important;
+  color: #eaf8f5 !important;
+  border-color: rgba(159, 224, 212, .11) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button {
+  background: rgba(19, 45, 47, .90) !important;
+  color: #bdd2cf !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-send-button {
+  background:
+    linear-gradient(180deg, #2b9c80, #1e785f) !important;
+  color: #ffffff !important;
+  border-color: rgba(116, 221, 185, .24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 9px 22px rgba(0,0,0,.18) !important;
+}
+
+/* FINAL LORE STRIP --------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip,
+html[data-theme="dark"] .taboshi1-page .lore-final-whisper {
+  background:
+    radial-gradient(circle at 86% 30%, rgba(112, 80, 156, .075), transparent 30%),
+    radial-gradient(circle at 10% 20%, rgba(62, 150, 174, .06), transparent 28%),
+    linear-gradient(135deg, rgba(15, 38, 40, .97), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip strong {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip p {
+  color: #96aca9 !important;
+}
+
+/* Inline empty / quiet messages ------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page :is(
+  .lore-soft-chip,
+  .seedleaf-sync-message,
+  .watch-pouch-privacy,
+  .seedleaf-note-dot
+) {
+  color: #8da4a1 !important;
+}
+
+/* Make decorative white highlights subtle in dark mode. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .seedleaf-asset-card::before,
+  .seedleaf-asset-card::after,
+  .lore-relic-panel::before
+) {
+  opacity: .32;
+}
+
+/* Mobile dark mode: keep cards distinct without huge bright borders. */
+@media(max-width:620px) {
+  html[data-theme="dark"] .taboshi1-page .mytw-world-nav {
+    padding: 6px;
+  }
+  html[data-theme="dark"] .taboshi1-page .mytw-world-nav a {
+    min-height: 56px;
+  }
+  html[data-theme="dark"] .taboshi1-page .mytw-profile-card,
+  html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+  html[data-theme="dark"] .taboshi1-page .lore-relic-panel,
+  html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+  html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.035),
+      0 12px 25px rgba(0,0,0,.16) !important;
+  }
+}
+
