@@ -152,6 +152,7 @@ export default function TaboshiOnePage() {
   const [refreshCooling, setRefreshCooling] = useState(false);
   const refreshCooldownRef = useRef<number | null>(null);
   const refreshLockUntilRef = useRef(0);
+  const autoRefreshKeyRef = useRef("");
   const [syncMessage, setSyncMessage] = useState("");
   const [leafMetadata, setLeafMetadata] = useState<Metadata | null>(null);
   const [seedMetadata, setSeedMetadata] = useState<Metadata | null>(null);
@@ -162,7 +163,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI1_TOKEN_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
+    query: { enabled: Boolean(address), staleTime: 15_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: true, refetchOnMount: "always" },
   });
   const leafUriRead = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -177,7 +178,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address, TABOSHI_SEED_ID] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
+    query: { enabled: Boolean(address), staleTime: 15_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: true, refetchOnMount: "always" },
   });
   const seedUriRead = useReadContract({
     address: TABOSHI_SEEDS_ADDRESS,
@@ -198,7 +199,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true },
+    query: { enabled: Boolean(address), staleTime: 15_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: true, refetchOnMount: "always" },
   });
   const legacyLoreBalanceRead = useReadContract({
     address: LEGACY_LORE_DEED_ADDRESS,
@@ -206,7 +207,7 @@ export default function TaboshiOnePage() {
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     chainId: base.id,
-    query: { enabled: Boolean(address), staleTime: 0, refetchInterval: false, refetchOnMount: "always", refetchOnWindowFocus: false, refetchOnReconnect: true, retry: false },
+    query: { enabled: Boolean(address), staleTime: 60_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: true, refetchOnMount: "always", retry: false },
   });
 
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
@@ -365,66 +366,77 @@ export default function TaboshiOnePage() {
     ]);
   }
 
+
+  // Base App can keep the connector alive across navigation while cached reads
+  // remain empty. On each fresh visit to My Tobyworld, do one quiet direct Base
+  // refresh for the connected wallet. Session storage prevents route-bouncing
+  // from creating a request loop.
+  useEffect(() => {
+    if (!isConnected || !address) return;
+
+    const key = `tobyswap:pouch-auto-refresh:${address.toLowerCase()}`;
+    const now = Date.now();
+
+    try {
+      const previous = Number(window.sessionStorage.getItem(key) || "0");
+      if (now - previous < 8_000) return;
+      window.sessionStorage.setItem(key, String(now));
+    } catch {}
+
+    const runKey = `${address.toLowerCase()}:${now}`;
+    if (autoRefreshKeyRef.current === runKey) return;
+    autoRefreshKeyRef.current = runKey;
+
+    const timer = window.setTimeout(() => {
+      void refreshAll().then(() => {
+        window.dispatchEvent(
+          new CustomEvent("tobyswap:wallet-data-refreshed", {
+            detail: { address, at: Date.now(), automatic: true },
+          }),
+        );
+      });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [address, isConnected]);
+
   async function syncWalletAndHoldings() {
     const now = Date.now();
     if (syncingWallet || refreshCooling || now < refreshLockUntilRef.current) return;
-    // Ref-based lock closes the tiny gap before React commits disabled state,
-    // so rapid taps cannot fan out duplicate RPC refresh bundles.
+
+    // Immediate ref lock prevents rapid taps before React commits disabled state.
     refreshLockUntilRef.current = now + 12_000;
     setSyncingWallet(true);
     setRefreshCooling(true);
-    setSyncMessage("Checking the wallet in the pond…");
+    setSyncMessage("Refreshing your pouch…");
 
     try {
-      let providerAccounts: string[] = [];
-      const activeConnector = connector || connectors[0];
-
-      if (activeConnector) {
-        try {
-          const provider = await activeConnector.getProvider();
-          if (provider && typeof (provider as any).request === "function") {
-            const raw = await (provider as any).request({ method: "eth_accounts" });
-            if (Array.isArray(raw)) providerAccounts = raw.filter((value): value is string => typeof value === "string");
-          }
-        } catch {}
-
-        if (!providerAccounts.length) {
-          try {
-            const accounts = await activeConnector.getAccounts();
-            providerAccounts = accounts.map(String);
-          } catch {}
-        }
-      }
-
-      const liveAddress = providerAccounts[0];
-      const walletChanged = Boolean(liveAddress && address && liveAddress.toLowerCase() !== address.toLowerCase());
-
-      if (activeConnector && (walletChanged || (!liveAddress && isConnected))) {
-        setSyncMessage(walletChanged ? "New wallet found — reopening the pouch…" : "Reconnecting wallet…");
-        try { await disconnectAsync({ connector: activeConnector }); } catch {}
-        await new Promise((resolve) => setTimeout(resolve, 120));
-        try { await connectAsync({ connector: activeConnector }); } catch {}
-        // Query keys throughout the app are address-scoped. A clean reload after the
-        // connector handshake guarantees no cached balance from the previous wallet survives.
-        if (typeof window !== "undefined") {
-          window.setTimeout(() => window.location.reload(), 120);
-          return;
-        }
-      }
-
+      // Do not disconnect/reconnect inside Base App just to refresh balances.
+      // Embedded smart-wallet connectors can remain connected while their cached
+      // query state is stale. A direct refetch is safer and much less disruptive.
       await refreshAll();
-      setSyncMessage("Your pouch is refreshed.");
+
+      setSyncMessage("Pouch refreshed.");
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("tobyswap:wallet-data-refreshed", { detail: { address } }));
+        window.dispatchEvent(
+          new CustomEvent("tobyswap:wallet-data-refreshed", {
+            detail: { address, at: Date.now() },
+          }),
+        );
       }
     } catch {
-      setSyncMessage("Could not refresh the pouch. Try Change wallet from the wallet menu.");
+      setSyncMessage("Refresh did not finish. Try again in a few seconds.");
     } finally {
       setSyncingWallet(false);
       if (typeof window !== "undefined") {
         window.setTimeout(() => setSyncMessage(""), 3200);
-        if (refreshCooldownRef.current) window.clearTimeout(refreshCooldownRef.current);
-        refreshCooldownRef.current = window.setTimeout(() => setRefreshCooling(false), 12_000);
+        if (refreshCooldownRef.current) {
+          window.clearTimeout(refreshCooldownRef.current);
+        }
+        refreshCooldownRef.current = window.setTimeout(
+          () => setRefreshCooling(false),
+          12_000,
+        );
       } else {
         setRefreshCooling(false);
       }
@@ -619,7 +631,7 @@ COMPLETION</span>
               <div className="seedleaf-wallet-sync-copy"><span>Wallet in the pond</span><strong>{shortAddress(address)}</strong></div>
               <button type="button" className="seedleaf-sync-button" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-busy={syncingWallet}>
                 <span className={syncingWallet ? "seedleaf-sync-icon is-spinning" : "seedleaf-sync-icon"}>↻</span>
-                {syncingWallet ? "Syncing…" : refreshCooling ? "Updated" : "Refresh wallet"}
+                {syncingWallet ? "Refreshing…" : refreshCooling ? "Refreshed" : "Refresh pouch"}
               </button>
             </div>
             {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
@@ -629,7 +641,7 @@ COMPLETION</span>
         <section id="pouch" className="seedleaf-all-assets lore-inventory-card scroll-mt-24">
           <div className="seedleaf-section-head"><div><span className="taboshi1-kicker">YOUR POUCH</span><h2>Everything you carry</h2><p>Choose an asset here to move it through the transfer portal.</p></div>{isConnected ? (
               <button type="button" className="seedleaf-pouch-refresh" onClick={syncWalletAndHoldings} disabled={syncingWallet || refreshCooling} aria-label="Refresh wallet and pouch balances">
-                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "SYNCING" : refreshCooling ? "UPDATED" : "REFRESH"}
+                <span className={syncingWallet ? "is-spinning" : ""}>↻</span>{syncingWallet ? "REFRESHING" : refreshCooling ? "REFRESHED" : "REFRESH POUCH"}
               </button>
             ) : <span className="seedleaf-asset-count">CLOSED</span>}</div>
           <div className="seedleaf-assets-grid lore-assets-grid">
