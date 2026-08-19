@@ -36,6 +36,7 @@ export type LocalPouchEditor = {
 
 const MEMORY_MS = 10 * 60_000;
 const memory = new Map<string, { at: number; value: PublicPouchProfile | null }>();
+const walletMemory = new Map<string, { at: number; value: PublicPouchProfile | null }>();
 
 function publicSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
@@ -99,7 +100,49 @@ export async function readPublicPouchProfile(
     if (!response.ok) return null;
     const rows = await response.json();
     const value = rows?.[0] ? rowToProfile(rows[0]) : null;
-    memory.set(clean, { at: Date.now(), value });
+    const entry = { at: Date.now(), value };
+    memory.set(clean, entry);
+    if (value) walletMemory.set(value.walletAddress.toLowerCase(), entry);
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+
+export async function readPublicPouchProfileByWallet(
+  walletAddress: string,
+  force = false,
+): Promise<PublicPouchProfile | null> {
+  const clean = walletAddress.trim().toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(clean)) return null;
+
+  const cached = walletMemory.get(clean);
+  if (!force && cached && Date.now() - cached.at < MEMORY_MS) {
+    return cached.value;
+  }
+
+  const supabase = publicSupabase();
+  if (!supabase) return null;
+
+  try {
+    const response = await fetch(
+      `${supabase.url}/rest/v1/tobyswap_public_pouches?wallet_address=eq.${encodeURIComponent(clean)}&select=slug,wallet_address,page_name,description,theme,featured_deed,show_wallet,verified,x_url,farcaster_url,website_url,created_at,updated_at&limit=1`,
+      {
+        headers: {
+          apikey: supabase.key,
+          Authorization: `Bearer ${supabase.key}`,
+        },
+        cache: "force-cache",
+      },
+    );
+
+    if (!response.ok) return null;
+    const rows = await response.json();
+    const value = rows?.[0] ? rowToProfile(rows[0]) : null;
+    const entry = { at: Date.now(), value };
+    walletMemory.set(clean, entry);
+    if (value) memory.set(value.slug.toLowerCase(), entry);
     return value;
   } catch {
     return null;
@@ -107,7 +150,9 @@ export async function readPublicPouchProfile(
 }
 
 export function rememberPublicPouchProfile(profile: PublicPouchProfile) {
-  memory.set(profile.slug.toLowerCase(), { at: Date.now(), value: profile });
+  const entry = { at: Date.now(), value: profile };
+  memory.set(profile.slug.toLowerCase(), entry);
+  walletMemory.set(profile.walletAddress.toLowerCase(), entry);
 }
 
 export function editorStorageKey(wallet: string) {
