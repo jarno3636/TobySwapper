@@ -1,5 +1,6 @@
 "use client";
 
+import { PouchLandTransfer } from "@/components/land/PouchLandTransfer";
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
