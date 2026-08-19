@@ -2853,3 +2853,116 @@ button,a,select,input{touch-action:manipulation}
     grid-template-columns:1fr;
   }
 }
+
+/* ==========================================================================
+   One wallet → one public Pouch identity
+   ========================================================================== */
+.public-pouch-create-compact.is-loading{
+  opacity:.82;
+}
+.public-pouch-existing-compact,
+.public-pouch-manage-compact{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  margin-top:12px;
+  padding:13px;
+  border:1px solid rgba(29,94,96,.13);
+  border-radius:16px;
+  background:
+    radial-gradient(circle at 95% 5%,rgba(91,205,177,.1),transparent 36%),
+    linear-gradient(155deg,#fbfffd,#edf7f3);
+  box-shadow:inset 0 1px 0 #fff,0 8px 18px rgba(20,70,69,.05);
+}
+.public-pouch-existing-compact>div:first-child,
+.public-pouch-manage-compact>div:first-child{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.public-pouch-existing-compact span,
+.public-pouch-manage-compact span{
+  color:#77908e;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.11em;
+}
+.public-pouch-existing-compact strong,
+.public-pouch-manage-compact strong{
+  margin-top:2px;
+  color:#20544f;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.public-pouch-existing-compact small,
+.public-pouch-manage-compact small{
+  margin-top:3px;
+  color:#829492;
+  font-size:7px;
+  line-height:1.4;
+}
+.public-pouch-existing-actions,
+.public-pouch-manage-compact>div:nth-child(2){
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:5px;
+}
+.public-pouch-existing-actions a,
+.public-pouch-manage-compact a,
+.public-pouch-manage-compact button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid rgba(26,92,89,.12);
+  border-radius:10px;
+  background:#fff;
+  color:#2b6960;
+  font-size:8px;
+  font-weight:950;
+  text-decoration:none;
+}
+.public-pouch-existing-actions span{
+  max-width:220px;
+  text-align:right;
+  font-size:6px;
+  line-height:1.35;
+  letter-spacing:0;
+  font-weight:800;
+}
+.public-pouch-expand-editor{
+  grid-column:1/-1;
+  width:100%;
+  min-height:34px;
+  border:0!important;
+  border-radius:10px!important;
+  background:linear-gradient(180deg,#eef8f4,#e4f2ed)!important;
+  color:#2c675f!important;
+}
+.public-pouch-existing{
+  width:min(920px,calc(100% - 24px));
+  margin:14px auto 0;
+  padding:16px;
+  border:1px solid rgba(29,94,96,.13);
+  border-radius:19px;
+  background:#f7fcfa;
+}
+@media(max-width:560px){
+  .public-pouch-existing-compact,
+  .public-pouch-manage-compact{
+    grid-template-columns:1fr;
+  }
+  .public-pouch-existing-actions,
+  .public-pouch-manage-compact>div:nth-child(2){
+    align-items:stretch;
+  }
+  .public-pouch-existing-actions span{
+    max-width:none;
+    text-align:left;
+  }
+}
