@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PouchLandTransfer } from "@/components/land/PouchLandTransfer";
 import LoreDeedArt from "@/components/land/LoreDeedArt";
 import { useEffect, useMemo, useState } from "react";
@@ -168,7 +169,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
     <div className="mytw-owned-deeds">
       <div className="mytw-owned-deeds-head">
         <div><span>{readOnly ? "LORE DEEDS" : `MY LORE DEED${expectedCount === 1n ? "" : "S"}`}</span><strong>{loading ? "Finding land…" : `${expectedCount.toLocaleString()} held`}</strong><small>{sorted.length > 0 ? (readOnly ? "Canonical deed IDs held by this wallet" : "Your deed IDs are shown below") : "Finding token IDs"}</small></div>
-        <a href="/world">Explore World ↗</a>
+        <Link prefetch={false} href="/world">Explore World ↗</Link>
       </div>
 
       {sorted.length > 0 ? (
@@ -176,16 +177,16 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
           <div className="mytw-deed-gallery">
             {visibleDeeds.map((deed, index) => (
               <article key={deed.tokenId} className={`mytw-deed-tile theme-${deed.bannerTheme || "moss"}`}>
-                <a href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
+                <Link prefetch={false} href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
                   <LoreDeedArt tokenId={deed.tokenId} label={deed.communityName || undefined} eager={index < 2} />
-                </a>
+                </Link>
                 <div className="mytw-deed-tile-copy">
                   <small>{deed.communityName || "LORE LAND"}</small>
                   <strong>Deed #{deed.tokenId}</strong>
                   <span>{revealed ? "Canonical land" : "Veiled land"}</span>
                 </div>
                 <div className="mytw-deed-tile-actions">
-                  <a href={`/land/${deed.tokenId}`}>Visit</a>
+                  <Link prefetch={false} href={`/land/${deed.tokenId}`}>Visit</Link>
                   {!readOnly ? <button type="button" onClick={() => sendToDeed(deed.tokenId)}>Send assets</button> : null}
                   <button type="button" onClick={() => copyTokenId(deed.tokenId)}>
                     {copied === deed.tokenId ? "Copied" : "Copy ID"}

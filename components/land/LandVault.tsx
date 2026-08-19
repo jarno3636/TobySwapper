@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
+import { encodeFunctionData, erc20Abi, formatUnits, getAddress, isAddress, parseUnits, type Address } from "viem";
 import { base } from "wagmi/chains";
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
@@ -18,6 +18,30 @@ const assets: Array<{ id: VaultAsset; kind: "erc20" | "erc1155"; address: Addres
   { id: "OLD LEAF", kind: "erc1155", address: TABOSHI1_ADDRESS, decimals: 0, tokenId: TABOSHI1_TOKEN_ID },
   { id: "SEED", kind: "erc1155", address: TABOSHI_SEEDS_ADDRESS, decimals: 0, tokenId: TABOSHI_SEED_ID },
 ];
+const TOKEN_BOUND_ACCOUNT_ABI = [
+  {
+    type: "function",
+    name: "supportsInterface",
+    stateMutability: "view",
+    inputs: [{ name: "interfaceId", type: "bytes4" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "execute",
+    stateMutability: "payable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "data", type: "bytes" },
+      { name: "operation", type: "uint8" },
+    ],
+    outputs: [{ name: "result", type: "bytes" }],
+  },
+] as const;
+
+const ERC6551_EXECUTABLE_INTERFACE = "0x51945447" as const;
+
 
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
@@ -39,6 +63,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   const { writeContractAsync } = useWriteContract();
   const [selected, setSelected] = useState<VaultAsset>("SEED");
   const [amount, setAmount] = useState("1");
+  const [withdrawRecipient, setWithdrawRecipient] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [deployed, setDeployed] = useState<boolean | null>(null);
@@ -85,6 +110,10 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   }), [vaultReads.data]);
 
   const isKeeper = Boolean(address && owner && address.toLowerCase() === owner.toLowerCase());
+
+  useEffect(() => {
+    if (address && !withdrawRecipient) setWithdrawRecipient(address);
+  }, [address, withdrawRecipient]);
 
   const checkVaultDeployment = useCallback(async () => {
     if (!vault || !client) return false;
@@ -262,6 +291,68 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
     finally { setBusy(""); }
   }
 
+  async function withdrawFromLand() {
+    if (!vault || !address || !client || !isKeeper || !isAddress(withdrawRecipient)) return;
+    const asset = assets.find((item) => item.id === selected)!;
+    const current = balances.find((item) => item.id === selected)?.value || 0n;
+
+    try {
+      setBusy("withdraw");
+      setMessage("Preparing the Land Vault transfer…");
+
+      if (chainId !== base.id) {
+        await switchChainAsync({ chainId: base.id });
+      }
+
+      const supported = await client.readContract({
+        address: vault,
+        abi: TOKEN_BOUND_ACCOUNT_ABI,
+        functionName: "supportsInterface",
+        args: [ERC6551_EXECUTABLE_INTERFACE],
+      }).catch(() => false);
+      if (!supported) throw new Error("This Land Vault does not expose the standard ERC-6551 execution interface.");
+
+      const value = asset.kind === "erc20"
+        ? parseUnits(amount || "0", asset.decimals)
+        : BigInt(amount || "0");
+      if (value <= 0n) throw new Error("Enter an amount greater than zero.");
+      if (value > current) throw new Error(`Only ${asset.decimals ? formatUnits(current, asset.decimals) : current.toString()} ${asset.id} is in this Land Vault.`);
+
+      const recipient = getAddress(withdrawRecipient);
+      const data = asset.kind === "erc20"
+        ? encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [recipient, value],
+          })
+        : encodeFunctionData({
+            abi: selected === "SEED" ? TABOSHI_SEEDS_ABI : TABOSHI1_ABI,
+            functionName: "safeTransferFrom",
+            args: [vault, recipient, asset.tokenId!, value, "0x"],
+          } as any);
+
+      setMessage("Confirm the transfer from your Land Vault.");
+      const hash = await writeContractAsync({
+        address: vault,
+        abi: TOKEN_BOUND_ACCOUNT_ABI,
+        functionName: "execute",
+        args: [asset.address, 0n, data, 0],
+        chainId: base.id,
+      });
+
+      setMessage("Moving the asset out of the land…");
+      const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 45_000 });
+      if (receipt.status !== "success") throw new Error("The Land Vault transfer reverted.");
+      await vaultReads.refetch();
+      setMessage(`${amount} ${selected} moved from Land #${tokenId} to ${recipient.slice(0, 6)}…${recipient.slice(-4)}.`);
+    } catch (error: any) {
+      const text = String(error?.shortMessage || error?.message || "The Land Vault transfer did not complete.");
+      setMessage(/reject|denied|cancel/i.test(text) ? "Transfer cancelled in wallet." : text.slice(0, 190));
+    } finally {
+      setBusy("");
+    }
+  }
+
   return (
     <section className="land-vault-card">
       <div className="land-vault-head">
@@ -300,24 +391,51 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
           </div>
 
           {isKeeper ? (
-            <div className="land-vault-send">
-              <label>
-                <span>SEND TO LAND</span>
-                <select value={selected} onChange={(e) => setSelected(e.target.value as VaultAsset)}>
-                  {assets.map((asset) => <option key={asset.id}>{asset.id}</option>)}
-                </select>
-              </label>
-              <label>
-                <span>AMOUNT</span>
-                <input
-                  inputMode="decimal"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-              </label>
-              <button onClick={sendToLand} disabled={Boolean(busy)}>
-                {busy === "send" ? "Moving…" : `Send to #${tokenId}`}
-              </button>
+            <div className="land-vault-actions">
+              <div className="land-vault-send">
+                <label>
+                  <span>ASSET</span>
+                  <select value={selected} onChange={(e) => setSelected(e.target.value as VaultAsset)}>
+                    {assets.map((asset) => <option key={asset.id}>{asset.id}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>AMOUNT</span>
+                  <input
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  />
+                </label>
+                <button onClick={sendToLand} disabled={Boolean(busy)}>
+                  {busy === "send" ? "Moving…" : `Send to #${tokenId}`}
+                </button>
+              </div>
+
+              <div className="land-vault-withdraw">
+                <div>
+                  <span className="land-section-kicker">UNPACK LAND</span>
+                  <strong>Move an asset out of this deed</strong>
+                  <p>The current Lore Deed owner controls the token-bound vault. This sends the selected asset directly from the vault in one onchain transaction.</p>
+                </div>
+                <label>
+                  <span>DESTINATION</span>
+                  <input
+                    value={withdrawRecipient}
+                    onChange={(e) => setWithdrawRecipient(e.target.value.trim())}
+                    placeholder="0x…"
+                    spellCheck={false}
+                    autoComplete="off"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={withdrawFromLand}
+                  disabled={Boolean(busy) || !isAddress(withdrawRecipient) || (balances.find((item) => item.id === selected)?.value || 0n) === 0n}
+                >
+                  {busy === "withdraw" ? "Moving out…" : `Move ${selected} out`}
+                </button>
+              </div>
             </div>
           ) : null}
         </>
