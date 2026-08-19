@@ -2429,3 +2429,88 @@ button,a,select,input{touch-action:manipulation}
 @media(max-width:620px){
   .land-vault-create-actions{width:100%}
 }
+
+/* ==========================================================================
+   Read-only Pouch + canonical metadata fallback
+   ========================================================================== */
+.watch-pouch-card{
+  margin-top:18px;
+  padding:18px;
+  border:1px solid rgba(29,94,99,.13);
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 92% 8%,rgba(139,223,208,.16),transparent 34%),
+    linear-gradient(155deg,rgba(255,255,255,.98),rgba(235,247,245,.95));
+  box-shadow:inset 0 1px 0 #fff,0 13px 28px rgba(19,66,71,.08);
+}
+.watch-pouch-copy h2{margin:4px 0 5px;color:#173f47;font-size:21px;line-height:1.08}
+.watch-pouch-copy p{margin:0;max-width:650px;color:#75898b;font-size:10px;line-height:1.5}
+.watch-pouch-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:14px}
+.watch-pouch-form input{
+  min-width:0;
+  min-height:46px;
+  padding:0 13px;
+  border:1px solid rgba(28,91,96,.14);
+  border-radius:14px;
+  background:#fff;
+  color:#17444b;
+  font-size:12px;
+  font-weight:750;
+  outline:none;
+}
+.watch-pouch-form input:focus{border-color:rgba(25,143,123,.42);box-shadow:0 0 0 3px rgba(59,184,154,.09)}
+.watch-pouch-form button{
+  min-width:112px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(180deg,#209577,#17705f);
+  color:#fff;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.05em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 7px 16px rgba(24,104,88,.15);
+}
+.watch-pouch-privacy{display:block;margin-top:8px;color:#879798;font-size:7px;font-weight:800;letter-spacing:.04em}
+.watch-pouch-error{margin-top:8px;padding:9px 11px;border-radius:11px;background:#fff0ed;color:#a44c42;font-size:9px;font-weight:850}
+.watch-pouch-results{
+  margin-top:12px;
+  padding:16px;
+  border:1px solid rgba(28,93,98,.14);
+  border-radius:24px;
+  background:rgba(248,252,251,.96);
+  box-shadow:inset 0 1px 0 #fff,0 11px 24px rgba(21,66,71,.06);
+}
+.watch-pouch-results-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.watch-pouch-results-head>div{display:flex;flex-direction:column;min-width:0}
+.watch-pouch-results-head span{font-size:7px;font-weight:950;letter-spacing:.14em;color:#768d8f}
+.watch-pouch-results-head strong{margin-top:3px;color:#17464d;font-size:14px;overflow-wrap:anywhere}
+.watch-pouch-results-head small{margin-top:2px;color:#89999a;font-size:8px}
+.watch-pouch-results-head button{border:1px solid rgba(31,94,98,.12);border-radius:11px;background:#fff;padding:8px 10px;color:#376a69;font-size:8px;font-weight:900}
+.watch-pouch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}
+.watch-pouch-asset{
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  min-height:68px;
+  padding:10px;
+  border:1px solid rgba(31,92,97,.1);
+  border-radius:16px;
+  background:linear-gradient(155deg,#fff,#f0f7f6);
+}
+.watch-pouch-icon{display:grid;place-items:center;width:46px;height:46px;overflow:hidden;border-radius:13px;background:#f0f5f4;color:#275f64;font-size:8px;font-weight:950}
+.watch-pouch-icon img{width:42px;height:42px;object-fit:contain}
+.watch-pouch-asset>div:nth-child(2){display:flex;flex-direction:column;min-width:0}
+.watch-pouch-asset small{font-size:7px;color:#879697}
+.watch-pouch-asset strong{margin-top:2px;color:#214d54;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.watch-pouch-asset>b{min-width:0;color:#245860;font-size:11px;overflow-wrap:anywhere}
+.watch-pouch-asset.is-lore{background:linear-gradient(155deg,#fff,#f2effa)}
+.watch-pouch-note{margin-top:11px;padding:10px 12px;border-radius:13px;background:#eef7f4;color:#6c8585;font-size:8px;line-height:1.45}
+.watch-pouch-results .mytw-owned-deeds{margin-top:15px}
+.canonical-deed-source:not(.ready){background:rgba(92,109,111,.78)}
+@media(max-width:620px){
+  .watch-pouch-form{grid-template-columns:1fr}
+  .watch-pouch-form button{min-height:44px}
+  .watch-pouch-grid{grid-template-columns:1fr}
+}
