@@ -18,7 +18,7 @@ export default function LandExchangePage() {
         <div id="market" className="scroll-mt-24"><MarketplaceShell /></div>
       </main>
       <Footer />
-      <PondDock active="world" />
+      <PondDock active="market" />
     </MiniAppGate>
   );
 }
