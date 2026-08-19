@@ -117,19 +117,24 @@ export async function POST(request: Request) {
 
       const wallet = getAddress(body.walletAddress).toLowerCase();
 
-      // Keep no-login creation useful without allowing one wallet to generate an
-      // unlimited number of rows. A verified profile can be added later without
-      // changing this public-page model.
-      const existing = await supabaseRest<Array<{ slug: string }>>(
-        `tobyswap_public_pouches?wallet_address=eq.${encodeURIComponent(wallet)}&select=slug&limit=3`,
+      // Wallet address is the identity anchor for a public Pouch.
+      // Creation is intentionally idempotent: if one already exists, return it
+      // rather than ever creating a second public identity for the same wallet.
+      const existing = await supabaseRest<
+        Array<{ slug: string; verified: boolean }>
+      >(
+        `tobyswap_public_pouches?wallet_address=eq.${encodeURIComponent(wallet)}&select=slug,verified&limit=1`,
       );
 
-      if (existing.length >= 3) {
+      if (existing[0]) {
         return NextResponse.json(
           {
             ok: false,
+            existing: true,
+            slug: existing[0].slug,
+            verified: Boolean(existing[0].verified),
             error:
-              "This wallet already has several public Pouch pages. Open one from the browser where it was created or verify the wallet later to recover it.",
+              "This wallet already has a public Pouch. Open the existing page instead of creating another one.",
           },
           { status: 409 },
         );
