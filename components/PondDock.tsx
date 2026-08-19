@@ -23,10 +23,10 @@ function AtlasDockIcon() {
 
 
 const items = [
-  { id: "swap", label: "Swap", href: "/#swap", custom: "swap" as const },
+  { id: "swap", label: "Pond", href: "/#swap", custom: "swap" as const },
+  { id: "pouch", label: "Pouch", href: "/taboshi1#pouch", icon: "/seed.png" },
   { id: "world", label: "World", href: "/world", custom: "atlas" as const },
-  { id: "hop", label: "Hop", href: "https://farcaster.xyz/miniapps/rTQGt2rMfgOF/toby-hop", icon: "/tokens/toby.PNG" },
-  { id: "vault", label: "Vault", href: "https://toadvault.xyz", icon: "/tokens/patience.PNG" },
+  { id: "market", label: "Market", href: "/world/exchange", icon: "/tokens/taboshi.PNG" },
 ] as const;
 
 function DockVisual({ item }: { item: (typeof items)[number] }) {
@@ -35,7 +35,7 @@ function DockVisual({ item }: { item: (typeof items)[number] }) {
   return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/toby.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
 }
 
-export default function PondDock({ active }: { active?: "swap" | "world" }) {
+export default function PondDock({ active }: { active?: "swap" | "pouch" | "world" | "market" }) {
   return (
     <nav className="pond-dock-wrap" aria-label="TobySwap shortcuts">
       <div className="pond-dock-shine" aria-hidden="true" />
@@ -43,7 +43,7 @@ export default function PondDock({ active }: { active?: "swap" | "world" }) {
         {items.map((item) => {
           const content = <><DockVisual item={item} /><span className="pond-dock-label">{item.label}</span></>;
           const className = `pond-dock-item ${active === item.id ? "pond-dock-active" : ""}`;
-          if (item.id === "swap") return <a key={item.id} className={className} href={item.href}>{content}</a>;
+          if (item.href.startsWith("/")) return <a key={item.id} className={className} href={item.href}>{content}</a>;
           return <LinkMaybeMini key={item.id} href={item.href} className={className}>{content}</LinkMaybeMini>;
         })}
       </div>
