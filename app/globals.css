@@ -2247,3 +2247,158 @@ button,a,select,input{touch-action:manipulation}
   .mytw-deed-tile-actions>*:last-child{grid-column:1/-1;border-top:1px solid rgba(27,89,94,.08)}
   .market-listing-tile>.canonical-deed-art.market-canonical-art{width:56px;min-width:56px}
 }
+
+/* ==========================================================================
+   Canonical deed metadata + clearer ERC-6551 Land Vault
+   ========================================================================== */
+
+.land-hero-deed-wrap{
+  min-width:0;
+  padding:10px;
+  border:1px solid rgba(20,79,86,.12);
+  border-radius:26px;
+  background:linear-gradient(155deg,rgba(255,255,255,.98),rgba(232,246,244,.94));
+  box-shadow:inset 0 1px 0 #fff,0 15px 30px rgba(18,67,72,.1);
+}
+.land-hero-deed-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:3px 3px 9px;
+}
+.land-hero-deed-label span{
+  color:#789092;
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.14em;
+}
+.land-hero-deed-label strong{
+  color:#194951;
+  font-size:10px;
+}
+.land-hero-canonical-deed{
+  width:100%;
+  max-height:520px;
+  aspect-ratio:1/1;
+  border-radius:19px;
+  background:#eaf2f1;
+}
+.land-hero-canonical-deed img{
+  object-fit:contain;
+  background:#edf4f3;
+}
+.canonical-deed-metadata-fallback{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:26px;
+  text-align:center;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(150,224,210,.26),transparent 38%),
+    linear-gradient(160deg,#f6fbfa,#e7f2f0);
+}
+.canonical-deed-metadata-fallback .canonical-deed-mark{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  border-radius:15px;
+  background:#174d54;
+  color:#fff;
+  font-size:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+}
+.canonical-deed-metadata-fallback strong{
+  color:#19464e;
+  font-size:12px;
+}
+.canonical-deed-metadata-fallback small{
+  max-width:260px;
+  color:#7a8e90;
+  font-size:8px;
+  line-height:1.45;
+}
+.canonical-deed-source{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  z-index:3;
+  max-width:calc(100% - 74px);
+  overflow:hidden;
+  padding:5px 7px;
+  border-radius:999px;
+  background:rgba(89,108,110,.78);
+  color:#fff;
+  font-size:6px;
+  font-weight:950;
+  letter-spacing:.07em;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  backdrop-filter:blur(6px);
+}
+.canonical-deed-source.ready{background:rgba(24,110,83,.82)}
+.land-metadata-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 3px 1px;
+  color:#7c9192;
+  font-size:7px;
+  font-weight:850;
+}
+.land-metadata-row a{
+  color:#237064;
+  font-weight:950;
+  text-decoration:none;
+}
+
+.land-vault-create-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  margin-top:11px;
+  padding:14px;
+  border:1px solid rgba(31,91,94,.1);
+  border-radius:17px;
+  background:rgba(255,255,255,.72);
+}
+.land-vault-create-panel strong{
+  color:#17464d;
+  font-size:11px;
+}
+.land-vault-create-panel p{
+  max-width:580px;
+  margin:4px 0 0;
+  color:#7e9092;
+  font-size:8px;
+  line-height:1.5;
+}
+.land-vault-create-panel .land-vault-wake{
+  width:auto;
+  min-width:154px;
+  margin:0;
+  padding:0 16px;
+}
+.land-vault-owner-note{
+  max-width:180px;
+  color:#7d9092;
+  font-size:8px;
+  line-height:1.4;
+}
+.land-vault-state.sleeping{
+  background:#edf1f1;
+  color:#718285;
+}
+
+@media(max-width:620px){
+  .land-vault-create-panel{grid-template-columns:1fr}
+  .land-vault-create-panel .land-vault-wake{width:100%}
+  .land-metadata-row{align-items:flex-start;flex-direction:column}
+}
