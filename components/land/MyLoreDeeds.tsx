@@ -43,11 +43,11 @@ function writeCached(owner: Address, data: OwnedResponse) {
   try { localStorage.setItem(storageKey(owner), JSON.stringify(entry)); } catch {}
 }
 
-function loadOwned(owner: Address) {
+function loadOwned(owner: Address, expectedCount: bigint) {
   const key = ownerKey(owner);
   const existing = inflight.get(key);
   if (existing) return existing;
-  const request = fetch(`/api/land/owned?owner=${encodeURIComponent(owner)}`, { cache: "force-cache" })
+  const request = fetch(`/api/land/owned?owner=${encodeURIComponent(owner)}&count=${expectedCount.toString()}`, { cache: "force-cache" })
     .then(async (response) => {
       if (!response.ok) throw new Error("deeds unavailable");
       return response.json() as Promise<OwnedResponse>;
@@ -67,14 +67,20 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed }: { owner?
     if (!owner || expectedCount === 0n) { setDeeds([]); setComplete(true); return; }
     const cached = readCached(owner);
     if (cached && Date.now() - cached.at < CACHE_MS) {
-      setDeeds(cached.data.deeds || []);
-      setComplete(cached.data.complete !== false);
-      return;
+      const cachedDeeds = cached.data.deeds || [];
+      // Only trust the cached token-id list when it still matches the live
+      // canonical ERC721 balance. This keeps navigation fast without hiding a
+      // newly acquired/sold deed behind a stale browser cache.
+      if (BigInt(cachedDeeds.length) === expectedCount) {
+        setDeeds(cachedDeeds);
+        setComplete(cached.data.complete !== false);
+        return;
+      }
     }
 
     let cancelled = false;
     setLoading(true);
-    loadOwned(owner)
+    loadOwned(owner, expectedCount)
       .then((data) => {
         if (cancelled) return;
         setDeeds(data.deeds || []);
