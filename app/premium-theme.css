@@ -480,3 +480,406 @@ html[data-theme="dark"] .hero-status-cyan { color:#8fd7f6!important; }
   html { scroll-behavior:auto; }
   .header-quick-link,.pond-dock-item,.theme-toggle { transition:none!important; }
 }
+
+
+/* ==========================================================================
+   DARK MODE READABILITY + GLASS CONSISTENCY PASS
+   Fixes light metallic controls retaining white surfaces while inheriting
+   dark-theme white text. Dark mode now uses one coherent smoked-glass system.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --dark-glass: rgba(15, 34, 36, .78);
+  --dark-glass-strong: rgba(12, 29, 31, .94);
+  --dark-glass-soft: rgba(23, 47, 49, .72);
+  --dark-control: rgba(25, 48, 50, .96);
+  --dark-control-hover: rgba(31, 59, 61, .98);
+  --dark-control-low: rgba(13, 29, 31, .98);
+  --dark-text: #effaf7;
+  --dark-text-soft: #a8bfbd;
+  --dark-text-muted: #779391;
+  --dark-edge: rgba(168, 229, 218, .16);
+  --dark-edge-strong: rgba(168, 229, 218, .24);
+  --dark-teal: #63d5bf;
+  --dark-blue: #78ccef;
+  --dark-red: #ff978b;
+  --dark-green: #84d79c;
+}
+
+/* Give the page depth instead of one nearly-black sheet. */
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(47, 135, 124, .14), transparent 25%),
+    radial-gradient(circle at 92% 32%, rgba(93, 77, 130, .10), transparent 31%),
+    linear-gradient(180deg, #081719 0%, #071315 58%, #091416 100%) !important;
+}
+
+html[data-theme="dark"] .app-header {
+  background:
+    linear-gradient(180deg, rgba(14, 34, 35, .92), rgba(10, 27, 29, .86)) !important;
+  border-bottom-color: rgba(154, 221, 209, .14) !important;
+  box-shadow: 0 9px 30px rgba(0,0,0,.18);
+}
+
+/* --------------------------------------------------------------------------
+   Core glass surfaces
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .glass,
+html[data-theme="dark"] .glass-strong,
+html[data-theme="dark"] .swap-shell,
+html[data-theme="dark"] .burn-card,
+html[data-theme="dark"] .content-visible {
+  border-color: var(--dark-edge) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-theme="dark"] .glass {
+  background:
+    linear-gradient(155deg, rgba(20, 43, 45, .78), rgba(10, 27, 29, .76)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 18px 42px rgba(0,0,0,.22) !important;
+}
+
+html[data-theme="dark"] .glass-strong {
+  background:
+    linear-gradient(155deg, rgba(18, 41, 43, .94), rgba(8, 23, 25, .94)) !important;
+}
+
+html[data-theme="dark"] .glass-hover:hover {
+  background: rgba(25, 50, 52, .92) !important;
+  border-color: var(--dark-edge-strong) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Swap card: keep the glass personality but make every layer readable.
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .swap-shell {
+  background:
+    radial-gradient(70% 38% at 4% 0%, rgba(214, 84, 90, .10), transparent 72%),
+    radial-gradient(68% 38% at 96% 0%, rgba(60, 175, 219, .13), transparent 72%),
+    linear-gradient(165deg, rgba(15, 39, 41, .96), rgba(8, 26, 28, .94)) !important;
+  border: 1px solid rgba(88, 208, 187, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 0 0 1px rgba(84, 212, 189, .04),
+    0 24px 52px rgba(0,0,0,.30) !important;
+}
+
+html[data-theme="dark"] .swap-shell::before {
+  opacity: .72;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(255, 109, 113, .34),
+      rgba(255,255,255,0) 27%,
+      rgba(80, 196, 232, .30) 58%,
+      rgba(92, 215, 158, .27)
+    ) !important;
+}
+
+/* Pay / receive become dark tinted glass rather than white cards. */
+html[data-theme="dark"] .trade-panel {
+  border-color: var(--dark-edge) !important;
+  background:
+    radial-gradient(120% 90% at 12% -10%, rgba(255,255,255,.055), transparent 55%),
+    linear-gradient(160deg, rgba(24, 48, 50, .93), rgba(14, 32, 34, .93)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 11px 25px rgba(0,0,0,.18) !important;
+}
+
+html[data-theme="dark"] .trade-panel-pay {
+  border-color: rgba(242, 126, 126, .26) !important;
+  background:
+    radial-gradient(90% 120% at 0% 0%, rgba(170, 62, 67, .20), transparent 58%),
+    linear-gradient(160deg, rgba(43, 34, 36, .92), rgba(21, 31, 33, .94)) !important;
+}
+
+html[data-theme="dark"] .trade-panel-receive {
+  border-color: rgba(98, 208, 144, .25) !important;
+  background:
+    radial-gradient(90% 120% at 0% 0%, rgba(54, 150, 93, .18), transparent 58%),
+    radial-gradient(80% 80% at 100% 0%, rgba(53, 158, 196, .13), transparent 62%),
+    linear-gradient(160deg, rgba(27, 45, 40, .94), rgba(15, 31, 33, .94)) !important;
+}
+
+html[data-theme="dark"] .trade-panel:focus-within {
+  border-color: rgba(91, 198, 226, .42) !important;
+  box-shadow:
+    0 0 0 3px rgba(73, 185, 211, .10),
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 11px 25px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .trade-panel-labels {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .trade-panel-pay .trade-panel-labels > span:first-child {
+  color: var(--dark-red) !important;
+}
+html[data-theme="dark"] .trade-panel-receive .trade-panel-labels > span:first-child {
+  color: var(--dark-green) !important;
+}
+html[data-theme="dark"] .trade-amount-input,
+html[data-theme="dark"] .trade-output {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .trade-amount-input::placeholder {
+  color: #55706f !important;
+}
+html[data-theme="dark"] .trade-usd,
+html[data-theme="dark"] .trade-token-side small {
+  color: var(--dark-text-soft) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Metallic controls: use smoked metal in dark mode, never white + white text.
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .swap-direction-floating,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+) {
+  border-color: var(--dark-edge) !important;
+  background:
+    radial-gradient(120% 85% at 50% 0%, rgba(255,255,255,.10), transparent 48%),
+    linear-gradient(180deg, rgba(34, 61, 63, .98), rgba(18, 39, 41, .98)) !important;
+  color: var(--dark-text) !important;
+  text-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(0,0,0,.20),
+    0 4px 0 rgba(0,0,0,.18),
+    0 9px 20px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+)::before {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0)) !important;
+  opacity: .8 !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+)::after {
+  background:
+    linear-gradient(90deg, transparent, rgba(190, 244, 234, .28) 28%, rgba(255,255,255,.22) 70%, transparent) !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+):hover:not(:disabled) {
+  background:
+    radial-gradient(120% 85% at 50% 0%, rgba(255,255,255,.13), transparent 48%),
+    linear-gradient(180deg, rgba(42, 73, 75, .99), rgba(22, 45, 47, .99)) !important;
+  border-color: var(--dark-edge-strong) !important;
+  filter: none !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+):disabled {
+  background:
+    linear-gradient(180deg, rgba(38, 57, 59, .72), rgba(24, 41, 43, .75)) !important;
+  color: #8ca09f !important;
+  opacity: .72 !important;
+  border-color: rgba(162, 207, 199, .09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 4px 12px rgba(0,0,0,.12) !important;
+}
+
+/* The main disconnected CTA should still look intentional and readable. */
+html[data-theme="dark"] .swap-submit-premium,
+html[data-theme="dark"] .swap-primary {
+  color: #eaf9f6 !important;
+}
+html[data-theme="dark"] .swap-submit-premium:not(:disabled),
+html[data-theme="dark"] .swap-primary:not(:disabled) {
+  border-color: rgba(95, 202, 218, .30) !important;
+  background:
+    radial-gradient(110% 80% at 50% 0%, rgba(255,255,255,.13), transparent 52%),
+    linear-gradient(180deg, #235b64 0%, #17454c 56%, #10363c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 -2px 0 rgba(0,0,0,.18),
+    0 5px 0 rgba(0,0,0,.20),
+    0 13px 28px rgba(0,0,0,.25) !important;
+}
+
+/* Token pickers */
+html[data-theme="dark"] .token-trigger {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .token-trigger-icon {
+  background: rgba(239, 250, 247, .92) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 5px 12px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .token-trigger-symbol {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .token-trigger-balance,
+html[data-theme="dark"] .token-trigger-chevron {
+  color: var(--dark-text-soft) !important;
+}
+
+/* Direction button gets its own subtle blue glass identity. */
+html[data-theme="dark"] .swap-direction-floating {
+  border-color: rgba(116, 202, 230, .24) !important;
+  background:
+    radial-gradient(circle at 32% 20%, rgba(255,255,255,.17) 0 10%, transparent 12%),
+    linear-gradient(145deg, #244c55, #173a41 54%, #102d33) !important;
+  color: #dff7fb !important;
+}
+
+/* --------------------------------------------------------------------------
+   Share pills + burn card from screenshot
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .pill {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .pill-opaque,
+html[data-theme="dark"] .pill-nav {
+  background:
+    linear-gradient(180deg, rgba(31, 57, 59, .96), rgba(17, 38, 40, .97)) !important;
+}
+
+html[data-theme="dark"] .burn-share-fc {
+  color: #d9c8ff !important;
+  border-color: rgba(154, 123, 224, .25) !important;
+  background:
+    linear-gradient(180deg, rgba(78, 60, 112, .76), rgba(42, 35, 61, .90)) !important;
+}
+html[data-theme="dark"] .burn-share-x {
+  color: #f0f6f5 !important;
+  background:
+    linear-gradient(180deg, rgba(42, 59, 61, .92), rgba(22, 38, 40, .95)) !important;
+}
+html[data-theme="dark"] .burn-share-icon {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+
+html[data-theme="dark"] .content-visible.glass,
+html[data-theme="dark"] .glass.content-visible {
+  background:
+    radial-gradient(70% 90% at 10% 0%, rgba(67, 142, 118, .10), transparent 58%),
+    radial-gradient(70% 90% at 92% 20%, rgba(221, 112, 72, .08), transparent 60%),
+    linear-gradient(160deg, rgba(18, 40, 42, .89), rgba(10, 27, 29, .91)) !important;
+}
+
+html[data-theme="dark"] .content-visible h3 {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .content-visible .text-inkSub {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .content-visible .bg-black\/\[\.035\] {
+  background: rgba(0,0,0,.22) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Header controls
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .theme-toggle {
+  color: #c9e8e2 !important;
+  background:
+    linear-gradient(180deg, rgba(27, 55, 57, .94), rgba(13, 34, 36, .96)) !important;
+  border-color: var(--dark-edge) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 8px 20px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .app-header .pill-opaque,
+html[data-theme="dark"] .app-header .pill-nav {
+  color: #eefaf7 !important;
+  background:
+    linear-gradient(180deg, rgba(35, 63, 65, .96), rgba(18, 41, 43, .98)) !important;
+  border-color: rgba(177, 233, 223, .16) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Status/receipt/readability
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .route-status,
+html[data-theme="dark"] .quote-receipt-row > span,
+html[data-theme="dark"] .swap-status-row {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .quote-receipt,
+html[data-theme="dark"] .weth-route-callout,
+html[data-theme="dark"] .swap-alert {
+  background: rgba(19, 42, 44, .84) !important;
+  border-color: var(--dark-edge) !important;
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .quote-receipt strong,
+html[data-theme="dark"] .weth-route-callout strong,
+html[data-theme="dark"] .swap-alert strong {
+  color: var(--dark-text) !important;
+}
+
+/* A little more breathing room on the homepage in dark mode. */
+html[data-theme="dark"] .swap-shell + * {
+  color: var(--dark-text-soft);
+}
+
+/* No white-on-white regressions from utility opacity classes. */
+html[data-theme="dark"] .opacity-70 {
+  opacity: .84;
+}
+
+/* Keep real NFT art untouched. */
+html[data-theme="dark"] .canonical-deed-art img,
+html[data-theme="dark"] .land-hero-canonical-deed img {
+  filter: none !important;
+}
+
+/* Mobile: reduce glass stacking so the screen stays clean instead of muddy. */
+@media(max-width:620px) {
+  html[data-theme="dark"] .swap-shell {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 18px 36px rgba(0,0,0,.24) !important;
+  }
+  html[data-theme="dark"] .trade-panel {
+    border-radius: 22px;
+  }
+}
+
