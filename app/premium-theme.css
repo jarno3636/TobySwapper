@@ -3063,3 +3063,45 @@ html[data-theme="dark"] .land-vault-message{background:rgba(36,102,83,.20)!impor
 html[data-theme="dark"] .market-approval-note{background:rgba(18,44,46,.78)!important;border-color:rgba(159,224,212,.10)!important}
 html[data-theme="dark"] .market-approval-note b{color:#dff5f1!important}
 html[data-theme="dark"] .market-approval-note span{color:#8fa6a3!important}
+
+/* My Tobyworld · Pond Record dark treatment */
+html[data-theme="dark"] .taboshi1-page .mytw-pond-record{
+  border-color:rgba(96,207,190,.20);
+  background:
+    radial-gradient(circle at 84% 9%,rgba(55,202,190,.14),transparent 28%),
+    radial-gradient(circle at 8% 90%,rgba(49,139,191,.10),transparent 30%),
+    linear-gradient(145deg,#0d2d2f 0%,#0a292b 55%,#102c2c 100%);
+  box-shadow:inset 0 1px 0 rgba(205,255,245,.05),0 22px 50px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pond-record:after{border-color:rgba(190,255,243,.025)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score,
+html[data-theme="dark"] .taboshi1-page .mytw-record-hero,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid>div{background:rgba(20,58,58,.76);border-color:rgba(104,197,185,.12);box-shadow:inset 0 1px 0 rgba(220,255,248,.035)}
+html[data-theme="dark"] .taboshi1-page .mytw-flame-orb{background:linear-gradient(145deg,#183e3c,#102f30);border-color:rgba(107,208,190,.13);box-shadow:inset 0 1px 0 rgba(220,255,248,.04),0 8px 20px rgba(0,0,0,.16)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-story>small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid em,
+html[data-theme="dark"] .taboshi1-page .mytw-record-foot>small{color:#829f9e}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score strong,
+html[data-theme="dark"] .taboshi1-page .mytw-record-story>strong,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid strong{color:#e6f5f1}
+html[data-theme="dark"] .taboshi1-page .mytw-record-kicker{color:#68c8c2}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring{background:conic-gradient(#42afd2 0deg,#63cfad var(--record-progress),rgba(124,177,170,.11) var(--record-progress));box-shadow:0 9px 22px rgba(0,0,0,.17)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring:before{background:linear-gradient(145deg,#123536,#0e2d2f);box-shadow:inset 0 1px 0 rgba(220,255,248,.04)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring strong{color:#dbf4ef}
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-icon{color:#78d3ce;background:linear-gradient(145deg,#183f40,#123436)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line{background:linear-gradient(90deg,rgba(79,51,42,.42),rgba(17,56,55,.72));border-color:rgba(219,152,117,.09)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line>span{background:rgba(21,57,56,.78)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line small{color:#a9897b}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line strong{color:#f0d1c0}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line em{color:#8f9f9c}
+html[data-theme="dark"] .taboshi1-page .mytw-record-progress{background:rgba(112,163,157,.10)}
+
+/* Slightly richer card surfaces without increasing request/load cost. */
+.taboshi1-page .seedleaf-relic-card,.taboshi1-page .mytw-land-card,.taboshi1-page .mytw-seed-garden{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+@media(hover:hover){.taboshi1-page .seedleaf-relic-card:hover,.taboshi1-page .mytw-land-card:hover,.taboshi1-page .mytw-seed-garden:hover{transform:translateY(-2px);border-color:rgba(77,177,172,.22);box-shadow:0 18px 38px rgba(11,67,74,.10)}}
+html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
+html[data-theme="dark"] .taboshi1-page .mytw-land-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden{box-shadow:inset 0 1px 0 rgba(220,255,248,.035),0 16px 34px rgba(0,0,0,.15)}
