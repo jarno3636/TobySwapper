@@ -2137,3 +2137,113 @@ button,a,select,input{touch-action:manipulation}
   .pouch-land-send-amount{grid-column:auto}
   .pouch-land-vault-line{align-items:flex-start;flex-direction:column}
 }
+
+/* ==========================================================================
+   2026-08 Canonical Lore art + Pouch-first flow
+   ========================================================================== */
+
+.canonical-deed-art{
+  position:relative;
+  width:100%;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  border-radius:18px;
+  background:linear-gradient(180deg,#d9f0f4 0 48%,#88c9b7 49% 64%,#2e6b67 65% 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+  isolation:isolate;
+}
+.canonical-deed-art img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.canonical-deed-art-sky{position:absolute;inset:0;background:radial-gradient(circle at 72% 22%,rgba(255,255,255,.72),transparent 22%)}
+.canonical-deed-art-moon{position:absolute;right:16%;top:14%;width:24%;aspect-ratio:1;border-radius:50%;background:#f4fff9;box-shadow:0 0 28px rgba(225,255,246,.82)}
+.canonical-deed-art-island{position:absolute;left:10%;right:10%;bottom:18%;height:32%;border-radius:48% 52% 38% 42%;background:linear-gradient(180deg,#80b98c,#386a59);transform:rotate(-3deg)}
+.canonical-deed-art-rune{position:absolute;left:14%;top:13%;display:grid;place-items:center;width:28px;height:28px;border-radius:10px;background:rgba(18,66,70,.72);color:#fff;font-size:13px;font-weight:950;backdrop-filter:blur(5px)}
+.canonical-deed-art-id{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:2;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:999px;
+  background:rgba(8,42,47,.68);
+  color:#fff;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.05em;
+  backdrop-filter:blur(7px);
+}
+.mytw-deed-gallery{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.mytw-deed-tile{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid rgba(29,91,95,.13);
+  border-radius:20px;
+  background:linear-gradient(155deg,#fff,#eef7f5);
+  box-shadow:inset 0 1px 0 #fff,0 9px 20px rgba(21,68,73,.07);
+}
+.mytw-deed-art-link{display:block;padding:8px 8px 0}
+.mytw-deed-art-link .canonical-deed-art{border-radius:14px}
+.mytw-deed-tile-copy{display:flex;flex-direction:column;min-width:0;padding:9px 10px 8px}
+.mytw-deed-tile-copy small{font-size:7px;font-weight:950;letter-spacing:.11em;color:#789092;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mytw-deed-tile-copy strong{margin-top:2px;font-size:13px;color:#183f47}
+.mytw-deed-tile-copy span{margin-top:2px;font-size:8px;color:#839597}
+.mytw-deed-tile-actions{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid rgba(27,89,94,.09)}
+.mytw-deed-tile-actions a,.mytw-deed-tile-actions button{
+  display:grid;
+  place-items:center;
+  min-width:0;
+  min-height:34px;
+  padding:5px;
+  border:0;
+  border-right:1px solid rgba(27,89,94,.08);
+  background:rgba(255,255,255,.72);
+  color:#285e61;
+  font-size:7px;
+  font-weight:950;
+  text-decoration:none;
+}
+.mytw-deed-tile-actions>*:last-child{border-right:0}
+.mytw-deed-more{
+  display:block;
+  width:100%;
+  min-height:38px;
+  margin-top:9px;
+  border:1px solid rgba(29,101,99,.13);
+  border-radius:13px;
+  background:rgba(237,248,245,.9);
+  color:#24615e;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.06em;
+}
+.market-listing-tile>.canonical-deed-art.market-canonical-art{
+  width:64px;
+  min-width:64px;
+  border-radius:16px;
+  align-self:center;
+}
+.pond-dock{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pond-dock-item{min-width:0}
+.pond-dock-item .pond-dock-label{white-space:nowrap}
+.pouch-land-send{scroll-margin-top:84px}
+
+@media(max-width:760px){
+  .mytw-deed-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+  .mytw-deed-gallery{grid-template-columns:1fr 1fr}
+  .mytw-deed-tile-actions{grid-template-columns:1fr 1fr}
+  .mytw-deed-tile-actions>*:last-child{grid-column:1/-1;border-top:1px solid rgba(27,89,94,.08)}
+  .market-listing-tile>.canonical-deed-art.market-canonical-art{width:56px;min-width:56px}
+}
