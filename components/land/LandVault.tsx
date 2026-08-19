@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address } from "viem";
 import { base } from "wagmi/chains";
-import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
@@ -19,9 +19,23 @@ const assets: Array<{ id: VaultAsset; kind: "erc20" | "erc1155"; address: Addres
   { id: "SEED", kind: "erc1155", address: TABOSHI_SEEDS_ADDRESS, decimals: 0, tokenId: TABOSHI_SEED_ID },
 ];
 
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise.finally(() => {
+      if (timer) clearTimeout(timer);
+    }),
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
 export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?: Address }) {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const client = usePublicClient({ chainId: base.id });
+  const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
   const [selected, setSelected] = useState<VaultAsset>("SEED");
   const [amount, setAmount] = useState("1");
@@ -39,8 +53,19 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   useEffect(() => {
     if (!vault || !client) return;
     let cancelled = false;
-    client.getBytecode({ address: vault }).then((code) => { if (!cancelled) setDeployed(Boolean(code && code !== "0x")); }).catch(() => { if (!cancelled) setDeployed(false); });
-    return () => { cancelled = true; };
+
+    void client
+      .getBytecode({ address: vault })
+      .then((code) => {
+        if (!cancelled) setDeployed(Boolean(code && code !== "0x"));
+      })
+      .catch(() => {
+        if (!cancelled) setDeployed(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [client, vault]);
 
   const vaultReads = useReadContracts({
@@ -61,40 +86,116 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
 
   const isKeeper = Boolean(address && owner && address.toLowerCase() === owner.toLowerCase());
 
+  const checkVaultDeployment = useCallback(async () => {
+    if (!vault || !client) return false;
+    try {
+      const code = await withTimeout(
+        client.getBytecode({ address: vault }),
+        12_000,
+        "Vault status check timed out.",
+      );
+      const ready = Boolean(code && code !== "0x");
+      setDeployed(ready);
+      return ready;
+    } catch {
+      return false;
+    }
+  }, [client, vault]);
+
+
   async function createVault() {
-    if (!client || !address) return;
+    if (!client || !address || !vault || busy) return;
+
     try {
       setBusy("create");
-      setMessage("Checking the canonical vault…");
+      setMessage("Checking your Land Vault…");
 
-      // Simulate first. This gives Base smart wallets a fully formed request
-      // and lets us surface the real contract failure before asking for a signature.
-      const simulation = await client.simulateContract({
-        address: LORE_COLLECTION_ADDRESS,
-        abi: LORE_DEEDS_ABI,
-        functionName: "createAccount",
-        args: [tokenId],
-        account: address,
-      });
+      // A previous attempt may actually have completed even if the embedded
+      // wallet UI never returned control to the page.
+      if (await checkVaultDeployment()) {
+        setMessage("Land Vault is already ready.");
+        return;
+      }
+
+      if (chainId !== base.id) {
+        setMessage("Switching to Base…");
+        await withTimeout(
+          switchChainAsync({ chainId: base.id }),
+          20_000,
+          "Network switch timed out.",
+        );
+      }
+
+      // Preflight is useful for catching a real contract revert, but do not
+      // pass the simulated request object into the embedded wallet. Some Base
+      // smart-wallet providers can stall when an explicit simulated `account`
+      // is forwarded through wagmi.
+      setMessage("Checking the canonical ERC-6551 registry…");
+      await withTimeout(
+        client.simulateContract({
+          address: LORE_COLLECTION_ADDRESS,
+          abi: LORE_DEEDS_ABI,
+          functionName: "createAccount",
+          args: [tokenId],
+          account: address,
+        }),
+        15_000,
+        "Vault preflight timed out.",
+      );
 
       setMessage("Confirm Create Land Vault in your wallet.");
-      const hash = await writeContractAsync(simulation.request as any);
-      const receipt = await client.waitForTransactionReceipt({ hash });
+
+      // Submit a clean connector-native request. Most important change:
+      // this cannot hold the UI in "Creating…" forever.
+      const hash = await withTimeout(
+        writeContractAsync({
+          address: LORE_COLLECTION_ADDRESS,
+          abi: LORE_DEEDS_ABI,
+          functionName: "createAccount",
+          args: [tokenId],
+          chainId: base.id,
+        }),
+        40_000,
+        "The wallet request did not return.",
+      );
+
+      setMessage("Creating Land Vault on Base…");
+
+      const receipt = await withTimeout(
+        client.waitForTransactionReceipt({
+          hash,
+          confirmations: 1,
+          timeout: 45_000,
+        }),
+        55_000,
+        "The transaction is taking longer than expected.",
+      );
 
       if (receipt.status !== "success") {
         throw new Error("The vault transaction reverted.");
       }
 
-      const code = vault ? await client.getBytecode({ address: vault }) : undefined;
-      const ready = Boolean(code && code !== "0x");
-      setDeployed(ready);
+      // Give the RPC a moment to expose CREATE2 bytecode after the receipt.
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const ready = await checkVaultDeployment();
 
-      setMessage(
-        ready
-          ? "Land Vault ready. This deed can now manage assets held by its token-bound account."
-          : "The transaction confirmed, but the vault account is not visible yet. Refresh in a moment.",
-      );
+      if (ready) {
+        setMessage("Land Vault ready ✓");
+        await vaultReads.refetch();
+      } else {
+        setMessage(
+          "The transaction confirmed. The vault is still syncing on Base — tap Check Vault in a moment.",
+        );
+      }
     } catch (error: any) {
+      // Always re-check first. Embedded wallet promises sometimes time out even
+      // though the user successfully confirmed the transaction.
+      const ready = await checkVaultDeployment();
+      if (ready) {
+        setMessage("Land Vault ready ✓");
+        return;
+      }
+
       const text = String(
         error?.shortMessage ||
         error?.details ||
@@ -103,20 +204,39 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
         "",
       );
 
-      if (/reject|denied|cancel/i.test(text)) {
+      if (/wallet request did not return|timed out|taking longer/i.test(text)) {
+        setMessage(
+          "The wallet did not return control to TobySwap. Nothing is stuck here — tap Check Vault first, then Try Again if it is still not deployed.",
+        );
+      } else if (/reject|denied|cancel|user rejected/i.test(text)) {
         setMessage("Vault creation was cancelled in your wallet.");
       } else if (/already|deployed|create2/i.test(text)) {
-        setMessage("This Land Vault may already exist. Refresh the page to re-check it.");
+        setMessage("This Land Vault may already exist. Tap Check Vault.");
       } else if (/nonexistent|not minted|invalid token/i.test(text)) {
         setMessage("The canonical contract does not recognize this Lore Deed as minted.");
       } else {
         setMessage(
-          "The canonical ERC-6551 registry rejected vault creation. No assets moved. Try again, and if it repeats we can inspect the transaction error.",
+          "The canonical ERC-6551 creation call did not complete. No assets moved. Tap Check Vault before trying again.",
         );
       }
     } finally {
+      // Critical: never leave the button permanently disabled if an embedded
+      // wallet provider fails to settle its promise.
       setBusy("");
     }
+  }
+
+  async function manuallyCheckVault() {
+    if (busy) return;
+    setBusy("check");
+    setMessage("Checking the vault on Base…");
+    const ready = await checkVaultDeployment();
+    setMessage(
+      ready
+        ? "Land Vault ready ✓"
+        : "The vault is not deployed yet. You can safely try Create Land Vault again.",
+    );
+    setBusy("");
   }
 
   async function sendToLand() {
@@ -211,13 +331,23 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
             </p>
           </div>
           {isKeeper ? (
-            <button
-              className="land-vault-wake"
-              onClick={createVault}
-              disabled={Boolean(busy) || !vault}
-            >
-              {busy === "create" ? "Creating…" : "Create Land Vault"}
-            </button>
+            <div className="land-vault-create-actions">
+              <button
+                className="land-vault-wake"
+                onClick={createVault}
+                disabled={Boolean(busy) || !vault}
+              >
+                {busy === "create" ? "Waiting for wallet…" : "Create Land Vault"}
+              </button>
+              <button
+                type="button"
+                className="land-vault-check"
+                onClick={manuallyCheckVault}
+                disabled={Boolean(busy) || !vault}
+              >
+                {busy === "check" ? "Checking…" : "Check Vault"}
+              </button>
+            </div>
           ) : (
             <span className="land-vault-owner-note">Only the connected deed owner gets the creation shortcut here.</span>
           )}
