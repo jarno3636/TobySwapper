@@ -5,7 +5,9 @@ import { formatUnits, parseUnits, type Address } from "viem";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { makeBaseClient } from "@/lib/rpc";
 import { CANONICAL_LORE_LAND, CANONICAL_LORE_ABI } from "@/lib/lore-deeds";
-import { TOBY, PATIENCE, TABOSHI, OLD_LEAF, TABOSHI_SEEDS } from "@/lib/addresses";
+import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
+import { TABOSHI1_ADDRESS, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
+import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
 const ERC20_ABI = [
   {
@@ -66,8 +68,8 @@ const assets: Array<{
   { id: "TOBY", label: "TOBY", address: TOBY, decimals: 18, standard: "erc20" },
   { id: "PATIENCE", label: "PATIENCE", address: PATIENCE, decimals: 18, standard: "erc20" },
   { id: "TABOSHI", label: "TABOSHI", address: TABOSHI, decimals: 18, standard: "erc20" },
-  { id: "OLD_LEAF", label: "OLD LEAF", address: OLD_LEAF, decimals: 0, standard: "erc1155", tokenId: 1n },
-  { id: "SEED", label: "SEED", address: TABOSHI_SEEDS, decimals: 0, standard: "erc1155", tokenId: 1n },
+  { id: "OLD_LEAF", label: "OLD LEAF", address: TABOSHI1_ADDRESS, decimals: 0, standard: "erc1155", tokenId: TABOSHI1_TOKEN_ID },
+  { id: "SEED", label: "SEED", address: TABOSHI_SEEDS_ADDRESS, decimals: 0, standard: "erc1155", tokenId: TABOSHI_SEED_ID },
 ];
 
 export function PouchLandTransfer({
