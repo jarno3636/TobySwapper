@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { erc20Abi, type Address } from "viem";
@@ -122,15 +123,15 @@ export default function LandPage() {
     <MiniAppGate>
       <main className="land-page mx-auto w-full max-w-5xl px-4 pb-32 pt-4 sm:px-6 sm:pt-6">
         <header className="land-topbar">
-          <a href="/taboshi1" className="land-back">← My Tobyworld</a>
-          <a href="/world" className="land-world-link">Explore World ↗</a>
+          <Link prefetch={false} href="/taboshi1" className="land-back">← My Tobyworld</Link>
+          <Link prefetch={false} href="/world" className="land-world-link">Explore World ↗</Link>
         </header>
 
         {missing ? (
           <section className="land-not-found">
             <span>△</span><h1>The land stayed behind the veil.</h1>
             <p>That deed ID is not minted, could not be read, or is not a valid Lore Land token.</p>
-            <a href="/taboshi1">Return to My Tobyworld</a>
+            <Link prefetch={false} href="/taboshi1">Return to My Tobyworld</Link>
           </section>
         ) : (
           <>
