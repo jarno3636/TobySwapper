@@ -23,6 +23,7 @@ import LinkMaybeMini from "@/components/LinkMaybeMini";
 import PondPulse from "@/components/PondPulse";
 import MyLoreDeeds from "@/components/land/MyLoreDeeds";
 import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
+import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
@@ -717,6 +718,9 @@ COMPLETION</span>
               </button>
             </div>
             {syncMessage && <div className="seedleaf-sync-message" role="status">{syncMessage}</div>}
+            {address ? (
+              <PublicPouchCreator walletAddress={address} compact />
+            ) : null}
           </>
         )}
 
