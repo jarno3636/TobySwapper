@@ -1,3 +1,4 @@
+import Link from "next/link";
 // app/share/page.tsx
 export const metadata = {
   title: "Toby Swapper — Share",
@@ -21,9 +22,9 @@ export default function ShareLanding() {
       <p className="opacity-80">
         Swap on Base with 1% auto-burn to $TOBY. Join the lore. 🐸
       </p>
-      <a className="pill pill-nav inline-block mt-6" href="/">
+      <Link prefetch={false} className="pill pill-nav inline-block mt-6" href="/">
         Open the App
-      </a>
+      </Link>
     </main>
   );
 }
