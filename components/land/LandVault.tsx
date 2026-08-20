@@ -64,6 +64,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   const { writeContractAsync } = useWriteContract();
   const [selected, setSelected] = useState<VaultAsset>("SEED");
   const [amount, setAmount] = useState("1");
+  const [withdrawAmount, setWithdrawAmount] = useState("1");
   const [assetTokenId, setAssetTokenId] = useState("");
   const [withdrawRecipient, setWithdrawRecipient] = useState("");
   const [busy, setBusy] = useState("");
@@ -347,13 +348,13 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       let movementLabel: string;
 
       if (asset.kind === "erc20") {
-        const value = parseUnits(amount || "0", asset.decimals);
+        const value = parseUnits(withdrawAmount || "0", asset.decimals);
         if (value <= 0n) throw new Error("Enter an amount greater than zero.");
         if (value > current) throw new Error(`Only ${formatUnits(current, asset.decimals)} ${asset.id} is in this Land Vault.`);
         data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient, value] });
-        movementLabel = `${amount} ${selected}`;
+        movementLabel = `${withdrawAmount} ${selected}`;
       } else if (asset.kind === "erc1155") {
-        const value = BigInt(amount || "0");
+        const value = BigInt(withdrawAmount || "0");
         if (value <= 0n) throw new Error("Enter an amount greater than zero.");
         if (value > current) throw new Error(`Only ${current.toString()} ${asset.id} is in this Land Vault.`);
         data = encodeFunctionData({
@@ -361,7 +362,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
           functionName: "safeTransferFrom",
           args: [vault, recipient, asset.tokenId!, value, "0x"],
         } as any);
-        movementLabel = `${amount} ${selected}`;
+        movementLabel = `${withdrawAmount} ${selected}`;
       } else {
         if (!assetTokenId) throw new Error("Enter the Old Lore Land token ID you want to unpack.");
         const oldLandTokenId = BigInt(assetTokenId);
@@ -403,6 +404,17 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
     } finally {
       setBusy("");
     }
+  }
+
+  const selectedAsset = assets.find((item) => item.id === selected)!;
+  const selectedVaultBalance = balances.find((item) => item.id === selected)?.value || 0n;
+  const selectedVaultBalanceLabel = selectedAsset.kind === "erc20"
+    ? formatUnits(selectedVaultBalance, selectedAsset.decimals)
+    : selectedVaultBalance.toString();
+
+  function useMaxWithdraw() {
+    if (selectedAsset.kind === "erc721") return;
+    setWithdrawAmount(selectedVaultBalanceLabel);
   }
 
   return (
@@ -484,6 +496,38 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                   <p>Choose an asset, set the destination, and move it back out before transferring the deed. Each unpack is a single vault transaction.</p>
                 </div>
                 <label>
+                  <span>ASSET TO WITHDRAW</span>
+                  <select value={selected} onChange={(e) => setSelected(e.target.value as VaultAsset)}>
+                    {assets.map((asset) => <option key={asset.id}>{asset.id}</option>)}
+                  </select>
+                </label>
+                {selectedAsset.kind !== "erc721" ? (
+                  <label className="land-vault-withdraw-amount">
+                    <span>AMOUNT TO WITHDRAW</span>
+                    <div className="land-vault-amount-control">
+                      <input
+                        inputMode={selectedAsset.kind === "erc20" ? "decimal" : "numeric"}
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(selectedAsset.kind === "erc20" ? e.target.value.replace(/[^0-9.]/g, "") : e.target.value.replace(/\D/g, ""))}
+                        placeholder="0"
+                      />
+                      <button type="button" onClick={useMaxWithdraw} disabled={selectedVaultBalance === 0n}>MAX</button>
+                    </div>
+                    <small>{selectedVaultBalanceLabel} {selected} available in this Land Vault</small>
+                  </label>
+                ) : (
+                  <label className="land-vault-withdraw-token-id">
+                    <span>OLD LAND TOKEN ID</span>
+                    <input
+                      inputMode="numeric"
+                      value={assetTokenId}
+                      onChange={(e) => setAssetTokenId(e.target.value.replace(/\D/g, ""))}
+                      placeholder="e.g. 42"
+                    />
+                    <small>Enter the exact Old Lore Land deed held inside this vault.</small>
+                  </label>
+                )}
+                <label>
                   <span>DESTINATION</span>
                   <input
                     value={withdrawRecipient}
@@ -496,7 +540,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                 <button
                   type="button"
                   onClick={withdrawFromLand}
-                  disabled={Boolean(busy) || !isAddress(withdrawRecipient) || (balances.find((item) => item.id === selected)?.value || 0n) === 0n || (assets.find((item) => item.id === selected)?.kind === "erc721" && !assetTokenId)}
+                  disabled={Boolean(busy) || !isAddress(withdrawRecipient) || selectedVaultBalance === 0n || (selectedAsset.kind === "erc721" ? !assetTokenId : !withdrawAmount)}
                 >
                   {busy === "withdraw" ? "Moving out…" : `Move ${selected} out`}
                 </button>
