@@ -6,9 +6,7 @@ export default function Footer() {
       <div className="border-t border-[var(--line)] pt-6">
         <p>Community-built Tobyworld utility · Base mainnet · Non-custodial swaps.</p>
         <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2 font-semibold">
-          <LinkMaybeMini href="https://tobyworld.app" className="hover:text-[var(--ink)]">Tobyworld</LinkMaybeMini>
-          <LinkMaybeMini href="https://toadvault.xyz" className="hover:text-[var(--ink)]">ToadVault</LinkMaybeMini>
-          <LinkMaybeMini href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d" className="hover:text-[var(--ink)]">Contract</LinkMaybeMini>
+          <LinkMaybeMini href="https://basescan.org/address/0xfC098D8d13CD4583715ECc2eFC1894F39947599d" className="hover:text-[var(--ink)]">TobySwap contract ↗</LinkMaybeMini>
         </div>
       </div>
     </footer>
