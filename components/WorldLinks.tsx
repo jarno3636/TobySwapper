@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 
 const links = [
@@ -89,7 +90,7 @@ export default function WorldLinks() {
           );
           const className = `world-link-card pond-destination pond-destination-${item.accent} group`;
           return item.href.startsWith("/")
-            ? <a key={item.title} href={item.href} className={className}>{content}</a>
+            ? <Link prefetch={false} key={item.title} href={item.href} className={className}>{content}</Link>
             : <LinkMaybeMini key={item.title} href={item.href} className={className}>{content}</LinkMaybeMini>;
         })}
       </div>
