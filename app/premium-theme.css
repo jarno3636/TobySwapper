@@ -4171,3 +4171,136 @@ html[data-theme="dark"] .tw-asset-unrevealed { color:#90aaa6; }
   .tw-asset-modal-actions { display:grid; }
   .tw-asset-modal-actions a { width:100%; }
 }
+
+/* ==========================================================================\n   TOBYWORLD OFFICIAL + COMMUNITY DIRECTORY\n   Clear source hierarchy without extra API/server work.\n   ========================================================================== */
+.official-tobyworld-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  min-height: 150px;
+  padding: 19px;
+  border: 1px solid rgba(33, 119, 164, .24);
+  border-radius: 27px;
+  color: var(--ink);
+  text-decoration: none;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(56, 173, 233, .17), transparent 35%),
+    radial-gradient(circle at 4% 95%, rgba(87, 198, 157, .13), transparent 38%),
+    linear-gradient(145deg, #f7fcff 0%, #eef8fb 56%, #edf8f3 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.86), 0 14px 30px rgba(27, 80, 102, .10);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.official-tobyworld-card:hover { transform: translateY(-2px); border-color: rgba(27, 130, 184, .38); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 34px rgba(27, 80, 102, .14); }
+.official-site-art {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(41, 127, 158, .14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92), 0 10px 22px rgba(22, 77, 96, .11);
+}
+.official-site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  color: #217a69;
+}
+.official-site-title { display: block; margin-top: 7px; font-size: 22px; line-height: 1.02; letter-spacing: -.025em; }
+.official-site-copy { display: block; margin-top: 7px; max-width: 390px; color: var(--inkSub); font-size: 12px; line-height: 1.55; }
+.official-site-domain { display: block; margin-top: 9px; font-size: 11px; font-weight: 800; color: #247ca3; }
+.official-site-arrow,
+.community-link-arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(64, 130, 139, .16);
+  color: #286d77;
+  background: rgba(255,255,255,.55);
+}
+.official-site-arrow { width: 42px; height: 42px; border-radius: 15px; }
+.community-link-arrow { width: 34px; height: 34px; border-radius: 12px; }
+.official-site-arrow svg,
+.community-link-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.pond-community-block,
+.pond-more-block { margin-top: 22px; }
+.pond-more-block { padding-top: 20px; border-top: 1px solid var(--line); }
+.pond-link-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.pond-link-section-heading h3 { margin-top: 3px; font-size: 19px; font-weight: 900; letter-spacing: -.025em; }
+.pond-link-section-heading-small h3 { font-size: 17px; }
+.pond-link-section-copy { margin: 0 0 13px; color: var(--inkSub); font-size: 12px; line-height: 1.55; }
+.community-independent-pill { border: 1px solid rgba(80, 156, 140, .18); border-radius: 999px; padding: 7px 9px; background: rgba(82, 174, 150, .08); color: #56887e; font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+
+.community-site-card,
+.pond-compact-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(248, 252, 252, .78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.community-site-card { min-height: 102px; padding: 14px; border-radius: 22px; }
+.pond-compact-link { min-height: 82px; padding: 12px 13px; border-radius: 20px; }
+.community-site-card:hover,
+.pond-compact-link:hover { transform: translateY(-1px); border-color: rgba(73, 153, 139, .28); background: rgba(251, 254, 254, .96); }
+.pond-link-gold { background: linear-gradient(145deg, rgba(255, 249, 235, .88), rgba(248, 252, 248, .84)); }
+.pond-community-note { background: rgba(247, 251, 252, .72); }
+
+html[data-theme="dark"] .official-tobyworld-card {
+  color: var(--dark-copy);
+  border-color: rgba(69, 170, 208, .25);
+  background:
+    radial-gradient(circle at 88% 7%, rgba(40, 145, 211, .15), transparent 35%),
+    radial-gradient(circle at 5% 94%, rgba(69, 173, 141, .10), transparent 38%),
+    linear-gradient(145deg, rgba(13, 37, 43, .98), rgba(7, 27, 31, .99));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 16px 34px rgba(0,0,0,.21);
+}
+html[data-theme="dark"] .official-tobyworld-card:hover { border-color: rgba(69, 177, 216, .38); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 38px rgba(0,0,0,.25); }
+html[data-theme="dark"] .official-site-art { background: rgba(221, 246, 244, .07); border-color: rgba(147, 223, 211, .12); box-shadow: none; }
+html[data-theme="dark"] .official-site-badge { color: #79d6bd; }
+html[data-theme="dark"] .official-site-title { color: #f2fbf9; }
+html[data-theme="dark"] .official-site-copy { color: #9fb7b5; }
+html[data-theme="dark"] .official-site-domain { color: #71c9e7; }
+html[data-theme="dark"] .official-site-arrow,
+html[data-theme="dark"] .community-link-arrow { color: #c8eeea; border-color: rgba(151, 223, 213, .13); background: rgba(220, 246, 242, .055); }
+html[data-theme="dark"] .community-independent-pill { color: #86b8ae; border-color: rgba(132, 211, 195, .13); background: rgba(77, 166, 146, .07); }
+html[data-theme="dark"] .pond-more-block { border-top-color: var(--dark-line-soft); }
+html[data-theme="dark"] .community-site-card,
+html[data-theme="dark"] .pond-compact-link,
+html[data-theme="dark"] .pond-link-gold {
+  color: var(--dark-copy);
+  border-color: var(--dark-line-soft);
+  background: linear-gradient(155deg, rgba(17, 41, 43, .91), rgba(10, 30, 32, .95));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.12);
+}
+html[data-theme="dark"] .community-site-card:hover,
+html[data-theme="dark"] .pond-compact-link:hover { background: linear-gradient(155deg, rgba(20, 47, 49, .94), rgba(12, 34, 36, .97)); border-color: var(--dark-line); }
+html[data-theme="dark"] .community-site-card :is(strong, span.font-extrabold),
+html[data-theme="dark"] .pond-compact-link :is(strong, span.font-extrabold),
+html[data-theme="dark"] .pond-link-section-heading h3 { color: var(--dark-copy) !important; }
+html[data-theme="dark"] .community-site-card .text-inkSub,
+html[data-theme="dark"] .pond-compact-link .text-inkSub,
+html[data-theme="dark"] .pond-link-section-copy { color: var(--dark-copy-soft) !important; }
+html[data-theme="dark"] .pond-community-note { background: rgba(13, 34, 36, .75); border-color: var(--dark-line-soft) !important; }
+
+@media (max-width: 520px) {
+  .official-tobyworld-card { align-items: flex-start; min-height: 0; padding: 16px; gap: 13px; }
+  .official-site-art { width: 62px; height: 62px; flex-basis: 62px; border-radius: 20px; }
+  .official-site-title { font-size: 20px; }
+  .official-site-arrow { width: 36px; height: 36px; border-radius: 13px; }
+  .community-site-card { min-height: 0; padding: 13px; }
+  .pond-compact-link { min-height: 0; padding: 11px 12px; }
+}
