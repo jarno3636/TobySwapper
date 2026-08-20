@@ -5,18 +5,19 @@ import { encodeFunctionData, erc20Abi, formatUnits, getAddress, isAddress, parse
 import { base } from "wagmi/chains";
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
-import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
+import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI, LEGACY_LORE_DEED_ADDRESS, LEGACY_LORE_DEED_ABI } from "@/lib/lore-deeds";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
-type VaultAsset = "TOBY" | "PATIENCE" | "TABOSHI" | "OLD LEAF" | "SEED";
+type VaultAsset = "TOBY" | "PATIENCE" | "TABOSHI" | "OLD LEAF" | "SEED" | "OLD LAND";
 
-const assets: Array<{ id: VaultAsset; kind: "erc20" | "erc1155"; address: Address; decimals: number; tokenId?: bigint }> = [
+const assets: Array<{ id: VaultAsset; kind: "erc20" | "erc1155" | "erc721"; address: Address; decimals: number; tokenId?: bigint }> = [
   { id: "TOBY", kind: "erc20", address: TOBY, decimals: 18 },
   { id: "PATIENCE", kind: "erc20", address: PATIENCE, decimals: 18 },
   { id: "TABOSHI", kind: "erc20", address: TABOSHI, decimals: 18 },
   { id: "OLD LEAF", kind: "erc1155", address: TABOSHI1_ADDRESS, decimals: 0, tokenId: TABOSHI1_TOKEN_ID },
   { id: "SEED", kind: "erc1155", address: TABOSHI_SEEDS_ADDRESS, decimals: 0, tokenId: TABOSHI_SEED_ID },
+  { id: "OLD LAND", kind: "erc721", address: LEGACY_LORE_DEED_ADDRESS, decimals: 0 },
 ];
 const TOKEN_BOUND_ACCOUNT_ABI = [
   {
@@ -63,6 +64,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   const { writeContractAsync } = useWriteContract();
   const [selected, setSelected] = useState<VaultAsset>("SEED");
   const [amount, setAmount] = useState("1");
+  const [assetTokenId, setAssetTokenId] = useState("");
   const [withdrawRecipient, setWithdrawRecipient] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
@@ -100,6 +102,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       { address: TABOSHI, abi: erc20Abi, functionName: "balanceOf", args: [vault], chainId: base.id },
       { address: TABOSHI1_ADDRESS, abi: TABOSHI1_ABI, functionName: "balanceOf", args: [vault, TABOSHI1_TOKEN_ID], chainId: base.id },
       { address: TABOSHI_SEEDS_ADDRESS, abi: TABOSHI_SEEDS_ABI, functionName: "balanceOf", args: [vault, TABOSHI_SEED_ID], chainId: base.id },
+      { address: LEGACY_LORE_DEED_ADDRESS, abi: LEGACY_LORE_DEED_ABI, functionName: "balanceOf", args: [vault], chainId: base.id },
     ] as const : [],
     query: { enabled: Boolean(vault), staleTime: 30_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnMount: "always" },
   });
@@ -272,23 +275,50 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
     if (!vault || !address || !client || !isKeeper) return;
     const asset = assets.find((item) => item.id === selected)!;
     try {
-      setBusy("send"); setMessage("");
+      setBusy("send");
+      setMessage("");
       let hash: `0x${string}`;
+
       if (asset.kind === "erc20") {
         const value = parseUnits(amount || "0", asset.decimals);
-        if (value <= 0n) throw new Error("bad amount");
+        if (value <= 0n) throw new Error("Enter an amount greater than zero.");
         hash = await writeContractAsync({ address: asset.address, abi: erc20Abi, functionName: "transfer", args: [vault, value], chainId: base.id });
-      } else {
+      } else if (asset.kind === "erc1155") {
         const value = BigInt(amount || "0");
-        if (value <= 0n) throw new Error("bad amount");
+        if (value <= 0n) throw new Error("Enter an amount greater than zero.");
         const abi = selected === "SEED" ? TABOSHI_SEEDS_ABI : TABOSHI1_ABI;
         hash = await writeContractAsync({ address: asset.address, abi, functionName: "safeTransferFrom", args: [address, vault, asset.tokenId!, value, "0x"], chainId: base.id } as any);
+      } else {
+        if (!assetTokenId) throw new Error("Enter the Old Lore Land token ID.");
+        const oldLandTokenId = BigInt(assetTokenId);
+        const currentOwner = await client.readContract({
+          address: LEGACY_LORE_DEED_ADDRESS,
+          abi: LEGACY_LORE_DEED_ABI,
+          functionName: "ownerOf",
+          args: [oldLandTokenId],
+        });
+        if (getAddress(currentOwner as Address) !== getAddress(address)) {
+          throw new Error(`Old Lore Land #${assetTokenId} is not owned by this wallet.`);
+        }
+        hash = await writeContractAsync({
+          address: LEGACY_LORE_DEED_ADDRESS,
+          abi: LEGACY_LORE_DEED_ABI,
+          functionName: "safeTransferFrom",
+          args: [address, vault, oldLandTokenId],
+          chainId: base.id,
+        });
       }
+
       await client.waitForTransactionReceipt({ hash });
       await vaultReads.refetch();
-      setMessage(`${amount} ${selected} moved into Land #${tokenId}.`);
-    } catch { setMessage("That asset could not be moved into the Land Vault."); }
-    finally { setBusy(""); }
+      setMessage(asset.kind === "erc721" ? `Old Lore Land #${assetTokenId} moved into Land #${tokenId}.` : `${amount} ${selected} moved into Land #${tokenId}.`);
+      if (asset.kind === "erc721") setAssetTokenId("");
+    } catch (error: any) {
+      const text = String(error?.shortMessage || error?.message || "That asset could not be moved into the Land Vault.");
+      setMessage(/reject|denied|cancel/i.test(text) ? "Transfer cancelled in wallet." : text.slice(0, 190));
+    } finally {
+      setBusy("");
+    }
   }
 
   async function withdrawFromLand() {
@@ -312,24 +342,45 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       }).catch(() => false);
       if (!supported) throw new Error("This Land Vault does not expose the standard ERC-6551 execution interface.");
 
-      const value = asset.kind === "erc20"
-        ? parseUnits(amount || "0", asset.decimals)
-        : BigInt(amount || "0");
-      if (value <= 0n) throw new Error("Enter an amount greater than zero.");
-      if (value > current) throw new Error(`Only ${asset.decimals ? formatUnits(current, asset.decimals) : current.toString()} ${asset.id} is in this Land Vault.`);
-
       const recipient = getAddress(withdrawRecipient);
-      const data = asset.kind === "erc20"
-        ? encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "transfer",
-            args: [recipient, value],
-          })
-        : encodeFunctionData({
-            abi: selected === "SEED" ? TABOSHI_SEEDS_ABI : TABOSHI1_ABI,
-            functionName: "safeTransferFrom",
-            args: [vault, recipient, asset.tokenId!, value, "0x"],
-          } as any);
+      let data: `0x${string}`;
+      let movementLabel: string;
+
+      if (asset.kind === "erc20") {
+        const value = parseUnits(amount || "0", asset.decimals);
+        if (value <= 0n) throw new Error("Enter an amount greater than zero.");
+        if (value > current) throw new Error(`Only ${formatUnits(current, asset.decimals)} ${asset.id} is in this Land Vault.`);
+        data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient, value] });
+        movementLabel = `${amount} ${selected}`;
+      } else if (asset.kind === "erc1155") {
+        const value = BigInt(amount || "0");
+        if (value <= 0n) throw new Error("Enter an amount greater than zero.");
+        if (value > current) throw new Error(`Only ${current.toString()} ${asset.id} is in this Land Vault.`);
+        data = encodeFunctionData({
+          abi: selected === "SEED" ? TABOSHI_SEEDS_ABI : TABOSHI1_ABI,
+          functionName: "safeTransferFrom",
+          args: [vault, recipient, asset.tokenId!, value, "0x"],
+        } as any);
+        movementLabel = `${amount} ${selected}`;
+      } else {
+        if (!assetTokenId) throw new Error("Enter the Old Lore Land token ID you want to unpack.");
+        const oldLandTokenId = BigInt(assetTokenId);
+        const currentOwner = await client.readContract({
+          address: LEGACY_LORE_DEED_ADDRESS,
+          abi: LEGACY_LORE_DEED_ABI,
+          functionName: "ownerOf",
+          args: [oldLandTokenId],
+        });
+        if (getAddress(currentOwner as Address) !== getAddress(vault)) {
+          throw new Error(`Old Lore Land #${assetTokenId} is not inside this Land Vault.`);
+        }
+        data = encodeFunctionData({
+          abi: LEGACY_LORE_DEED_ABI,
+          functionName: "safeTransferFrom",
+          args: [vault, recipient, oldLandTokenId],
+        });
+        movementLabel = `Old Lore Land #${assetTokenId}`;
+      }
 
       setMessage("Confirm the transfer from your Land Vault.");
       const hash = await writeContractAsync({
@@ -344,7 +395,8 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 1, timeout: 45_000 });
       if (receipt.status !== "success") throw new Error("The Land Vault transfer reverted.");
       await vaultReads.refetch();
-      setMessage(`${amount} ${selected} moved from Land #${tokenId} to ${recipient.slice(0, 6)}…${recipient.slice(-4)}.`);
+      setMessage(`${movementLabel} moved from Land #${tokenId} to ${recipient.slice(0, 6)}…${recipient.slice(-4)}.`);
+      if (asset.kind === "erc721") setAssetTokenId("");
     } catch (error: any) {
       const text = String(error?.shortMessage || error?.message || "The Land Vault transfer did not complete.");
       setMessage(/reject|denied|cancel/i.test(text) ? "Transfer cancelled in wallet." : text.slice(0, 190));
@@ -391,7 +443,12 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
           </div>
 
           {isKeeper ? (
-            <div className="land-vault-actions">
+            <>
+              <div className="land-vault-travel-warning" role="note">
+                <span aria-hidden="true">!</span>
+                <p><strong>Before transferring this Lore Deed:</strong> anything left in its Land Vault goes with the NFT. Use Unpack Land below to move out anything you want to keep.</p>
+              </div>
+              <div className="land-vault-actions">
               <div className="land-vault-send">
                 <label>
                   <span>ASSET</span>
@@ -400,14 +457,22 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                   </select>
                 </label>
                 <label>
-                  <span>AMOUNT</span>
+                  <span>{assets.find((item) => item.id === selected)?.kind === "erc721" ? "OLD LAND TOKEN ID" : "AMOUNT"}</span>
                   <input
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                    inputMode={assets.find((item) => item.id === selected)?.kind === "erc20" ? "decimal" : "numeric"}
+                    value={assets.find((item) => item.id === selected)?.kind === "erc721" ? assetTokenId : amount}
+                    onChange={(e) => {
+                      const kind = assets.find((item) => item.id === selected)?.kind;
+                      if (kind === "erc721") setAssetTokenId(e.target.value.replace(/\D/g, ""));
+                      else setAmount(kind === "erc20" ? e.target.value.replace(/[^0-9.]/g, "") : e.target.value.replace(/\D/g, ""));
+                    }}
+                    placeholder={assets.find((item) => item.id === selected)?.kind === "erc721" ? "e.g. 42" : "0"}
                   />
                 </label>
-                <button onClick={sendToLand} disabled={Boolean(busy)}>
+                <button
+                  onClick={sendToLand}
+                  disabled={Boolean(busy) || (assets.find((item) => item.id === selected)?.kind === "erc721" ? !assetTokenId : !amount)}
+                >
                   {busy === "send" ? "Moving…" : `Send to #${tokenId}`}
                 </button>
               </div>
@@ -416,7 +481,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                 <div>
                   <span className="land-section-kicker">UNPACK LAND</span>
                   <strong>Move an asset out of this deed</strong>
-                  <p>The current Lore Deed owner controls the token-bound vault. This sends the selected asset directly from the vault in one onchain transaction.</p>
+                  <p>Choose an asset, set the destination, and move it back out before transferring the deed. Each unpack is a single vault transaction.</p>
                 </div>
                 <label>
                   <span>DESTINATION</span>
@@ -431,12 +496,13 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                 <button
                   type="button"
                   onClick={withdrawFromLand}
-                  disabled={Boolean(busy) || !isAddress(withdrawRecipient) || (balances.find((item) => item.id === selected)?.value || 0n) === 0n}
+                  disabled={Boolean(busy) || !isAddress(withdrawRecipient) || (balances.find((item) => item.id === selected)?.value || 0n) === 0n || (assets.find((item) => item.id === selected)?.kind === "erc721" && !assetTokenId)}
                 >
                   {busy === "withdraw" ? "Moving out…" : `Move ${selected} out`}
                 </button>
               </div>
             </div>
+            </>
           ) : null}
         </>
       ) : (
