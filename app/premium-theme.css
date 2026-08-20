@@ -3835,3 +3835,78 @@ html[data-theme="dark"] .hero-cta-relic {
   .hero-poster-image,
   .hero-cta-arrow { transition: none !important; }
 }
+
+/* ========================================================================== */
+/* 2026-08-20 HERO CTA LEGACY-STYLE CLEANUP                                   */
+/* The original globals.css styles every direct <span> inside .hero-cta as an */
+/* icon tile. The newer CTA markup also uses spans for copy + arrow, so those  */
+/* legacy rules must be explicitly neutralized.                                */
+/* ========================================================================== */
+.hero-cta > .hero-cta-copy {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  display: flex !important;
+  place-items: initial !important;
+  grid-row: auto !important;
+  padding: 0 !important;
+}
+.hero-cta > .hero-cta-arrow {
+  grid-row: auto !important;
+}
+.hero-cta > .hero-cta-icon,
+.hero-cta > .hero-cta-seed-art {
+  grid-row: auto !important;
+}
+
+/* Fully retire the old chrome/gloss caps on the home action deck. */
+.hero-cta::before,
+.hero-cta::after {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-theme="dark"] .hero-cta::before,
+html[data-theme="dark"] .hero-cta::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Keep each CTA to one clean row and prevent legacy grid placement from
+   collapsing the label underneath the icon on narrow Base App webviews. */
+.hero-cta {
+  display: grid !important;
+  grid-template-columns: 50px minmax(0, 1fr) 30px !important;
+  grid-template-rows: minmax(50px, auto) !important;
+  align-items: center !important;
+}
+.hero-cta-copy strong,
+.hero-cta-copy small {
+  width: 100% !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+@media (max-width: 700px) {
+  .hero-cta {
+    grid-template-columns: 50px minmax(0, 1fr) 30px !important;
+    min-height: 76px !important;
+    padding: 11px 12px !important;
+  }
+  .hero-cta-copy strong {
+    font-size: 16px !important;
+    line-height: 1.12 !important;
+  }
+  .hero-cta-copy small {
+    font-size: 11px !important;
+    line-height: 1.28 !important;
+  }
+}
