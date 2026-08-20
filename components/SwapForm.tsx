@@ -329,18 +329,18 @@ function SuccessToast({
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[10999]" onClick={onClose} />
+      <div className="swap-success-backdrop fixed inset-0 z-[10999]" onClick={onClose} aria-hidden="true" />
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[11000] w-[calc(100%-1.5rem)] max-w-md isolate" aria-live="polite">
         <div className="swap-success-card pointer-events-auto">
           <span className="swap-success-shine" aria-hidden="true" />
           <button onClick={onClose} className="swap-success-close" aria-label="Close">×</button>
           <div className="swap-success-head">
-            <span className="swap-success-orb">✓</span>
+            <span className="swap-success-orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m7 12.5 3.1 3.1L17.6 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" opacity=".42"/></svg></span>
             <div><small>BASE CONFIRMED</small><strong>Swap landed in the pond</strong></div>
           </div>
           <div className="swap-success-grid">
             {bought && boughtSymbol && <div><small>Estimated receive</small><strong>~{bought} {boughtSymbol}</strong></div>}
-            {burnedToby ? <div className="swap-success-burn"><small>Estimated burn</small><strong>🔥 ~{burnedToby} TOBY</strong></div> : burnedInput && burnedSymbol ? <div><small>Fee input</small><strong>~{burnedInput} {burnedSymbol}</strong></div> : null}
+            {burnedToby ? <div className="swap-success-burn"><small>Estimated burn</small><strong><span className="swap-success-flame" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M13.7 2.8c.5 3-1.7 4.2-2.7 6.1-.7 1.2-.5 2.4.5 3.2.3-1.8 1.5-2.8 2.8-3.8 1.8 1.7 3 3.7 3 6a5.3 5.3 0 0 1-10.6 0c0-2.3 1.2-4.3 3.2-6.2-.1 2.1.6 3.1 1.5 3.8-.4-2.6 2.9-4.4 2.3-9.1Z" fill="currentColor"/></svg></span>~{burnedToby} TOBY</strong></div> : burnedInput && burnedSymbol ? <div><small>Fee input</small><strong>~{burnedInput} {burnedSymbol}</strong></div> : null}
           </div>
           <a className="swap-success-basescan" href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noopener noreferrer">
             <span>View confirmed transaction</span><strong>BaseScan ↗</strong>
