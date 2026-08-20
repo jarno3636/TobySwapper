@@ -3234,3 +3234,187 @@ html[data-theme="dark"] .market-modal.success .market-modal-mark{color:#8ee0bd !
 @media(prefers-reduced-motion:reduce){
   .swap-success-close,.market-modal-close,.market-confirm-actions button,.market-modal-share button{transition:none!important}
 }
+
+/* ==========================================================================
+   2026-08-20 NIGHT POLISH — remove remaining paper-white surfaces
+   This block intentionally lives last so embedded Base browsers cannot revive
+   earlier "paper island" rules through cascade order.
+   ========================================================================== */
+html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card {
+  background:
+    radial-gradient(circle at 92% 4%,rgba(67,181,158,.075),transparent 29%),
+    linear-gradient(148deg,rgba(15,40,42,.99),rgba(8,27,29,.995)) !important;
+  border-color:rgba(153,224,211,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.035),0 18px 38px rgba(0,0,0,.19) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card :is(h2,h3,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(h2,h3,strong,b){color:#e9f8f4 !important}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card :is(p,small,em),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(p,small,em){color:#91a8a4 !important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line{
+  background:rgba(16,48,45,.78) !important;
+  border-color:rgba(121,210,179,.11) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line>span{background:rgba(74,184,143,.15)!important;color:#8bd7b5!important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line p{color:#92aaa3!important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line b{color:#d9efe8!important}
+
+/* Pouch cards: keep token art bright, but the surrounding UI stays night. */
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .legacy-land-asset{
+  background:linear-gradient(150deg,rgba(23,49,51,.97),rgba(13,34,36,.99)) !important;
+  border-color:rgba(151,224,211,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 9px 19px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .seedleaf-asset-card.is-selected{
+  background:radial-gradient(circle at 20% 0,rgba(76,201,165,.12),transparent 46%),linear-gradient(150deg,rgba(26,59,54,.99),rgba(14,38,39,.99)) !important;
+  border-color:rgba(84,213,172,.30) !important;
+}
+
+/* Land detail: identity, relics, cultivation and production all belong to night. */
+html[data-theme="dark"] .land-page :is(.land-identity-card,.land-module,.land-discovery-module,.land-world-next,.land-production-module){
+  background:
+    radial-gradient(circle at 94% 4%,rgba(78,186,157,.07),transparent 28%),
+    linear-gradient(148deg,rgba(15,40,42,.99),rgba(8,27,29,.995)) !important;
+  border-color:rgba(153,224,211,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.035),0 18px 38px rgba(0,0,0,.19) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-title-row h1,
+html[data-theme="dark"] .land-page .land-module-head h2,
+html[data-theme="dark"] .land-page .land-garden-copy strong,
+html[data-theme="dark"] .land-page .land-production-module h2{color:#eaf8f5 !important;text-shadow:none!important}
+html[data-theme="dark"] .land-page :is(.land-identity-title-row p,.land-garden-copy p,.land-garden-copy small,.land-production-module p){color:#93aaa6 !important}
+html[data-theme="dark"] .land-page .land-identity-grid>div,
+html[data-theme="dark"] .land-page .land-relic-tile,
+html[data-theme="dark"] .land-page .land-question{
+  background:linear-gradient(150deg,rgba(23,50,51,.96),rgba(14,35,37,.98)) !important;
+  border-color:rgba(153,224,211,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 8px 18px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid small,
+html[data-theme="dark"] .land-page .land-relic-tile small,
+html[data-theme="dark"] .land-page .land-question small{color:#89a29e!important}
+html[data-theme="dark"] .land-page .land-identity-grid strong,
+html[data-theme="dark"] .land-page .land-relic-tile strong,
+html[data-theme="dark"] .land-page .land-relic-tile b,
+html[data-theme="dark"] .land-page .land-question b{color:#e4f5f0!important}
+html[data-theme="dark"] .land-page .land-state-chip,
+html[data-theme="dark"] .land-page .land-live-chip,
+html[data-theme="dark"] .land-page .land-seed-count{
+  background:rgba(29,70,61,.84)!important;
+  border-color:rgba(108,207,173,.15)!important;
+  color:#a7e4ca!important;
+}
+html[data-theme="dark"] .land-page .land-production-status{background:rgba(71,55,91,.48)!important;color:#c9bbe2!important}
+
+/* Pond Pulse: live data should be luminous, not a white sheet in dark mode. */
+html[data-theme="dark"] .pond-pulse{
+  background:
+    radial-gradient(circle at 9% 0%,rgba(54,159,192,.12),transparent 31%),
+    radial-gradient(circle at 93% 100%,rgba(208,164,54,.08),transparent 31%),
+    linear-gradient(148deg,#102f32,#0a2528 58%,#0c292b) !important;
+  border-color:rgba(150,220,211,.14)!important;
+  color:#e9f7f4!important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.04),0 20px 44px rgba(0,0,0,.20)!important;
+}
+html[data-theme="dark"] .pond-pulse-shine{background:linear-gradient(180deg,rgba(191,242,232,.035),transparent)!important}
+html[data-theme="dark"] .pond-pulse-title span{color:#6fb8c9!important}
+html[data-theme="dark"] .pond-pulse-title h2{color:#eaf8f5!important}
+html[data-theme="dark"] .pond-pulse-title p{color:#91a8a5!important}
+html[data-theme="dark"] .pond-pulse-orb{
+  background:linear-gradient(145deg,#173f43,#102e32)!important;
+  border-color:rgba(117,200,197,.13)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 18px rgba(0,0,0,.15)!important;
+}
+html[data-theme="dark"] .pond-pulse-status{
+  background:linear-gradient(180deg,rgba(27,68,59,.96),rgba(18,52,47,.96))!important;
+  border-color:rgba(96,203,158,.18)!important;
+  color:#a2e5c2!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 17px rgba(0,0,0,.14)!important;
+}
+html[data-theme="dark"] .pond-pulse-status b{color:#7fc0c8!important}
+html[data-theme="dark"] .pond-pulse-feature,
+html[data-theme="dark"] .pond-pulse-stat{
+  border-color:rgba(151,220,211,.10)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 22px rgba(0,0,0,.14)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-burn{
+  background:radial-gradient(circle at 92% 12%,rgba(218,91,68,.14),transparent 34%),linear-gradient(145deg,#193234,#11292b)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-treasury{
+  background:radial-gradient(circle at 92% 12%,rgba(214,170,56,.14),transparent 34%),linear-gradient(145deg,#193433,#122b2c)!important;
+}
+html[data-theme="dark"] .pond-pulse-stat,
+html[data-theme="dark"] .pond-pulse-stat.is-leaf,
+html[data-theme="dark"] .pond-pulse-stat.is-btc,
+html[data-theme="dark"] .pond-pulse-stat.is-seed,
+html[data-theme="dark"] .pond-pulse-stat.is-draw{
+  background:linear-gradient(150deg,rgba(23,50,51,.97),rgba(13,34,36,.99))!important;
+}
+html[data-theme="dark"] .pond-pulse-kicker,
+html[data-theme="dark"] .pond-pulse-stat span{color:#87a8a5!important}
+html[data-theme="dark"] .pond-pulse-feature strong,
+html[data-theme="dark"] .pond-pulse-stat strong{color:#eaf8f5!important;text-shadow:none!important}
+html[data-theme="dark"] .pond-pulse-feature small,
+html[data-theme="dark"] .pond-pulse-stat small,
+html[data-theme="dark"] .pond-pulse-stat em,
+html[data-theme="dark"] .pond-pulse-whisper,
+html[data-theme="dark"] .pond-pulse-whisper p{color:#8ea6a2!important}
+html[data-theme="dark"] .pond-pulse-feature small b,
+html[data-theme="dark"] .pond-pulse-whisper b,
+html[data-theme="dark"] .pond-pulse-whisper code{color:#b9d8d1!important}
+html[data-theme="dark"] .pond-pulse-feature em,
+html[data-theme="dark"] .pond-pulse-whisper code{
+  background:rgba(21,54,54,.78)!important;
+  border-color:rgba(151,220,211,.09)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+/* Land Vault travel warning + six-asset layout. */
+.land-vault-travel-warning{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin-top:12px;
+  padding:11px 12px;
+  border:1px solid rgba(183,129,72,.18);
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(255,247,229,.94),rgba(250,239,215,.90));
+  color:#705a3d;
+  font-size:8px;
+  line-height:1.5;
+}
+.land-vault-travel-warning>span{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:50%;background:rgba(174,112,50,.12);color:#9a672e;font-weight:1000}
+.land-vault-travel-warning p{margin:0!important;color:inherit!important}
+.land-vault-travel-warning strong{color:#654b2f!important}
+.land-vault-assets{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html[data-theme="dark"] .land-vault-travel-warning,
+html[data-theme="dark"] .pouch-land-send .land-vault-travel-warning{
+  background:linear-gradient(145deg,rgba(70,53,35,.52),rgba(48,43,32,.48))!important;
+  border-color:rgba(229,178,105,.15)!important;
+  color:#cbb897!important;
+}
+html[data-theme="dark"] .land-vault-travel-warning>span{background:rgba(221,163,83,.14)!important;color:#e3b779!important}
+html[data-theme="dark"] .land-vault-travel-warning strong{color:#f0d5aa!important}
+html[data-theme="dark"] .land-vault-actions .land-vault-send,
+html[data-theme="dark"] .land-vault-actions .land-vault-withdraw{background:rgba(12,34,36,.34)}
+
+@media(max-width:760px){.land-vault-assets{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* Warning shown at the actual deed-transfer portal, where it matters most. */
+.lore-deed-transfer-warning{display:flex;gap:9px;align-items:flex-start;margin:10px 0;padding:10px 11px;border:1px solid rgba(183,129,72,.17);border-radius:13px;background:linear-gradient(145deg,#fff8e9,#f8eed8);color:#705b3f}
+.lore-deed-transfer-warning>span{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:50%;background:rgba(166,106,43,.11);color:#95622d;font-size:10px;font-weight:1000}
+.lore-deed-transfer-warning strong{display:block;color:#654c30;font-size:9px}
+.lore-deed-transfer-warning p{margin:3px 0 0!important;color:#7c6b52!important;font-size:8px;line-height:1.45}
+.lore-deed-transfer-warning a{display:inline-flex;margin-top:6px;color:#2d7467;font-size:8px;font-weight:950;text-decoration:none}
+html[data-theme="dark"] .lore-deed-transfer-warning{background:linear-gradient(145deg,rgba(70,53,35,.52),rgba(48,43,32,.48))!important;border-color:rgba(229,178,105,.15)!important;color:#cbb897!important}
+html[data-theme="dark"] .lore-deed-transfer-warning>span{background:rgba(221,163,83,.14)!important;color:#e3b779!important}
+html[data-theme="dark"] .lore-deed-transfer-warning strong{color:#f0d5aa!important}
+html[data-theme="dark"] .lore-deed-transfer-warning p{color:#c5b394!important}
+html[data-theme="dark"] .lore-deed-transfer-warning a{color:#84d4c0!important}
