@@ -3910,3 +3910,137 @@ html[data-theme="dark"] .hero-cta::after {
     line-height: 1.28 !important;
   }
 }
+
+/* ========================================================================== */
+/* 2026-08-20 DARK MODE — matte land + pouch cleanup                          */
+/* Removes the remaining bright glass caps and fixes low-contrast land names. */
+/* ========================================================================== */
+
+/* LAND DETAIL HERO --------------------------------------------------------- */
+/* The named land title is user content and must stay readable at night. */
+html[data-theme="dark"] .land-page .land-hero {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(83,190,165,.08), transparent 30%),
+    linear-gradient(150deg, #123436 0%, #0b2527 58%, #081e20 100%) !important;
+  border-color: rgba(151,224,211,.13) !important;
+  color: #edf9f6 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 18px 40px rgba(0,0,0,.22) !important;
+}
+html[data-theme="dark"] .land-page .land-hero::before {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+html[data-theme="dark"] .land-page .land-hero h1,
+html[data-theme="dark"] .land-page .land-hero-copy h1 {
+  color: #f1fbf8 !important;
+  -webkit-text-fill-color: #f1fbf8 !important;
+  text-shadow: 0 1px 12px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-copy > p {
+  color: #a6bbb7 !important;
+}
+html[data-theme="dark"] .land-page .land-hero .land-section-kicker {
+  color: #79b7ad !important;
+}
+
+/* Keep the actual canonical artwork light; only the surrounding UI is dark. */
+html[data-theme="dark"] .land-page .land-hero-deed-wrap {
+  background: rgba(8,25,27,.62) !important;
+  border-color: rgba(153,224,211,.11) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label span { color:#88a6a1 !important; }
+html[data-theme="dark"] .land-page .land-hero-deed-label strong { color:#dff4ef !important; }
+
+/* Secondary sharing controls should not become bright paper islands at night. */
+html[data-theme="dark"] .land-page .land-share-actions button:not(:first-child) {
+  background: linear-gradient(150deg, rgba(22,49,51,.98), rgba(13,34,36,.99)) !important;
+  border-color: rgba(153,224,211,.11) !important;
+  color: #dcefeb !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 7px 16px rgba(0,0,0,.13) !important;
+}
+
+/* POUCH ASSET CARDS -------------------------------------------------------- */
+/* Retire the old white capsule/highlight layer completely in dark mode. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card::before,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card::after {
+  content: none !important;
+  display: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-lore,
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset {
+  background: linear-gradient(150deg, #163638 0%, #0e2b2d 100%) !important;
+  border-color: rgba(150,222,210,.10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.028),
+    0 7px 16px rgba(0,0,0,.12) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-selected {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(70,194,158,.10), transparent 42%),
+    linear-gradient(150deg, #1b403d 0%, #103130 100%) !important;
+  border-color: rgba(84,213,172,.30) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 0 0 2px rgba(72,190,156,.05),
+    0 8px 18px rgba(0,0,0,.14) !important;
+}
+
+/* Force every label/value in the asset selector onto the night palette. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-usd-value {
+  color: #93aaa6 !important;
+  -webkit-text-fill-color: #93aaa6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy strong,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy b {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* TRANSFER PORTAL ---------------------------------------------------------- */
+/* The legacy lore-transfer gloss is the silver cap visible in the screenshot. */
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card::before,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card::before {
+  content: none !important;
+  display: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card {
+  background:
+    radial-gradient(circle at 94% 3%, rgba(76,178,158,.055), transparent 27%),
+    linear-gradient(150deg, #143436 0%, #0a2729 100%) !important;
+  border-color: rgba(153,224,211,.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 14px 30px rgba(0,0,0,.17) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card :is(h2,h3,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card :is(h2,h3,strong,b) {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card :is(p,small,span),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card :is(p,small,span) {
+  color: #93aaa6 !important;
+}
+
+/* Keep form values brighter than their labels. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-fields :is(input,select),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-summary {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+
+@media (max-width: 620px) {
+  html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card {
+    min-height: 100px;
+  }
+}
