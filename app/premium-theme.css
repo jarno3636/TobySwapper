@@ -3106,60 +3106,131 @@ html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
 html[data-theme="dark"] .taboshi1-page .mytw-land-card,
 html[data-theme="dark"] .taboshi1-page .mytw-seed-garden{box-shadow:inset 0 1px 0 rgba(220,255,248,.035),0 16px 34px rgba(0,0,0,.15)}
 
-/* ========================================================================== 
-   2026-08-20 interaction + visual refinement pass
-   ========================================================================== */
-.mytw-glyph{width:18px;height:18px;display:block}
-.mytw-world-nav a>span{transition:transform .18s ease,box-shadow .18s ease,color .18s ease}
-.mytw-world-nav a:active>span{transform:scale(.92)}
-.mytw-record-stat-icon{position:relative;overflow:hidden}
-.mytw-record-stat-icon .mytw-glyph{width:17px;height:17px}
-.mytw-record-seed-icon img{padding:3px}
-
-/* Give long pages a visual rhythm without adding image or network cost. */
-.mytw-section-heading{position:relative;padding:4px 0 5px 14px}
-.mytw-section-heading:before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:999px;background:linear-gradient(180deg,#55c8bd,#4ca8d1);box-shadow:0 0 14px rgba(76,184,190,.18)}
-.mytw-section-heading h2{max-width:680px;line-height:1.04}
-
-/* Home hero: more depth, cleaner hierarchy, still one static image. */
-.hero-poster-premium{position:relative;isolation:isolate}
-.hero-poster-premium:before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;background:linear-gradient(125deg,rgba(89,205,191,.16),transparent 24%,transparent 72%,rgba(70,155,203,.12));z-index:-1;filter:blur(14px)}
-.hero-poster-frame{box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 22px 48px rgba(20,65,72,.12)!important}
-.hero-cta{min-height:72px;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease!important}
-.hero-cta:active{transform:scale(.985)}
-@media(hover:hover){.hero-cta:hover{transform:translateY(-2px);box-shadow:0 13px 28px rgba(18,68,74,.10)!important}}
-.pond-section-divider{display:flex;align-items:center;gap:12px;margin:2px 0 12px;color:var(--app-text-faint);font-size:8px;font-weight:950;letter-spacing:.22em}
-.pond-section-divider:before,.pond-section-divider:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--app-line-strong))}
-.pond-section-divider:after{background:linear-gradient(90deg,var(--app-line-strong),transparent)}
-
-/* Pouch/profile cards: sharper depth and easier tap targets on phones. */
-.mytw-profile-card,.mytw-action-card,.seedleaf-relic-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.68),0 16px 36px rgba(15,65,72,.075)}
-.mytw-action-card{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.mytw-record-stat-grid>div{min-height:92px;transition:transform .16s ease,border-color .16s ease}
-@media(hover:hover){.mytw-record-stat-grid>div:hover{transform:translateY(-2px);border-color:rgba(62,169,160,.22)}}
-.mytw-record-progress{height:7px!important;overflow:hidden;box-shadow:inset 0 1px 2px rgba(16,61,65,.10)}
-.mytw-record-progress>span{position:relative;overflow:hidden}
-.mytw-record-progress>span:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%);animation:pond-progress-glint 4.8s ease-in-out infinite}
-@keyframes pond-progress-glint{0%,65%{transform:translateX(-100%)}85%,100%{transform:translateX(120%)}}
-
-/* Dock reads more like native app navigation. */
-.pond-dock-wrap{padding-bottom:max(8px,env(safe-area-inset-bottom))}
-.pond-dock{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 16px 38px rgba(12,54,60,.15)}
-.pond-dock-item{min-height:58px;position:relative}
-.pond-dock-active:after{content:"";position:absolute;bottom:4px;left:50%;width:18px;height:3px;transform:translateX(-50%);border-radius:999px;background:linear-gradient(90deg,#45aee0,#55cbaa);box-shadow:0 0 10px rgba(67,186,188,.24)}
-
-/* Small-screen typography and spacing polish for Base/Farcaster webviews. */
-@media(max-width:680px){
-  .mytw-profile-card,.mytw-action-card,.seedleaf-relic-card{border-radius:24px!important}
-  .mytw-profile-head h2{line-height:1.03}
-  .mytw-world-nav{gap:7px;padding:6px}
-  .mytw-world-nav a{padding:9px;column-gap:7px}
-  .mytw-world-nav a>span{width:34px;height:34px}
-  .mytw-record-stat-grid>div{min-height:86px;padding:12px!important}
-  .mytw-section-heading{margin-top:28px}
+/* ==========================================================================\n   TRANSACTION NOTIFICATIONS — polished light/dark surfaces\n   ========================================================================== */
+.swap-success-backdrop{
+  background:rgba(6,24,27,.16);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
 }
+.swap-success-card{
+  isolation:isolate;
+  transform:translateZ(0);
+}
+.swap-success-orb svg,.market-modal-mark svg{width:24px;height:24px;display:block}
+.swap-success-flame{display:inline-grid;width:14px;height:14px;place-items:center;margin-right:4px;vertical-align:-2px;color:#d4673f}
+.swap-success-flame svg{width:14px;height:14px;display:block}
+.swap-success-close,.market-modal-close,.market-confirm-actions button,.market-modal-share button{
+  transition:transform .16s ease,filter .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+@media(hover:hover){
+  .swap-success-close:hover,.market-modal-close:hover,.market-confirm-actions button:hover,.market-modal-share button:hover{filter:brightness(1.04);transform:translateY(-1px)}
+}
+.swap-success-close:active,.market-modal-close:active,.market-confirm-actions button:active,.market-modal-share button:active{transform:translateY(1px) scale(.985)}
+.swap-success-close:focus-visible,.market-modal-close:focus-visible,.market-confirm-actions button:focus-visible,.market-modal-share button:focus-visible,.swap-success-basescan:focus-visible,.market-modal>a:focus-visible{outline:2px solid #65cfbb;outline-offset:3px}
 
-html[data-theme="dark"] .mytw-section-heading:before{box-shadow:0 0 16px rgba(79,204,193,.16)}
-html[data-theme="dark"] .hero-poster-frame{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 22px 48px rgba(0,0,0,.28)!important}
-html[data-theme="dark"] .pond-dock{box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 18px 42px rgba(0,0,0,.30)}
-@media(prefers-reduced-motion:reduce){.mytw-record-progress>span:after{animation:none}.hero-cta,.mytw-action-card,.mytw-record-stat-grid>div{transition:none!important}}
+html[data-theme="dark"] .swap-success-backdrop{
+  background:rgba(2,11,13,.48);
+  backdrop-filter:blur(7px) saturate(.9);
+  -webkit-backdrop-filter:blur(7px) saturate(.9);
+}
+html[data-theme="dark"] .swap-success-card{
+  border-color:rgba(94,214,178,.22) !important;
+  color:#e8f7f3 !important;
+  background:
+    radial-gradient(85% 80% at 84% 0%,rgba(64,199,158,.14),transparent 62%),
+    linear-gradient(165deg,rgba(18,49,48,.99),rgba(8,27,29,.995)) !important;
+  box-shadow:inset 0 1px 0 rgba(225,255,248,.07),0 8px 0 rgba(2,13,15,.24),0 28px 64px rgba(0,0,0,.46) !important;
+}
+html[data-theme="dark"] .swap-success-shine{
+  opacity:.17;
+  background:linear-gradient(180deg,rgba(204,255,243,.32),transparent) !important;
+}
+html[data-theme="dark"] .swap-success-close{
+  border-color:rgba(128,205,190,.16) !important;
+  background:rgba(24,57,57,.88) !important;
+  color:#a9c5bf !important;
+  box-shadow:inset 0 1px 0 rgba(230,255,250,.04),0 5px 13px rgba(0,0,0,.2) !important;
+}
+html[data-theme="dark"] .swap-success-orb{
+  border-color:rgba(192,255,235,.2) !important;
+  color:#eafff7 !important;
+  background:linear-gradient(145deg,#54c79a,#269272 58%,#176552) !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,248,.26),0 8px 18px rgba(13,93,69,.28) !important;
+}
+html[data-theme="dark"] .swap-success-head small{color:#73b8a5 !important}
+html[data-theme="dark"] .swap-success-head strong{color:#edf9f6 !important}
+html[data-theme="dark"] .swap-success-grid>div{
+  border-color:rgba(112,190,174,.12) !important;
+  background:rgba(20,54,54,.78) !important;
+  box-shadow:inset 0 1px 0 rgba(224,255,248,.035) !important;
+}
+html[data-theme="dark"] .swap-success-grid small{color:#829f9b !important}
+html[data-theme="dark"] .swap-success-grid strong{color:#e1f2ee !important}
+html[data-theme="dark"] .swap-success-grid .swap-success-burn{
+  border-color:rgba(213,133,91,.13) !important;
+  background:linear-gradient(145deg,rgba(62,45,39,.88),rgba(25,52,50,.88)) !important;
+}
+html[data-theme="dark"] .swap-success-burn strong,html[data-theme="dark"] .swap-success-flame{color:#efa27a !important}
+html[data-theme="dark"] .swap-success-basescan{
+  border-color:rgba(73,154,207,.17) !important;
+  color:#c4dcdf !important;
+  background:linear-gradient(180deg,rgba(25,57,66,.94),rgba(16,43,49,.96)) !important;
+  box-shadow:inset 0 1px 0 rgba(220,250,255,.04),0 7px 16px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] .swap-success-basescan strong{color:#73bfe7 !important}
+html[data-theme="dark"] .swap-success-card>p{color:#7f9995 !important}
+
+html[data-theme="dark"] .market-modal-backdrop{
+  background:rgba(2,12,14,.66) !important;
+  backdrop-filter:blur(10px) saturate(.86) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(.86) !important;
+}
+html[data-theme="dark"] .market-modal,
+html[data-theme="dark"] .market-confirm-modal{
+  border:1px solid rgba(100,188,174,.19) !important;
+  box-shadow:inset 0 1px 0 rgba(228,255,249,.045),0 30px 80px rgba(0,0,0,.56) !important;
+}
+html[data-theme="dark"] .market-modal-mark{
+  border:1px solid rgba(116,212,184,.13);
+  box-shadow:inset 0 1px 0 rgba(231,255,248,.05),0 8px 20px rgba(0,0,0,.18);
+}
+html[data-theme="dark"] .market-modal h2{color:#edf9f6 !important}
+html[data-theme="dark"] .market-modal p{color:#9bb2ae !important}
+html[data-theme="dark"] .market-modal>a{
+  padding:9px 12px;
+  border:1px solid rgba(80,162,199,.14);
+  border-radius:12px;
+  color:#79c6e8 !important;
+  background:rgba(24,55,62,.72);
+}
+html[data-theme="dark"] .market-modal-share button,
+html[data-theme="dark"] .market-confirm-back{
+  border:1px solid rgba(111,181,171,.12) !important;
+  background:rgba(22,52,52,.9) !important;
+  color:#b2c8c4 !important;
+}
+html[data-theme="dark"] .market-confirm-go,
+html[data-theme="dark"] .market-modal-close{
+  border:1px solid rgba(130,225,199,.12) !important;
+  background:linear-gradient(180deg,#2c957a,#176a59) !important;
+  color:#f1fffb !important;
+  box-shadow:inset 0 1px 0 rgba(231,255,249,.14),0 8px 18px rgba(0,0,0,.2) !important;
+}
+html[data-theme="dark"] .market-modal.error .market-modal-close{
+  background:linear-gradient(180deg,#8e5148,#653b36) !important;
+  border-color:rgba(244,164,149,.12) !important;
+}
+html[data-theme="dark"] .market-modal.info .market-modal-mark{color:#cbb9ec !important}
+html[data-theme="dark"] .market-modal.error .market-modal-mark{color:#f0a095 !important}
+html[data-theme="dark"] .market-modal.success .market-modal-mark{color:#8ee0bd !important}
+
+@media(max-width:520px){
+  .swap-success-card{border-radius:23px;padding:14px}
+  .market-modal{border-radius:22px;padding:21px 18px}
+}
+@supports(padding:max(0px)){
+  .swap-success-card{margin-bottom:max(0px,env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){
+  .swap-success-close,.market-modal-close,.market-confirm-actions button,.market-modal-share button{transition:none!important}
+}
