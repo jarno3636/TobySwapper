@@ -3105,3 +3105,61 @@ html[data-theme="dark"] .taboshi1-page .mytw-record-progress{background:rgba(112
 html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
 html[data-theme="dark"] .taboshi1-page .mytw-land-card,
 html[data-theme="dark"] .taboshi1-page .mytw-seed-garden{box-shadow:inset 0 1px 0 rgba(220,255,248,.035),0 16px 34px rgba(0,0,0,.15)}
+
+/* ========================================================================== 
+   2026-08-20 interaction + visual refinement pass
+   ========================================================================== */
+.mytw-glyph{width:18px;height:18px;display:block}
+.mytw-world-nav a>span{transition:transform .18s ease,box-shadow .18s ease,color .18s ease}
+.mytw-world-nav a:active>span{transform:scale(.92)}
+.mytw-record-stat-icon{position:relative;overflow:hidden}
+.mytw-record-stat-icon .mytw-glyph{width:17px;height:17px}
+.mytw-record-seed-icon img{padding:3px}
+
+/* Give long pages a visual rhythm without adding image or network cost. */
+.mytw-section-heading{position:relative;padding:4px 0 5px 14px}
+.mytw-section-heading:before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:999px;background:linear-gradient(180deg,#55c8bd,#4ca8d1);box-shadow:0 0 14px rgba(76,184,190,.18)}
+.mytw-section-heading h2{max-width:680px;line-height:1.04}
+
+/* Home hero: more depth, cleaner hierarchy, still one static image. */
+.hero-poster-premium{position:relative;isolation:isolate}
+.hero-poster-premium:before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;background:linear-gradient(125deg,rgba(89,205,191,.16),transparent 24%,transparent 72%,rgba(70,155,203,.12));z-index:-1;filter:blur(14px)}
+.hero-poster-frame{box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 22px 48px rgba(20,65,72,.12)!important}
+.hero-cta{min-height:72px;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease!important}
+.hero-cta:active{transform:scale(.985)}
+@media(hover:hover){.hero-cta:hover{transform:translateY(-2px);box-shadow:0 13px 28px rgba(18,68,74,.10)!important}}
+.pond-section-divider{display:flex;align-items:center;gap:12px;margin:2px 0 12px;color:var(--app-text-faint);font-size:8px;font-weight:950;letter-spacing:.22em}
+.pond-section-divider:before,.pond-section-divider:after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--app-line-strong))}
+.pond-section-divider:after{background:linear-gradient(90deg,var(--app-line-strong),transparent)}
+
+/* Pouch/profile cards: sharper depth and easier tap targets on phones. */
+.mytw-profile-card,.mytw-action-card,.seedleaf-relic-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.68),0 16px 36px rgba(15,65,72,.075)}
+.mytw-action-card{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.mytw-record-stat-grid>div{min-height:92px;transition:transform .16s ease,border-color .16s ease}
+@media(hover:hover){.mytw-record-stat-grid>div:hover{transform:translateY(-2px);border-color:rgba(62,169,160,.22)}}
+.mytw-record-progress{height:7px!important;overflow:hidden;box-shadow:inset 0 1px 2px rgba(16,61,65,.10)}
+.mytw-record-progress>span{position:relative;overflow:hidden}
+.mytw-record-progress>span:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%);animation:pond-progress-glint 4.8s ease-in-out infinite}
+@keyframes pond-progress-glint{0%,65%{transform:translateX(-100%)}85%,100%{transform:translateX(120%)}}
+
+/* Dock reads more like native app navigation. */
+.pond-dock-wrap{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.pond-dock{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 16px 38px rgba(12,54,60,.15)}
+.pond-dock-item{min-height:58px;position:relative}
+.pond-dock-active:after{content:"";position:absolute;bottom:4px;left:50%;width:18px;height:3px;transform:translateX(-50%);border-radius:999px;background:linear-gradient(90deg,#45aee0,#55cbaa);box-shadow:0 0 10px rgba(67,186,188,.24)}
+
+/* Small-screen typography and spacing polish for Base/Farcaster webviews. */
+@media(max-width:680px){
+  .mytw-profile-card,.mytw-action-card,.seedleaf-relic-card{border-radius:24px!important}
+  .mytw-profile-head h2{line-height:1.03}
+  .mytw-world-nav{gap:7px;padding:6px}
+  .mytw-world-nav a{padding:9px;column-gap:7px}
+  .mytw-world-nav a>span{width:34px;height:34px}
+  .mytw-record-stat-grid>div{min-height:86px;padding:12px!important}
+  .mytw-section-heading{margin-top:28px}
+}
+
+html[data-theme="dark"] .mytw-section-heading:before{box-shadow:0 0 16px rgba(79,204,193,.16)}
+html[data-theme="dark"] .hero-poster-frame{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 22px 48px rgba(0,0,0,.28)!important}
+html[data-theme="dark"] .pond-dock{box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 18px 42px rgba(0,0,0,.30)}
+@media(prefers-reduced-motion:reduce){.mytw-record-progress>span:after{animation:none}.hero-cta,.mytw-action-card,.mytw-record-stat-grid>div{transition:none!important}}

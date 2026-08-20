@@ -16,7 +16,7 @@ export default function Page() {
   return (
     <MiniAppGate>
       <div className="mx-auto w-full max-w-6xl px-4 pb-32 pt-4 sm:px-6 sm:pt-6">
-        <section className="hero-poster-shell mb-6" aria-label="TobySwap">
+        <section className="hero-poster-shell hero-poster-premium mb-6" aria-label="TobySwap">
           <div className="hero-poster-frame">
             <Image
               src="/hero/tobyswap-hero.png"
@@ -43,6 +43,7 @@ export default function Page() {
           </div>
         </section>
 
+        <div className="pond-section-divider" aria-hidden="true"><span>THE POND</span></div>
         <div id="swap" className="scroll-mt-24 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(330px,.92fr)]">
           <div>
             <SwapForm />
