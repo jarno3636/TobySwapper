@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import ShareCallout from "@/components/ShareCallout";
 import WorldLinks from "@/components/WorldLinks";
 import PondDock from "@/components/PondDock";
+import TobyworldAssets from "@/components/TobyworldAssets";
 
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), { ssr: false });
 function HeroArtwork() {
@@ -98,6 +99,8 @@ export default function Page() {
             </a>
           </div>
         </section>
+
+        <TobyworldAssets />
 
         <div id="swap" className="scroll-mt-24 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(330px,.92fr)]">
           <div>
