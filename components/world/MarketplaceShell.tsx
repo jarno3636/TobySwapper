@@ -38,6 +38,12 @@ function assetFor(id: MarketplaceAssetKind) { return MARKETPLACE_ASSETS.find((as
 function paymentFor(id: MarketplacePayment) { return MARKETPLACE_PAYMENTS.find((payment) => payment.id === id)!; }
 function shortAddress(value: string) { return `${value.slice(0, 6)}…${value.slice(-4)}`; }
 
+function MarketNoticeIcon({ kind }: { kind: "success" | "error" | "info" }) {
+  if (kind === "success") return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 12.5 3.1 3.1L17.6 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" opacity=".4"/></svg>;
+  if (kind === "error") return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 7.2v6.1" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/><circle cx="12" cy="16.9" r="1.25" fill="currentColor"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.4" opacity=".4"/></svg>;
+  return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 4.5 7 13H5l7-13Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M12 9v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="15.4" r=".9" fill="currentColor"/></svg>;
+}
+
 function AssetVisual({ kind }: { kind: MarketplaceAssetKind }) {
   if (kind === "seed") return <span className="market-asset-art is-seed"><Image src="/seed.png" alt="" fill sizes="62px" className="object-cover" /></span>;
   return <span className={`market-asset-art ${kind === "old-land" ? "is-old-land" : "is-lore-land"}`}><b>△</b><i /></span>;
@@ -349,9 +355,9 @@ export default function MarketplaceShell() {
 
       <section className="market-rules-strip"><span><b>BASE</b><small>Network</small></span><span><b>USDC · ETH · TOBY</b><small>Payments</small></span><span><b>1%</b><small>Market fee on completed sales</small></span></section>
 
-      {confirm && <div className="market-modal-backdrop" role="presentation" onMouseDown={() => setConfirm(null)}><section className="market-modal info market-confirm-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}><div className="market-modal-mark">△</div><h2>{confirm.title}</h2><p>{confirm.body}</p><div className="market-confirm-actions"><button className="market-confirm-back" onClick={() => setConfirm(null)}>Go back</button><button className="market-confirm-go" onClick={async () => { const run = confirm.run; setConfirm(null); await run(); }}>{confirm.confirmLabel}</button></div></section></div>}
+      {confirm && <div className="market-modal-backdrop" role="presentation" onMouseDown={() => setConfirm(null)}><section className="market-modal info market-confirm-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}><div className="market-modal-mark"><MarketNoticeIcon kind="info" /></div><h2>{confirm.title}</h2><p>{confirm.body}</p><div className="market-confirm-actions"><button className="market-confirm-back" onClick={() => setConfirm(null)}>Go back</button><button className="market-confirm-go" onClick={async () => { const run = confirm.run; setConfirm(null); await run(); }}>{confirm.confirmLabel}</button></div></section></div>}
 
-      {notice && <div className="market-modal-backdrop" role="presentation" onMouseDown={() => setNotice(null)}><section className={`market-modal ${notice.kind}`} role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}><div className="market-modal-mark">{notice.kind === "success" ? "✓" : notice.kind === "error" ? "!" : "△"}</div><h2>{notice.title}</h2><p>{notice.body}</p>{notice.hash && <a href={`https://basescan.org/tx/${notice.hash}`} target="_blank" rel="noreferrer">View on BaseScan ↗</a>}{notice.shareText && <div className="market-modal-share"><button onClick={() => share(notice.shareText)}>Cast it</button><button onClick={() => shareX(notice.shareText)}>Post to X</button></div>}<button className="market-modal-close" onClick={() => setNotice(null)}>Done</button></section></div>}
+      {notice && <div className="market-modal-backdrop" role="presentation" onMouseDown={() => setNotice(null)}><section className={`market-modal ${notice.kind}`} role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}><div className="market-modal-mark"><MarketNoticeIcon kind={notice.kind} /></div><h2>{notice.title}</h2><p>{notice.body}</p>{notice.hash && <a href={`https://basescan.org/tx/${notice.hash}`} target="_blank" rel="noreferrer">View on BaseScan ↗</a>}{notice.shareText && <div className="market-modal-share"><button onClick={() => share(notice.shareText)}>Cast it</button><button onClick={() => shareX(notice.shareText)}>Post to X</button></div>}<button className="market-modal-close" onClick={() => setNotice(null)}>Done</button></section></div>}
     </div>
   );
 }
