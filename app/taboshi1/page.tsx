@@ -123,6 +123,18 @@ function SeedArt({ name }: { image?: string | null; name?: string }) {
 }
 
 
+function PondGlyph({ kind }: { kind: "swap" | "pouch" | "land" | "world" | "route" | "signal" }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="mytw-glyph">
+    {kind === "swap" && <><path {...common} d="M4 8h13m0 0-3-3m3 3-3 3"/><path {...common} d="M20 16H7m0 0 3-3m-3 3 3 3"/></>}
+    {kind === "pouch" && <><circle {...common} cx="12" cy="12" r="7.5"/><path {...common} d="M8.5 8.5c2-2 5-2 7 0M8 15.5c2.4 1.8 5.6 1.8 8 0"/></>}
+    {kind === "land" && <><path {...common} d="m12 4 7 15H5L12 4Z"/><path {...common} d="M9 15h6"/></>}
+    {kind === "world" && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M4 12h16M12 4c2.6 2.5 3.8 5.2 3.8 8S14.6 17.5 12 20M12 4C9.4 6.5 8.2 9.2 8.2 12s1.2 5.5 3.8 8"/></>}
+    {kind === "route" && <><path {...common} d="M5 17c2.5-7 6-9 14-10"/><circle cx="5" cy="17" r="2" fill="currentColor"/><circle cx="19" cy="7" r="2" fill="currentColor"/></>}
+    {kind === "signal" && <><circle {...common} cx="12" cy="12" r="2.5"/><path {...common} d="M7.7 7.7a6 6 0 0 0 0 8.6M16.3 7.7a6 6 0 0 1 0 8.6M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></>}
+  </svg>;
+}
+
 function PondFlameSvg() {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true" className="mytw-pond-flame-svg">
@@ -649,10 +661,10 @@ export default function TaboshiOnePage() {
         </section>
 
         <nav className="mytw-world-nav" aria-label="My Tobyworld sections">
-          <Link prefetch={false} href="/#swap"><span>↔</span><b>POND</b><small>Swap & contribute</small></Link>
-          <a href="#pouch"><span>◉</span><b>POUCH</b><small>What you carry</small></a>
-          <a href="#land"><span>△</span><b>LAND</b><small>Your place</small></a>
-          <Link prefetch={false} href="/world"><span>✦</span><b>WORLD</b><small>Visit & explore</small></Link>
+          <Link prefetch={false} href="/#swap"><span><PondGlyph kind="swap" /></span><b>POND</b><small>Swap & contribute</small></Link>
+          <a href="#pouch"><span><PondGlyph kind="pouch" /></span><b>POUCH</b><small>What you carry</small></a>
+          <a href="#land"><span><PondGlyph kind="land" /></span><b>LAND</b><small>Your place</small></a>
+          <Link prefetch={false} href="/world"><span><PondGlyph kind="world" /></span><b>WORLD</b><small>Visit & explore</small></Link>
         </nav>
 
         <section className="mytw-profile-card" aria-label="Your Tobyworld profile">
@@ -743,10 +755,10 @@ COMPLETION</span>
             </div>
 
             <div className="mytw-record-stat-grid">
-              <div><span className="mytw-record-stat-icon">↝</span><small>SWAPS</small><strong>{isConnected ? recordedSwaps.toLocaleString() : "—"}</strong><em>{pondRouteSwaps ? `${pondRouteSwaps} through Pond` : "confirmed here"}</em></div>
-              <div><span className="mytw-record-stat-icon">△</span><small>LORE LAND</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><em>{loreBalance > 0n ? "place anchored" : "not discovered"}</em></div>
-              <div><span className="mytw-record-stat-icon">✦</span><small>SEED HELD</small><strong>{isConnected ? seedBalance.toLocaleString() : "—"}</strong><em>{seedStage.label}</em></div>
-              <div><span className="mytw-record-stat-icon">◉</span><small>SIGNALS</small><strong>{isConnected ? `${foundSignals}/${profileSignals.length}` : "—"}</strong><em>{loreCompletion}% discovered</em></div>
+              <div><span className="mytw-record-stat-icon"><PondGlyph kind="route" /></span><small>SWAPS</small><strong>{isConnected ? recordedSwaps.toLocaleString() : "—"}</strong><em>{pondRouteSwaps ? `${pondRouteSwaps} through Pond` : "confirmed here"}</em></div>
+              <div><span className="mytw-record-stat-icon"><PondGlyph kind="land" /></span><small>LORE LAND</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><em>{loreBalance > 0n ? "place anchored" : "not discovered"}</em></div>
+              <div><span className="mytw-record-stat-icon mytw-record-seed-icon"><Image src="/seed.png" alt="" fill sizes="30px" className="object-cover" /></span><small>SEED HELD</small><strong>{isConnected ? seedBalance.toLocaleString() : "—"}</strong><em>{seedStage.label}</em></div>
+              <div><span className="mytw-record-stat-icon"><PondGlyph kind="signal" /></span><small>SIGNALS</small><strong>{isConnected ? `${foundSignals}/${profileSignals.length}` : "—"}</strong><em>{loreCompletion}% discovered</em></div>
             </div>
 
             <div className="mytw-record-burn-line">
