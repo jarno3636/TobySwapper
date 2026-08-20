@@ -4304,3 +4304,129 @@ html[data-theme="dark"] .pond-community-note { background: rgba(13, 34, 36, .75)
   .community-site-card { min-height: 0; padding: 13px; }
   .pond-compact-link { min-height: 0; padding: 11px 12px; }
 }
+
+/* ==========================================================================\n   SWAP TOKEN SELECTOR — DARK MODE\n   The picker is portaled to <body>, so it needs explicit dark-theme surfaces.\n   ========================================================================== */
+html[data-theme="dark"] .token-modal > button[aria-label="Close token selector"] {
+  background: rgba(2, 10, 12, .70) !important;
+  backdrop-filter: blur(7px) saturate(.88) !important;
+  -webkit-backdrop-filter: blur(7px) saturate(.88) !important;
+}
+
+html[data-theme="dark"] .token-modal-card {
+  color: #edf8f6 !important;
+  border: 1px solid rgba(130, 210, 201, .18) !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(55, 155, 181, .10), transparent 34%),
+    linear-gradient(160deg, #102f32 0%, #0b2528 54%, #081f22 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 24px 70px rgba(0,0,0,.46) !important;
+}
+
+html[data-theme="dark"] .token-modal-card .world-kicker {
+  color: #8bbab5 !important;
+}
+
+html[data-theme="dark"] .token-modal-card h3 {
+  color: #f4fbfa !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .token-modal-card .text-inkSub {
+  color: #9db6b4 !important;
+}
+
+html[data-theme="dark"] .token-modal-list {
+  gap: 8px !important;
+}
+
+html[data-theme="dark"] .token-option {
+  color: #edf8f6 !important;
+  border-color: rgba(137, 208, 199, .12) !important;
+  background: linear-gradient(155deg, rgba(22, 50, 52, .96), rgba(13, 36, 39, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 7px 16px rgba(0,0,0,.12) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .token-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(103, 195, 211, .27) !important;
+  background: linear-gradient(155deg, rgba(27, 59, 62, .98), rgba(15, 41, 44, .99)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 10px 20px rgba(0,0,0,.16) !important;
+}
+
+html[data-theme="dark"] .token-option-active {
+  border-color: rgba(68, 185, 221, .42) !important;
+  background:
+    radial-gradient(circle at 94% 16%, rgba(64, 187, 224, .12), transparent 34%),
+    linear-gradient(155deg, rgba(21, 58, 64, .99), rgba(11, 39, 44, .99)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(74, 187, 218, .08),
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 9px 22px rgba(0,0,0,.16) !important;
+}
+
+html[data-theme="dark"] .token-option > span:nth-child(2) > span:first-child {
+  color: #f1faf8 !important;
+}
+
+html[data-theme="dark"] .token-option > span:nth-child(2) > span:last-child {
+  color: #98b2af !important;
+}
+
+html[data-theme="dark"] .token-option-icon {
+  border-color: rgba(174, 225, 218, .13) !important;
+  background: rgba(231, 248, 245, .92) !important;
+  box-shadow: 0 5px 13px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .token-option-icon-weth {
+  background: radial-gradient(circle at 32% 25%, #f8fbff 0 25%, #e4ebff 48%, #c9d5ff 100%) !important;
+}
+
+html[data-theme="dark"] .token-option-arrow {
+  color: #76d6ef !important;
+  border-color: rgba(117, 204, 220, .17) !important;
+  background: rgba(209, 242, 238, .055) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+html[data-theme="dark"] .token-option-active .token-option-arrow {
+  color: #d9fbff !important;
+  border-color: rgba(91, 196, 225, .28) !important;
+  background: rgba(44, 145, 178, .20) !important;
+}
+
+html[data-theme="dark"] .token-route-chip {
+  color: #a7dff1 !important;
+  border-color: rgba(100, 193, 220, .18) !important;
+  background: rgba(37, 123, 151, .12) !important;
+}
+
+/* The compact Close control should be matte inside the modal, not chrome. */
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal {
+  color: #dff3ef !important;
+  border-color: rgba(151, 218, 208, .15) !important;
+  background: rgba(216, 242, 238, .065) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal::before,
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal::after {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-theme="dark"] .token-modal-card .status-dot {
+  box-shadow: 0 0 0 5px rgba(66, 196, 129, .08) !important;
+}
+
+@media (max-width: 520px) {
+  html[data-theme="dark"] .token-modal-card {
+    border-radius: 27px 27px 22px 22px !important;
+  }
+}
