@@ -25,6 +25,14 @@ on:
         required: true
         type: boolean
         default: false
+      metadata_timeout_ms:
+        description: "Metadata timeout per gateway (ms)"
+        required: true
+        default: "6000"
+      image_timeout_ms:
+        description: "Artwork timeout per gateway (ms)"
+        required: true
+        default: "6500"
 
 permissions:
   contents: read
@@ -39,6 +47,11 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+
+      # Public IPFS gateways used as fallbacks.
+      # The script rotates the first gateway by token ID so one provider
+      # does not receive the entire load.
+      IPFS_GATEWAYS: "https://w3s.link/ipfs/,https://dweb.link/ipfs/,https://nftstorage.link/ipfs/,https://ipfs.io/ipfs/,https://gateway.pinata.cloud/ipfs/"
 
     steps:
       - name: Check out repository
@@ -60,7 +73,12 @@ jobs:
 
           if [ -z "$BASE_RPC_URL" ]; then
             echo "BASE_RPC_URL is not set. Public Base fallback will be used."
+          else
+            echo "Dedicated BASE_RPC_URL is configured."
           fi
+
+          echo "Configured IPFS gateways:"
+          echo "$IPFS_GATEWAYS" | tr ',' '\n'
 
       - name: Backfill Lore
         shell: bash
@@ -79,6 +97,9 @@ jobs:
             --from=${{ inputs.from_token }} \
             --to=${{ inputs.to_token }} \
             --concurrency=${{ inputs.concurrency }} \
+            --metadata-timeout-ms=${{ inputs.metadata_timeout_ms }} \
+            --image-timeout-ms=${{ inputs.image_timeout_ms }} \
+            --retry-art=true \
             $EXTRA_ARGS
 
       - name: Run summary
@@ -86,7 +107,9 @@ jobs:
         shell: bash
         run: |
           echo "## Tobyworld Lore Backfill" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Range: ${{ inputs.from_token }} to ${{ inputs.to_token }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Workers: ${{ inputs.concurrency }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Replace cached: ${{ inputs.force_refresh }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Metadata only: ${{ inputs.metadata_only }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Range: **${{ inputs.from_token }} → ${{ inputs.to_token }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workers: **${{ inputs.concurrency }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Replace cached: **${{ inputs.force_refresh }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metadata only: **${{ inputs.metadata_only }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metadata timeout/gateway: **${{ inputs.metadata_timeout_ms }} ms**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artwork timeout/gateway: **${{ inputs.image_timeout_ms }} ms**" >> "$GITHUB_STEP_SUMMARY"
