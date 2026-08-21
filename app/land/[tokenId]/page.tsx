@@ -186,15 +186,15 @@ export default function LandPage() {
           <>
             <section className="land-hero">
               <div className="land-hero-copy">
-                <span className="land-section-kicker">A PLACE IN TOBYWORLD</span>
+                <span className="land-section-kicker">YOUR PLACE IN TOBYWORLD</span>
                 <h1>{communityProfile?.communityName || metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
                 <p>{communityProfile?.description || metadata?.description || (hasArtwork ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
               <div className="land-hero-deed-wrap">
                 <div className="land-hero-deed-label">
-                  <span>CANONICAL LORE DEED</span>
-                  <strong>#{tokenId!.toString()}</strong>
+                  <span><i aria-hidden="true" /> REVEALED CANONICAL LAND</span>
+                  <strong>DEED #{tokenId!.toString()}</strong>
                 </div>
                 <LoreDeedArt
                   tokenId={tokenId!}
@@ -204,6 +204,7 @@ export default function LandPage() {
                   showStatus
                   revealed={loreRevealed}
                 />
+                {loreRevealed && hasArtwork ? <div className="land-art-caption"><span>YOUR LAND</span><strong>{metadata?.name || `Lore Land Deed #${tokenId!.toString()}`}</strong></div> : null}
                 {typeof uriRead.data === "string" ? (
                   <div className="land-metadata-row">
                     <span>{metadataResult?.error ? "Metadata needs attention" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
