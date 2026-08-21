@@ -8,7 +8,7 @@ import { useReadContract } from "wagmi";
 import MyLoreDeeds from "@/components/land/MyLoreDeeds";
 import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
-import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
+import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
 import { TABOSHI1_ABI, TABOSHI1_ADDRESS, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ABI, TABOSHI_SEEDS_ADDRESS, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 import {
@@ -41,6 +41,7 @@ export default function WalletAssetViewer({
   const toby = useTokenBalance(owner, TOBY, { chainId: base.id });
   const patience = useTokenBalance(owner, PATIENCE, { chainId: base.id });
   const taboshi = useTokenBalance(owner, TABOSHI, { chainId: base.id });
+  const cbbtc = useTokenBalance(owner, CBBTC, { chainId: base.id });
 
   const leaf = useReadContract({
     address: TABOSHI1_ADDRESS,
@@ -88,6 +89,7 @@ export default function WalletAssetViewer({
       { symbol: "TOBY", note: "Pond token", image: "/tokens/toby.PNG", value: compact(toby.value, toby.decimals) },
       { symbol: "PATIENCE", note: "Ancient flame", image: "/ui/patience.webp", value: compact(patience.value, patience.decimals) },
       { symbol: "TABOSHI", note: "Awakened leaf", image: "/ui/taboshi.webp", value: compact(taboshi.value, taboshi.decimals) },
+      { symbol: "cbBTC", note: "Bitcoin on Base", image: "/tokens/cbbtc.svg", value: compact(cbbtc.value, cbbtc.decimals) },
       { symbol: "OLD LEAF", note: "Taboshi 1", image: "/ui/taboshi.webp", value: leafValue.toLocaleString() },
       { symbol: "SEED", note: "New seed", image: "/ui/seed.webp", value: seedValue.toLocaleString() },
       { symbol: "LORE LAND", note: "Canonical deed", image: null, value: loreValue.toLocaleString(), lore: true },
@@ -100,6 +102,8 @@ export default function WalletAssetViewer({
     patience.decimals,
     patience.value,
     seed.data,
+    cbbtc.decimals,
+    cbbtc.value,
     taboshi.decimals,
     taboshi.value,
     toby.decimals,
