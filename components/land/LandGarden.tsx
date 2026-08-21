@@ -22,7 +22,7 @@ export default function LandGarden({ seedBalance }: { seedBalance: bigint }) {
     <section className={`land-module land-garden-module land-garden-stage-${stage.level}`}>
       <div className="land-module-head">
         <div><span className="land-section-kicker">CULTIVATION</span><h2>Your garden</h2></div>
-        <span className="land-seed-count"><Image src="/seed.png" alt="" width={26} height={26} />{seedBalance.toLocaleString()} SEED</span>
+        <span className="land-seed-count"><Image src="/ui/seed.webp" alt="" width={26} height={26} />{seedBalance.toLocaleString()} SEED</span>
       </div>
 
       <div className="land-scene" aria-label={`Visual cultivation stage: ${stage.label}`}>

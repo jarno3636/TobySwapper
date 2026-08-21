@@ -27,10 +27,10 @@ export default function LandRelics({
 }) {
   const items = [
     { label: "TOBY", note: "pond affiliation", value: compact(toby), icon: "/tokens/toby.PNG" },
-    { label: "PATIENCE", note: "ancient flame", value: compact(patience), icon: "/tokens/patience.PNG" },
-    { label: "TABOSHI", note: "awakened leaf", value: compact(taboshi), icon: "/tokens/taboshi.PNG" },
-    { label: "OLD LEAF", note: "historical relic", value: oldLeaf.toLocaleString(), icon: "/tokens/taboshi.PNG" },
-    { label: "SEED", note: "new beginning", value: seed.toLocaleString(), icon: "/seed.png" },
+    { label: "PATIENCE", note: "ancient flame", value: compact(patience), icon: "/ui/patience.webp" },
+    { label: "TABOSHI", note: "awakened leaf", value: compact(taboshi), icon: "/ui/taboshi.webp" },
+    { label: "OLD LEAF", note: "historical relic", value: oldLeaf.toLocaleString(), icon: "/ui/taboshi.webp" },
+    { label: "SEED", note: "new beginning", value: seed.toLocaleString(), icon: "/ui/seed.webp" },
   ];
 
   return (
