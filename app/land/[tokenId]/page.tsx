@@ -76,6 +76,21 @@ export default function LandPage() {
     query: readQuery,
   });
 
+  const revealedRead = useReadContract({
+    address: LORE_COLLECTION_ADDRESS,
+    abi: LORE_DEEDS_ABI,
+    functionName: "revealed",
+    chainId: base.id,
+    query: {
+      staleTime: 15_000,
+      refetchInterval: false,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: "always",
+      retry: 1,
+    },
+  });
+
   const owner = typeof ownerRead.data === "string" ? ownerRead.data as Address : undefined;
 
   const ecosystem = useReadContracts({
@@ -96,6 +111,12 @@ export default function LandPage() {
   const oldLeaf = typeof values[3]?.result === "bigint" ? values[3].result : 0n;
   const seed = typeof values[4]?.result === "bigint" ? values[4].result : 0n;
 
+  const loreRevealed = revealedRead.data === true;
+
+  useEffect(() => {
+    if (loreRevealed) void uriRead.refetch();
+  }, [loreRevealed, tokenId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (typeof uriRead.data !== "string") {
       setMetadata(null);
@@ -103,14 +124,41 @@ export default function LandPage() {
       return;
     }
     let cancelled = false;
-    fetchLoreMetadataResult(uriRead.data).then((result) => {
+    fetchLoreMetadataResult(uriRead.data, loreRevealed).then(async (result) => {
+      if (cancelled) return;
+
+      // Public IPFS gateways can occasionally reject browser requests even when
+      // the metadata is healthy. Once the contract says reveal is live, use the
+      // existing server resolver only as a fallback so the normal path stays
+      // client-side and Hobby-tier friendly.
+      if (loreRevealed && result.error && tokenId !== null) {
+        try {
+          const response = await fetch(`/api/lore/metadata?tokenId=${tokenId.toString()}`, { cache: "no-store" });
+          if (response.ok) {
+            const payload = await response.json();
+            if (!cancelled && payload?.metadata && typeof payload.metadata === "object") {
+              const fallbackResult: LoreMetadataResult = {
+                metadata: payload.metadata as LoreMetadata,
+                sourceUri: typeof payload.tokenUri === "string" ? payload.tokenUri : uriRead.data,
+                resolvedMetadataUri: typeof payload.metadataUri === "string" ? payload.metadataUri : null,
+                directImage: payload.source === "direct-image" && typeof payload.image === "string" ? payload.image : null,
+                error: null,
+              };
+              setMetadata(fallbackResult.metadata);
+              setMetadataResult(fallbackResult);
+              return;
+            }
+          }
+        } catch {}
+      }
+
       if (!cancelled) {
         setMetadata(result.metadata);
         setMetadataResult(result);
       }
     });
     return () => { cancelled = true; };
-  }, [uriRead.data]);
+  }, [uriRead.data, loreRevealed]);
 
   const hasArtwork = Boolean(
     metadataResult?.directImage ||
@@ -154,10 +202,11 @@ export default function LandPage() {
                   className="land-hero-canonical-deed"
                   eager
                   showStatus
+                  revealed={loreRevealed}
                 />
                 {typeof uriRead.data === "string" ? (
                   <div className="land-metadata-row">
-                    <span>{metadataResult?.error ? "Metadata needs attention" : "Canonical tokenURI connected"}</span>
+                    <span>{metadataResult?.error ? "Metadata needs attention" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
                     {metadataResult?.resolvedMetadataUri && !metadataResult.resolvedMetadataUri.startsWith("data:") ? (
                       <a href={metadataResult.resolvedMetadataUri} target="_blank" rel="noreferrer">View metadata ↗</a>
                     ) : null}
