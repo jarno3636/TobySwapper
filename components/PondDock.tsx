@@ -25,9 +25,9 @@ function AtlasDockIcon() {
 
 const items = [
   { id: "swap", label: "Pond", href: "/#swap", custom: "swap" as const },
-  { id: "pouch", label: "Pouch", href: "/taboshi1#pouch", icon: "/seed.png" },
+  { id: "pouch", label: "Pouch", href: "/taboshi1#pouch", icon: "/ui/seed.webp" },
   { id: "world", label: "World", href: "/world", custom: "atlas" as const },
-  { id: "market", label: "Market", href: "/world/exchange", icon: "/tokens/taboshi.PNG" },
+  { id: "market", label: "Market", href: "/world/exchange", icon: "/ui/taboshi.webp" },
 ] as const;
 
 function DockVisual({ item }: { item: (typeof items)[number] }) {

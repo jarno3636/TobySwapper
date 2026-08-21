@@ -10,13 +10,13 @@ export default function Background() {
       <div className="ambient-orb ambient-orb-warm" />
       <div className="ambient-orb ambient-orb-green" />
       <div className="ambient-token ambient-token-taboshi">
-        <Image src="/tokens/taboshi.PNG" alt="" width={210} height={210} />
+        <Image src="/ui/taboshi.webp" alt="" width={210} height={210} />
       </div>
       <div className="ambient-token ambient-token-patience">
-        <Image src="/tokens/patience.PNG" alt="" width={210} height={210} />
+        <Image src="/ui/patience.webp" alt="" width={210} height={210} />
       </div>
       <div className="ambient-token ambient-token-sato">
-        <Image src="/tokens/sato.PNG" alt="" width={170} height={170} className="rounded-full" />
+        <Image src="/ui/sato.webp" alt="" width={170} height={170} className="rounded-full" />
       </div>
     </div>
   );

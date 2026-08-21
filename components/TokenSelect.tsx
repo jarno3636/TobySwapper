@@ -13,10 +13,10 @@ export type TokenChoice = Address | "ETH";
 const iconMap: Record<string, string> = {
   ETH: "/tokens/baseeth.PNG",
   WETH: "/tokens/baseeth.PNG",
-  USDC: "/tokens/usdc.PNG",
+  USDC: "/ui/usdc.webp",
   TOBY: "/tokens/toby.PNG",
-  PATIENCE: "/tokens/patience.PNG",
-  TABOSHI: "/tokens/taboshi.PNG",
+  PATIENCE: "/ui/patience.webp",
+  TABOSHI: "/ui/taboshi.webp",
 };
 
 const tokenCopy: Record<string, string> = {

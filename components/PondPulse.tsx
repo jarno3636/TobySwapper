@@ -149,7 +149,7 @@ export default function PondPulse() {
       <Image src="/tokens/toby.PNG" alt="" width={110} height={110} className="pond-pulse-toby" aria-hidden="true" />
       <div className="pond-pulse-head">
         <div className="pond-pulse-title">
-          <div className="pond-pulse-orb"><Image src="/tokens/sato.PNG" alt="" fill sizes="54px" className="object-contain" /></div>
+          <div className="pond-pulse-orb"><Image src="/ui/sato.webp" alt="" fill sizes="54px" className="object-contain" /></div>
           <div><span>LIVE ON BASE · POND LEDGER</span><h2>Pond pulse</h2><p>Burned supply, treasury depth, seeds and draws — read straight from the pond.</p></div>
         </div>
         <button type="button" className="pond-pulse-status" onClick={refresh} disabled={refreshCooling} title={refreshCooling ? "Live stats refreshed — available again shortly" : "Refresh live stats"}><i className={paused ? "is-quiet" : ""} />{refreshCooling ? "SYNCED" : status}<b className={refreshCooling ? "is-cooling" : ""}>↻</b></button>

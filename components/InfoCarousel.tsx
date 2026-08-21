@@ -24,11 +24,11 @@ type Item =
 
 const ITEMS: Item[] = [
   { kind: "token",   title: "TOBY",     icon: "/tokens/toby.PNG",     address: TOBY },
-  { kind: "token",   title: "PATIENCE", icon: "/tokens/patience.PNG", address: PATIENCE },
-  { kind: "token",   title: "TABOSHI",  icon: "/tokens/taboshi.PNG",  address: TABOSHI },
-  { kind: "swapper", title: "SWAPPER",  icon: "/toby2.PNG",           address: SWAPPER },
+  { kind: "token",   title: "PATIENCE", icon: "/ui/patience.webp", address: PATIENCE },
+  { kind: "token",   title: "TABOSHI",  icon: "/ui/taboshi.webp",  address: TABOSHI },
+  { kind: "swapper", title: "SWAPPER",  icon: "/ui/toby2.webp",           address: SWAPPER },
   { kind: "link",    title: "toadgod.xyz",  icon: "/tobyworld.PNG", href: "https://toadgod.xyz",         blurb: "Official site: lore, links, and updates." },
-  { kind: "link",    title: "Telegram",     icon: "/toadlore.PNG",  href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
+  { kind: "link",    title: "Telegram",     icon: "/ui/toadlore.webp",  href: "https://t.me/toadgang/212753", blurb: "Join Toadgang — community chat & alpha." },
   { kind: "link",    title: "@toadgod1017", icon: "/twitter.PNG",   href: "https://x.com/toadgod1017?s=21", blurb: "Follow on X for drops & news." },
 ];
 

@@ -29,7 +29,7 @@ const communityLinks: Destination[] = [
     title: "ToadVault",
     copy: "Speculation profiles, consensus theories, predictions, reactions and the Tobyworld mindshare map — mined from Toad Gang history.",
     href: "https://toadvault.xyz",
-    icon: "/tokens/sato.PNG",
+    icon: "/ui/sato.webp",
     accent: "cyan",
   },
   {
@@ -37,7 +37,7 @@ const communityLinks: Destination[] = [
     title: "Community Store",
     copy: "Wear a little bit of the pond out in the world.",
     href: "https://slice.so/store/2223",
-    icon: "/tokens/taboshi.PNG",
+    icon: "/ui/taboshi.webp",
     accent: "gold",
   },
 ];
@@ -48,7 +48,7 @@ const pondLinks: Destination[] = [
     title: "My Tobyworld",
     copy: "Pouch, Seeds, relics, Lore Land and your place in the world.",
     href: "/taboshi1",
-    icon: "/seed.png",
+    icon: "/ui/seed.webp",
     accent: "green",
   },
   {
@@ -56,7 +56,7 @@ const pondLinks: Destination[] = [
     title: "Explore Lands",
     copy: "Wander named Lore Lands and visit community places.",
     href: "/world",
-    icon: "/tokens/sato.PNG",
+    icon: "/ui/sato.webp",
     accent: "cyan",
   },
   {
@@ -72,7 +72,7 @@ const pondLinks: Destination[] = [
     title: "Tobyworld Atlas",
     copy: "Explore the map, paths, lore and hidden corners of the pond.",
     href: "https://farcaster.xyz/miniapps/6RxWwBQYOf63/tobyworld-atlas",
-    icon: "/tokens/sato.PNG",
+    icon: "/ui/sato.webp",
     accent: "cyan",
   },
 ];
@@ -118,7 +118,7 @@ export default function WorldLinks() {
           </p>
         </div>
         <div className="mini-art-stack" aria-hidden="true">
-          <span className="mini-art-back"><Image src="/tokens/sato.PNG" alt="" fill sizes="44px" className="object-cover" /></span>
+          <span className="mini-art-back"><Image src="/ui/sato.webp" alt="" fill sizes="44px" className="object-cover" /></span>
           <span className="mini-art-front"><Image src="/tokens/toby.PNG" alt="" fill sizes="52px" className="object-contain" /></span>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function WorldLinks() {
 
       <div className="pond-community-note mt-4 flex items-center gap-3 rounded-[20px] border border-[var(--line)] px-4 py-3">
         <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full shadow-sm">
-          <Image src="/tokens/sato.PNG" alt="Sato" fill sizes="36px" className="object-cover" />
+          <Image src="/ui/sato.webp" alt="Sato" fill sizes="36px" className="object-cover" />
         </div>
         <p className="text-[11px] leading-relaxed text-inkSub">
           Official and community links are labeled separately so it is always clear which part of the pond you are visiting.
