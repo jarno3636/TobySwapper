@@ -45,7 +45,7 @@ function MarketNoticeIcon({ kind }: { kind: "success" | "error" | "info" }) {
 }
 
 function AssetVisual({ kind }: { kind: MarketplaceAssetKind }) {
-  if (kind === "seed") return <span className="market-asset-art is-seed"><Image src="/seed.png" alt="" fill sizes="62px" className="object-cover" /></span>;
+  if (kind === "seed") return <span className="market-asset-art is-seed"><Image src="/ui/seed.webp" alt="" fill sizes="62px" className="object-cover" /></span>;
   return <span className={`market-asset-art ${kind === "old-land" ? "is-old-land" : "is-lore-land"}`}><b>△</b><i /></span>;
 }
 
