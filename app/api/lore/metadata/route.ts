@@ -28,23 +28,18 @@ const client = createPublicClient({
 
 function uriCandidates(value: string) {
   const uri = value.trim();
-  if (!uri) return [];
-  if (uri.startsWith("data:") || uri.startsWith("https://") || uri.startsWith("http://")) {
-    return [uri];
-  }
+  if (!uri) return [] as string[];
+  if (uri.startsWith("data:") || uri.startsWith("https://") || uri.startsWith("http://")) return [uri];
   if (uri.startsWith("ar://")) return [`https://arweave.net/${uri.slice(5)}`];
 
-  const path =
-    uri.startsWith("ipfs://ipfs/")
-      ? uri.slice(12)
-      : uri.startsWith("ipfs://")
-        ? uri.slice(7)
-        : null;
+  const path = uri.startsWith("ipfs://ipfs/")
+    ? uri.slice(12)
+    : uri.startsWith("ipfs://")
+      ? uri.slice(7)
+      : null;
 
   if (!path) return [uri];
 
-  // Different public gateways fail independently. Server-side fetch also avoids
-  // browser CORS rules that can block otherwise valid NFT metadata.
   return [
     `https://dweb.link/ipfs/${path}`,
     `https://ipfs.io/ipfs/${path}`,
@@ -74,65 +69,119 @@ function isImageUri(uri: string, contentType?: string | null) {
   return /\.(png|jpe?g|gif|webp|svg)(?:$|[?#])/i.test(uri);
 }
 
+function hasTraits(metadata: any) {
+  return Array.isArray(metadata?.attributes) && metadata.attributes.some((trait: any) => {
+    const value = trait?.value;
+    return value !== null && value !== undefined && String(value).trim() !== "";
+  });
+}
+
+function looksPreReveal(metadata: any) {
+  if (!metadata || typeof metadata !== "object") return true;
+  const text = `${metadata.name || ""} ${metadata.description || ""}`.toLowerCase();
+  return !hasTraits(metadata) || /sealed|behind the veil|waits behind|unrevealed|not revealed|landscape still waits/.test(text);
+}
+
+function responseHeaders(revealed: boolean, forceFresh: boolean) {
+  if (revealed || forceFresh) return { "Cache-Control": "no-store, max-age=0" };
+  return { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" };
+}
+
+function cacheBust(uri: string, forceFresh: boolean) {
+  if (!forceFresh || !/^https?:\/\//i.test(uri)) return uri;
+  const separator = uri.includes("?") ? "&" : "?";
+  return `${uri}${separator}tobyswap_reveal=${Date.now()}`;
+}
+
 export async function GET(request: NextRequest) {
   const tokenIdText = request.nextUrl.searchParams.get("tokenId") || "";
-  const revealRefresh = request.nextUrl.searchParams.get("reveal") === "1";
-  const cacheHeader = revealRefresh
-    ? "no-store, max-age=0"
-    : "public, s-maxage=300, stale-while-revalidate=900";
+  const forceFresh = request.nextUrl.searchParams.get("fresh") === "1" || request.nextUrl.searchParams.get("reveal") === "1";
 
   if (!/^\d+$/.test(tokenIdText)) {
     return NextResponse.json({ error: "Invalid tokenId." }, { status: 400 });
   }
 
   const tokenId = BigInt(tokenIdText);
-
-  // Canonical ids are inherited from the 1..4000 Lore partition.
   if (tokenId < 1n || tokenId > 4000n) {
     return NextResponse.json({ error: "Lore tokenId out of range." }, { status: 400 });
   }
 
   try {
-    const tokenUri = await client.readContract({
-      address: LORE_COLLECTION_ADDRESS,
-      abi: LORE_DEEDS_ABI,
-      functionName: "tokenURI",
-      args: [tokenId],
-    });
+    const [revealedRaw, unrevealedUriRaw, tokenUriRaw] = await Promise.all([
+      client.readContract({
+        address: LORE_COLLECTION_ADDRESS,
+        abi: LORE_DEEDS_ABI,
+        functionName: "revealed",
+      }),
+      client.readContract({
+        address: LORE_COLLECTION_ADDRESS,
+        abi: LORE_DEEDS_ABI,
+        functionName: "unrevealedURI",
+      }),
+      client.readContract({
+        address: LORE_COLLECTION_ADDRESS,
+        abi: LORE_DEEDS_ABI,
+        functionName: "tokenURI",
+        args: [tokenId],
+      }),
+    ]);
 
-    if (typeof tokenUri !== "string" || !tokenUri.trim()) {
+    const revealed = revealedRaw === true;
+    const tokenUri = typeof tokenUriRaw === "string" ? tokenUriRaw.trim() : "";
+    const unrevealedUri = typeof unrevealedUriRaw === "string" ? unrevealedUriRaw.trim() : "";
+    const headers = responseHeaders(revealed, forceFresh);
+
+    if (!tokenUri) {
       return NextResponse.json(
-        { tokenId: tokenIdText, tokenUri: null, metadata: null, image: null, error: "No token URI returned." },
-        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } },
+        { tokenId: tokenIdText, revealed, tokenUri: null, metadata: null, image: null, error: "No token URI returned." },
+        { status: 502, headers },
+      );
+    }
+
+    // Once reveal is live, the unrevealed URI is never a valid successful result.
+    if (revealed && unrevealedUri && tokenUri === unrevealedUri) {
+      return NextResponse.json(
+        {
+          tokenId: tokenIdText,
+          revealed,
+          tokenUri,
+          unrevealedUri,
+          metadata: null,
+          image: null,
+          error: "Reveal is live but tokenURI still equals unrevealedURI.",
+        },
+        { status: 409, headers },
       );
     }
 
     if (tokenUri.startsWith("data:application/json")) {
       const metadata = decodeInlineJson(tokenUri);
+      if (revealed && looksPreReveal(metadata)) {
+        return NextResponse.json(
+          { tokenId: tokenIdText, revealed, tokenUri, metadata: null, image: null, error: "Reveal is live but inline metadata still looks prereveal." },
+          { status: 409, headers },
+        );
+      }
       return NextResponse.json(
-        { tokenId: tokenIdText, tokenUri, metadata, image: metadata?.image || metadata?.image_url || metadata?.imageUrl || null, source: "inline" },
-        { headers: { "Cache-Control": cacheHeader } },
+        { tokenId: tokenIdText, revealed, tokenUri, metadata, image: metadata?.image || metadata?.image_url || metadata?.imageUrl || null, source: "inline" },
+        { headers },
       );
     }
 
     if (isImageUri(tokenUri)) {
       return NextResponse.json(
-        { tokenId: tokenIdText, tokenUri, metadata: null, image: tokenUri, source: "direct-image" },
-        { headers: { "Cache-Control": cacheHeader } },
+        { tokenId: tokenIdText, revealed, tokenUri, metadata: null, image: tokenUri, source: "direct-image" },
+        { headers },
       );
     }
 
     let lastError = "Metadata could not be loaded.";
+    let staleMetadataSeen = false;
 
     for (const candidate of uriCandidates(tokenUri)) {
       try {
-        const requestUri = revealRefresh && /^https?:\/\//i.test(candidate)
-          ? `${candidate}${candidate.includes("?") ? "&" : "?"}tobyswap_reveal=1`
-          : candidate;
-        const response = await fetch(requestUri, {
-          headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5" },
-          // This route is only a fallback for gateways that block browser CORS.
-          // Do not let a pre-reveal gateway response sit in Next's data cache.
+        const response = await fetch(cacheBust(candidate, revealed || forceFresh), {
+          headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5", "cache-control": "no-cache" },
           cache: "no-store",
         });
 
@@ -144,8 +193,8 @@ export async function GET(request: NextRequest) {
         const contentType = response.headers.get("content-type");
         if (isImageUri(candidate, contentType)) {
           return NextResponse.json(
-            { tokenId: tokenIdText, tokenUri, metadataUri: candidate, metadata: null, image: candidate, source: "direct-image" },
-            { headers: { "Cache-Control": cacheHeader } },
+            { tokenId: tokenIdText, revealed, tokenUri, metadataUri: candidate, metadata: null, image: candidate, source: "direct-image" },
+            { headers },
           );
         }
 
@@ -153,16 +202,25 @@ export async function GET(request: NextRequest) {
         const metadata = JSON.parse(text);
         if (!metadata || typeof metadata !== "object") continue;
 
+        // Revealed() is authoritative. Never return a successful sealed/no-trait
+        // payload after reveal; try the next gateway instead.
+        if (revealed && looksPreReveal(metadata)) {
+          staleMetadataSeen = true;
+          lastError = "Gateway returned prereveal metadata after reveal.";
+          continue;
+        }
+
         return NextResponse.json(
           {
             tokenId: tokenIdText,
+            revealed,
             tokenUri,
             metadataUri: candidate,
             metadata,
             image: metadata.image || metadata.image_url || metadata.imageUrl || null,
             source: "metadata",
           },
-          { headers: { "Cache-Control": cacheHeader } },
+          { headers },
         );
       } catch (error: any) {
         lastError = String(error?.message || "Metadata source failed.").slice(0, 160);
@@ -170,13 +228,21 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { tokenId: tokenIdText, tokenUri, metadata: null, image: null, error: lastError },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } },
+      {
+        tokenId: tokenIdText,
+        revealed,
+        tokenUri,
+        metadata: null,
+        image: null,
+        staleMetadataSeen,
+        error: lastError,
+      },
+      { status: revealed ? 502 : 200, headers },
     );
   } catch (error: any) {
     return NextResponse.json(
       { error: String(error?.shortMessage || error?.message || "Lore read failed.").slice(0, 180) },
-      { status: 502, headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+      { status: 502, headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   }
 }
