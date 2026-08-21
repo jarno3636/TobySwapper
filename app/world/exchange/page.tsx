@@ -14,7 +14,7 @@ export default function LandExchangePage() {
         <header className="world-topbar"><Link prefetch={false} href="/world">← World</Link><span>TOBYWORLD · MARKET</span></header>
         <section className="exchange-hero exchange-hero-clean">
           <div className="exchange-hero-copy"><span className="land-section-kicker">THE MARKET GATE</span><h1>Tobyworld Market</h1><p>Buy, sell, and signal what you are looking for across SEED, Old Lore Land, and Canonical Lore Land — all on Base.</p><div className="exchange-hero-actions"><a href="#market">Browse market ↓</a><Link prefetch={false} href="/taboshi1#pouch">My assets</Link></div></div>
-          <div className="exchange-hero-art" aria-hidden="true"><span className="exchange-gate-ring r1" /><span className="exchange-gate-ring r2" /><span className="exchange-gate-rune">△</span><Image src="/seed.png" alt="" width={78} height={78} className="exchange-seed" /><Image src="/tokens/toby.PNG" alt="" width={72} height={72} className="exchange-frog" /></div>
+          <div className="exchange-hero-art" aria-hidden="true"><span className="exchange-gate-ring r1" /><span className="exchange-gate-ring r2" /><span className="exchange-gate-rune">△</span><Image src="/ui/seed.webp" alt="" width={78} height={78} className="exchange-seed" /><Image src="/tokens/toby.PNG" alt="" width={72} height={72} className="exchange-frog" /></div>
         </section>
         <div id="market" className="scroll-mt-24"><MarketplaceShell /></div>
       </main>
