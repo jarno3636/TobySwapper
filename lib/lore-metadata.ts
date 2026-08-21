@@ -103,6 +103,22 @@ export function loreImage(metadata?: LoreMetadata | null) {
   );
 }
 
+export function hasLoreTraits(metadata?: LoreMetadata | null) {
+  return Array.isArray(metadata?.attributes) && metadata!.attributes!.some((trait) => {
+    const value = trait?.value;
+    return value !== null && value !== undefined && String(value).trim() !== "";
+  });
+}
+
+export function looksLikePreRevealMetadata(metadata?: LoreMetadata | null) {
+  if (!metadata) return true;
+  const text = `${metadata.name || ""} ${metadata.description || ""}`.toLowerCase();
+  return (
+    !hasLoreTraits(metadata) ||
+    /sealed|behind the veil|waits behind|unrevealed|not revealed|landscape still waits/.test(text)
+  );
+}
+
 export function loreImageCandidates(metadata?: LoreMetadata | null, directImage?: string | null) {
   const raw =
     directImage ||

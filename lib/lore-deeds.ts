@@ -118,6 +118,20 @@ export const LORE_DEEDS_ABI = [
   },
   {
     type: "function",
+    name: "unrevealedURI",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+  },
+  {
+    type: "function",
+    name: "revealTimestamp",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint64" }],
+  },
+  {
+    type: "function",
     name: "safeTransferFrom",
     stateMutability: "nonpayable",
     inputs: [
