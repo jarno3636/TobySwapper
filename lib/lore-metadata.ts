@@ -21,7 +21,15 @@ export type LoreMetadataResult = {
   error: string | null;
 };
 
-const CACHE_MS = 6 * 60 * 60_000;
+const REVEALED_CACHE_MS = 6 * 60 * 60_000;
+const UNREVEALED_CACHE_MS = 5 * 60_000;
+
+function cacheMsFor(result?: LoreMetadataResult | null) {
+  const metadata = result?.metadata;
+  const hasTraits = Array.isArray(metadata?.attributes) && metadata!.attributes!.some((trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "");
+  const hasFinalMedia = Boolean(result?.directImage || metadata?.image || metadata?.image_url || metadata?.imageUrl || metadata?.animation_url);
+  return hasTraits || hasFinalMedia ? REVEALED_CACHE_MS : UNREVEALED_CACHE_MS;
+}
 const memory = new Map<string, { at: number; result: LoreMetadataResult }>();
 const inflight = new Map<string, Promise<LoreMetadataResult>>();
 
@@ -67,7 +75,7 @@ function readStored(uri: string) {
     const raw = localStorage.getItem(storageKey(uri));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { at?: number; result?: LoreMetadataResult };
-    if (typeof parsed.at !== "number" || Date.now() - parsed.at > CACHE_MS || !parsed.result) {
+    if (typeof parsed.at !== "number" || !parsed.result || Date.now() - parsed.at > cacheMsFor(parsed.result)) {
       return null;
     }
     return { at: parsed.at, result: parsed.result };
@@ -111,7 +119,7 @@ export async function fetchLoreMetadataResult(
 
   if (!force) {
     const hot = memory.get(original);
-    if (hot && Date.now() - hot.at < CACHE_MS) return hot.result;
+    if (hot && Date.now() - hot.at < cacheMsFor(hot.result)) return hot.result;
 
     const stored = readStored(original);
     if (stored) {
