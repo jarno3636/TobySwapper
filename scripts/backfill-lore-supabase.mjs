@@ -7,6 +7,17 @@ const BUCKET = process.env.LORE_ART_BUCKET || "tobyswap-lore-art";
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const RPCS = [process.env.BASE_RPC_URL, process.env.NEXT_PUBLIC_BASE_RPC_URL, "https://mainnet.base.org"].filter(Boolean);
+const IPFS_GATEWAYS = (process.env.IPFS_GATEWAYS || [
+  "https://w3s.link/ipfs/",
+  "https://dweb.link/ipfs/",
+  "https://nftstorage.link/ipfs/",
+  "https://ipfs.io/ipfs/",
+  "https://gateway.pinata.cloud/ipfs/",
+].join(","))
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean)
+  .map((value) => value.endsWith("/") ? value : `${value}/`);
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error("Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SECRET_KEY.");
@@ -68,12 +79,7 @@ function uriCandidates(value) {
   if (uri.startsWith("ar://")) return [`https://arweave.net/${uri.slice(5)}`];
   const path = uri.startsWith("ipfs://ipfs/") ? uri.slice(12) : uri.startsWith("ipfs://") ? uri.slice(7) : null;
   if (!path) return [uri];
-  return [
-    `https://w3s.link/ipfs/${path}`,
-    `https://dweb.link/ipfs/${path}`,
-    `https://ipfs.io/ipfs/${path}`,
-    `https://gateway.pinata.cloud/ipfs/${path}`,
-  ];
+  return IPFS_GATEWAYS.map((gateway) => `${gateway}${path}`);
 }
 
 function resolveRelative(value, metadataUri) {
@@ -96,7 +102,7 @@ async function fetchWithTimeout(url, init = {}, ms = 6500) {
   }
 }
 
-async function fetchMetadata(tokenUri) {
+async function fetchMetadata(tokenUri, tokenId = 0, attempt = 0) {
   if (tokenUri.startsWith("data:application/json")) {
     const comma = tokenUri.indexOf(",");
     const header = tokenUri.slice(0, comma);
@@ -105,7 +111,10 @@ async function fetchMetadata(tokenUri) {
     return { metadata: JSON.parse(text), metadataUri: tokenUri };
   }
   let last = "metadata unavailable";
-  for (const url of uriCandidates(tokenUri)) {
+  const candidates = uriCandidates(tokenUri);
+  const offset = candidates.length ? (Number(tokenId || 0) + attempt) % candidates.length : 0;
+  const ordered = candidates.length ? [...candidates.slice(offset), ...candidates.slice(0, offset)] : candidates;
+  for (const url of ordered) {
     try {
       const response = await fetchWithTimeout(url, { headers: { accept: "application/json,*/*;q=0.5" }, cache: "no-store" }, META_TIMEOUT);
       if (!response.ok) { last = `${response.status} ${url}`; continue; }
@@ -152,11 +161,14 @@ async function markArtFailure(tokenId, message) {
   }).catch(() => {});
 }
 
-async function uploadArt(tokenId, imageValue, metadataUri, tokenUri) {
+async function uploadArt(tokenId, imageValue, metadataUri, tokenUri, attempt = 0) {
   const resolved = resolveRelative(imageValue, metadataUri || tokenUri);
   if (!resolved) throw new Error("No image URI in metadata");
   let last = "image unavailable";
-  for (const url of uriCandidates(resolved)) {
+  const candidates = uriCandidates(resolved);
+  const offset = candidates.length ? (Number(tokenId || 0) + attempt) % candidates.length : 0;
+  const ordered = candidates.length ? [...candidates.slice(offset), ...candidates.slice(0, offset)] : candidates;
+  for (const url of ordered) {
     try {
       const response = await fetchWithTimeout(url, { headers: { accept: "image/*,*/*;q=0.5" }, cache: "no-store" }, IMAGE_TIMEOUT);
       if (!response.ok) { last = `${response.status} ${url}`; continue; }
@@ -199,6 +211,7 @@ const total = queue.length;
 
 console.log(`Backfilling ${total} Lore deeds (${FROM}-${TO}), concurrency=${CONCURRENCY}, art=${!METADATA_ONLY}`);
 console.log(`Timeouts: metadata=${META_TIMEOUT}ms/gateway, image=${IMAGE_TIMEOUT}ms/gateway`);
+console.log(`IPFS gateways (${IPFS_GATEWAYS.length}): ${IPFS_GATEWAYS.join(" -> ")}`);
 
 function progress() {
   const processed = stats.metadataCached + stats.skipped + stats.metadataFailed;
@@ -238,7 +251,7 @@ async function processToken(tokenId) {
   let image;
   try {
     tokenUri = await client.readContract({ address: COLLECTION, abi, functionName: "tokenURI", args: [BigInt(tokenId)] });
-    ({ metadata, metadataUri } = await fetchMetadata(String(tokenUri)));
+    ({ metadata, metadataUri } = await fetchMetadata(String(tokenUri), tokenId));
     const traits = extractTraits(metadata);
     image = metadata?.image ?? metadata?.image_url ?? metadata?.imageUrl ?? null;
 
@@ -291,7 +304,7 @@ if (!METADATA_ONLY && RETRY_FAILED_ART && artRetryQueue.length) {
       const item = retryItems[cursor++];
       await sleep(300);
       try {
-        await uploadArt(item.tokenId, item.image, item.metadataUri, item.tokenUri);
+        await uploadArt(item.tokenId, item.image, item.metadataUri, item.tokenUri, 1);
         stats.artCached++;
         stats.artFailed = Math.max(0, stats.artFailed - 1);
         console.log(`#${item.tokenId} ART retry succeeded`);
