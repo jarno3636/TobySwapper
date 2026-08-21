@@ -27,8 +27,11 @@ const UNREVEALED_CACHE_MS = 5 * 60_000;
 function cacheMsFor(result?: LoreMetadataResult | null) {
   const metadata = result?.metadata;
   const hasTraits = Array.isArray(metadata?.attributes) && metadata!.attributes!.some((trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "");
-  const hasFinalMedia = Boolean(result?.directImage || metadata?.image || metadata?.image_url || metadata?.imageUrl || metadata?.animation_url);
-  return hasTraits || hasFinalMedia ? REVEALED_CACHE_MS : UNREVEALED_CACHE_MS;
+  // Placeholder metadata often includes an image too, so artwork alone cannot
+  // safely tell us that the collection is revealed. Keep image-only metadata
+  // on the short cache until real attributes arrive. The caller can force a
+  // refresh as soon as the onchain `revealed` flag flips.
+  return hasTraits ? REVEALED_CACHE_MS : UNREVEALED_CACHE_MS;
 }
 const memory = new Map<string, { at: number; result: LoreMetadataResult }>();
 const inflight = new Map<string, Promise<LoreMetadataResult>>();
@@ -131,6 +134,11 @@ export async function fetchLoreMetadataResult(
     if (existing) return existing;
   }
 
+  // Even forced reveal refreshes share an in-flight request for the same URI.
+  // This keeps the deed page + artwork component from hitting a gateway twice.
+  const active = inflight.get(original);
+  if (active) return active;
+
   const request = (async () => {
     // Inline JSON metadata is common for unrevealed NFTs.
     if (original.startsWith("data:application/json")) {
@@ -170,7 +178,7 @@ export async function fetchLoreMetadataResult(
     for (const uri of candidates) {
       try {
         const response = await fetch(uri, {
-          cache: "force-cache",
+          cache: force ? "no-store" : "force-cache",
           headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5" },
         });
 
