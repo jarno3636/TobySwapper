@@ -32,7 +32,33 @@ function traitTone(label: string): TraitTone {
   return "default";
 }
 
-function TraitIcon({ tone }: { tone: TraitTone }) {
+function normalizeTraitKey(label: string) {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function traitIconKind(label: string) {
+  const key = normalizeTraitKey(label);
+  if (key.includes("background")) return "background";
+  if (key.includes("core") || key.includes("crystal")) return "core";
+  if (key.includes("keeper") || key.includes("frog") || key.includes("toad")) return "keeper";
+  if (key === "land" || key.includes("biome") || key.includes("terrain") || key.includes("region")) return "land";
+  if (key.includes("relic") || key.includes("artifact") || key.includes("treasure")) return "relic";
+  if (key.includes("weather")) return "weather";
+  if (key.includes("season")) return "season";
+  if (key.includes("element")) return "element";
+  if (key.includes("power") || key.includes("ability")) return "power";
+  if (key.includes("guardian")) return "guardian";
+  if (key.includes("rarity") || key.includes("tier") || key.includes("class")) return "rarity";
+  return "sigil";
+}
+
+function labelHash(label: string) {
+  let hash = 0;
+  for (let i = 0; i < label.length; i += 1) hash = ((hash << 5) - hash + label.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+function TraitIcon({ label, tone }: { label: string; tone: TraitTone }) {
   const common = {
     width: 24,
     height: 24,
@@ -45,25 +71,49 @@ function TraitIcon({ tone }: { tone: TraitTone }) {
     "aria-hidden": true,
   };
 
-  if (tone === "sky") {
-    return <svg {...common}><path d="M4 15.5h16"/><path d="M6.5 15.5a5.5 5.5 0 0 1 11 0"/><path d="M12 4v2.1M5.9 6.6l1.5 1.5M18.1 6.6l-1.5 1.5"/><path d="M7 19h10"/></svg>;
+  const kind = traitIconKind(label);
+
+  if (kind === "background") {
+    return <svg {...common}><circle cx="16.8" cy="6.8" r="2.7"/><path d="M3.5 17.2 8.2 12l3.15 3.15 2.15-2.25 7 4.3"/><path d="M4 20h16"/><path d="M4.4 7.8c1.8-1.55 3.8-1.8 5.95-.75"/></svg>;
   }
-  if (tone === "core") {
-    return <svg {...common}><path d="M12 3.25 18.75 10 12 20.75 5.25 10 12 3.25Z"/><path d="m5.25 10 6.75 2.4L18.75 10M12 3.25v9.15M12 12.4v8.35"/></svg>;
+  if (kind === "core") {
+    return <svg {...common}><path d="M12 2.9 19 9.6 12 21.1 5 9.6 12 2.9Z"/><path d="m5 9.6 7 2.65 7-2.65M12 2.9v9.35M12 12.25v8.85"/><path d="m8.2 6.6 3.8 5.65 3.8-5.65"/></svg>;
   }
-  if (tone === "keeper") {
-    return <svg {...common}><path d="M6.25 9.25C6.25 5.8 8.55 4 12 4s5.75 1.8 5.75 5.25v4.25c0 3.9-2.65 6.5-5.75 6.5s-5.75-2.6-5.75-6.5V9.25Z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><path d="M9.2 14.3c.8.65 1.73.95 2.8.95s2-.3 2.8-.95"/><path d="M4.5 11.2 6.25 12M19.5 11.2 17.75 12"/></svg>;
+  if (kind === "keeper") {
+    return <svg {...common}><path d="M5.7 9.2C5.7 5.7 8.25 3.9 12 3.9s6.3 1.8 6.3 5.3v4.35c0 3.9-2.85 6.55-6.3 6.55s-6.3-2.65-6.3-6.55V9.2Z"/><circle cx="9" cy="9" r="1.05"/><circle cx="15" cy="9" r="1.05"/><path d="M9.1 14.35c.86.72 1.83 1.08 2.9 1.08s2.04-.36 2.9-1.08"/><path d="M3.8 10.8 5.7 12M20.2 10.8 18.3 12"/></svg>;
   }
-  if (tone === "land") {
-    return <svg {...common}><path d="m3.5 16.5 5.2-6 3.1 3.5 2.1-2.4 6.6 4.9"/><path d="M4 19h16"/><path d="M7 7.2c1.25-1.4 2.6-2.1 4.05-2.1 1.1 0 2.05.4 2.85 1.2"/></svg>;
+  if (kind === "land") {
+    return <svg {...common}><path d="M4 14.8c1.65-3.8 4.1-5.7 7.35-5.7 3.45 0 6.35 2.15 8.65 6.45"/><path d="M3.2 16.25c2.8 1.65 5.7 2.45 8.7 2.4 3.1-.05 6.05-.9 8.9-2.55"/><path d="M8.3 11.2c.45-2.15 1.75-3.35 3.9-3.6"/><path d="M13.2 8.15c1.15-.15 2.2.15 3.15.9"/></svg>;
   }
-  if (tone === "relic") {
-    return <svg {...common}><path d="M6 8.25h12v10.5H6z"/><path d="M8 8.25V5.5h8v2.75M6 12h12"/><path d="M12 10.75v2.5"/><path d="M9.3 16h5.4"/></svg>;
+  if (kind === "relic") {
+    return <svg {...common}><path d="M5.5 8.25h13v10.5h-13z"/><path d="M7.7 8.25V5.3h8.6v2.95M5.5 12h13"/><path d="m10.3 14.45 1.7-1.2 1.7 1.2-.65 2H10.95l-.65-2Z"/><path d="M8.5 20.25h7"/></svg>;
   }
-  if (tone === "rarity") {
-    return <svg {...common}><path d="m12 3 2.45 5.05L20 8.85l-4 3.9.95 5.5L12 15.65l-4.95 2.6.95-5.5-4-3.9 5.55-.8L12 3Z"/><path d="M12 7.2v4.9"/></svg>;
+  if (kind === "weather") {
+    return <svg {...common}><path d="M6.2 14.2h11.2a3.1 3.1 0 0 0 .15-6.2 5.2 5.2 0 0 0-9.85 1.6A2.35 2.35 0 0 0 6.2 14.2Z"/><path d="m8 17.2-1.1 2M12.2 17.2l-1.1 2M16.4 17.2l-1.1 2"/></svg>;
   }
-  return <svg {...common}><path d="m12 3.5 7 4v8l-7 4-7-4v-8l7-4Z"/><circle cx="12" cy="11.5" r="2.25"/><path d="M12 13.75v2.25"/></svg>;
+  if (kind === "season") {
+    return <svg {...common}><path d="M18.8 4.2C12.7 4.55 7.1 7.3 5 13.2c3.2 1.05 7.45.35 9.9-2.1 1.75-1.75 2.95-4.2 3.9-6.9Z"/><path d="M5.3 18.9c2.5-4.4 5.65-7.2 9.45-8.5"/><path d="M8.4 14.4c.1 1.55.6 2.85 1.5 3.9"/></svg>;
+  }
+  if (kind === "element") {
+    return <svg {...common}><path d="M12 3.2c2.2 3.05 4.9 5.45 4.9 9.15A4.9 4.9 0 0 1 12 17.3a4.9 4.9 0 0 1-4.9-4.95C7.1 8.65 9.8 6.25 12 3.2Z"/><path d="M12 17.3v3.5M8.8 19.1h6.4"/></svg>;
+  }
+  if (kind === "power") {
+    return <svg {...common}><path d="m13.4 2.9-7 10.1h5l-.8 8.1 7-10.3h-5.05l.85-7.9Z"/><path d="M4.2 6.2h2.4M17.5 17.8h2.3"/></svg>;
+  }
+  if (kind === "guardian") {
+    return <svg {...common}><path d="M12 3.2 19 6v5.1c0 4.6-2.6 7.65-7 9.7-4.4-2.05-7-5.1-7-9.7V6l7-2.8Z"/><path d="m8.8 11.7 2.05 2.05 4.45-4.5"/></svg>;
+  }
+  if (kind === "rarity") {
+    return <svg {...common}><path d="m12 3 2.45 5.05L20 8.85l-4 3.9.95 5.5L12 15.65l-4.95 2.6.95-5.5-4-3.9 5.55-.8L12 3Z"/><circle cx="12" cy="11" r="1.55"/></svg>;
+  }
+
+  // Unknown future traits still receive a deterministic one-of-a-kind sigil,
+  // rather than falling back to the same generic icon for every new trait.
+  const hash = labelHash(label);
+  const dotA = 5 + (hash % 5);
+  const dotB = 14 + ((hash >> 3) % 5);
+  const notch = 7 + ((hash >> 6) % 4);
+  return <svg {...common}><path d={`M12 3.4 19 7.2v9.6L12 20.6 5 16.8V7.2L12 3.4Z`}/><path d={`M${notch} 8.1 12 11.6 17 8.1M12 11.6v5.2`}/><circle cx={dotA} cy="15.2" r=".8"/><circle cx={dotB} cy="15.2" r=".8"/></svg>;
 }
 
 export default function LandTraits({ metadata, revealed = false, loading = false, error = null, onRefresh, rarityByTrait = {} }: Props) {
@@ -94,22 +144,18 @@ export default function LandTraits({ metadata, revealed = false, loading = false
         <div className="land-traits-grid">
           {traits.map((trait) => (
             <article className="land-trait-card" data-tone={trait.tone} key={`${trait.label}-${trait.index}`}>
-              <div className="land-trait-icon" aria-hidden="true"><TraitIcon tone={trait.tone} /></div>
+              <div className="land-trait-icon" aria-hidden="true"><TraitIcon label={trait.label} tone={trait.tone} /></div>
               <div className="land-trait-copy">
                 <span>{trait.label}</span>
                 <strong title={trait.value}>{trait.value}</strong>
                 <div className="land-trait-meta">
-                  <small>CANONICAL ATTRIBUTE</small>
                   <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`}>
                     <b>RARITY</b>
                     <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : "TBD"}</em>
                   </span>
                 </div>
               </div>
-              <span className="land-trait-canonical" title="Read from canonical metadata" aria-label="Canonical metadata trait">
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.2 8.2 2.25 2.25L11.9 5"/></svg>
-              </span>
-              <div className="land-trait-watermark" aria-hidden="true"><TraitIcon tone={trait.tone} /></div>
+              <div className="land-trait-watermark" aria-hidden="true"><TraitIcon label={trait.label} tone={trait.tone} /></div>
             </article>
           ))}
         </div>
