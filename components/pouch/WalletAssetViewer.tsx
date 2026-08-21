@@ -86,10 +86,10 @@ export default function WalletAssetViewer({
 
     return [
       { symbol: "TOBY", note: "Pond token", image: "/tokens/toby.PNG", value: compact(toby.value, toby.decimals) },
-      { symbol: "PATIENCE", note: "Ancient flame", image: "/tokens/patience.PNG", value: compact(patience.value, patience.decimals) },
-      { symbol: "TABOSHI", note: "Awakened leaf", image: "/tokens/taboshi.PNG", value: compact(taboshi.value, taboshi.decimals) },
-      { symbol: "OLD LEAF", note: "Taboshi 1", image: "/tokens/taboshi.PNG", value: leafValue.toLocaleString() },
-      { symbol: "SEED", note: "New seed", image: "/seed.png", value: seedValue.toLocaleString() },
+      { symbol: "PATIENCE", note: "Ancient flame", image: "/ui/patience.webp", value: compact(patience.value, patience.decimals) },
+      { symbol: "TABOSHI", note: "Awakened leaf", image: "/ui/taboshi.webp", value: compact(taboshi.value, taboshi.decimals) },
+      { symbol: "OLD LEAF", note: "Taboshi 1", image: "/ui/taboshi.webp", value: leafValue.toLocaleString() },
+      { symbol: "SEED", note: "New seed", image: "/ui/seed.webp", value: seedValue.toLocaleString() },
       { symbol: "LORE LAND", note: "Canonical deed", image: null, value: loreValue.toLocaleString(), lore: true },
       { symbol: "OLD LAND", note: "Previous collection", image: null, value: oldLoreValue.toLocaleString(), oldLand: true },
     ];
