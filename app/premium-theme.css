@@ -4725,3 +4725,114 @@ html[data-theme="dark"] .land-trait-canonical{border-color:rgba(128,205,191,.12)
   .land-trait-canonical{width:16px;height:16px}
   .land-trait-canonical svg{width:10px;height:10px}
 }
+
+/* ================================================================
+   LORE LAND — LAND-FIRST PROFILE / SUPABASE FAST PATH
+   2026-08-21
+   ================================================================ */
+.land-page .land-nameplate{
+  position:relative;
+  display:grid;
+  grid-template-columns:54px minmax(0,1fr) auto;
+  gap:15px;
+  align-items:center;
+  margin:0 0 14px;
+  padding:18px 19px;
+  overflow:hidden;
+  border:1px solid rgba(47,119,108,.14);
+  border-radius:25px;
+  background:
+    radial-gradient(circle at 92% 0,rgba(79,177,155,.10),transparent 31%),
+    linear-gradient(145deg,rgba(244,251,248,.96),rgba(228,243,238,.88));
+  box-shadow:0 14px 34px rgba(28,73,68,.08),inset 0 1px 0 rgba(255,255,255,.8);
+}
+.land-nameplate::after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(70,159,142,.24),transparent)}
+.land-nameplate-mark{display:grid;width:54px;height:54px;place-items:center;border:1px solid rgba(49,129,114,.14);border-radius:17px;background:rgba(255,255,255,.62);color:#3a8d7c;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.land-nameplate-mark svg{width:31px;height:31px;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.land-nameplate-copy{min-width:0}
+.land-nameplate-copy .land-section-kicker{display:block;margin-bottom:5px}
+.land-nameplate-copy h1{margin:0;color:#103f42;font-size:clamp(27px,5vw,46px);font-weight:650;letter-spacing:-.055em;line-height:1.02;overflow-wrap:anywhere}
+.land-nameplate-copy>p{max-width:650px;margin:7px 0 0;color:#6e8883;font-size:10px;line-height:1.5}
+.land-nameplate-side{display:flex;min-width:112px;flex-direction:column;align-items:flex-end;gap:9px}
+.land-nameplate-deed{color:#718f89;font-size:7px;font-weight:950;letter-spacing:.13em;white-space:nowrap}
+.land-nameplate-edit{display:inline-flex;min-height:39px;align-items:center;justify-content:center;gap:7px;padding:0 13px;border:1px solid rgba(49,127,113,.16);border-radius:999px;background:rgba(241,250,247,.88);color:#347d70;font-size:8px;font-weight:950;letter-spacing:.035em}
+.land-nameplate-edit svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.land-nameplate-editor{display:grid;gap:8px}
+.land-nameplate-editor label{color:#73918b;font-size:7px;font-weight:950;letter-spacing:.13em}
+.land-nameplate-editor input{width:100%;min-height:49px;padding:0 14px;border:1px solid rgba(53,132,117,.19);border-radius:14px;outline:none;background:rgba(255,255,255,.72);color:#123f42;font-size:18px;font-weight:750;letter-spacing:-.025em}
+.land-nameplate-editor input:focus{border-color:rgba(53,151,132,.48);box-shadow:0 0 0 4px rgba(70,169,149,.09)}
+.land-nameplate-editor-actions{display:flex;gap:8px}
+.land-nameplate-save,.land-nameplate-cancel{min-height:37px;padding:0 13px;border-radius:999px;font-size:8px;font-weight:950;letter-spacing:.04em}
+.land-nameplate-save{border:1px solid rgba(38,126,109,.12);background:#2f8978;color:#fff}
+.land-nameplate-cancel{border:1px solid rgba(57,124,113,.13);background:transparent;color:#67847e}
+.land-nameplate-message{grid-column:2/-1;margin:0;color:#9b5d4f;font-size:8px;font-weight:800}
+.land-nameplate-message.success{color:#3a8a71}
+
+.land-page .land-showcase{display:grid;gap:12px;margin-bottom:16px}
+.land-page .land-showcase-art{width:100%;max-width:none;padding:12px;border-radius:28px}
+.land-page .land-showcase-art .land-hero-deed-label{padding:1px 3px 11px}
+.land-page .land-showcase-art .land-hero-deed-label span{font-size:7px;letter-spacing:.14em}
+.land-page .land-showcase-art .land-hero-deed-label strong{font-size:9px}
+.land-page .land-showcase-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:11px 5px 1px}
+.land-page .land-showcase-meta>span{margin-right:auto}
+.land-page .land-showcase-meta button,.land-page .land-showcase-meta a{min-height:31px;padding:0 10px;border:1px solid rgba(56,130,117,.12);border-radius:999px;background:rgba(239,248,245,.55);color:#4e8077;font-size:7px;font-weight:900;letter-spacing:.025em;text-decoration:none}
+.land-page .land-showcase-meta button:disabled{opacity:.55}
+.land-showcase-share{padding:0 2px}
+
+/* Traits sit directly beneath the art and read as a land signature, not a table. */
+.land-page .land-reveal-traits.has-traits{position:relative;margin:0;padding:19px;border-radius:25px;background:linear-gradient(145deg,#f1faf6,#e8f5f0);border:1px solid rgba(48,124,111,.13);box-shadow:0 13px 32px rgba(34,80,73,.07),inset 0 1px 0 rgba(255,255,255,.72)}
+.land-page .land-reveal-traits.has-traits::before{left:22px;right:22px;height:1px;background:linear-gradient(90deg,transparent,#50ad97 25%,#72b9c8 72%,transparent)}
+.land-page .land-traits-head{display:flex;justify-content:space-between;gap:16px;margin-bottom:15px}
+.land-page .land-traits-head h2{margin:4px 0 0;color:#123f42;font-size:25px;font-weight:720;letter-spacing:-.045em;line-height:1.05}
+.land-page .land-traits-head p{max-width:520px;margin:7px 0 0;color:#738d87;font-size:9px;line-height:1.5}
+.land-page .land-traits-count{flex:0 0 auto;align-self:flex-start}
+.land-page .land-traits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.land-page .land-trait-card{--trait-accent:#5d9b8e;position:relative;display:grid;grid-template-columns:47px minmax(0,1fr) 20px;gap:11px;align-items:center;min-height:96px;padding:13px;overflow:hidden;border:1px solid color-mix(in srgb,var(--trait-accent) 18%,transparent);border-radius:19px;background:rgba(255,255,255,.64);box-shadow:inset 0 1px 0 rgba(255,255,255,.76)}
+.land-page .land-trait-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,transparent,var(--trait-accent),transparent);opacity:.75}
+.land-page .land-trait-card[data-tone="sky"]{--trait-accent:#6c9fae}.land-page .land-trait-card[data-tone="core"]{--trait-accent:#8975aa}.land-page .land-trait-card[data-tone="keeper"]{--trait-accent:#4f9b6a}.land-page .land-trait-card[data-tone="land"]{--trait-accent:#71964e}.land-page .land-trait-card[data-tone="relic"]{--trait-accent:#a17c48}.land-page .land-trait-card[data-tone="rarity"]{--trait-accent:#996885}
+.land-page .land-trait-icon{position:relative;z-index:2;display:grid;width:47px;height:47px;place-items:center;border:1px solid color-mix(in srgb,var(--trait-accent) 22%,transparent);border-radius:15px;background:color-mix(in srgb,var(--trait-accent) 9%,#f7fbf9);color:var(--trait-accent);box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+.land-page .land-trait-icon svg{width:25px;height:25px}
+.land-page .land-trait-copy{position:relative;z-index:2;min-width:0}
+.land-page .land-trait-copy>span{display:block;margin:0 0 5px;color:#769089;font-size:7px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase}
+.land-page .land-trait-copy>strong{display:block;color:#123d40;font-size:16px;font-weight:900;letter-spacing:-.025em;line-height:1.12;overflow-wrap:anywhere}
+.land-page .land-trait-copy>small{display:block!important;margin-top:7px;color:color-mix(in srgb,var(--trait-accent) 72%,#78918b);font-size:5.8px;font-weight:950;letter-spacing:.12em}
+.land-page .land-trait-canonical{position:relative;z-index:2;display:grid;width:20px;height:20px;place-items:center;border:1px solid rgba(63,136,122,.11);border-radius:50%;background:rgba(241,250,247,.72);color:#5e9b8f}
+.land-page .land-trait-watermark{position:absolute;right:-18px;bottom:-23px;width:92px;height:92px;color:var(--trait-accent);opacity:.045;transform:rotate(-9deg)}
+.land-page .land-trait-watermark svg{width:100%;height:100%;stroke-width:1.1}
+
+html[data-theme="dark"] .land-page .land-nameplate{border-color:rgba(141,215,201,.11);background:radial-gradient(circle at 92% 0,rgba(70,163,143,.10),transparent 31%),linear-gradient(145deg,#103234,#092527);box-shadow:0 16px 38px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.03)}
+html[data-theme="dark"] .land-nameplate-mark{border-color:rgba(137,211,197,.12);background:rgba(111,190,174,.065);color:#83c8ba;box-shadow:none}
+html[data-theme="dark"] .land-nameplate-copy h1{color:#f2fbf8!important;-webkit-text-fill-color:#f2fbf8!important}
+html[data-theme="dark"] .land-nameplate-copy>p{color:#8aa9a3!important}
+html[data-theme="dark"] .land-nameplate-deed{color:#789e97!important}
+html[data-theme="dark"] .land-nameplate-edit{border-color:rgba(133,209,194,.13);background:rgba(88,170,153,.08);color:#a6d8cf}
+html[data-theme="dark"] .land-nameplate-editor label{color:#7fa59e!important}
+html[data-theme="dark"] .land-nameplate-editor input{border-color:rgba(132,207,193,.14);background:#0a2426;color:#f0faf7!important;-webkit-text-fill-color:#f0faf7!important}
+html[data-theme="dark"] .land-nameplate-cancel{border-color:rgba(128,201,187,.11);color:#85aaa3}
+html[data-theme="dark"] .land-page .land-showcase-meta button,html[data-theme="dark"] .land-page .land-showcase-meta a{border-color:rgba(129,204,190,.10);background:rgba(91,171,154,.06);color:#83b8ae}
+html[data-theme="dark"] .land-page .land-reveal-traits.has-traits{border-color:rgba(145,216,203,.10);background:radial-gradient(circle at 90% 0,rgba(80,171,150,.08),transparent 32%),linear-gradient(145deg,#0f3032,#092426);box-shadow:0 16px 36px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.025)}
+html[data-theme="dark"] .land-page .land-traits-head h2{color:#f1fbf8!important;-webkit-text-fill-color:#f1fbf8!important}
+html[data-theme="dark"] .land-page .land-traits-head p{color:#86a6a0!important}
+html[data-theme="dark"] .land-page .land-trait-card{border-color:color-mix(in srgb,var(--trait-accent) 20%,transparent);background:linear-gradient(145deg,rgba(231,249,245,.047),rgba(231,249,245,.021));box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+html[data-theme="dark"] .land-page .land-trait-icon{border-color:color-mix(in srgb,var(--trait-accent) 22%,transparent);background:color-mix(in srgb,var(--trait-accent) 9%,#0b282a);color:color-mix(in srgb,var(--trait-accent) 72%,#b2ddd4);box-shadow:none}
+html[data-theme="dark"] .land-page .land-trait-copy>span{color:#80a59e!important}
+html[data-theme="dark"] .land-page .land-trait-copy>strong{color:#f3fbf9!important;-webkit-text-fill-color:#f3fbf9!important}
+html[data-theme="dark"] .land-page .land-trait-copy>small{color:#699c91!important}
+html[data-theme="dark"] .land-page .land-trait-canonical{border-color:rgba(128,205,191,.10);background:rgba(84,165,148,.06);color:#78b9ac}
+
+@media(max-width:640px){
+  .land-page .land-nameplate{grid-template-columns:44px minmax(0,1fr) auto;gap:10px;margin-bottom:11px;padding:14px;border-radius:22px}
+  .land-nameplate-mark{width:44px;height:44px;border-radius:14px}.land-nameplate-mark svg{width:26px;height:26px}
+  .land-nameplate-copy h1{font-size:29px}.land-nameplate-copy>p{font-size:9px;margin-top:5px}
+  .land-nameplate-side{min-width:0;gap:7px}.land-nameplate-deed{font-size:6px}.land-nameplate-edit{min-height:35px;padding:0 10px;font-size:7px}.land-nameplate-edit svg{width:12px;height:12px}
+  .land-nameplate-editor{grid-column:1/-1}.land-nameplate-editor input{font-size:17px}
+  .land-page .land-showcase-art{padding:8px;border-radius:23px}.land-page .land-showcase-art .land-hero-canonical-deed{border-radius:18px}
+  .land-page .land-showcase-meta{padding:9px 4px 1px}.land-page .land-showcase-meta>span{width:100%;margin-right:0}
+  .land-page .land-reveal-traits.has-traits{padding:15px;border-radius:22px}.land-page .land-traits-head{gap:9px;margin-bottom:13px}.land-page .land-traits-head h2{font-size:20px}.land-page .land-traits-head p{font-size:8px}.land-page .land-traits-count{padding:6px 8px;font-size:6px}
+  .land-page .land-traits-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .land-page .land-trait-card{grid-template-columns:39px minmax(0,1fr) 17px;gap:8px;min-height:84px;padding:10px 9px;border-radius:16px}
+  .land-page .land-trait-icon{width:39px;height:39px;border-radius:12px}.land-page .land-trait-icon svg{width:21px;height:21px}
+  .land-page .land-trait-copy>span{font-size:6px;letter-spacing:.105em}.land-page .land-trait-copy>strong{font-size:13px}.land-page .land-trait-copy>small{margin-top:5px;font-size:5px}
+  .land-page .land-trait-canonical{width:17px;height:17px}.land-page .land-trait-watermark{width:70px;height:70px;right:-14px;bottom:-18px}
+  .land-page .land-trait-card:last-child:nth-child(odd){grid-column:1/-1}
+}
