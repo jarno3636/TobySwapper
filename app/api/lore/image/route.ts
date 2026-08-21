@@ -88,7 +88,9 @@ async function resolveMetadata(tokenUri: string) {
     try {
       const response = await fetch(uri, {
         headers: { accept: "application/json,*/*;q=0.5" },
-        next: { revalidate: 21600 },
+        // Avoid pinning pre-reveal metadata inside Next's fetch cache. This
+        // endpoint is only reached when direct client image loading has failed.
+        cache: "no-store",
       });
       if (!response.ok) continue;
 
