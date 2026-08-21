@@ -3,6 +3,7 @@ import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { extractLoreTraits, normalizeLoreMetadata, resolveMetadataAssetUri } from "@/lib/lore-metadata-shared";
+import { cacheLoreArtwork } from "@/lib/lore-art-cache-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -196,6 +197,13 @@ export async function GET(request: NextRequest) {
 
         const contentType = response.headers.get("content-type") || "image/png";
         const bytes = await response.arrayBuffer();
+
+        // First uncached fallback visit also seeds Supabase Storage. This is bounded
+        // to one upload attempt for the successful image response; later page loads
+        // read the cached public Storage URL directly from the Lore metadata row.
+        if (revealed) {
+          await cacheLoreArtwork({ tokenId, bytes, contentType }).catch(() => null);
+        }
 
         return new NextResponse(bytes, {
           headers: {
