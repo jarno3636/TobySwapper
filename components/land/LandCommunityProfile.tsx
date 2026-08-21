@@ -11,17 +11,6 @@ import {
   type LandCommunityProfile,
 } from "@/lib/land-profile";
 
-const themes: Array<{ id: LandBannerTheme; label: string; note: string }> = [
-  { id: "moss", label: "Moss", note: "Deep green pondlight" },
-  { id: "moon", label: "Moon", note: "Blue night over water" },
-  { id: "lotus", label: "Lotus", note: "Soft bloom and sunrise" },
-  { id: "ember", label: "Ember", note: "Warm ancient glow" },
-  { id: "tide", label: "Tide", note: "Bright cyan water" },
-  { id: "dusk", label: "Dusk", note: "Violet evening sky" },
-  { id: "bloom", label: "Bloom", note: "Pink garden light" },
-  { id: "gold", label: "Gold", note: "Warm sunlit relic" },
-];
-
 export default function LandCommunityProfile({
   tokenId,
   owner,
@@ -40,8 +29,6 @@ export default function LandCommunityProfile({
   const saveLockRef = useRef(false);
   const [message, setMessage] = useState("");
   const [communityName, setCommunityName] = useState("");
-  const [description, setDescription] = useState("");
-  const [bannerTheme, setBannerTheme] = useState<LandBannerTheme>("moss");
 
   const isKeeper = useMemo(
     () => Boolean(address && owner && address.toLowerCase() === owner.toLowerCase()),
@@ -56,15 +43,25 @@ export default function LandCommunityProfile({
         if (cancelled) return;
         setProfile(next);
         setCommunityName(next?.communityName || "");
-        setDescription(next?.description || "");
-        setBannerTheme(next?.bannerTheme || "moss");
         onProfile?.(next);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [tokenId, onProfile]);
 
-  async function save() {
+  function openEditor() {
+    setCommunityName(profile?.communityName || "");
+    setMessage("");
+    setEditing(true);
+  }
+
+  function closeEditor() {
+    setCommunityName(profile?.communityName || "");
+    setMessage("");
+    setEditing(false);
+  }
+
+  async function saveName() {
     if (!address || !owner || !isKeeper || saving || saveLockRef.current) return;
     saveLockRef.current = true;
     setSaving(true);
@@ -72,12 +69,13 @@ export default function LandCommunityProfile({
     try {
       const timestamp = Date.now();
       const cleanName = communityName.trim().slice(0, 64);
-      const cleanDescription = description.trim().slice(0, 280);
+      const preservedDescription = profile?.description || "";
+      const preservedTheme = (profile?.bannerTheme || "moss") as LandBannerTheme;
       const signedMessage = landProfileMessage({
         tokenId,
         communityName: cleanName,
-        description: cleanDescription,
-        bannerTheme,
+        description: preservedDescription,
+        bannerTheme: preservedTheme,
         timestamp,
       });
       const signature = await signMessageAsync({ message: signedMessage });
@@ -88,8 +86,8 @@ export default function LandCommunityProfile({
           tokenId: tokenId.toString(),
           signer: address,
           communityName: cleanName,
-          description: cleanDescription,
-          bannerTheme,
+          description: preservedDescription,
+          bannerTheme: preservedTheme,
           timestamp,
           signature,
         }),
@@ -99,15 +97,15 @@ export default function LandCommunityProfile({
       const next: LandCommunityProfile = {
         tokenId: tokenId.toString(),
         communityName: cleanName || null,
-        description: cleanDescription || null,
-        bannerTheme,
+        description: preservedDescription || null,
+        bannerTheme: preservedTheme,
         updatedAt: new Date().toISOString(),
       };
       setProfile(next);
       rememberPublicLandProfile(next);
       onProfile?.(next);
       setEditing(false);
-      setMessage("Your land now carries its community name.");
+      setMessage("Land name saved.");
     } catch (error: any) {
       setMessage(error?.message || "The land stayed quiet.");
     } finally {
@@ -116,38 +114,56 @@ export default function LandCommunityProfile({
     }
   }
 
+  const displayName = loading
+    ? "Listening for your land…"
+    : (profile?.communityName || `Lore Land #${tokenId.toString()}`);
+
   return (
-    <section className={`land-community-card theme-${editing ? bannerTheme : (profile?.bannerTheme || bannerTheme)}`}>
-      <div className="land-community-banner">
-        <span className="land-community-banner-orb" />
-        <span className="land-community-banner-hill h1" />
-        <span className="land-community-banner-hill h2" />
-        <span className="land-community-banner-water" />
-        <div className="land-community-banner-copy">
-          <span className="land-section-kicker">COMMUNITY LAND</span>
-          <h2>{loading ? "Listening for a name…" : editing ? (communityName.trim() || `Lore Land #${tokenId.toString()}`) : (profile?.communityName || `Lore Land #${tokenId.toString()}`)}</h2>
-          <p>{editing ? (description.trim() || "A quiet place in Tobyworld, waiting for its keeper to leave a mark.") : (profile?.description || "A quiet place in Tobyworld, waiting for its keeper to leave a mark.")}</p>
-        </div>
+    <section className="land-nameplate" aria-labelledby="land-place-name">
+      <div className="land-nameplate-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M20 4.5 31.5 11v13L20 35.5 8.5 24V11L20 4.5Z" />
+          <path d="M13 23.8c2.2-4.5 4.55-6.75 7.05-6.75 2.45 0 4.75 2.25 6.95 6.75" />
+          <circle cx="20" cy="13.5" r="2.25" />
+        </svg>
       </div>
-
-      <div className="land-community-foot">
-        <div><small>KEEPER&apos;S MARK</small><strong>{profile?.communityName ? "NAMED" : "OPEN"}</strong></div>
-        {isKeeper ? (
-          <button type="button" className="land-community-edit" onClick={() => setEditing((value) => !value)}>
-            {editing ? "Close editor" : profile ? "Edit my land" : "Name my land"}
+      <div className="land-nameplate-copy">
+        <span className="land-section-kicker">YOUR PLACE IN TOBYWORLD</span>
+        {editing ? (
+          <div className="land-nameplate-editor">
+            <label htmlFor={`land-name-${tokenId.toString()}`}>LAND NAME</label>
+            <input
+              id={`land-name-${tokenId.toString()}`}
+              value={communityName}
+              maxLength={64}
+              autoFocus
+              onChange={(event) => setCommunityName(event.target.value)}
+              placeholder={`Lore Land #${tokenId.toString()}`}
+            />
+            <div className="land-nameplate-editor-actions">
+              <button type="button" className="land-nameplate-save" onClick={saveName} disabled={saving}>
+                {saving ? "Saving…" : "Save name"}
+              </button>
+              <button type="button" className="land-nameplate-cancel" onClick={closeEditor} disabled={saving}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h1 id="land-place-name">{displayName}</h1>
+            <p>{profile?.description || "A revealed place in Tobyworld, held by its current keeper."}</p>
+          </>
+        )}
+      </div>
+      <div className="land-nameplate-side">
+        <span className="land-nameplate-deed">DEED #{tokenId.toString()}</span>
+        {isKeeper && !editing ? (
+          <button type="button" className="land-nameplate-edit" onClick={openEditor}>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 14.8.7-3.3L12.6 3.6a1.5 1.5 0 0 1 2.1 0l1.7 1.7a1.5 1.5 0 0 1 0 2.1l-7.9 7.9-3.3.7L4 14.8Z"/><path d="m11.3 4.9 3.8 3.8"/></svg>
+            Edit name
           </button>
-        ) : <span className="land-community-visitor-chip">PUBLIC PLACE</span>}
+        ) : null}
       </div>
-
-      {editing && isKeeper && (
-        <div className="land-community-editor">
-          <label><span>LAND NAME</span><input value={communityName} maxLength={64} onChange={(event) => setCommunityName(event.target.value)} placeholder="The Mossy Hollow" /></label>
-          <label><span>DESCRIPTION</span><textarea value={description} maxLength={280} onChange={(event) => setDescription(event.target.value)} placeholder="A small corner of the pond where the old leaves still whisper." /></label>
-          <div className="land-theme-picker"><span>LAND MOOD</span><div>{themes.map((theme) => <button key={theme.id} type="button" className={bannerTheme === theme.id ? "is-selected" : ""} aria-pressed={bannerTheme === theme.id} onClick={() => setBannerTheme(theme.id)}><i className={`theme-swatch theme-${theme.id}`} /><b>{theme.label}</b><small>{theme.note}</small></button>)}</div></div>
-          <button type="button" className="land-community-save" disabled={saving} onClick={save}>{saving ? "Setting the marker…" : "Save my land"}</button>
-        </div>
-      )}
-      {message && <p className="land-community-message" role="status">{message}</p>}
+      {message ? <p className={`land-nameplate-message ${message === "Land name saved." ? "success" : ""}`} role="status">{message}</p> : null}
     </section>
   );
 }

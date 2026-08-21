@@ -81,8 +81,8 @@ export default function LandTraits({ metadata, revealed = false, loading = false
       <div className="land-traits-head">
         <div>
           <span className="land-section-kicker">LAND SIGNATURE · {revealed ? "REVEALED" : "METADATA"}</span>
-          <h2 id="land-traits-title">Your land, in traits</h2>
-          <p>{traits.length ? "The canonical attributes that define this deed." : "The deed is revealed. TobySwap is reading its canonical trait signature."}</p>
+          <h2 id="land-traits-title">What makes this place unique</h2>
+          <p>{traits.length ? "Traits read directly from the revealed canonical metadata." : "The deed is revealed. TobySwap is reading its canonical trait signature."}</p>
         </div>
         <span className="land-traits-count"><i aria-hidden="true" />{traits.length ? `${traits.length} ${traits.length === 1 ? "trait" : "traits"}` : loading ? "reading" : "waiting"}</span>
       </div>
@@ -95,10 +95,12 @@ export default function LandTraits({ metadata, revealed = false, loading = false
               <div className="land-trait-copy">
                 <span>{trait.label}</span>
                 <strong title={trait.value}>{trait.value}</strong>
+                <small>CANONICAL ATTRIBUTE</small>
               </div>
               <span className="land-trait-canonical" title="Read from canonical metadata" aria-label="Canonical metadata trait">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.2 8.2 2.25 2.25L11.9 5"/></svg>
               </span>
+              <div className="land-trait-watermark" aria-hidden="true"><TraitIcon tone={trait.tone} /></div>
             </article>
           ))}
         </div>
