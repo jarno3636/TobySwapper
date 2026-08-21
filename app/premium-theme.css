@@ -4456,3 +4456,104 @@ html[data-theme="dark"] .land-trait-card{border-color:rgba(151,222,210,.09);back
 html[data-theme="dark"] .land-trait-card>span{color:#83aaa3!important}
 html[data-theme="dark"] .land-trait-card>strong{color:#e9f7f3!important;-webkit-text-fill-color:#e9f7f3!important}
 @media(max-width:560px){.land-traits{padding:15px;border-radius:21px}.land-traits-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.land-traits-head{align-items:flex-start}.land-traits-head h2{font-size:18px}}
+
+/* ========================================================================== */
+/* 2026-08-21 LORE LAND — revealed land focus + trait signature               */
+/* ========================================================================== */
+.land-page .land-hero{
+  grid-template-columns:minmax(0,.82fr) minmax(360px,1.18fr);
+  align-items:stretch;
+  padding:22px;
+  gap:20px;
+}
+.land-page .land-hero-copy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:8px 4px 8px 6px;
+}
+.land-page .land-hero-copy h1{max-width:12ch}
+.land-page .land-hero-deed-wrap{
+  position:relative;
+  padding:9px;
+  border-radius:29px;
+  background:linear-gradient(145deg,rgba(246,252,250,.98),rgba(225,242,238,.96));
+  box-shadow:0 20px 46px rgba(14,61,66,.14),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.land-page .land-hero-deed-label{padding:5px 6px 10px}
+.land-page .land-hero-deed-label span{display:flex;align-items:center;gap:6px}
+.land-page .land-hero-deed-label span i{width:6px;height:6px;border-radius:999px;background:#53c993;box-shadow:0 0 0 5px rgba(83,201,147,.11)}
+.land-page .land-hero-canonical-deed{max-height:none;aspect-ratio:1/1;border-radius:22px;overflow:hidden}
+.land-page .land-hero-canonical-deed img{width:100%;height:100%;object-fit:cover;background:#e9f1ee}
+.land-art-caption{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 6px 2px}
+.land-art-caption span{color:#73918b;font-size:7px;font-weight:1000;letter-spacing:.14em}
+.land-art-caption strong{max-width:70%;overflow:hidden;color:#174b4d;font-size:10px;font-weight:950;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+
+.land-reveal-traits{
+  position:relative;
+  overflow:hidden;
+  margin-top:16px;
+  padding:20px;
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 90% 0,rgba(75,185,150,.13),transparent 28%),
+    linear-gradient(145deg,#f8fcfa,#eef7f4);
+}
+.land-reveal-traits::before{content:"";position:absolute;left:20px;right:20px;top:0;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,#59b99d 25%,#79c6dc 65%,transparent)}
+.land-traits-head{position:relative;z-index:1;align-items:flex-start}
+.land-traits-head h2{font-size:24px}
+.land-traits-head p{max-width:520px;margin:6px 0 0;color:#718985;font-size:10px;line-height:1.5}
+.land-traits-count{display:inline-flex;align-items:center;gap:7px;padding:7px 10px}
+.land-traits-count i{width:7px;height:7px;border-radius:999px;background:#55c693;box-shadow:0 0 0 4px rgba(85,198,147,.11)}
+.land-traits-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.land-trait-card{
+  position:relative;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  min-height:78px;
+  padding:12px;
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(242,249,247,.84));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 7px 18px rgba(23,74,70,.05);
+}
+.land-trait-glyph{display:grid;width:38px;height:38px;place-items:center;border:1px solid rgba(61,137,123,.12);border-radius:13px;background:linear-gradient(145deg,#edf8f4,#e4f3ef);color:#3d8c7b;font-size:17px;font-weight:900}
+.land-trait-copy{min-width:0}
+.land-trait-copy>span{display:block;margin:0 0 4px;color:#78918c;font-size:7px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;overflow-wrap:anywhere}
+.land-trait-copy>strong{display:block;color:#123f42;font-size:14px;font-weight:1000;line-height:1.15;overflow-wrap:anywhere;word-break:break-word}
+.land-trait-card>small{align-self:flex-start;color:#9aadaa;font-size:7px;font-weight:900;letter-spacing:.08em}
+
+html[data-theme="dark"] .land-page .land-hero-deed-wrap{background:linear-gradient(145deg,#123436,#0b2729)!important;border-color:rgba(151,220,207,.12)!important;box-shadow:0 20px 46px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.035)!important}
+html[data-theme="dark"] .land-page .land-hero-canonical-deed img{background:#0e2729!important}
+html[data-theme="dark"] .land-art-caption span{color:#789d96!important}
+html[data-theme="dark"] .land-art-caption strong{color:#eaf8f4!important}
+html[data-theme="dark"] .land-reveal-traits{background:radial-gradient(circle at 90% 0,rgba(77,170,148,.10),transparent 30%),linear-gradient(145deg,#102f31,#092426)!important;border-color:rgba(149,220,208,.11)!important;box-shadow:0 16px 38px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.025)!important}
+html[data-theme="dark"] .land-traits-head p{color:#89a5a0!important}
+html[data-theme="dark"] .land-trait-card{background:linear-gradient(145deg,rgba(224,247,242,.055),rgba(224,247,242,.025))!important;border-color:rgba(150,220,208,.09)!important;box-shadow:none!important}
+html[data-theme="dark"] .land-trait-glyph{border-color:rgba(128,210,194,.12)!important;background:rgba(74,155,139,.08)!important;color:#82c9bb!important}
+html[data-theme="dark"] .land-trait-copy>span{color:#82a7a0!important}
+html[data-theme="dark"] .land-trait-copy>strong{color:#eefaf7!important;-webkit-text-fill-color:#eefaf7!important}
+html[data-theme="dark"] .land-trait-card>small{color:#668781!important}
+
+@media(max-width:850px){
+  .land-page .land-hero{grid-template-columns:1fr}
+  .land-page .land-hero-deed-wrap{order:1}
+  .land-page .land-hero-copy{order:2;padding:4px 2px 0}
+  .land-page .land-hero-copy h1{max-width:none}
+}
+@media(max-width:560px){
+  .land-page .land-hero{padding:12px;border-radius:28px;gap:14px}
+  .land-page .land-hero-deed-wrap{border-radius:23px;padding:7px}
+  .land-page .land-hero-canonical-deed{border-radius:18px}
+  .land-page .land-hero-copy{padding:4px 6px 7px}
+  .land-page .land-hero h1{font-size:34px}
+  .land-art-caption{padding:9px 5px 2px}
+  .land-reveal-traits{padding:16px;border-radius:23px}
+  .land-traits-head h2{font-size:20px}
+  .land-traits-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .land-trait-card{grid-template-columns:32px minmax(0,1fr);min-height:70px;padding:10px;gap:8px}
+  .land-trait-glyph{width:32px;height:32px;border-radius:11px;font-size:14px}
+  .land-trait-copy>strong{font-size:12px}
+  .land-trait-card>small{display:none}
+}
