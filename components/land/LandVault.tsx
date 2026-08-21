@@ -4,17 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, erc20Abi, formatUnits, getAddress, isAddress, parseUnits, type Address } from "viem";
 import { base } from "wagmi/chains";
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
-import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
+import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI, LEGACY_LORE_DEED_ADDRESS, LEGACY_LORE_DEED_ABI } from "@/lib/lore-deeds";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
-type VaultAsset = "TOBY" | "PATIENCE" | "TABOSHI" | "OLD LEAF" | "SEED" | "OLD LAND";
+type VaultAsset = "TOBY" | "PATIENCE" | "TABOSHI" | "cbBTC" | "OLD LEAF" | "SEED" | "OLD LAND";
 
 const assets: Array<{ id: VaultAsset; kind: "erc20" | "erc1155" | "erc721"; address: Address; decimals: number; tokenId?: bigint }> = [
   { id: "TOBY", kind: "erc20", address: TOBY, decimals: 18 },
   { id: "PATIENCE", kind: "erc20", address: PATIENCE, decimals: 18 },
   { id: "TABOSHI", kind: "erc20", address: TABOSHI, decimals: 18 },
+  { id: "cbBTC", kind: "erc20", address: CBBTC, decimals: 8 },
   { id: "OLD LEAF", kind: "erc1155", address: TABOSHI1_ADDRESS, decimals: 0, tokenId: TABOSHI1_TOKEN_ID },
   { id: "SEED", kind: "erc1155", address: TABOSHI_SEEDS_ADDRESS, decimals: 0, tokenId: TABOSHI_SEED_ID },
   { id: "OLD LAND", kind: "erc721", address: LEGACY_LORE_DEED_ADDRESS, decimals: 0 },
@@ -101,6 +102,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       { address: TOBY, abi: erc20Abi, functionName: "balanceOf", args: [vault], chainId: base.id },
       { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [vault], chainId: base.id },
       { address: TABOSHI, abi: erc20Abi, functionName: "balanceOf", args: [vault], chainId: base.id },
+      { address: CBBTC, abi: erc20Abi, functionName: "balanceOf", args: [vault], chainId: base.id },
       { address: TABOSHI1_ADDRESS, abi: TABOSHI1_ABI, functionName: "balanceOf", args: [vault, TABOSHI1_TOKEN_ID], chainId: base.id },
       { address: TABOSHI_SEEDS_ADDRESS, abi: TABOSHI_SEEDS_ABI, functionName: "balanceOf", args: [vault, TABOSHI_SEED_ID], chainId: base.id },
       { address: LEGACY_LORE_DEED_ADDRESS, abi: LEGACY_LORE_DEED_ABI, functionName: "balanceOf", args: [vault], chainId: base.id },

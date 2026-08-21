@@ -122,8 +122,7 @@ export default function LoreDeedArt({
   // canonical image proxy first. The response is CDN-cacheable, so this is one
   // origin fetch per cached token image rather than a request on every view.
   // If the proxy ever fails, fall back to the direct gateway candidates.
-  const hasFastCachedImage = Boolean(authoritative && directImageOverride && /^https?:\/\//i.test(directImageOverride));
-  const preferCanonicalProxy = visible && authoritative && revealed && !hasFastCachedImage && !proxyTried;
+  const preferCanonicalProxy = visible && authoritative && revealed && !proxyTried;
   const fallbackProxy = visible && result && !directImage && !proxyTried;
   const proxyImage =
     preferCanonicalProxy || fallbackProxy

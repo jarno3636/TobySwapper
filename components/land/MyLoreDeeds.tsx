@@ -6,6 +6,7 @@ import LoreDeedArt from "@/components/land/LoreDeedArt";
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
+import { readCachedLoreMetadata, type CachedLoreMetadata } from "@/lib/lore-cache";
 
 type OwnedDeed = {
   tokenId: string;
@@ -44,6 +45,30 @@ function writeCached(owner: Address, data: OwnedResponse) {
   const entry = { at: Date.now(), data };
   memory.set(ownerKey(owner), entry);
   try { localStorage.setItem(storageKey(owner), JSON.stringify(entry)); } catch {}
+}
+
+
+function CachedDeedArt({ deed, revealed, eager }: { deed: OwnedDeed; revealed: boolean; eager: boolean }) {
+  const [cached, setCached] = useState<CachedLoreMetadata | null>(null);
+
+  useEffect(() => {
+    if (!revealed) { setCached(null); return; }
+    let cancelled = false;
+    readCachedLoreMetadata(deed.tokenId).then((value) => { if (!cancelled) setCached(value); });
+    return () => { cancelled = true; };
+  }, [deed.tokenId, revealed]);
+
+  return (
+    <LoreDeedArt
+      tokenId={deed.tokenId}
+      label={deed.communityName || cached?.metadata?.name || undefined}
+      eager={eager}
+      revealed={revealed}
+      authoritative={Boolean(cached?.metadata)}
+      metadataOverride={cached?.metadata || null}
+      directImageOverride={cached?.directImage || null}
+    />
+  );
 }
 
 function loadOwned(owner: Address) {
@@ -178,7 +203,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
             {visibleDeeds.map((deed, index) => (
               <article key={deed.tokenId} className={`mytw-deed-tile theme-${deed.bannerTheme || "moss"}`}>
                 <Link prefetch={false} href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
-                  <LoreDeedArt tokenId={deed.tokenId} label={deed.communityName || undefined} eager={index < 2} revealed={revealed} />
+                  <CachedDeedArt deed={deed} revealed={revealed} eager={index < 2} />
                 </Link>
                 <div className="mytw-deed-tile-copy">
                   <small>{deed.communityName || "LORE LAND"}</small>

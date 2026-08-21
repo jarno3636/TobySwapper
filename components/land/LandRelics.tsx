@@ -16,12 +16,14 @@ export default function LandRelics({
   toby,
   patience,
   taboshi,
+  cbbtc,
   oldLeaf,
   seed,
 }: {
   toby: bigint;
   patience: bigint;
   taboshi: bigint;
+  cbbtc: bigint;
   oldLeaf: bigint;
   seed: bigint;
 }) {
@@ -29,6 +31,7 @@ export default function LandRelics({
     { label: "TOBY", note: "pond affiliation", value: compact(toby), icon: "/tokens/toby.PNG" },
     { label: "PATIENCE", note: "ancient flame", value: compact(patience), icon: "/ui/patience.webp" },
     { label: "TABOSHI", note: "awakened leaf", value: compact(taboshi), icon: "/ui/taboshi.webp" },
+    { label: "cbBTC", note: "bitcoin on Base", value: compact(cbbtc, 8), icon: "/tokens/cbbtc.svg" },
     { label: "OLD LEAF", note: "historical relic", value: oldLeaf.toLocaleString(), icon: "/ui/taboshi.webp" },
     { label: "SEED", note: "new beginning", value: seed.toLocaleString(), icon: "/ui/seed.webp" },
   ];

@@ -9,6 +9,8 @@ type Props = {
   loading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  /** Future-ready map keyed as `${trait_type}::${value}`. Values are collection percentages. */
+  rarityByTrait?: Record<string, number | null | undefined>;
 };
 
 type TraitTone = "sky" | "core" | "keeper" | "land" | "relic" | "rarity" | "default";
@@ -64,12 +66,13 @@ function TraitIcon({ tone }: { tone: TraitTone }) {
   return <svg {...common}><path d="m12 3.5 7 4v8l-7 4-7-4v-8l7-4Z"/><circle cx="12" cy="11.5" r="2.25"/><path d="M12 13.75v2.25"/></svg>;
 }
 
-export default function LandTraits({ metadata, revealed = false, loading = false, error = null, onRefresh }: Props) {
+export default function LandTraits({ metadata, revealed = false, loading = false, error = null, onRefresh, rarityByTrait = {} }: Props) {
   const traits = extractLoreTraits(metadata)
     .map((trait, index) => ({
       label: (trait.trait_type || `Trait ${index + 1}`).trim(),
       value: textValue(trait.value).trim(),
       tone: traitTone(trait.trait_type || ""),
+      rarity: rarityByTrait[`${(trait.trait_type || `Trait ${index + 1}`).trim()}::${textValue(trait.value).trim()}`],
       index,
     }))
     .filter((trait) => trait.value.length > 0);
@@ -95,7 +98,13 @@ export default function LandTraits({ metadata, revealed = false, loading = false
               <div className="land-trait-copy">
                 <span>{trait.label}</span>
                 <strong title={trait.value}>{trait.value}</strong>
-                <small>CANONICAL ATTRIBUTE</small>
+                <div className="land-trait-meta">
+                  <small>CANONICAL ATTRIBUTE</small>
+                  <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`}>
+                    <b>RARITY</b>
+                    <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : "TBD"}</em>
+                  </span>
+                </div>
               </div>
               <span className="land-trait-canonical" title="Read from canonical metadata" aria-label="Canonical metadata trait">
                 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.2 8.2 2.25 2.25L11.9 5"/></svg>
