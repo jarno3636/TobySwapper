@@ -9,6 +9,8 @@ type CachedLoreRow = {
   name: string | null;
   description: string | null;
   image_uri: string | null;
+  cached_image_url: string | null;
+  art_cache_status: string | null;
   metadata: Record<string, unknown> | null;
   trait_count: number | null;
   revealed: boolean | null;
@@ -55,7 +57,7 @@ export async function readCachedLoreMetadata(tokenId: bigint | string, force = f
     const query = new URLSearchParams({
       collection_address: `eq.${collection}`,
       token_id: `eq.${id}`,
-      select: "token_id,token_uri,metadata_uri,name,description,image_uri,metadata,trait_count,revealed,fetched_at,last_verified_at",
+      select: "token_id,token_uri,metadata_uri,name,description,image_uri,cached_image_url,art_cache_status,metadata,trait_count,revealed,fetched_at,last_verified_at",
       limit: "1",
     });
 
@@ -81,7 +83,7 @@ export async function readCachedLoreMetadata(tokenId: bigint | string, force = f
       metadata: normalized,
       sourceUri: row.token_uri,
       resolvedMetadataUri: row.metadata_uri,
-      directImage: null,
+      directImage: row.art_cache_status === "cached" && row.cached_image_url ? row.cached_image_url : null,
       error: null,
       fetchedAt: row.fetched_at,
       lastVerifiedAt: row.last_verified_at,
