@@ -1,0 +1,4590 @@
+/* ==========================================================================
+   TobySwapper premium shell + dark mode
+   This file intentionally contains cross-page theme overrides so globals.css
+   does not continue growing for every new visual pass.
+   ========================================================================== */
+
+:root {
+  --app-bg: #faf9f6;
+  --app-bg-raised: rgba(255,255,255,.91);
+  --app-bg-solid: #ffffff;
+  --app-panel-soft: #f1f7f5;
+  --app-panel-tint: #eaf6f2;
+  --app-text: #173f47;
+  --app-text-soft: #708789;
+  --app-text-faint: #8fa0a1;
+  --app-line: rgba(24,77,83,.12);
+  --app-line-strong: rgba(24,77,83,.19);
+  --app-shadow: 0 16px 38px rgba(20,61,67,.08);
+  --app-shadow-soft: 0 8px 22px rgba(20,61,67,.06);
+  --app-glow: rgba(64,189,167,.13);
+  --app-header: rgba(250,250,247,.84);
+  --app-dock: rgba(250,252,251,.91);
+  --app-accent: #178d78;
+  --app-accent-bright: #2fb69a;
+  --app-blue: #299fdf;
+  --app-warm: #d97a57;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--app-bg);
+}
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+::selection {
+  background: rgba(52,177,151,.24);
+  color: var(--app-text);
+}
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button, a {
+  touch-action: manipulation;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(54,187,161,.72);
+  outline-offset: 2px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 999;
+  transform: translateY(-150%);
+  border-radius: 12px;
+  background: var(--app-bg-solid);
+  color: var(--app-text);
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: var(--app-shadow);
+}
+.skip-link:focus { transform: translateY(0); }
+
+/* Header ------------------------------------------------------------------ */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  border-bottom: 1px solid var(--app-line);
+  background: var(--app-header);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+.app-header-inner {
+  width: min(1152px, 100%);
+  margin: 0 auto;
+  min-height: 68px;
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: minmax(180px,1fr) auto minmax(180px,1fr);
+  align-items: center;
+  gap: 12px;
+}
+.brand-lockup {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  color: var(--app-text);
+  text-decoration: none;
+}
+.brand-copy { display:flex; min-width:0; flex-direction:column; }
+.brand-eyebrow {
+  color: var(--app-text-faint);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .28em;
+}
+.brand-title {
+  color: var(--app-text);
+  font-size: 19px;
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+.header-quick-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-bg-solid) 70%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38);
+}
+.header-quick-link {
+  min-width: 58px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--app-text-soft);
+  font-size: 9px;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+.header-quick-link:hover {
+  background: var(--app-panel-soft);
+  color: var(--app-text);
+  transform: translateY(-1px);
+}
+.header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Theme toggle ------------------------------------------------------------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 9px 0 6px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-bg-solid) 88%, transparent);
+  color: var(--app-text-soft);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), var(--app-shadow-soft);
+}
+.theme-toggle-track {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(145deg,#e5f7fa,#cfe9f0);
+}
+.theme-toggle-orbit {
+  position: absolute;
+  width: 32px;
+  height: 11px;
+  border: 1px solid rgba(49,123,142,.18);
+  border-radius: 50%;
+  transform: rotate(-20deg);
+}
+.theme-toggle-icon {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+}
+.theme-toggle-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-toggle-label {
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* Background --------------------------------------------------------------- */
+.ambient-orb {
+  position:absolute;
+  border-radius:999px;
+  filter:blur(55px);
+}
+.ambient-orb-blue { left:-96px; top:64px; width:288px; height:288px; background:#dff5ff; opacity:.7; }
+.ambient-orb-warm { right:-96px; top:34%; width:320px; height:320px; background:#fff0e6; opacity:.72; }
+.ambient-orb-green { left:4%; bottom:-40px; width:288px; height:288px; background:#e8f8e9; opacity:.58; }
+.ambient-token { position:absolute; opacity:.04; }
+.ambient-token-taboshi { left:5%; bottom:40px; transform:rotate(-10deg); }
+.ambient-token-patience { right:3%; top:13%; transform:rotate(8deg); }
+.ambient-token-sato { right:9%; bottom:6%; opacity:.035; }
+
+/* Cross-page premium consistency ------------------------------------------ */
+.world-hero,
+.world-card,
+.taboshi1-card,
+.seedleaf-all-assets,
+.lore-inventory-card,
+.lore-transfer-card,
+.mytw-owned-deeds,
+.land-vault-card,
+.land-community-card,
+.land-production-card,
+.land-garden-card,
+.land-relic-card,
+.exchange-shell,
+.exchange-hero,
+.market-compose-card,
+.market-listing-card,
+.market-request-card,
+.watch-pouch-card,
+.watch-pouch-results,
+.public-pouch-editor,
+.public-pouch-hero,
+.public-pouch-featured-deed,
+.public-pouch-viewer-note,
+.public-pouch-missing,
+.public-pouch-loading {
+  border-color: var(--app-line) !important;
+  box-shadow: var(--app-shadow);
+}
+.seedleaf-asset-card,
+.mytw-deed-tile,
+.world-path-card,
+.world-land-card,
+.market-asset-choice,
+.market-filter,
+.market-toolbar,
+.land-exchange-preview,
+.watch-pouch-asset {
+  border-color: var(--app-line) !important;
+  box-shadow: var(--app-shadow-soft);
+}
+
+/* Use content visibility for long, below-fold sections without hiding
+   interactive state from React. */
+.world-atlas,
+.marketplace-stack,
+.mytw-owned-deeds,
+.seedleaf-lore-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 700px auto;
+}
+
+/* Dock -------------------------------------------------------------------- */
+.pond-dock-wrap {
+  filter: drop-shadow(0 12px 28px rgba(16,54,59,.12));
+}
+.pond-dock {
+  border-color: var(--app-line) !important;
+}
+.pond-dock-item {
+  transition: transform .15s ease, background .15s ease, color .15s ease;
+}
+.pond-dock-item:active { transform:scale(.97); }
+
+/* Responsive header -------------------------------------------------------- */
+@media(max-width:850px) {
+  .app-header-inner {
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  .header-quick-nav { display:none; }
+}
+@media(max-width:520px) {
+  .app-header-inner {
+    min-height:62px;
+    padding:8px 10px;
+  }
+  .brand-medallion { width:40px!important; height:40px!important; border-radius:14px!important; }
+  .brand-title { font-size:16px; }
+  .brand-eyebrow { font-size:7px; }
+  .theme-toggle { width:38px; height:38px; padding:4px; justify-content:center; }
+  .theme-toggle-track { width:28px; height:28px; }
+  .theme-toggle-label { display:none; }
+  .header-actions { gap:5px; }
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #081416;
+  --glass: rgba(15,30,32,.78);
+  --glass-strong: rgba(13,26,28,.94);
+  --panel: #0f2022;
+  --ink: #edf8f5;
+  --ink-sub: #8aa5a5;
+  --line: rgba(184,233,224,.12);
+  --shadow-strong: 0 18px 52px rgba(0,0,0,.32);
+  --shadow-soft: 0 10px 28px rgba(0,0,0,.24);
+  --ring: rgba(87,207,189,.38);
+
+  --app-bg: #081416;
+  --app-bg-raised: rgba(13,29,31,.92);
+  --app-bg-solid: #0f2022;
+  --app-panel-soft: #13282a;
+  --app-panel-tint: #173032;
+  --app-text: #edf8f5;
+  --app-text-soft: #9ab3b2;
+  --app-text-faint: #6f8b8b;
+  --app-line: rgba(184,233,224,.12);
+  --app-line-strong: rgba(184,233,224,.2);
+  --app-shadow: 0 18px 42px rgba(0,0,0,.28);
+  --app-shadow-soft: 0 8px 24px rgba(0,0,0,.21);
+  --app-glow: rgba(65,208,182,.15);
+  --app-header: rgba(7,20,22,.84);
+  --app-dock: rgba(10,25,27,.92);
+  --app-accent: #57cdb7;
+  --app-accent-bright: #6fdfc8;
+  --app-blue: #63bde8;
+  --app-warm: #e69874;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .world-paper {
+  background-color: var(--app-bg) !important;
+  color: var(--app-text);
+}
+html[data-theme="dark"] .world-paper {
+  background-image:
+    radial-gradient(circle,rgba(141,202,194,.075) 1.15px,transparent 1.3px),
+    linear-gradient(180deg,rgba(19,40,42,.28),rgba(4,14,16,.1)) !important;
+}
+html[data-theme="dark"] .ambient-orb-blue { background:#144c59; opacity:.48; }
+html[data-theme="dark"] .ambient-orb-warm { background:#4b2b27; opacity:.38; }
+html[data-theme="dark"] .ambient-orb-green { background:#1b4b39; opacity:.42; }
+html[data-theme="dark"] .ambient-token { opacity:.065; filter:saturate(.8) brightness(.9); }
+
+html[data-theme="dark"] .brand-medallion,
+html[data-theme="dark"] .pond-dock-icon,
+html[data-theme="dark"] .dock-art {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1),0 8px 18px rgba(0,0,0,.24);
+}
+html[data-theme="dark"] .theme-toggle-track {
+  background:linear-gradient(145deg,#173a40,#0b2024);
+  color:#8ee1d2;
+}
+html[data-theme="dark"] .theme-toggle-orbit {
+  border-color:rgba(111,223,200,.2);
+}
+
+/* Primary surfaces */
+html[data-theme="dark"] :is(
+  .world-hero,.world-card,.taboshi1-card,.seedleaf-all-assets,.lore-inventory-card,
+  .lore-transfer-card,.mytw-owned-deeds,.land-vault-card,.land-community-card,
+  .land-production-card,.land-garden-card,.land-relic-card,.exchange-shell,.exchange-hero,
+  .market-compose-card,.market-listing-card,.market-request-card,.watch-pouch-card,
+  .watch-pouch-results,.public-pouch-editor,.public-pouch-hero,.public-pouch-featured-deed,
+  .public-pouch-viewer-note,.public-pouch-missing,.public-pouch-loading,
+  .hero-poster-shell,.hero-cta,.hero-status-rail,.swap-card,.swap-shell
+) {
+  background: linear-gradient(155deg,rgba(16,35,37,.97),rgba(10,25,27,.95)) !important;
+  border-color: var(--app-line) !important;
+  color: var(--app-text) !important;
+}
+
+/* Secondary tiles and controls */
+html[data-theme="dark"] :is(
+  .seedleaf-asset-card,.mytw-deed-tile,.world-path-card,.world-land-card,.market-asset-choice,
+  .market-filter,.market-toolbar,.land-exchange-preview,.watch-pouch-asset,
+  .seedleaf-transfer-summary,.seedleaf-transfer-fields input,.seedleaf-transfer-fields select,
+  .public-pouch-field input,.public-pouch-field textarea,.public-pouch-toggle,
+  .land-vault-create-panel,.land-vault-address,.land-vault-assets>div,
+  .pouch-land-send,.pouch-land-vault-line,.market-modal-card,.market-confirm-card
+) {
+  background: rgba(18,39,41,.9) !important;
+  border-color: var(--app-line) !important;
+  color: var(--app-text) !important;
+}
+
+/* Text hierarchy */
+html[data-theme="dark"] :is(
+  h1,h2,h3,h4,strong,.brand-title,.world-link-card,.seedleaf-asset-copy strong,
+  .mytw-deed-tile-copy strong,.market-listing-card strong,.watch-pouch-asset strong,
+  .land-vault-card strong,.public-pouch-hero h1,.public-pouch-editor h3
+) {
+  color: var(--app-text) !important;
+}
+html[data-theme="dark"] :is(
+  p,small,em,.text-inkSub,.text-ink-sub,.world-kicker,.taboshi1-kicker,.land-section-kicker,
+  .seedleaf-asset-copy span,.mytw-deed-tile-copy span,.watch-pouch-asset small
+) {
+  color: var(--app-text-soft) !important;
+}
+
+/* Links, pills, nav */
+html[data-theme="dark"] :is(
+  .world-chip,.pill,.pill-opaque,.pill-nav,.header-quick-nav,.header-quick-link,
+  .pond-dock,.pond-dock-item,.world-hero-actions a,.world-topbar a,.mytw-land-quicklinks a,
+  .public-pouch-links a,.public-pouch-footer-actions a
+) {
+  border-color: var(--app-line) !important;
+}
+html[data-theme="dark"] .pond-dock {
+  background: var(--app-dock) !important;
+}
+html[data-theme="dark"] .pond-dock-item,
+html[data-theme="dark"] .header-quick-link {
+  color:var(--app-text-soft)!important;
+}
+html[data-theme="dark"] .pond-dock-active,
+html[data-theme="dark"] .header-quick-link:hover {
+  background:var(--app-panel-tint)!important;
+  color:var(--app-text)!important;
+}
+
+/* Forms */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background:#0c1e20!important;
+  border-color:var(--app-line)!important;
+  color:var(--app-text)!important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color:#607c7c!important;
+}
+
+/* Canonical NFT frames stay neutral so actual artwork isn't color-shifted. */
+html[data-theme="dark"] .canonical-deed-art.has-image,
+html[data-theme="dark"] .land-hero-canonical-deed {
+  background:#0a1719!important;
+  border-color:rgba(186,225,218,.14)!important;
+}
+html[data-theme="dark"] .canonical-deed-art.has-image img {
+  background:#0a1719!important;
+}
+html[data-theme="dark"] .canonical-deed-metadata-fallback {
+  background:
+    radial-gradient(circle at 50% 30%,rgba(58,143,130,.18),transparent 38%),
+    linear-gradient(160deg,#132729,#0b1b1d)!important;
+}
+
+/* RainbowKit + network gate */
+html[data-theme="dark"] [data-rk] [role="dialog"] {
+  background:#0d2022!important;
+  border-color:var(--app-line)!important;
+}
+html[data-theme="dark"] .menu-sheet {
+  background:#0d2022!important;
+}
+html[data-theme="dark"] .menu-overlay {
+  background:rgba(0,0,0,.54)!important;
+}
+
+/* Keep status colors legible */
+html[data-theme="dark"] .world-chip-red,
+html[data-theme="dark"] .hero-status-red { color:#ff9c87!important; }
+html[data-theme="dark"] .world-chip-green,
+html[data-theme="dark"] .hero-status-green { color:#85d895!important; }
+html[data-theme="dark"] .hero-status-blue,
+html[data-theme="dark"] .hero-status-cyan { color:#8fd7f6!important; }
+
+@media(prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+  .header-quick-link,.pond-dock-item,.theme-toggle { transition:none!important; }
+}
+
+
+/* ==========================================================================
+   DARK MODE READABILITY + GLASS CONSISTENCY PASS
+   Fixes light metallic controls retaining white surfaces while inheriting
+   dark-theme white text. Dark mode now uses one coherent smoked-glass system.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --dark-glass: rgba(15, 34, 36, .78);
+  --dark-glass-strong: rgba(12, 29, 31, .94);
+  --dark-glass-soft: rgba(23, 47, 49, .72);
+  --dark-control: rgba(25, 48, 50, .96);
+  --dark-control-hover: rgba(31, 59, 61, .98);
+  --dark-control-low: rgba(13, 29, 31, .98);
+  --dark-text: #effaf7;
+  --dark-text-soft: #a8bfbd;
+  --dark-text-muted: #779391;
+  --dark-edge: rgba(168, 229, 218, .16);
+  --dark-edge-strong: rgba(168, 229, 218, .24);
+  --dark-teal: #63d5bf;
+  --dark-blue: #78ccef;
+  --dark-red: #ff978b;
+  --dark-green: #84d79c;
+}
+
+/* Give the page depth instead of one nearly-black sheet. */
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(47, 135, 124, .14), transparent 25%),
+    radial-gradient(circle at 92% 32%, rgba(93, 77, 130, .10), transparent 31%),
+    linear-gradient(180deg, #081719 0%, #071315 58%, #091416 100%) !important;
+}
+
+html[data-theme="dark"] .app-header {
+  background:
+    linear-gradient(180deg, rgba(14, 34, 35, .92), rgba(10, 27, 29, .86)) !important;
+  border-bottom-color: rgba(154, 221, 209, .14) !important;
+  box-shadow: 0 9px 30px rgba(0,0,0,.18);
+}
+
+/* --------------------------------------------------------------------------
+   Core glass surfaces
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .glass,
+html[data-theme="dark"] .glass-strong,
+html[data-theme="dark"] .swap-shell,
+html[data-theme="dark"] .burn-card,
+html[data-theme="dark"] .content-visible {
+  border-color: var(--dark-edge) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-theme="dark"] .glass {
+  background:
+    linear-gradient(155deg, rgba(20, 43, 45, .78), rgba(10, 27, 29, .76)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 18px 42px rgba(0,0,0,.22) !important;
+}
+
+html[data-theme="dark"] .glass-strong {
+  background:
+    linear-gradient(155deg, rgba(18, 41, 43, .94), rgba(8, 23, 25, .94)) !important;
+}
+
+html[data-theme="dark"] .glass-hover:hover {
+  background: rgba(25, 50, 52, .92) !important;
+  border-color: var(--dark-edge-strong) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Swap card: keep the glass personality but make every layer readable.
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .swap-shell {
+  background:
+    radial-gradient(70% 38% at 4% 0%, rgba(214, 84, 90, .10), transparent 72%),
+    radial-gradient(68% 38% at 96% 0%, rgba(60, 175, 219, .13), transparent 72%),
+    linear-gradient(165deg, rgba(15, 39, 41, .96), rgba(8, 26, 28, .94)) !important;
+  border: 1px solid rgba(88, 208, 187, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 0 0 1px rgba(84, 212, 189, .04),
+    0 24px 52px rgba(0,0,0,.30) !important;
+}
+
+html[data-theme="dark"] .swap-shell::before {
+  opacity: .72;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(255, 109, 113, .34),
+      rgba(255,255,255,0) 27%,
+      rgba(80, 196, 232, .30) 58%,
+      rgba(92, 215, 158, .27)
+    ) !important;
+}
+
+/* Pay / receive become dark tinted glass rather than white cards. */
+html[data-theme="dark"] .trade-panel {
+  border-color: var(--dark-edge) !important;
+  background:
+    radial-gradient(120% 90% at 12% -10%, rgba(255,255,255,.055), transparent 55%),
+    linear-gradient(160deg, rgba(24, 48, 50, .93), rgba(14, 32, 34, .93)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 11px 25px rgba(0,0,0,.18) !important;
+}
+
+html[data-theme="dark"] .trade-panel-pay {
+  border-color: rgba(242, 126, 126, .26) !important;
+  background:
+    radial-gradient(90% 120% at 0% 0%, rgba(170, 62, 67, .20), transparent 58%),
+    linear-gradient(160deg, rgba(43, 34, 36, .92), rgba(21, 31, 33, .94)) !important;
+}
+
+html[data-theme="dark"] .trade-panel-receive {
+  border-color: rgba(98, 208, 144, .25) !important;
+  background:
+    radial-gradient(90% 120% at 0% 0%, rgba(54, 150, 93, .18), transparent 58%),
+    radial-gradient(80% 80% at 100% 0%, rgba(53, 158, 196, .13), transparent 62%),
+    linear-gradient(160deg, rgba(27, 45, 40, .94), rgba(15, 31, 33, .94)) !important;
+}
+
+html[data-theme="dark"] .trade-panel:focus-within {
+  border-color: rgba(91, 198, 226, .42) !important;
+  box-shadow:
+    0 0 0 3px rgba(73, 185, 211, .10),
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 11px 25px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .trade-panel-labels {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .trade-panel-pay .trade-panel-labels > span:first-child {
+  color: var(--dark-red) !important;
+}
+html[data-theme="dark"] .trade-panel-receive .trade-panel-labels > span:first-child {
+  color: var(--dark-green) !important;
+}
+html[data-theme="dark"] .trade-amount-input,
+html[data-theme="dark"] .trade-output {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .trade-amount-input::placeholder {
+  color: #55706f !important;
+}
+html[data-theme="dark"] .trade-usd,
+html[data-theme="dark"] .trade-token-side small {
+  color: var(--dark-text-soft) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Metallic controls: use smoked metal in dark mode, never white + white text.
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .swap-direction-floating,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+) {
+  border-color: var(--dark-edge) !important;
+  background:
+    radial-gradient(120% 85% at 50% 0%, rgba(255,255,255,.10), transparent 48%),
+    linear-gradient(180deg, rgba(34, 61, 63, .98), rgba(18, 39, 41, .98)) !important;
+  color: var(--dark-text) !important;
+  text-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(0,0,0,.20),
+    0 4px 0 rgba(0,0,0,.18),
+    0 9px 20px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+)::before {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0)) !important;
+  opacity: .8 !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+)::after {
+  background:
+    linear-gradient(90deg, transparent, rgba(190, 244, 234, .28) 28%, rgba(255,255,255,.22) 70%, transparent) !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .token-trigger,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+):hover:not(:disabled) {
+  background:
+    radial-gradient(120% 85% at 50% 0%, rgba(255,255,255,.13), transparent 48%),
+    linear-gradient(180deg, rgba(42, 73, 75, .99), rgba(22, 45, 47, .99)) !important;
+  border-color: var(--dark-edge-strong) !important;
+  filter: none !important;
+}
+
+html[data-theme="dark"] :is(
+  .metal-button,
+  .pill-opaque,
+  .pill-nav,
+  .approve-button,
+  .swap-submit-premium,
+  .burn-share-button
+):disabled {
+  background:
+    linear-gradient(180deg, rgba(38, 57, 59, .72), rgba(24, 41, 43, .75)) !important;
+  color: #8ca09f !important;
+  opacity: .72 !important;
+  border-color: rgba(162, 207, 199, .09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 4px 12px rgba(0,0,0,.12) !important;
+}
+
+/* The main disconnected CTA should still look intentional and readable. */
+html[data-theme="dark"] .swap-submit-premium,
+html[data-theme="dark"] .swap-primary {
+  color: #eaf9f6 !important;
+}
+html[data-theme="dark"] .swap-submit-premium:not(:disabled),
+html[data-theme="dark"] .swap-primary:not(:disabled) {
+  border-color: rgba(95, 202, 218, .30) !important;
+  background:
+    radial-gradient(110% 80% at 50% 0%, rgba(255,255,255,.13), transparent 52%),
+    linear-gradient(180deg, #235b64 0%, #17454c 56%, #10363c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 -2px 0 rgba(0,0,0,.18),
+    0 5px 0 rgba(0,0,0,.20),
+    0 13px 28px rgba(0,0,0,.25) !important;
+}
+
+/* Token pickers */
+html[data-theme="dark"] .token-trigger {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .token-trigger-icon {
+  background: rgba(239, 250, 247, .92) !important;
+  border-color: rgba(255,255,255,.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 5px 12px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .token-trigger-symbol {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .token-trigger-balance,
+html[data-theme="dark"] .token-trigger-chevron {
+  color: var(--dark-text-soft) !important;
+}
+
+/* Direction button gets its own subtle blue glass identity. */
+html[data-theme="dark"] .swap-direction-floating {
+  border-color: rgba(116, 202, 230, .24) !important;
+  background:
+    radial-gradient(circle at 32% 20%, rgba(255,255,255,.17) 0 10%, transparent 12%),
+    linear-gradient(145deg, #244c55, #173a41 54%, #102d33) !important;
+  color: #dff7fb !important;
+}
+
+/* --------------------------------------------------------------------------
+   Share pills + burn card from screenshot
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .pill {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .pill-opaque,
+html[data-theme="dark"] .pill-nav {
+  background:
+    linear-gradient(180deg, rgba(31, 57, 59, .96), rgba(17, 38, 40, .97)) !important;
+}
+
+html[data-theme="dark"] .burn-share-fc {
+  color: #d9c8ff !important;
+  border-color: rgba(154, 123, 224, .25) !important;
+  background:
+    linear-gradient(180deg, rgba(78, 60, 112, .76), rgba(42, 35, 61, .90)) !important;
+}
+html[data-theme="dark"] .burn-share-x {
+  color: #f0f6f5 !important;
+  background:
+    linear-gradient(180deg, rgba(42, 59, 61, .92), rgba(22, 38, 40, .95)) !important;
+}
+html[data-theme="dark"] .burn-share-icon {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+
+html[data-theme="dark"] .content-visible.glass,
+html[data-theme="dark"] .glass.content-visible {
+  background:
+    radial-gradient(70% 90% at 10% 0%, rgba(67, 142, 118, .10), transparent 58%),
+    radial-gradient(70% 90% at 92% 20%, rgba(221, 112, 72, .08), transparent 60%),
+    linear-gradient(160deg, rgba(18, 40, 42, .89), rgba(10, 27, 29, .91)) !important;
+}
+
+html[data-theme="dark"] .content-visible h3 {
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .content-visible .text-inkSub {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .content-visible .bg-black\/\[\.035\] {
+  background: rgba(0,0,0,.22) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Header controls
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .theme-toggle {
+  color: #c9e8e2 !important;
+  background:
+    linear-gradient(180deg, rgba(27, 55, 57, .94), rgba(13, 34, 36, .96)) !important;
+  border-color: var(--dark-edge) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 8px 20px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .app-header .pill-opaque,
+html[data-theme="dark"] .app-header .pill-nav {
+  color: #eefaf7 !important;
+  background:
+    linear-gradient(180deg, rgba(35, 63, 65, .96), rgba(18, 41, 43, .98)) !important;
+  border-color: rgba(177, 233, 223, .16) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Status/receipt/readability
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .route-status,
+html[data-theme="dark"] .quote-receipt-row > span,
+html[data-theme="dark"] .swap-status-row {
+  color: var(--dark-text-soft) !important;
+}
+html[data-theme="dark"] .quote-receipt,
+html[data-theme="dark"] .weth-route-callout,
+html[data-theme="dark"] .swap-alert {
+  background: rgba(19, 42, 44, .84) !important;
+  border-color: var(--dark-edge) !important;
+  color: var(--dark-text) !important;
+}
+html[data-theme="dark"] .quote-receipt strong,
+html[data-theme="dark"] .weth-route-callout strong,
+html[data-theme="dark"] .swap-alert strong {
+  color: var(--dark-text) !important;
+}
+
+/* A little more breathing room on the homepage in dark mode. */
+html[data-theme="dark"] .swap-shell + * {
+  color: var(--dark-text-soft);
+}
+
+/* No white-on-white regressions from utility opacity classes. */
+html[data-theme="dark"] .opacity-70 {
+  opacity: .84;
+}
+
+/* Keep real NFT art untouched. */
+html[data-theme="dark"] .canonical-deed-art img,
+html[data-theme="dark"] .land-hero-canonical-deed img {
+  filter: none !important;
+}
+
+/* Mobile: reduce glass stacking so the screen stays clean instead of muddy. */
+@media(max-width:620px) {
+  html[data-theme="dark"] .swap-shell {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 18px 36px rgba(0,0,0,.24) !important;
+  }
+  html[data-theme="dark"] .trade-panel {
+    border-radius: 22px;
+  }
+}
+
+
+/* ==========================================================================
+   DARK MODE UNIFICATION PASS — match the successful Explore-a-Wallet card
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --dark-card: rgba(10, 30, 32, .92);
+  --dark-card-raised: rgba(16, 38, 40, .94);
+  --dark-card-soft: rgba(20, 44, 46, .82);
+  --dark-copy: #edf8f6;
+  --dark-copy-soft: #a3b8b6;
+  --dark-copy-muted: #78918f;
+  --dark-line: rgba(159, 224, 212, .17);
+  --dark-line-soft: rgba(159, 224, 212, .10);
+  --dark-accent: #53c9ac;
+}
+
+/* The Explore-a-Wallet card is the reference material:
+   deep teal glass, bright title, soft gray copy, green primary action. */
+html[data-theme="dark"] :is(
+  .watch-pouch-card,
+  .mytw-section-heading,
+  .mytw-pond-heading,
+  .mytw-pouch-transfer-shell,
+  .mytw-path-grid,
+  .mytw-profile-card,
+  .mytw-find-place,
+  .mytw-profile-shell,
+  .mytw-world-card,
+  .mytw-world-link,
+  .seedleaf-lore-section,
+  .taboshi1-lore-strip
+) {
+  background:
+    radial-gradient(circle at 94% 6%, rgba(68, 177, 158, .08), transparent 34%),
+    linear-gradient(155deg, rgba(13, 37, 39, .96), rgba(8, 27, 29, .96)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 16px 34px rgba(0,0,0,.21) !important;
+}
+
+/* Turn stubborn light cards into proper dark glass. */
+html[data-theme="dark"] :is(
+  .world-link-card,
+  .world-path-card,
+  .mytw-path-card,
+  .mytw-profile-asset,
+  .mytw-profile-tile,
+  .mytw-action-card,
+  .mytw-land-card,
+  .mytw-land-quicklinks a,
+  .taboshi1-lore-link,
+  .taboshi1-lore-strip a,
+  .taboshi1-stat,
+  .taboshi1-mini-card,
+  .taboshi1-token-card,
+  .seedleaf-lore-card,
+  .seedleaf-stat-card,
+  .seedleaf-info-card
+) {
+  background:
+    linear-gradient(160deg, rgba(19, 43, 45, .92), rgba(12, 31, 33, .94)) !important;
+  border-color: var(--dark-line-soft) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 9px 20px rgba(0,0,0,.14) !important;
+}
+
+/* Fix the exact white cards visible in screenshots even when selectors differ. */
+html[data-theme="dark"] a[class*="world"],
+html[data-theme="dark"] a[class*="lore"],
+html[data-theme="dark"] div[class*="profile"] > div[class*="card"],
+html[data-theme="dark"] div[class*="path"] > a,
+html[data-theme="dark"] div[class*="path"] > div {
+  border-color: var(--dark-line-soft);
+}
+
+/* Headings and descriptions: do not rely on inherited light-page colors. */
+html[data-theme="dark"] :is(
+  .mytw-section-heading h2,
+  .mytw-section-heading h3,
+  .mytw-profile-card h2,
+  .mytw-profile-card h3,
+  .mytw-find-place h2,
+  .mytw-find-place h3,
+  .world-link-card h2,
+  .world-link-card h3,
+  .taboshi1-lore-link h3,
+  .taboshi1-lore-strip strong,
+  .mytw-action-card h2,
+  .mytw-land-card h2
+) {
+  color: var(--dark-copy) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-section-heading p,
+  .mytw-profile-card p,
+  .mytw-find-place p,
+  .world-link-card p,
+  .taboshi1-lore-link p,
+  .mytw-action-card p,
+  .mytw-land-card p
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+/* Small uppercase labels stay visible but subordinate. */
+html[data-theme="dark"] :is(
+  .mytw-section-heading span,
+  .mytw-profile-card > span,
+  .world-link-card > span,
+  .taboshi1-kicker,
+  .mytw-kicker,
+  .seedleaf-kicker
+) {
+  color: #8fb1ad !important;
+}
+
+/* Profile / completion area in screenshot: remove white sheet and make assets readable. */
+html[data-theme="dark"] .mytw-profile-card,
+html[data-theme="dark"] .mytw-find-place,
+html[data-theme="dark"] .mytw-profile-shell {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(93, 198, 182, .09), transparent 28%),
+    linear-gradient(155deg, rgba(13, 36, 38, .97), rgba(8, 26, 28, .97)) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset,
+  .mytw-profile-tile
+) {
+  background: rgba(18, 42, 44, .88) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset strong,
+  .mytw-profile-tile strong
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-profile-asset small,
+  .mytw-profile-tile small,
+  .mytw-profile-footer,
+  .mytw-profile-note
+) {
+  color: var(--dark-copy-muted) !important;
+}
+
+/* The circular Lore Completion area becomes a dark glass orb rather than white. */
+html[data-theme="dark"] :is(
+  .mytw-completion,
+  .mytw-completion-orb,
+  .mytw-profile-score,
+  .mytw-lore-completion
+) {
+  background:
+    radial-gradient(circle at 36% 22%, rgba(255,255,255,.07), transparent 24%),
+    linear-gradient(145deg, rgba(24, 57, 59, .96), rgba(12, 34, 36, .98)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 10px 22px rgba(0,0,0,.17) !important;
+}
+
+/* Four-way Pond / Pouch / Land / World shortcuts. */
+html[data-theme="dark"] :is(
+  .mytw-path-grid,
+  .mytw-path-chain
+) {
+  background:
+    linear-gradient(155deg, rgba(15, 38, 40, .94), rgba(9, 28, 30, .95)) !important;
+  border-color: var(--dark-line) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-path-card,
+  .mytw-path-chain a,
+  .mytw-path-chain > div
+) {
+  background: rgba(17, 41, 43, .86) !important;
+  color: var(--dark-copy) !important;
+  border-color: var(--dark-line-soft) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-path-card strong,
+  .mytw-path-chain strong
+) {
+  color: #dff6f1 !important;
+}
+html[data-theme="dark"] :is(
+  .mytw-path-card small,
+  .mytw-path-chain small
+) {
+  color: #809896 !important;
+}
+
+/* Explore / external world cards from screenshot. */
+html[data-theme="dark"] :is(
+  .world-link-card,
+  .taboshi1-lore-link
+) {
+  min-height: 132px;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(80, 176, 159, .08), transparent 26%),
+    linear-gradient(160deg, rgba(16, 39, 41, .96), rgba(9, 28, 30, .96)) !important;
+}
+
+html[data-theme="dark"] :is(
+  .world-link-card:hover,
+  .taboshi1-lore-link:hover
+) {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(86, 192, 170, .12), transparent 28%),
+    linear-gradient(160deg, rgba(22, 49, 51, .98), rgba(12, 34, 36, .98)) !important;
+  border-color: var(--dark-line) !important;
+}
+
+/* White icon wells in those cards were okay, but use translucent pale glass instead. */
+html[data-theme="dark"] :is(
+  .world-link-card-icon,
+  .taboshi1-lore-icon,
+  .mytw-path-icon
+) {
+  background: rgba(229, 247, 243, .09) !important;
+  border-color: rgba(209, 244, 237, .12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 7px 14px rgba(0,0,0,.13) !important;
+}
+
+/* Arrow buttons: smoked glass, never glowing white circles. */
+html[data-theme="dark"] :is(
+  .world-link-card-arrow,
+  .taboshi1-lore-arrow,
+  .mytw-action-arrow,
+  .mytw-link-arrow
+) {
+  background:
+    linear-gradient(180deg, rgba(37, 70, 72, .96), rgba(19, 44, 46, .98)) !important;
+  border-color: var(--dark-line) !important;
+  color: #dff7f2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 7px 15px rgba(0,0,0,.16) !important;
+}
+
+/* Connect-state card from screenshot. */
+html[data-theme="dark"] :is(
+  .mytw-connect-card,
+  .mytw-quiet-card,
+  .seedleaf-wallet-empty,
+  .seedleaf-empty-wallet
+) {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(69, 170, 151, .08), transparent 30%),
+    linear-gradient(155deg, rgba(14, 37, 39, .97), rgba(8, 27, 29, .97)) !important;
+  border-color: var(--dark-line) !important;
+  color: var(--dark-copy) !important;
+}
+
+html[data-theme="dark"] :is(
+  .mytw-connect-card h2,
+  .mytw-connect-card strong,
+  .mytw-quiet-card h2,
+  .mytw-quiet-card strong
+) {
+  color: var(--dark-copy) !important;
+}
+html[data-theme="dark"] :is(
+  .mytw-connect-card p,
+  .mytw-quiet-card p
+) {
+  color: var(--dark-copy-soft) !important;
+}
+
+/* Generic last-resort correction for old light gradients on My Tobyworld.
+   Keep deliberately bright asset artwork itself untouched. */
+html[data-theme="dark"] .taboshi1-page :is(
+  section,
+  article
+)[style*="background"] {
+  color: var(--dark-copy);
+}
+
+/* Improve card separation on the dark background without making it busy. */
+html[data-theme="dark"] .taboshi1-page > section + section,
+html[data-theme="dark"] .taboshi1-page > div + section {
+  margin-top: 18px;
+}
+
+/* Do not change NFT/token images. */
+html[data-theme="dark"] :is(
+  .seedleaf-asset-card img,
+  .mytw-profile-asset img,
+  .mytw-profile-tile img,
+  .world-link-card img,
+  .taboshi1-lore-link img
+) {
+  filter: none !important;
+}
+
+
+/* ==========================================================================
+   TABOSHI1 / MY TOBYWORLD — COMPLETE DARK MODE PASS
+   Uses exact page classes from app/taboshi1/page.tsx so no remaining light
+   cards inherit pale/white text in dark mode.
+   ========================================================================== */
+
+/* HERO -------------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-hero {
+  background:
+    radial-gradient(circle at 14% 10%, rgba(55, 162, 190, .14), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(75, 180, 126, .12), transparent 28%),
+    linear-gradient(145deg, rgba(16, 40, 42, .98), rgba(8, 27, 29, .98)) !important;
+  border-color: rgba(160, 225, 214, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 20px 44px rgba(0,0,0,.24) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-hero::before {
+  background:
+    linear-gradient(120deg, rgba(255,255,255,.045), transparent 36%, rgba(79, 194, 177, .045)) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-hero .taboshi1-kicker {
+  color: #8fb9b4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero h1 {
+  color: #f1fbf8 !important;
+  text-shadow: 0 2px 18px rgba(0,0,0,.20);
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero p {
+  color: #a8bcba !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-hero-art::after {
+  background: radial-gradient(circle, rgba(81, 207, 191, .10), transparent 68%) !important;
+}
+
+/* The actual seed/frog art remains bright, but its disc sits in a dark jewel frame. */
+html[data-theme="dark"] .taboshi1-page .taboshi1-relic-disc {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.08), transparent 24%),
+    linear-gradient(145deg, rgba(30, 61, 62, .96), rgba(11, 30, 32, .98)) !important;
+  border-color: rgba(167, 226, 216, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 13px 28px rgba(0,0,0,.20) !important;
+}
+
+/* PRIMARY FOUR-WAY NAV ---------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav {
+  background:
+    linear-gradient(155deg, rgba(14, 37, 39, .96), rgba(8, 27, 29, .96)) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 14px 30px rgba(0,0,0,.18) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a {
+  color: #e8f7f4 !important;
+  border-color: rgba(159, 224, 212, .055) !important;
+  background: rgba(18, 43, 45, .62) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a:hover {
+  background: rgba(24, 53, 55, .90) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a::before {
+  background: linear-gradient(115deg, transparent 0 42%, rgba(173,235,224,.08) 49%, transparent 57%) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav a > span {
+  background:
+    linear-gradient(145deg, rgba(30, 65, 67, .96), rgba(17, 45, 47, .98)) !important;
+  color: #72cbd4 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 5px 10px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav b {
+  color: #dff5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-world-nav small {
+  color: #819a97 !important;
+}
+
+/* POND PROFILE ------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-profile-card {
+  background:
+    radial-gradient(circle at 94% 4%, rgba(63, 177, 150, .10), transparent 28%),
+    radial-gradient(circle at 4% 100%, rgba(65, 146, 179, .08), transparent 30%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+  border-color: rgba(159, 224, 212, .16) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-card::before {
+  background: linear-gradient(90deg, transparent, rgba(173,235,224,.10), transparent) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-head h2 {
+  color: #effaf7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-head p {
+  color: #a4b9b7 !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb {
+  background:
+    radial-gradient(circle at 38% 27%, rgba(255,255,255,.08) 0 11%, transparent 13%),
+    linear-gradient(145deg, rgba(27, 60, 62, .98), rgba(11, 35, 37, .98)) !important;
+  border-color: rgba(123, 207, 193, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 9px 20px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb strong {
+  color: #effaf7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-orb span {
+  color: #8da6a3 !important;
+}
+
+/* Asset path nodes should be readable even while "not found". */
+html[data-theme="dark"] .taboshi1-page .mytw-path-node {
+  background: rgba(17, 41, 43, .82) !important;
+  border-color: rgba(159, 224, 212, .08) !important;
+  opacity: .72 !important;
+  filter: saturate(.62) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node.is-found {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(77, 190, 151, .08), transparent 44%),
+    rgba(21, 47, 46, .95) !important;
+  border-color: rgba(96, 199, 159, .18) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 7px 15px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-icon {
+  background: rgba(227, 245, 241, .08) !important;
+  box-shadow: 0 5px 10px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node b {
+  color: #b8ceca !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node.is-found b {
+  color: #e6f7f3 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-path-node i {
+  color: #577674 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-completion-track {
+  background: rgba(4, 18, 19, .70) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.28) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-profile-foot {
+  color: #7f9996 !important;
+}
+
+/* ACTION GRID: land / garden / contribution ------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+html[data-theme="dark"] .taboshi1-page .mytw-land-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-card {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(74, 170, 151, .07), transparent 29%),
+    linear-gradient(145deg, rgba(15, 38, 40, .97), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card::before {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-head small {
+  color: #88a5a2 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-head h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card > p {
+  color: #9eb4b1 !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(.mytw-action-icon,.mytw-symbol-orb) {
+  background:
+    linear-gradient(145deg, rgba(29, 62, 64, .96), rgba(16, 42, 44, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 14px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats span,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines span,
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line {
+  background: rgba(19, 44, 46, .82) !important;
+  border-color: rgba(159, 224, 212, .08) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats small,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines em {
+  color: #819a96 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-stats b,
+html[data-theme="dark"] .taboshi1-page .mytw-contribution-lines b,
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line b {
+  color: #dcefeb !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-inline-action,
+html[data-theme="dark"] .taboshi1-page .mytw-inline-action.is-primary {
+  background:
+    linear-gradient(180deg, rgba(31, 68, 66, .98), rgba(18, 49, 48, .98)) !important;
+  color: #dff8f1 !important;
+  border-color: rgba(106, 205, 172, .17) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 6px 12px rgba(0,0,0,.13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot {
+  background: rgba(29, 35, 44, .58) !important;
+  border-color: rgba(169, 151, 205, .16) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot span,
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot small {
+  color: #928aa6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-production-slot b {
+  color: #c8bddb !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch label {
+  background: rgba(17, 41, 43, .88) !important;
+  border-color: rgba(159, 224, 212, .10) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch label span {
+  color: #879e9b !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch input {
+  color: #eaf7f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-secondary-land-action {
+  color: #9cb3af !important;
+}
+
+/* Keep garden as an illustrated scene, but darken it enough to belong. */
+html[data-theme="dark"] .taboshi1-page .mytw-garden {
+  background:
+    linear-gradient(180deg,#183f43 0%,#1d4a40 57%,#385642 58%,#263f31 100%) !important;
+  border-color: rgba(119, 201, 170, .12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-garden::before {
+  background: rgba(198, 241, 229, .14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-stage-label {
+  color: #83c8a8 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-seed-actions > span {
+  color: #829894 !important;
+}
+
+/* RELICS ------------------------------------------------------------------ */
+html[data-theme="dark"] .taboshi1-page .lore-relic-panel,
+html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-seed-card,
+html[data-theme="dark"] .taboshi1-page .canonical-land-card {
+  background:
+    radial-gradient(circle at 90% 5%, rgba(68, 163, 145, .065), transparent 30%),
+    linear-gradient(145deg, rgba(15, 38, 40, .98), rgba(9, 28, 30, .98)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-relic-panel::before {
+  background:
+    linear-gradient(115deg, transparent 0 42%, rgba(184,238,227,.055) 49%, transparent 57%) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-showcase {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(74, 184, 122, .08), transparent 35%),
+    rgba(17, 42, 44, .88) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-token-art {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255,255,255,.07), rgba(27, 59, 54, .92) 48%, rgba(16, 40, 37, .98)) !important;
+  border-color: rgba(151, 218, 197, .12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 8px 18px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance small {
+  color: #86a49b !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance strong {
+  color: #e6f7f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-balance span,
+html[data-theme="dark"] .taboshi1-page .lore-whisper,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-intro {
+  color: #96aaa7 !important;
+}
+
+/* WALLET STATE ------------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .taboshi1-connect,
+html[data-theme="dark"] .taboshi1-page .lore-connect-card,
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner {
+  background:
+    linear-gradient(155deg, rgba(15, 38, 40, .96), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-connect p,
+html[data-theme="dark"] .taboshi1-page .lore-connect-card p {
+  color: #a1b5b2 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner span {
+  color: #829b98 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-owner strong {
+  color: #e6f7f3 !important;
+}
+
+/* POUCH + TRANSFER --------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-shell {
+  background:
+    radial-gradient(circle at 10% 5%, rgba(64, 181, 158, .08), transparent 30%),
+    radial-gradient(circle at 92% 95%, rgba(94, 106, 172, .06), transparent 32%),
+    linear-gradient(155deg, rgba(13, 36, 38, .97), rgba(8, 27, 29, .97)) !important;
+  border-color: rgba(159, 224, 212, .15) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro p {
+  color: #9eb3b0 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-intro > a {
+  background: rgba(19, 44, 46, .90) !important;
+  border-color: rgba(159, 224, 212, .10) !important;
+  color: #dff5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card {
+  background:
+    radial-gradient(circle at 96% 0, rgba(76, 151, 143, .055), transparent 24%),
+    linear-gradient(145deg, rgba(16, 40, 42, .97), rgba(10, 29, 31, .97)) !important;
+  border-color: rgba(159, 224, 212, .12) !important;
+}
+
+/* Exact Pouch asset cards */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-lore {
+  background:
+    linear-gradient(150deg, rgba(22, 48, 50, .94), rgba(14, 35, 37, .96)) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 8px 17px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-selected {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(75, 196, 159, .10), transparent 45%),
+    linear-gradient(150deg, rgba(25, 56, 52, .97), rgba(15, 39, 38, .98)) !important;
+  border-color: rgba(76, 205, 163, .28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 2px rgba(65, 182, 148, .06),
+    0 9px 20px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-copy strong {
+  color: #e8f8f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-usd-value,
+html[data-theme="dark"] .taboshi1-page .seedleaf-assets-note {
+  color: #889f9c !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-pouch-refresh,
+html[data-theme="dark"] .taboshi1-page .seedleaf-sync-button {
+  background:
+    linear-gradient(180deg, rgba(31, 67, 65, .98), rgba(18, 49, 47, .98)) !important;
+  color: #dff7f1 !important;
+  border-color: rgba(113, 210, 179, .16) !important;
+}
+
+/* Transfer controls */
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-summary {
+  background: rgba(18, 43, 45, .84) !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-label {
+  color: #8ca4a1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-fields :is(input,select) {
+  background: #0c2022 !important;
+  color: #eaf8f5 !important;
+  border-color: rgba(159, 224, 212, .11) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button {
+  background: rgba(19, 45, 47, .90) !important;
+  color: #bdd2cf !important;
+  border-color: rgba(159, 224, 212, .09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-send-button {
+  background:
+    linear-gradient(180deg, #2b9c80, #1e785f) !important;
+  color: #ffffff !important;
+  border-color: rgba(116, 221, 185, .24) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 9px 22px rgba(0,0,0,.18) !important;
+}
+
+/* FINAL LORE STRIP --------------------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip,
+html[data-theme="dark"] .taboshi1-page .lore-final-whisper {
+  background:
+    radial-gradient(circle at 86% 30%, rgba(112, 80, 156, .075), transparent 30%),
+    radial-gradient(circle at 10% 20%, rgba(62, 150, 174, .06), transparent 28%),
+    linear-gradient(135deg, rgba(15, 38, 40, .97), rgba(9, 28, 30, .97)) !important;
+  border-color: rgba(159, 224, 212, .13) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip strong {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-lore-strip p {
+  color: #96aca9 !important;
+}
+
+/* Inline empty / quiet messages ------------------------------------------- */
+html[data-theme="dark"] .taboshi1-page :is(
+  .lore-soft-chip,
+  .seedleaf-sync-message,
+  .watch-pouch-privacy,
+  .seedleaf-note-dot
+) {
+  color: #8da4a1 !important;
+}
+
+/* Make decorative white highlights subtle in dark mode. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .seedleaf-asset-card::before,
+  .seedleaf-asset-card::after,
+  .lore-relic-panel::before
+) {
+  opacity: .32;
+}
+
+/* Mobile dark mode: keep cards distinct without huge bright borders. */
+@media(max-width:620px) {
+  html[data-theme="dark"] .taboshi1-page .mytw-world-nav {
+    padding: 6px;
+  }
+  html[data-theme="dark"] .taboshi1-page .mytw-world-nav a {
+    min-height: 56px;
+  }
+  html[data-theme="dark"] .taboshi1-page .mytw-profile-card,
+  html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+  html[data-theme="dark"] .taboshi1-page .lore-relic-panel,
+  html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+  html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.035),
+      0 12px 25px rgba(0,0,0,.16) !important;
+  }
+}
+
+
+/* ==========================================================================
+   2026-08 DARK SYSTEM DEEP DIVE
+   Exact World / Exchange / remaining My Tobyworld selectors.
+   Reference material: Explore-a-Wallet dark glass.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  --tw-night-bg: #071416;
+  --tw-night-card: rgba(12, 32, 34, .95);
+  --tw-night-card-2: rgba(17, 40, 42, .94);
+  --tw-night-card-3: rgba(22, 47, 49, .90);
+  --tw-night-line: rgba(159, 224, 212, .15);
+  --tw-night-line-soft: rgba(159, 224, 212, .085);
+  --tw-night-copy: #eef9f6;
+  --tw-night-copy-soft: #a1b7b4;
+  --tw-night-copy-muted: #78918f;
+  --tw-night-green: #58c9a9;
+  --tw-night-cyan: #72c8df;
+  --tw-night-purple: #b3a3dc;
+  --tw-night-gold: #e0b172;
+  --tw-night-red: #ec9283;
+  --tw-night-shadow: 0 17px 38px rgba(0,0,0,.22);
+  --tw-night-shadow-soft: 0 8px 20px rgba(0,0,0,.14);
+}
+
+/* --------------------------------------------------------------------------
+   WORLD PAGE — shell / topbar / hero
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-page,
+html[data-theme="dark"] .exchange-page {
+  color: var(--tw-night-copy) !important;
+}
+
+html[data-theme="dark"] .world-topbar > a {
+  color: #9eb8b5 !important;
+}
+html[data-theme="dark"] .world-topbar > span {
+  color: #708b89 !important;
+}
+
+html[data-theme="dark"] .world-hero,
+html[data-theme="dark"] .exchange-hero {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 82% 5%, rgba(76, 190, 158, .12), transparent 29%),
+    radial-gradient(circle at 4% 100%, rgba(64, 139, 184, .10), transparent 32%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 24px 52px rgba(0,0,0,.24) !important;
+}
+html[data-theme="dark"] .exchange-hero {
+  background:
+    radial-gradient(circle at 86% 2%, rgba(200, 133, 73, .11), transparent 32%),
+    radial-gradient(circle at 0 100%, rgba(73, 190, 161, .11), transparent 32%),
+    linear-gradient(145deg, rgba(14, 37, 39, .98), rgba(8, 27, 29, .98)) !important;
+}
+html[data-theme="dark"] .world-hero::before,
+html[data-theme="dark"] .world-onboarding::before {
+  background:
+    linear-gradient(115deg, transparent 0 45%, rgba(194,240,232,.055) 50%, transparent 56%) !important;
+  opacity: .55;
+}
+html[data-theme="dark"] .world-hero h1,
+html[data-theme="dark"] .exchange-hero h1 {
+  color: var(--tw-night-copy) !important;
+  text-shadow: 0 3px 24px rgba(0,0,0,.18);
+}
+html[data-theme="dark"] .world-hero-copy > p,
+html[data-theme="dark"] .exchange-hero p {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-hero-actions > a,
+html[data-theme="dark"] .exchange-hero-actions > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 64, 63, .97), rgba(17, 47, 46, .98)) !important;
+  color: #e1f7f2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 7px 15px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .world-hero-actions > a:hover,
+html[data-theme="dark"] .exchange-hero-actions > a:hover {
+  background:
+    linear-gradient(180deg, rgba(37, 76, 74, .98), rgba(21, 55, 54, .98)) !important;
+  border-color: rgba(130, 220, 195, .22) !important;
+}
+html[data-theme="dark"] .land-section-kicker {
+  color: #86aaa6 !important;
+}
+
+/* World hero art remains an illustration, but belongs to the night system. */
+html[data-theme="dark"] .world-hero-art {
+  filter: saturate(.82) brightness(.82);
+}
+html[data-theme="dark"] .world-hero-sun {
+  opacity: .68;
+  box-shadow: 0 0 48px rgba(202, 235, 216, .16) !important;
+}
+html[data-theme="dark"] .exchange-gate-ring {
+  border-color: rgba(219, 163, 104, .28) !important;
+}
+html[data-theme="dark"] .exchange-gate-ring.r2 {
+  border-color: rgba(95, 203, 183, .24) !important;
+}
+html[data-theme="dark"] .exchange-gate-rune {
+  color: #d98d7b !important;
+  text-shadow: 0 8px 20px rgba(0,0,0,.23) !important;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD ONBOARDING
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-onboarding,
+html[data-theme="dark"] .world-onboarding.has-land {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(69, 180, 151, .09), transparent 31%),
+    linear-gradient(145deg, rgba(13, 35, 37, .97), rgba(8, 26, 28, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .world-onboarding-frog {
+  background:
+    linear-gradient(145deg, rgba(29, 63, 65, .96), rgba(15, 42, 44, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 8px 18px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] .world-onboarding-intro h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .world-onboarding-intro p {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-path-card,
+html[data-theme="dark"] .world-path-card.is-seed,
+html[data-theme="dark"] .world-path-card.is-pond,
+html[data-theme="dark"] .world-path-card.is-land,
+html[data-theme="dark"] .world-path-card.is-explore {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(20, 45, 47, .94), rgba(13, 33, 35, .96)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .world-path-card:hover {
+  background:
+    linear-gradient(150deg, rgba(27, 56, 58, .97), rgba(16, 39, 41, .98)) !important;
+  border-color: var(--tw-night-line) !important;
+}
+html[data-theme="dark"] .world-path-card > span:first-child {
+  background:
+    linear-gradient(145deg, rgba(31, 68, 70, .96), rgba(16, 45, 47, .98)) !important;
+  color: var(--tw-night-cyan) !important;
+}
+html[data-theme="dark"] .world-path-card strong {
+  color: #e8f7f4 !important;
+}
+html[data-theme="dark"] .world-path-card small {
+  color: #839a98 !important;
+}
+html[data-theme="dark"] .world-path-card > b {
+  color: var(--tw-night-green) !important;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD SEARCH / ATLAS
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .world-search-panel,
+html[data-theme="dark"] .world-atlas-section,
+html[data-theme="dark"] .world-official-atlas {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(71, 178, 153, .065), transparent 28%),
+    linear-gradient(145deg, rgba(13, 35, 37, .97), rgba(8, 26, 28, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy > span,
+  .world-atlas-head span,
+  .world-official-atlas span
+) {
+  color: #83a6a2 !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy h2,
+  .world-atlas-head h2,
+  .world-official-atlas h2
+) {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] :is(
+  .world-search-copy p,
+  .world-official-atlas p
+) {
+  color: var(--tw-night-copy-soft) !important;
+}
+html[data-theme="dark"] .world-search-field,
+html[data-theme="dark"] .world-deed-jump label {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(17, 41, 43, .86) !important;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .world-search-field > span,
+html[data-theme="dark"] .world-deed-jump label > span {
+  color: #789390 !important;
+}
+html[data-theme="dark"] .world-search-field input,
+html[data-theme="dark"] .world-deed-jump input {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .world-deed-jump > a,
+html[data-theme="dark"] .world-atlas-head-actions > a,
+html[data-theme="dark"] .world-atlas-head > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 66, 63, .97), rgba(17, 48, 46, .98)) !important;
+  color: #dff6f1 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 13px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .world-atlas-head-actions > .is-exchange {
+  border-color: rgba(213, 168, 104, .19) !important;
+  background:
+    linear-gradient(180deg, rgba(72, 57, 40, .94), rgba(50, 40, 31, .97)) !important;
+  color: #e6be86 !important;
+}
+
+/* World land cards: preserve scene colors, darken the information surface. */
+html[data-theme="dark"] .world-land-card {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(12, 31, 33, .97) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    0 10px 24px rgba(0,0,0,.17) !important;
+}
+html[data-theme="dark"] .world-land-card:hover {
+  border-color: var(--tw-night-line) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 15px 30px rgba(0,0,0,.22) !important;
+}
+html[data-theme="dark"] .world-land-scene {
+  filter: saturate(.76) brightness(.77);
+}
+html[data-theme="dark"] .world-land-moon {
+  opacity: .72;
+}
+html[data-theme="dark"] .world-land-id,
+html[data-theme="dark"] .world-land-copy small {
+  color: #78918f !important;
+}
+html[data-theme="dark"] .world-land-copy h3 {
+  color: #edf8f5 !important;
+}
+html[data-theme="dark"] .world-land-copy p {
+  color: #9db1af !important;
+}
+html[data-theme="dark"] .world-land-copy > div {
+  border-top-color: var(--tw-night-line-soft) !important;
+}
+html[data-theme="dark"] .world-land-copy b {
+  color: var(--tw-night-green) !important;
+}
+html[data-theme="dark"] .world-empty {
+  border-color: rgba(141, 210, 197, .15) !important;
+  background: rgba(15, 38, 40, .64) !important;
+}
+html[data-theme="dark"] .world-empty h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .world-empty p {
+  color: #8fa6a3 !important;
+}
+html[data-theme="dark"] .world-official-atlas > a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(31, 68, 66, .98), rgba(18, 49, 48, .98)) !important;
+  color: #dcf6ef !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 6px 14px rgba(0,0,0,.14) !important;
+}
+
+/* Exchange preview on World page */
+html[data-theme="dark"] .land-exchange-preview {
+  border-color: rgba(211, 160, 100, .16) !important;
+  background:
+    radial-gradient(circle at 0 100%, rgba(69, 177, 151, .08), transparent 31%),
+    radial-gradient(circle at 100% 0%, rgba(201, 139, 76, .09), transparent 34%),
+    linear-gradient(145deg, rgba(16, 37, 38, .98), rgba(10, 28, 30, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .land-exchange-copy > span {
+  color: #c39867 !important;
+}
+html[data-theme="dark"] .land-exchange-copy h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .land-exchange-copy p {
+  color: #9dacaa !important;
+}
+html[data-theme="dark"] .land-exchange-preview > a {
+  border-color: rgba(211, 160, 100, .17) !important;
+  background:
+    linear-gradient(180deg, rgba(75, 57, 39, .96), rgba(51, 40, 31, .98)) !important;
+  color: #e4bb86 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 7px 14px rgba(0,0,0,.14) !important;
+}
+
+/* --------------------------------------------------------------------------
+   EXCHANGE / MARKET — whole app surface system
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .marketplace-stack {
+  color: var(--tw-night-copy);
+}
+html[data-theme="dark"] .market-compose-card,
+html[data-theme="dark"] .market-compose-card.is-wanted,
+html[data-theme="dark"] .market-listings-card,
+html[data-theme="dark"] .market-compose-card-v2 {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(73, 177, 151, .06), transparent 28%),
+    linear-gradient(150deg, rgba(13, 35, 37, .98), rgba(8, 26, 28, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    var(--tw-night-shadow) !important;
+}
+html[data-theme="dark"] .market-compose-card.is-wanted {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(145, 111, 192, .085), transparent 28%),
+    linear-gradient(150deg, rgba(16, 34, 39, .98), rgba(9, 26, 29, .98)) !important;
+}
+html[data-theme="dark"] .market-compose-copy > span,
+html[data-theme="dark"] .market-listings-head span:first-child {
+  color: #82a6a2 !important;
+}
+html[data-theme="dark"] .market-compose-copy h2,
+html[data-theme="dark"] .market-listings-head h2 {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .market-compose-copy p,
+html[data-theme="dark"] .market-listings-head p {
+  color: var(--tw-night-copy-soft) !important;
+}
+
+/* Asset choice tiles */
+html[data-theme="dark"] .market-asset-choice {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(155deg, rgba(20, 45, 47, .94), rgba(13, 33, 35, .96)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .market-asset-choice:hover {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(155deg, rgba(27, 55, 57, .97), rgba(16, 39, 41, .98)) !important;
+}
+html[data-theme="dark"] .market-asset-choice.is-selected {
+  border-color: rgba(83, 201, 169, .29) !important;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(75, 195, 158, .09), transparent 40%),
+    linear-gradient(155deg, rgba(24, 54, 50, .97), rgba(14, 38, 37, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 0 0 2px rgba(75, 195, 158, .04),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .market-asset-choice small,
+html[data-theme="dark"] .market-asset-choice em {
+  color: #849b98 !important;
+}
+html[data-theme="dark"] .market-asset-choice strong {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-asset-choice > b {
+  background: rgba(33, 70, 66, .88) !important;
+  color: #63cbae !important;
+}
+html[data-theme="dark"] .market-held-line,
+html[data-theme="dark"] .market-asset-choice:not(.is-selected) .market-held-line {
+  color: #75a99d !important;
+}
+
+/* Market mode selector */
+html[data-theme="dark"] .market-mode-switch {
+  border-color: var(--tw-night-line) !important;
+  background: rgba(11, 30, 32, .92) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-mode-switch button {
+  color: #819a97 !important;
+}
+html[data-theme="dark"] .market-mode-switch button b {
+  color: #aac0bd !important;
+}
+html[data-theme="dark"] .market-mode-switch button.is-active {
+  border-color: rgba(79, 197, 165, .25) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 67, 61, .98), rgba(17, 48, 46, .98)) !important;
+  color: #dff8f1 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 7px 16px rgba(0,0,0,.15) !important;
+}
+html[data-theme="dark"] .market-mode-switch button.is-active b {
+  color: #e9faf6 !important;
+}
+
+/* Market form controls */
+html[data-theme="dark"] .market-compose-row label > span,
+html[data-theme="dark"] .market-filterbar label > span,
+html[data-theme="dark"] .market-note-field > span {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-compose-row select,
+html[data-theme="dark"] .market-filterbar select,
+html[data-theme="dark"] .market-filterbar input,
+html[data-theme="dark"] .market-note-field textarea {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(18, 43, 45, .98), rgba(11, 31, 33, .99)) !important;
+  color: #eaf8f5 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-compose-row select:focus,
+html[data-theme="dark"] .market-filterbar select:focus,
+html[data-theme="dark"] .market-filterbar input:focus,
+html[data-theme="dark"] .market-note-field textarea:focus {
+  border-color: rgba(79, 198, 165, .35) !important;
+  box-shadow: 0 0 0 3px rgba(79, 198, 165, .075) !important;
+}
+html[data-theme="dark"] .market-fee-pill,
+html[data-theme="dark"] .market-fee-badge {
+  border-color: rgba(218, 170, 94, .18) !important;
+  background:
+    linear-gradient(180deg, rgba(70, 55, 35, .96), rgba(47, 40, 30, .98)) !important;
+  color: #e1b879 !important;
+}
+html[data-theme="dark"] .market-list-button:not(.is-live) {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(34, 54, 56, .92), rgba(20, 39, 41, .96)) !important;
+  color: #849b98 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .market-list-button:not(.is-live) b {
+  background: rgba(255,255,255,.045) !important;
+  color: #839b98 !important;
+}
+
+/* Filters */
+html[data-theme="dark"] .market-filterbar {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(13, 34, 36, .82) !important;
+}
+html[data-theme="dark"] .market-history-toggle button {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(21, 46, 48, .97), rgba(13, 34, 36, .98)) !important;
+  color: #a5bab7 !important;
+}
+
+/* Marketplace rule strip */
+html[data-theme="dark"] .market-rules-strip {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(12, 32, 34, .78) !important;
+}
+html[data-theme="dark"] .market-rules-strip span {
+  background: rgba(20, 44, 46, .80) !important;
+}
+html[data-theme="dark"] .market-rules-strip b {
+  color: #e3f5f1 !important;
+}
+html[data-theme="dark"] .market-rules-strip small {
+  color: #849a98 !important;
+}
+
+/* Listings */
+html[data-theme="dark"] .market-listing-tile,
+html[data-theme="dark"] .market-listing-tile.status-sold,
+html[data-theme="dark"] .market-listing-tile.status-expired,
+html[data-theme="dark"] .market-listing-tile.wanted-tile {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(20, 44, 46, .95), rgba(12, 32, 34, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 8px 18px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .market-listing-tile.status-sold {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(134, 102, 188, .08), transparent 35%),
+    linear-gradient(150deg, rgba(21, 42, 47, .95), rgba(13, 30, 35, .97)) !important;
+}
+html[data-theme="dark"] .market-listing-tile.status-expired {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(190, 132, 72, .07), transparent 35%),
+    linear-gradient(150deg, rgba(23, 41, 39, .95), rgba(14, 30, 31, .97)) !important;
+}
+html[data-theme="dark"] .market-listing-tile-copy small,
+html[data-theme="dark"] .market-listing-tile-copy p,
+html[data-theme="dark"] .market-listing-tile-price small {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-listing-tile-copy h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-listing-tile-price strong {
+  color: #73d2b8 !important;
+}
+html[data-theme="dark"] .market-listing-tile button:not(.market-action) {
+  background: rgba(31, 54, 55, .90) !important;
+  color: #899d9a !important;
+}
+html[data-theme="dark"] .market-action.secondary {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 50, 51, .92) !important;
+  color: #a2b8b5 !important;
+}
+html[data-theme="dark"] .market-history-note {
+  background: rgba(24, 47, 49, .72) !important;
+  color: #8da2a0 !important;
+}
+html[data-theme="dark"] .market-listing-summary > div {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(20, 44, 46, .80) !important;
+}
+html[data-theme="dark"] .market-listing-summary small {
+  color: #829a97 !important;
+}
+html[data-theme="dark"] .market-listing-summary strong {
+  color: #e2f4f0 !important;
+}
+
+/* Market empty state */
+html[data-theme="dark"] .market-empty-clean h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .market-empty-clean p {
+  color: #94aaa7 !important;
+}
+html[data-theme="dark"] .market-empty-clean a {
+  border-color: var(--tw-night-line) !important;
+  background:
+    linear-gradient(180deg, rgba(29, 66, 63, .97), rgba(17, 48, 46, .98)) !important;
+  color: #dff7f1 !important;
+}
+html[data-theme="dark"] .market-empty-stack .market-asset-art {
+  border-color: rgba(9, 27, 29, .92) !important;
+}
+
+/* Status badges remain colored, but tuned to night surfaces. */
+html[data-theme="dark"] .market-status-badge.status-active {
+  background: rgba(50, 142, 109, .20) !important;
+  color: #82d9b4 !important;
+}
+html[data-theme="dark"] .market-status-badge.status-sold {
+  background: rgba(122, 96, 173, .22) !important;
+  color: #c2ade9 !important;
+}
+html[data-theme="dark"] .market-status-badge.status-cancelled {
+  background: rgba(110, 129, 128, .17) !important;
+  color: #9eb0ae !important;
+}
+html[data-theme="dark"] .market-status-badge.status-expired {
+  background: rgba(167, 112, 57, .18) !important;
+  color: #e0b177 !important;
+}
+html[data-theme="dark"] .market-status-badge.wanted {
+  background: rgba(142, 95, 182, .22) !important;
+  color: #d0a7ec !important;
+}
+
+/* Market confirmation / result modals */
+html[data-theme="dark"] .market-modal,
+html[data-theme="dark"] .market-modal.error,
+html[data-theme="dark"] .market-modal.info,
+html[data-theme="dark"] .market-confirm-modal {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(70, 169, 147, .06), transparent 30%),
+    linear-gradient(155deg, rgba(17, 41, 43, .99), rgba(9, 28, 30, .99)) !important;
+  color: var(--tw-night-copy) !important;
+  box-shadow: 0 28px 70px rgba(0,0,0,.42) !important;
+}
+html[data-theme="dark"] .market-modal.error {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(172, 75, 65, .09), transparent 30%),
+    linear-gradient(155deg, rgba(38, 30, 31, .99), rgba(17, 27, 29, .99)) !important;
+}
+html[data-theme="dark"] .market-modal.info {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(115, 88, 163, .10), transparent 30%),
+    linear-gradient(155deg, rgba(28, 31, 42, .99), rgba(13, 27, 30, .99)) !important;
+}
+html[data-theme="dark"] .market-modal h2 {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .market-modal p {
+  color: #9db2af !important;
+}
+html[data-theme="dark"] .market-modal > a {
+  color: #6fc9b0 !important;
+}
+html[data-theme="dark"] .market-modal-share button,
+html[data-theme="dark"] .market-confirm-back {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(23, 49, 51, .94) !important;
+  color: #aec2bf !important;
+}
+html[data-theme="dark"] .market-modal-mark {
+  background: rgba(48, 133, 105, .20) !important;
+  color: #80d4b1 !important;
+}
+html[data-theme="dark"] .market-modal.error .market-modal-mark {
+  background: rgba(159, 73, 63, .18) !important;
+  color: #ee9d90 !important;
+}
+html[data-theme="dark"] .market-modal.info .market-modal-mark {
+  background: rgba(116, 90, 163, .20) !important;
+  color: #c4afe9 !important;
+}
+
+/* --------------------------------------------------------------------------
+   REMAINING MY TOBYWORLD / TABOSHI1 LIGHT SURFACES
+   -------------------------------------------------------------------------- */
+
+/* Original lore hero family */
+html[data-theme="dark"] .taboshi1-page .lore-pouch-hero,
+html[data-theme="dark"] .taboshi1-page .taboshi1-hero {
+  border-color: var(--tw-night-line) !important;
+  background:
+    radial-gradient(circle at 83% 18%, rgba(58, 144, 180, .12), transparent 24%),
+    radial-gradient(circle at 72% 92%, rgba(72, 157, 99, .09), transparent 27%),
+    linear-gradient(135deg, rgba(15, 38, 40, .98), rgba(8, 27, 29, .98)) !important;
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-hero h1,
+  .taboshi1-card h2,
+  .seedleaf-section-head h2
+) {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-hero p,
+  .seedleaf-section-head p
+) {
+  color: #9fb4b1 !important;
+}
+
+/* Remaining relic trio / old deed */
+html[data-theme="dark"] .taboshi1-page .lore-deed-card,
+html[data-theme="dark"] .taboshi1-page .lore-deed-showcase,
+html[data-theme="dark"] .taboshi1-page .lore-deed-token {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    radial-gradient(circle at 82% 15%, rgba(111, 87, 160, .09), transparent 30%),
+    linear-gradient(145deg, rgba(18, 39, 44, .98), rgba(10, 28, 31, .98)) !important;
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-deed-balance strong,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card h2,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card h3 {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-deed-balance small,
+html[data-theme="dark"] .taboshi1-page .lore-deed-card p {
+  color: #93aaa7 !important;
+}
+
+/* Owned deeds shell and old chip fallback */
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(145deg, rgba(18, 42, 44, .90), rgba(11, 30, 32, .92)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head span,
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head > div small {
+  color: #78918f !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head strong {
+  color: #e3f5f1 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-owned-deeds-head > a {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 52, 53, .92) !important;
+  color: #a9c4bf !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-moon,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-lotus,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-chip.theme-ember {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(70, 180, 151, .07), transparent 38%),
+    linear-gradient(145deg, rgba(22, 47, 49, .95), rgba(13, 34, 36, .97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main {
+  color: var(--tw-night-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main small,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main strong i {
+  color: #7e9794 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main strong {
+  color: #e8f7f4 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main em,
+html[data-theme="dark"] .taboshi1-page .mytw-deed-main > b {
+  color: #6bc9ae !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-copy-deed {
+  border-color: var(--tw-night-line-soft) !important;
+  background: rgba(24, 50, 52, .94) !important;
+  color: #92aaa7 !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-deed-fallback {
+  background: rgba(20, 45, 47, .70) !important;
+  color: #8fa5a2 !important;
+}
+
+/* Legacy land tile was explicitly forced light with !important in globals. */
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(91, 116, 107, .08), transparent 38%),
+    linear-gradient(145deg, rgba(20, 42, 43, .95), rgba(13, 32, 34, .97)) !important;
+  border-color: rgba(153, 197, 188, .11) !important;
+}
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset.is-held {
+  border-color: rgba(91, 176, 139, .20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    var(--tw-night-shadow-soft) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-legacy-land-icon {
+  background:
+    linear-gradient(145deg, rgba(40, 57, 57, .96), rgba(23, 39, 40, .98)) !important;
+  color: #91a19f !important;
+}
+
+/* Wallet sync strip */
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-row {
+  border-color: var(--tw-night-line-soft) !important;
+  background:
+    linear-gradient(150deg, rgba(17, 41, 43, .95), rgba(10, 29, 31, .97)) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-copy strong {
+  color: #e7f7f3 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-wallet-sync-copy span {
+  color: #889f9c !important;
+}
+
+/* Buttons/primary actions in Taboshi1 that were still hard-coded white. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-primary,
+  .seedleaf-connect,
+  .lore-connect-card button
+) {
+  border-color: rgba(102, 207, 175, .19) !important;
+  background:
+    linear-gradient(180deg, #2b957a, #1d705d) !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 8px 18px rgba(0,0,0,.17) !important;
+}
+
+/* Generic Taboshi1 text catches for old structures, but NOT art/images. */
+html[data-theme="dark"] .taboshi1-page :is(
+  .taboshi1-card-copy,
+  .lore-transfer-note,
+  .lore-transfer-intro,
+  .lore-whisper
+) {
+  color: #99afac !important;
+}
+
+/* --------------------------------------------------------------------------
+   Consistency / hover / mobile
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] :is(
+  .world-path-card,
+  .world-land-card,
+  .market-asset-choice,
+  .market-listing-tile,
+  .mytw-deed-chip
+) {
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    box-shadow .16s ease !important;
+}
+
+@media(max-width:620px) {
+  html[data-theme="dark"] .world-search-panel,
+  html[data-theme="dark"] .world-atlas-section,
+  html[data-theme="dark"] .market-compose-card,
+  html[data-theme="dark"] .market-listings-card,
+  html[data-theme="dark"] .world-onboarding,
+  html[data-theme="dark"] .land-exchange-preview {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.03),
+      0 12px 26px rgba(0,0,0,.17) !important;
+  }
+}
+
+/* Never recolor actual user/NFT/token artwork. */
+html[data-theme="dark"] :is(
+  .canonical-deed-art img,
+  .land-hero-canonical-deed img,
+  .market-asset-art img,
+  .world-onboarding img,
+  .land-exchange-mark img,
+  .seedleaf-asset-image img,
+  .taboshi1-real-art
+) {
+  filter: none !important;
+}
+
+/* ==========================================================================
+   2026-08 FINAL CONTRAST SYSTEM
+   --------------------------------------------------------------------------
+   Dark mode intentionally uses TWO surface contexts:
+   1) deep pond glass = light text
+   2) frosted paper islands = dark teal text
+
+   This section is intentionally last. It resolves the remaining white-on-white
+   cases caused by the broad dark-mode heading rules earlier in this file.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  /* Frosted paper islands used inside the night experience. */
+  --paper-surface: rgba(247, 251, 249, .965);
+  --paper-surface-soft: rgba(240, 248, 245, .95);
+  --paper-surface-blue: rgba(239, 249, 251, .965);
+  --paper-surface-green: rgba(240, 249, 242, .965);
+  --paper-surface-gold: rgba(253, 247, 232, .965);
+  --paper-surface-lilac: rgba(247, 243, 251, .965);
+  --paper-ink: #123f47;
+  --paper-ink-strong: #0b3540;
+  --paper-copy: #667f82;
+  --paper-copy-soft: #809396;
+  --paper-label: #729093;
+  --paper-line: rgba(19, 67, 74, .11);
+  --paper-line-strong: rgba(19, 67, 74, .16);
+  --paper-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 15px 34px rgba(0,0,0,.17);
+
+  /* Night glass used for the surrounding experience. */
+  --pond-surface: rgba(10, 31, 33, .94);
+  --pond-surface-raised: rgba(16, 39, 41, .94);
+  --pond-ink: #eef9f6;
+  --pond-copy: #a1b7b4;
+  --pond-label: #83a19e;
+}
+
+/* ==========================================================================
+   MY TOBYWORLD / POUCH — frosted holdings stay light, but get dark ink
+   ========================================================================== */
+
+/* The large holdings/pouch card shown in the screenshot. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(78, 197, 165, .075), transparent 28%),
+    linear-gradient(150deg, var(--paper-surface), var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  h1,h2,h3,h4,strong,b
+) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  p,small,em
+) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(
+  .taboshi1-kicker,.seedleaf-section-head span,.seedleaf-asset-copy span
+) {
+  color: var(--paper-label) !important;
+}
+
+/* Individual asset tiles remain subtly colored rather than turning dark. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card {
+  border-color: var(--paper-line) !important;
+  background: linear-gradient(150deg,#ffffff,#f4f8f7) !important;
+  color: var(--paper-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 7px 17px rgba(21,65,72,.07) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-blue {
+  background: linear-gradient(145deg,#fff,#edf8fc) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-red {
+  background: linear-gradient(145deg,#fff,#fbefef) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-green,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-leaf {
+  background: linear-gradient(145deg,#fff,#edf7ef) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-seed {
+  background: linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card.is-selected {
+  border-color: rgba(39, 143, 110, .27) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 2px rgba(44, 153, 117, .06),
+    0 8px 18px rgba(23,85,67,.09) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy span {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy strong {
+  color: #24545b !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy b {
+  color: #0d3c46 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-usd-value {
+  color: #39775f !important;
+}
+
+/* ==========================================================================
+   LAND PAGE — preserve intentional light cards inside the night shell
+   ========================================================================== */
+
+/* Main land hero/share card from screenshot. */
+html[data-theme="dark"] .land-page .land-hero {
+  background:
+    radial-gradient(circle at 88% 4%, rgba(84, 222, 185, .13), transparent 28%),
+    radial-gradient(circle at 3% 100%, rgba(92,155,229,.08), transparent 30%),
+    linear-gradient(145deg, rgba(250,253,251,.985), rgba(240,249,246,.97)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-hero h1 {
+  color: var(--paper-ink-strong) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .land-page .land-hero-copy > p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-hero .land-section-kicker {
+  color: #6d9992 !important;
+}
+
+/* Share buttons: primary can stay dark, secondary buttons are paper with dark text. */
+html[data-theme="dark"] .land-page .land-share-actions button {
+  background: linear-gradient(180deg,#ffffff,#edf6f3) !important;
+  border-color: var(--paper-line) !important;
+  color: #174a53 !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 6px 14px rgba(20,65,71,.08) !important;
+}
+html[data-theme="dark"] .land-page .land-share-actions button:first-child {
+  background: linear-gradient(180deg,#175263,#0c3a47) !important;
+  border-color: #0d3a46 !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    0 8px 18px rgba(8,48,57,.18) !important;
+}
+
+/* Deed identity card. */
+html[data-theme="dark"] .land-page .land-identity-card {
+  background:
+    radial-gradient(circle at 98% 0, rgba(102,179,155,.08), transparent 28%),
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card :is(h1,h2,h3,h4,strong,b) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card :is(p,small,em) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-card .land-section-kicker {
+  color: #73918f !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid > div {
+  background: rgba(255,255,255,.78) !important;
+  border-color: var(--paper-line) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid strong {
+  color: #194c55 !important;
+}
+
+/* Community banner card: scene remains colored; the footer remains readable paper. */
+html[data-theme="dark"] .land-page .land-community-card {
+  background: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot {
+  background: linear-gradient(180deg,#ffffff,#f3f8f6) !important;
+  color: var(--paper-ink) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-community-foot strong {
+  color: #2d625b !important;
+}
+
+/* Garden module is deliberately a bright illustrated island. */
+html[data-theme="dark"] .land-page .land-garden-card,
+html[data-theme="dark"] .land-page .land-module.land-garden-card {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(72, 190, 139, .09), transparent 31%),
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-green)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy > strong {
+  color: #215a4f !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-garden-copy small {
+  color: var(--paper-copy-soft) !important;
+}
+html[data-theme="dark"] .land-page .land-question {
+  background: rgba(247,252,249,.86) !important;
+  border-color: rgba(45,120,93,.18) !important;
+}
+html[data-theme="dark"] .land-page .land-question > span {
+  background: #dff2e8 !important;
+  color: #408262 !important;
+}
+html[data-theme="dark"] .land-page .land-question b {
+  color: #275d50 !important;
+}
+html[data-theme="dark"] .land-page .land-question small {
+  color: #758b8b !important;
+}
+
+/* "Beyond the Veil" remains a pale lilac mystery card with dark purple/teal copy. */
+html[data-theme="dark"] .land-page .land-production-card,
+html[data-theme="dark"] .land-page .land-production-module {
+  background:
+    radial-gradient(circle at 100% 0,rgba(104,76,167,.13),transparent 40%),
+    linear-gradient(145deg,#fcfbfd,var(--paper-surface-lilac)) !important;
+  border-color: rgba(104,76,167,.13) !important;
+  color: #3e3b56 !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page .land-production-rune {
+  color: #8a72b5 !important;
+}
+html[data-theme="dark"] .land-page .land-production-module h2 {
+  color: #473b60 !important;
+}
+html[data-theme="dark"] .land-page .land-production-module p {
+  color: #716c80 !important;
+}
+html[data-theme="dark"] .land-page .land-production-status {
+  background: #eee8f8 !important;
+  color: #725e98 !important;
+}
+
+/* Relics / discovery light modules should use paper ink. */
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) {
+  background:
+    linear-gradient(145deg,var(--paper-surface),var(--paper-surface-soft)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) :is(h1,h2,h3,h4,strong,b) {
+  color: var(--paper-ink-strong) !important;
+}
+html[data-theme="dark"] .land-page :is(
+  .land-relic-card,.land-discovery-module,.land-world-next
+) :is(p,small,em) {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile {
+  background: rgba(255,255,255,.72) !important;
+  border-color: var(--paper-line) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile small {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile strong {
+  color: #315d65 !important;
+}
+html[data-theme="dark"] .land-page .land-relic-tile b {
+  color: #103d47 !important;
+}
+
+/* Deed artwork frame: keep the actual NFT art exactly as delivered. */
+html[data-theme="dark"] .land-page .land-hero-deed-wrap {
+  background: rgba(249,252,251,.94) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label span {
+  color: var(--paper-label) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label strong {
+  color: #244e56 !important;
+}
+
+/* ==========================================================================
+   POND PULSE — intentional pale data ledger with strong readable metrics
+   ========================================================================== */
+
+html[data-theme="dark"] .pond-pulse {
+  background:
+    radial-gradient(circle at 8% 0%,rgba(70,186,229,.11),transparent 30%),
+    radial-gradient(circle at 92% 100%,rgba(243,194,69,.09),transparent 30%),
+    linear-gradient(145deg,rgba(249,252,251,.985),rgba(239,247,245,.97)) !important;
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow: var(--paper-shadow) !important;
+}
+html[data-theme="dark"] .pond-pulse-shine {
+  background: linear-gradient(180deg,rgba(255,255,255,.72),transparent) !important;
+}
+html[data-theme="dark"] .pond-pulse-title span {
+  color: #3f7b8e !important;
+}
+html[data-theme="dark"] .pond-pulse-title h2 {
+  color: var(--paper-ink-strong) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-title p {
+  color: var(--paper-copy) !important;
+}
+html[data-theme="dark"] .pond-pulse-orb {
+  background: linear-gradient(145deg,#fff,#e8f5f8) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 7px 16px rgba(21,111,150,.08) !important;
+}
+
+/* Running status remains a light green capsule with dark green copy. */
+html[data-theme="dark"] .pond-pulse-status {
+  background: linear-gradient(180deg,#fff,#edf7ef) !important;
+  border-color: rgba(45,137,87,.15) !important;
+  color: #27744d !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 7px 15px rgba(28,91,59,.06) !important;
+}
+html[data-theme="dark"] .pond-pulse-status b {
+  color: #567f8a !important;
+}
+
+/* Big feature metrics: burn and treasury. */
+html[data-theme="dark"] .pond-pulse-feature {
+  border-color: var(--paper-line) !important;
+  color: var(--paper-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 10px 23px rgba(17,62,71,.07) !important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-burn {
+  background:
+    radial-gradient(circle at 92% 12%,rgba(238,96,70,.14),transparent 31%),
+    linear-gradient(145deg,#fff,#fbeee9) !important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-treasury {
+  background:
+    radial-gradient(circle at 92% 12%,rgba(238,183,55,.17),transparent 31%),
+    linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .pond-pulse-kicker {
+  color: #637b80 !important;
+}
+html[data-theme="dark"] .pond-pulse-feature strong {
+  color: #0b3641 !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-feature small {
+  color: #687f83 !important;
+}
+html[data-theme="dark"] .pond-pulse-feature small b {
+  color: #4d686e !important;
+}
+html[data-theme="dark"] .pond-pulse-feature em {
+  background: rgba(255,255,255,.67) !important;
+  border-color: var(--paper-line) !important;
+  color: #2d7056 !important;
+  box-shadow: inset 0 1px 0 #fff !important;
+}
+
+/* Smaller ledger blocks. */
+html[data-theme="dark"] .pond-pulse-stat,
+html[data-theme="dark"] .pond-pulse-stat.is-leaf,
+html[data-theme="dark"] .pond-pulse-stat.is-btc,
+html[data-theme="dark"] .pond-pulse-stat.is-seed,
+html[data-theme="dark"] .pond-pulse-stat.is-draw {
+  border-color: var(--paper-line) !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 8px 17px rgba(18,61,69,.055) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat {
+  background: linear-gradient(150deg,#fff,#f4f8f8) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-leaf {
+  background: linear-gradient(145deg,#fff,#edf7ef) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-btc {
+  background: linear-gradient(145deg,#fff,#fbf5e5) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-seed {
+  background: linear-gradient(145deg,#fff,#edf7fb) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat.is-draw {
+  background: linear-gradient(145deg,#fff,#f3eff8) !important;
+}
+html[data-theme="dark"] .pond-pulse-stat span {
+  color: #607b80 !important;
+}
+html[data-theme="dark"] .pond-pulse-stat strong {
+  color: #0c3742 !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .pond-pulse-stat small {
+  color: #74898c !important;
+}
+html[data-theme="dark"] .pond-pulse-stat em {
+  color: #76665e !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper,
+html[data-theme="dark"] .pond-pulse-whisper p {
+  color: #657f83 !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper b,
+html[data-theme="dark"] .pond-pulse-whisper code {
+  color: #315e69 !important;
+}
+html[data-theme="dark"] .pond-pulse-whisper code {
+  background: rgba(255,255,255,.64) !important;
+}
+
+/* ==========================================================================
+   WORLD / EXCHANGE — make sure no light card inherits white typography
+   ========================================================================== */
+
+/* If a World land scene uses a light information footer, force paper ink. */
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy {
+  background: rgba(12,31,33,.97) !important;
+}
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy h3 {
+  color: #edf8f5 !important;
+}
+html[data-theme="dark"] .world-page .world-land-card .world-land-copy p {
+  color: #9fb4b1 !important;
+}
+
+/* Marketplace asset artwork itself is unchanged; dark surrounding copy stays bright. */
+html[data-theme="dark"] .exchange-page :is(
+  .market-compose-card,.market-listings-card,.market-listing-tile,.market-asset-choice
+) :is(h1,h2,h3,h4,strong,b) {
+  color: #eaf8f5 !important;
+}
+html[data-theme="dark"] .exchange-page :is(
+  .market-compose-card,.market-listings-card,.market-listing-tile,.market-asset-choice
+) :is(p,small,em) {
+  color: #93aaa7 !important;
+}
+
+/* ==========================================================================
+   GENERIC SAFETY NETS — scoped, not global
+   ========================================================================== */
+
+/* Any deliberate paper island inside the land page gets paper typography. */
+html[data-theme="dark"] .land-page :is(
+  .land-identity-card,
+  .land-garden-card,
+  .land-production-card,
+  .land-community-foot,
+  .land-hero
+) {
+  --local-ink: var(--paper-ink);
+  --local-copy: var(--paper-copy);
+}
+
+/* Do not let earlier broad dark-mode heading rules override paper headings. */
+html[data-theme="dark"] .land-page :is(
+  .land-identity-card,
+  .land-garden-card,
+  .land-production-card,
+  .land-community-foot,
+  .land-hero
+) :is(h1,h2,h3,h4,strong,b) {
+  text-shadow: none !important;
+}
+
+/* Keep all real ecosystem/NFT/token art unfiltered. */
+html[data-theme="dark"] :is(
+  .canonical-deed-art img,
+  .land-hero-canonical-deed img,
+  .seedleaf-asset-image img,
+  .taboshi1-real-art,
+  .market-asset-art img
+) {
+  filter: none !important;
+}
+
+/* ==========================================================================
+   FINAL DARK-SURFACE PASS — no paper-white panels in dark mode
+   ========================================================================== */
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card,
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card {
+  background:radial-gradient(circle at 94% 4%,rgba(76,188,158,.07),transparent 28%),linear-gradient(145deg,rgba(15,39,41,.985),rgba(8,27,29,.985)) !important;
+  border-color:rgba(159,224,212,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-blue,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-red,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-green,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-leaf,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-seed {
+  background:linear-gradient(150deg,rgba(22,48,50,.96),rgba(13,34,36,.98)) !important;
+  border-color:rgba(159,224,212,.09) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 17px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-card.is-selected {
+  background:radial-gradient(circle at 20% 0%,rgba(75,196,159,.10),transparent 45%),linear-gradient(150deg,rgba(25,56,52,.98),rgba(14,38,38,.99)) !important;
+  border-color:rgba(76,205,163,.29) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 2px rgba(65,182,148,.06),0 9px 20px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(h1,h2,h3,h4,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy strong,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy b {color:#e8f8f4 !important}
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(p,small,em),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets .seedleaf-usd-value {color:#8ea5a2 !important}
+html[data-theme="dark"] .seedleaf-reconnect-button{background:rgba(18,45,47,.94)!important;border-color:rgba(159,224,212,.12)!important;color:#dff5f1!important}
+
+html[data-theme="dark"] .land-page :is(.land-hero,.land-identity-card,.land-garden-card,.land-production-card,.land-community-foot,.land-vault-card,.pouch-land-send),
+html[data-theme="dark"] .land-vault-card {
+  background:radial-gradient(circle at 92% 4%,rgba(77,188,156,.07),transparent 29%),linear-gradient(145deg,rgba(15,39,41,.985),rgba(8,27,29,.985)) !important;
+  border-color:rgba(159,224,212,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 15px 32px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .land-vault-card :is(h1,h2,h3,h4,strong,b){color:#eaf8f5 !important}
+html[data-theme="dark"] .land-vault-card :is(p,small,span){color:#91a8a5}
+html[data-theme="dark"] .land-vault-address,
+html[data-theme="dark"] .land-vault-assets>div,
+html[data-theme="dark"] .land-vault-withdraw,
+html[data-theme="dark"] .land-vault-create-panel {background:rgba(18,44,46,.88)!important;border-color:rgba(159,224,212,.10)!important}
+html[data-theme="dark"] .land-vault-address button,
+html[data-theme="dark"] .land-vault-send :is(select,input),
+html[data-theme="dark"] .land-vault-withdraw input {background:#0c2022!important;color:#eaf8f5!important;border-color:rgba(159,224,212,.11)!important}
+html[data-theme="dark"] .land-vault-message{background:rgba(36,102,83,.20)!important;color:#bfe9dc!important}
+
+html[data-theme="dark"] .market-approval-note{background:rgba(18,44,46,.78)!important;border-color:rgba(159,224,212,.10)!important}
+html[data-theme="dark"] .market-approval-note b{color:#dff5f1!important}
+html[data-theme="dark"] .market-approval-note span{color:#8fa6a3!important}
+
+/* My Tobyworld · Pond Record dark treatment */
+html[data-theme="dark"] .taboshi1-page .mytw-pond-record{
+  border-color:rgba(96,207,190,.20);
+  background:
+    radial-gradient(circle at 84% 9%,rgba(55,202,190,.14),transparent 28%),
+    radial-gradient(circle at 8% 90%,rgba(49,139,191,.10),transparent 30%),
+    linear-gradient(145deg,#0d2d2f 0%,#0a292b 55%,#102c2c 100%);
+  box-shadow:inset 0 1px 0 rgba(205,255,245,.05),0 22px 50px rgba(0,0,0,.22);
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pond-record:after{border-color:rgba(190,255,243,.025)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score,
+html[data-theme="dark"] .taboshi1-page .mytw-record-hero,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid>div{background:rgba(20,58,58,.76);border-color:rgba(104,197,185,.12);box-shadow:inset 0 1px 0 rgba(220,255,248,.035)}
+html[data-theme="dark"] .taboshi1-page .mytw-flame-orb{background:linear-gradient(145deg,#183e3c,#102f30);border-color:rgba(107,208,190,.13);box-shadow:inset 0 1px 0 rgba(220,255,248,.04),0 8px 20px rgba(0,0,0,.16)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-story>small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid small,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid em,
+html[data-theme="dark"] .taboshi1-page .mytw-record-foot>small{color:#829f9e}
+html[data-theme="dark"] .taboshi1-page .mytw-record-score strong,
+html[data-theme="dark"] .taboshi1-page .mytw-record-story>strong,
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-grid strong{color:#e6f5f1}
+html[data-theme="dark"] .taboshi1-page .mytw-record-kicker{color:#68c8c2}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring{background:conic-gradient(#42afd2 0deg,#63cfad var(--record-progress),rgba(124,177,170,.11) var(--record-progress));box-shadow:0 9px 22px rgba(0,0,0,.17)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring:before{background:linear-gradient(145deg,#123536,#0e2d2f);box-shadow:inset 0 1px 0 rgba(220,255,248,.04)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-ring strong{color:#dbf4ef}
+html[data-theme="dark"] .taboshi1-page .mytw-record-stat-icon{color:#78d3ce;background:linear-gradient(145deg,#183f40,#123436)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line{background:linear-gradient(90deg,rgba(79,51,42,.42),rgba(17,56,55,.72));border-color:rgba(219,152,117,.09)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line>span{background:rgba(21,57,56,.78)}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line small{color:#a9897b}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line strong{color:#f0d1c0}
+html[data-theme="dark"] .taboshi1-page .mytw-record-burn-line em{color:#8f9f9c}
+html[data-theme="dark"] .taboshi1-page .mytw-record-progress{background:rgba(112,163,157,.10)}
+
+/* Slightly richer card surfaces without increasing request/load cost. */
+.taboshi1-page .seedleaf-relic-card,.taboshi1-page .mytw-land-card,.taboshi1-page .mytw-seed-garden{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+@media(hover:hover){.taboshi1-page .seedleaf-relic-card:hover,.taboshi1-page .mytw-land-card:hover,.taboshi1-page .mytw-seed-garden:hover{transform:translateY(-2px);border-color:rgba(77,177,172,.22);box-shadow:0 18px 38px rgba(11,67,74,.10)}}
+html[data-theme="dark"] .taboshi1-page .seedleaf-relic-card,
+html[data-theme="dark"] .taboshi1-page .mytw-land-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden{box-shadow:inset 0 1px 0 rgba(220,255,248,.035),0 16px 34px rgba(0,0,0,.15)}
+
+/* ==========================================================================\n   TRANSACTION NOTIFICATIONS — polished light/dark surfaces\n   ========================================================================== */
+.swap-success-backdrop{
+  background:rgba(6,24,27,.16);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.swap-success-card{
+  isolation:isolate;
+  transform:translateZ(0);
+}
+.swap-success-orb svg,.market-modal-mark svg{width:24px;height:24px;display:block}
+.swap-success-flame{display:inline-grid;width:14px;height:14px;place-items:center;margin-right:4px;vertical-align:-2px;color:#d4673f}
+.swap-success-flame svg{width:14px;height:14px;display:block}
+.swap-success-close,.market-modal-close,.market-confirm-actions button,.market-modal-share button{
+  transition:transform .16s ease,filter .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+@media(hover:hover){
+  .swap-success-close:hover,.market-modal-close:hover,.market-confirm-actions button:hover,.market-modal-share button:hover{filter:brightness(1.04);transform:translateY(-1px)}
+}
+.swap-success-close:active,.market-modal-close:active,.market-confirm-actions button:active,.market-modal-share button:active{transform:translateY(1px) scale(.985)}
+.swap-success-close:focus-visible,.market-modal-close:focus-visible,.market-confirm-actions button:focus-visible,.market-modal-share button:focus-visible,.swap-success-basescan:focus-visible,.market-modal>a:focus-visible{outline:2px solid #65cfbb;outline-offset:3px}
+
+html[data-theme="dark"] .swap-success-backdrop{
+  background:rgba(2,11,13,.48);
+  backdrop-filter:blur(7px) saturate(.9);
+  -webkit-backdrop-filter:blur(7px) saturate(.9);
+}
+html[data-theme="dark"] .swap-success-card{
+  border-color:rgba(94,214,178,.22) !important;
+  color:#e8f7f3 !important;
+  background:
+    radial-gradient(85% 80% at 84% 0%,rgba(64,199,158,.14),transparent 62%),
+    linear-gradient(165deg,rgba(18,49,48,.99),rgba(8,27,29,.995)) !important;
+  box-shadow:inset 0 1px 0 rgba(225,255,248,.07),0 8px 0 rgba(2,13,15,.24),0 28px 64px rgba(0,0,0,.46) !important;
+}
+html[data-theme="dark"] .swap-success-shine{
+  opacity:.17;
+  background:linear-gradient(180deg,rgba(204,255,243,.32),transparent) !important;
+}
+html[data-theme="dark"] .swap-success-close{
+  border-color:rgba(128,205,190,.16) !important;
+  background:rgba(24,57,57,.88) !important;
+  color:#a9c5bf !important;
+  box-shadow:inset 0 1px 0 rgba(230,255,250,.04),0 5px 13px rgba(0,0,0,.2) !important;
+}
+html[data-theme="dark"] .swap-success-orb{
+  border-color:rgba(192,255,235,.2) !important;
+  color:#eafff7 !important;
+  background:linear-gradient(145deg,#54c79a,#269272 58%,#176552) !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,248,.26),0 8px 18px rgba(13,93,69,.28) !important;
+}
+html[data-theme="dark"] .swap-success-head small{color:#73b8a5 !important}
+html[data-theme="dark"] .swap-success-head strong{color:#edf9f6 !important}
+html[data-theme="dark"] .swap-success-grid>div{
+  border-color:rgba(112,190,174,.12) !important;
+  background:rgba(20,54,54,.78) !important;
+  box-shadow:inset 0 1px 0 rgba(224,255,248,.035) !important;
+}
+html[data-theme="dark"] .swap-success-grid small{color:#829f9b !important}
+html[data-theme="dark"] .swap-success-grid strong{color:#e1f2ee !important}
+html[data-theme="dark"] .swap-success-grid .swap-success-burn{
+  border-color:rgba(213,133,91,.13) !important;
+  background:linear-gradient(145deg,rgba(62,45,39,.88),rgba(25,52,50,.88)) !important;
+}
+html[data-theme="dark"] .swap-success-burn strong,html[data-theme="dark"] .swap-success-flame{color:#efa27a !important}
+html[data-theme="dark"] .swap-success-basescan{
+  border-color:rgba(73,154,207,.17) !important;
+  color:#c4dcdf !important;
+  background:linear-gradient(180deg,rgba(25,57,66,.94),rgba(16,43,49,.96)) !important;
+  box-shadow:inset 0 1px 0 rgba(220,250,255,.04),0 7px 16px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] .swap-success-basescan strong{color:#73bfe7 !important}
+html[data-theme="dark"] .swap-success-card>p{color:#7f9995 !important}
+
+html[data-theme="dark"] .market-modal-backdrop{
+  background:rgba(2,12,14,.66) !important;
+  backdrop-filter:blur(10px) saturate(.86) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(.86) !important;
+}
+html[data-theme="dark"] .market-modal,
+html[data-theme="dark"] .market-confirm-modal{
+  border:1px solid rgba(100,188,174,.19) !important;
+  box-shadow:inset 0 1px 0 rgba(228,255,249,.045),0 30px 80px rgba(0,0,0,.56) !important;
+}
+html[data-theme="dark"] .market-modal-mark{
+  border:1px solid rgba(116,212,184,.13);
+  box-shadow:inset 0 1px 0 rgba(231,255,248,.05),0 8px 20px rgba(0,0,0,.18);
+}
+html[data-theme="dark"] .market-modal h2{color:#edf9f6 !important}
+html[data-theme="dark"] .market-modal p{color:#9bb2ae !important}
+html[data-theme="dark"] .market-modal>a{
+  padding:9px 12px;
+  border:1px solid rgba(80,162,199,.14);
+  border-radius:12px;
+  color:#79c6e8 !important;
+  background:rgba(24,55,62,.72);
+}
+html[data-theme="dark"] .market-modal-share button,
+html[data-theme="dark"] .market-confirm-back{
+  border:1px solid rgba(111,181,171,.12) !important;
+  background:rgba(22,52,52,.9) !important;
+  color:#b2c8c4 !important;
+}
+html[data-theme="dark"] .market-confirm-go,
+html[data-theme="dark"] .market-modal-close{
+  border:1px solid rgba(130,225,199,.12) !important;
+  background:linear-gradient(180deg,#2c957a,#176a59) !important;
+  color:#f1fffb !important;
+  box-shadow:inset 0 1px 0 rgba(231,255,249,.14),0 8px 18px rgba(0,0,0,.2) !important;
+}
+html[data-theme="dark"] .market-modal.error .market-modal-close{
+  background:linear-gradient(180deg,#8e5148,#653b36) !important;
+  border-color:rgba(244,164,149,.12) !important;
+}
+html[data-theme="dark"] .market-modal.info .market-modal-mark{color:#cbb9ec !important}
+html[data-theme="dark"] .market-modal.error .market-modal-mark{color:#f0a095 !important}
+html[data-theme="dark"] .market-modal.success .market-modal-mark{color:#8ee0bd !important}
+
+@media(max-width:520px){
+  .swap-success-card{border-radius:23px;padding:14px}
+  .market-modal{border-radius:22px;padding:21px 18px}
+}
+@supports(padding:max(0px)){
+  .swap-success-card{margin-bottom:max(0px,env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){
+  .swap-success-close,.market-modal-close,.market-confirm-actions button,.market-modal-share button{transition:none!important}
+}
+
+/* ==========================================================================
+   2026-08-20 NIGHT POLISH — remove remaining paper-white surfaces
+   This block intentionally lives last so embedded Base browsers cannot revive
+   earlier "paper island" rules through cascade order.
+   ========================================================================== */
+html[data-theme="dark"] .taboshi1-page .mytw-action-card,
+html[data-theme="dark"] .taboshi1-page .mytw-seed-garden,
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets,
+html[data-theme="dark"] .taboshi1-page .lore-inventory-card {
+  background:
+    radial-gradient(circle at 92% 4%,rgba(67,181,158,.075),transparent 29%),
+    linear-gradient(148deg,rgba(15,40,42,.99),rgba(8,27,29,.995)) !important;
+  border-color:rgba(153,224,211,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.035),0 18px 38px rgba(0,0,0,.19) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card :is(h2,h3,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(h2,h3,strong,b){color:#e9f8f4 !important}
+html[data-theme="dark"] .taboshi1-page .mytw-action-card :is(p,small,em),
+html[data-theme="dark"] .taboshi1-page .seedleaf-all-assets :is(p,small,em){color:#91a8a4 !important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line{
+  background:rgba(16,48,45,.78) !important;
+  border-color:rgba(121,210,179,.11) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line>span{background:rgba(74,184,143,.15)!important;color:#8bd7b5!important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line p{color:#92aaa3!important}
+html[data-theme="dark"] .taboshi1-page .mytw-mystery-line b{color:#d9efe8!important}
+
+/* Pouch cards: keep token art bright, but the surrounding UI stays night. */
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .legacy-land-asset{
+  background:linear-gradient(150deg,rgba(23,49,51,.97),rgba(13,34,36,.99)) !important;
+  border-color:rgba(151,224,211,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 9px 19px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .taboshi1-page .mytw-pouch-transfer-grid .seedleaf-all-assets .seedleaf-asset-card.is-selected{
+  background:radial-gradient(circle at 20% 0,rgba(76,201,165,.12),transparent 46%),linear-gradient(150deg,rgba(26,59,54,.99),rgba(14,38,39,.99)) !important;
+  border-color:rgba(84,213,172,.30) !important;
+}
+
+/* Land detail: identity, relics, cultivation and production all belong to night. */
+html[data-theme="dark"] .land-page :is(.land-identity-card,.land-module,.land-discovery-module,.land-world-next,.land-production-module){
+  background:
+    radial-gradient(circle at 94% 4%,rgba(78,186,157,.07),transparent 28%),
+    linear-gradient(148deg,rgba(15,40,42,.99),rgba(8,27,29,.995)) !important;
+  border-color:rgba(153,224,211,.13) !important;
+  color:#eaf8f5 !important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.035),0 18px 38px rgba(0,0,0,.19) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-title-row h1,
+html[data-theme="dark"] .land-page .land-module-head h2,
+html[data-theme="dark"] .land-page .land-garden-copy strong,
+html[data-theme="dark"] .land-page .land-production-module h2{color:#eaf8f5 !important;text-shadow:none!important}
+html[data-theme="dark"] .land-page :is(.land-identity-title-row p,.land-garden-copy p,.land-garden-copy small,.land-production-module p){color:#93aaa6 !important}
+html[data-theme="dark"] .land-page .land-identity-grid>div,
+html[data-theme="dark"] .land-page .land-relic-tile,
+html[data-theme="dark"] .land-page .land-question{
+  background:linear-gradient(150deg,rgba(23,50,51,.96),rgba(14,35,37,.98)) !important;
+  border-color:rgba(153,224,211,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 8px 18px rgba(0,0,0,.12) !important;
+}
+html[data-theme="dark"] .land-page .land-identity-grid small,
+html[data-theme="dark"] .land-page .land-relic-tile small,
+html[data-theme="dark"] .land-page .land-question small{color:#89a29e!important}
+html[data-theme="dark"] .land-page .land-identity-grid strong,
+html[data-theme="dark"] .land-page .land-relic-tile strong,
+html[data-theme="dark"] .land-page .land-relic-tile b,
+html[data-theme="dark"] .land-page .land-question b{color:#e4f5f0!important}
+html[data-theme="dark"] .land-page .land-state-chip,
+html[data-theme="dark"] .land-page .land-live-chip,
+html[data-theme="dark"] .land-page .land-seed-count{
+  background:rgba(29,70,61,.84)!important;
+  border-color:rgba(108,207,173,.15)!important;
+  color:#a7e4ca!important;
+}
+html[data-theme="dark"] .land-page .land-production-status{background:rgba(71,55,91,.48)!important;color:#c9bbe2!important}
+
+/* Pond Pulse: live data should be luminous, not a white sheet in dark mode. */
+html[data-theme="dark"] .pond-pulse{
+  background:
+    radial-gradient(circle at 9% 0%,rgba(54,159,192,.12),transparent 31%),
+    radial-gradient(circle at 93% 100%,rgba(208,164,54,.08),transparent 31%),
+    linear-gradient(148deg,#102f32,#0a2528 58%,#0c292b) !important;
+  border-color:rgba(150,220,211,.14)!important;
+  color:#e9f7f4!important;
+  box-shadow:inset 0 1px 0 rgba(235,255,250,.04),0 20px 44px rgba(0,0,0,.20)!important;
+}
+html[data-theme="dark"] .pond-pulse-shine{background:linear-gradient(180deg,rgba(191,242,232,.035),transparent)!important}
+html[data-theme="dark"] .pond-pulse-title span{color:#6fb8c9!important}
+html[data-theme="dark"] .pond-pulse-title h2{color:#eaf8f5!important}
+html[data-theme="dark"] .pond-pulse-title p{color:#91a8a5!important}
+html[data-theme="dark"] .pond-pulse-orb{
+  background:linear-gradient(145deg,#173f43,#102e32)!important;
+  border-color:rgba(117,200,197,.13)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 18px rgba(0,0,0,.15)!important;
+}
+html[data-theme="dark"] .pond-pulse-status{
+  background:linear-gradient(180deg,rgba(27,68,59,.96),rgba(18,52,47,.96))!important;
+  border-color:rgba(96,203,158,.18)!important;
+  color:#a2e5c2!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 17px rgba(0,0,0,.14)!important;
+}
+html[data-theme="dark"] .pond-pulse-status b{color:#7fc0c8!important}
+html[data-theme="dark"] .pond-pulse-feature,
+html[data-theme="dark"] .pond-pulse-stat{
+  border-color:rgba(151,220,211,.10)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 22px rgba(0,0,0,.14)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-burn{
+  background:radial-gradient(circle at 92% 12%,rgba(218,91,68,.14),transparent 34%),linear-gradient(145deg,#193234,#11292b)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-treasury{
+  background:radial-gradient(circle at 92% 12%,rgba(214,170,56,.14),transparent 34%),linear-gradient(145deg,#193433,#122b2c)!important;
+}
+html[data-theme="dark"] .pond-pulse-stat,
+html[data-theme="dark"] .pond-pulse-stat.is-leaf,
+html[data-theme="dark"] .pond-pulse-stat.is-btc,
+html[data-theme="dark"] .pond-pulse-stat.is-seed,
+html[data-theme="dark"] .pond-pulse-stat.is-draw{
+  background:linear-gradient(150deg,rgba(23,50,51,.97),rgba(13,34,36,.99))!important;
+}
+html[data-theme="dark"] .pond-pulse-kicker,
+html[data-theme="dark"] .pond-pulse-stat span{color:#87a8a5!important}
+html[data-theme="dark"] .pond-pulse-feature strong,
+html[data-theme="dark"] .pond-pulse-stat strong{color:#eaf8f5!important;text-shadow:none!important}
+html[data-theme="dark"] .pond-pulse-feature small,
+html[data-theme="dark"] .pond-pulse-stat small,
+html[data-theme="dark"] .pond-pulse-stat em,
+html[data-theme="dark"] .pond-pulse-whisper,
+html[data-theme="dark"] .pond-pulse-whisper p{color:#8ea6a2!important}
+html[data-theme="dark"] .pond-pulse-feature small b,
+html[data-theme="dark"] .pond-pulse-whisper b,
+html[data-theme="dark"] .pond-pulse-whisper code{color:#b9d8d1!important}
+html[data-theme="dark"] .pond-pulse-feature em,
+html[data-theme="dark"] .pond-pulse-whisper code{
+  background:rgba(21,54,54,.78)!important;
+  border-color:rgba(151,220,211,.09)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+/* Land Vault travel warning + six-asset layout. */
+.land-vault-travel-warning{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin-top:12px;
+  padding:11px 12px;
+  border:1px solid rgba(183,129,72,.18);
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(255,247,229,.94),rgba(250,239,215,.90));
+  color:#705a3d;
+  font-size:8px;
+  line-height:1.5;
+}
+.land-vault-travel-warning>span{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:50%;background:rgba(174,112,50,.12);color:#9a672e;font-weight:1000}
+.land-vault-travel-warning p{margin:0!important;color:inherit!important}
+.land-vault-travel-warning strong{color:#654b2f!important}
+.land-vault-assets{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html[data-theme="dark"] .land-vault-travel-warning,
+html[data-theme="dark"] .pouch-land-send .land-vault-travel-warning{
+  background:linear-gradient(145deg,rgba(70,53,35,.52),rgba(48,43,32,.48))!important;
+  border-color:rgba(229,178,105,.15)!important;
+  color:#cbb897!important;
+}
+html[data-theme="dark"] .land-vault-travel-warning>span{background:rgba(221,163,83,.14)!important;color:#e3b779!important}
+html[data-theme="dark"] .land-vault-travel-warning strong{color:#f0d5aa!important}
+html[data-theme="dark"] .land-vault-actions .land-vault-send,
+html[data-theme="dark"] .land-vault-actions .land-vault-withdraw{background:rgba(12,34,36,.34)}
+
+@media(max-width:760px){.land-vault-assets{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* Warning shown at the actual deed-transfer portal, where it matters most. */
+.lore-deed-transfer-warning{display:flex;gap:9px;align-items:flex-start;margin:10px 0;padding:10px 11px;border:1px solid rgba(183,129,72,.17);border-radius:13px;background:linear-gradient(145deg,#fff8e9,#f8eed8);color:#705b3f}
+.lore-deed-transfer-warning>span{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:50%;background:rgba(166,106,43,.11);color:#95622d;font-size:10px;font-weight:1000}
+.lore-deed-transfer-warning strong{display:block;color:#654c30;font-size:9px}
+.lore-deed-transfer-warning p{margin:3px 0 0!important;color:#7c6b52!important;font-size:8px;line-height:1.45}
+.lore-deed-transfer-warning a{display:inline-flex;margin-top:6px;color:#2d7467;font-size:8px;font-weight:950;text-decoration:none}
+html[data-theme="dark"] .lore-deed-transfer-warning{background:linear-gradient(145deg,rgba(70,53,35,.52),rgba(48,43,32,.48))!important;border-color:rgba(229,178,105,.15)!important;color:#cbb897!important}
+html[data-theme="dark"] .lore-deed-transfer-warning>span{background:rgba(221,163,83,.14)!important;color:#e3b779!important}
+html[data-theme="dark"] .lore-deed-transfer-warning strong{color:#f0d5aa!important}
+html[data-theme="dark"] .lore-deed-transfer-warning p{color:#c5b394!important}
+html[data-theme="dark"] .lore-deed-transfer-warning a{color:#84d4c0!important}
+
+/* 2026-08-20 — Pond Pulse dark-mode correction.
+   The light-theme pseudo-element glosses were still rendering over dark cards,
+   which created large silver/white caps on mobile. Dark mode should feel like
+   illuminated pond glass, not chrome. */
+html[data-theme="dark"] .pond-pulse-shine{
+  height:32%!important;
+  opacity:.28!important;
+  background:linear-gradient(180deg,rgba(118,213,202,.08),rgba(118,213,202,.015) 46%,transparent)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature::before{
+  content:""!important;
+  inset:0!important;
+  height:auto!important;
+  border-radius:inherit!important;
+  background:linear-gradient(180deg,rgba(174,236,225,.045),transparent 34%)!important;
+  opacity:1!important;
+}
+html[data-theme="dark"] .pond-pulse-feature::after{
+  opacity:.14!important;
+  filter:blur(18px)!important;
+}
+html[data-theme="dark"] .pond-pulse-stat::after{
+  content:""!important;
+  inset:0!important;
+  height:auto!important;
+  background:linear-gradient(180deg,rgba(176,235,224,.035),transparent 38%)!important;
+  opacity:1!important;
+}
+html[data-theme="dark"] .pond-pulse-feature,
+html[data-theme="dark"] .pond-pulse-stat{
+  overflow:hidden!important;
+  border-color:rgba(141,218,205,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(215,255,247,.035),0 10px 22px rgba(0,0,0,.16)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-burn{
+  background:
+    radial-gradient(circle at 100% 100%,rgba(139,65,54,.10),transparent 36%),
+    linear-gradient(145deg,#173538,#10292c 64%,#112a2c)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature.is-treasury{
+  background:
+    radial-gradient(circle at 100% 100%,rgba(161,126,44,.10),transparent 36%),
+    linear-gradient(145deg,#183638,#102a2c 64%,#112b2d)!important;
+}
+html[data-theme="dark"] .pond-pulse-stat,
+html[data-theme="dark"] .pond-pulse-stat.is-leaf,
+html[data-theme="dark"] .pond-pulse-stat.is-btc,
+html[data-theme="dark"] .pond-pulse-stat.is-seed,
+html[data-theme="dark"] .pond-pulse-stat.is-draw{
+  background:linear-gradient(150deg,#173436,#10292b 68%,#0e2628)!important;
+}
+html[data-theme="dark"] .pond-pulse-kicker,
+html[data-theme="dark"] .pond-pulse-stat span{
+  color:#9abbb5!important;
+  text-shadow:none!important;
+}
+html[data-theme="dark"] .pond-pulse-feature strong,
+html[data-theme="dark"] .pond-pulse-stat strong{
+  color:#f0fbf8!important;
+  text-shadow:none!important;
+}
+html[data-theme="dark"] .pond-pulse-feature small,
+html[data-theme="dark"] .pond-pulse-stat small,
+html[data-theme="dark"] .pond-pulse-stat em{
+  color:#9eb2ae!important;
+}
+html[data-theme="dark"] .pond-pulse-feature em{
+  color:#9ed7bc!important;
+  background:rgba(18,49,47,.88)!important;
+  border-color:rgba(129,211,184,.13)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+html[data-theme="dark"] .pond-pulse-orb{
+  overflow:hidden!important;
+  background:linear-gradient(145deg,#173f43,#102e32)!important;
+  border-color:rgba(117,200,197,.15)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 18px rgba(0,0,0,.15)!important;
+}
+html[data-theme="dark"] .pond-pulse-orb img{
+  border-radius:14px!important;
+}
+html[data-theme="dark"] .pond-pulse-status:hover{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 20px rgba(0,0,0,.16)!important;
+}
+html[data-theme="dark"] .pond-pulse-whisper span{
+  background:rgba(22,59,60,.9)!important;
+  color:#7fc0c8!important;
+}
+html[data-theme="dark"] .pond-pulse-actions .metal-button,
+html[data-theme="dark"] .pond-pulse-cast,
+html[data-theme="dark"] .pond-pulse-copy{
+  background:linear-gradient(180deg,#173f42,#102e31)!important;
+  border-color:rgba(123,202,195,.15)!important;
+  color:#dff5f0!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 7px 15px rgba(0,0,0,.15)!important;
+}
+
+/* 2026-08-20 — Pond Pulse readability + partial Land Vault withdrawals */
+html[data-theme="dark"] .pond-pulse-title span{
+  color:#8fd1dc!important;
+  opacity:1!important;
+}
+html[data-theme="dark"] .pond-pulse-title p{
+  color:#b1c6c2!important;
+  opacity:1!important;
+}
+html[data-theme="dark"] .pond-pulse-kicker,
+html[data-theme="dark"] .pond-pulse-stat span{
+  color:#b9d8d2!important;
+  opacity:1!important;
+  text-shadow:0 1px 0 rgba(0,0,0,.2)!important;
+}
+html[data-theme="dark"] .pond-pulse-feature small,
+html[data-theme="dark"] .pond-pulse-stat small,
+html[data-theme="dark"] .pond-pulse-stat em{
+  color:#b4c9c5!important;
+  opacity:1!important;
+}
+html[data-theme="dark"] .pond-pulse-feature small b{
+  color:#d1e3df!important;
+}
+html[data-theme="dark"] .pond-pulse-feature em{
+  color:#a6e1bd!important;
+}
+html[data-theme="dark"] .pond-pulse-feature::before,
+html[data-theme="dark"] .pond-pulse-stat::after{
+  z-index:0!important;
+  pointer-events:none!important;
+}
+html[data-theme="dark"] .pond-pulse-feature>* ,
+html[data-theme="dark"] .pond-pulse-stat>span,
+html[data-theme="dark"] .pond-pulse-stat>strong,
+html[data-theme="dark"] .pond-pulse-stat>small,
+html[data-theme="dark"] .pond-pulse-stat>em{
+  position:relative!important;
+  z-index:2!important;
+}
+.land-vault-withdraw-amount small{
+  display:block;
+  margin-top:6px;
+  color:#78908d;
+  font-size:8px;
+  font-weight:800;
+  line-height:1.35;
+}
+.land-vault-amount-control{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:7px;
+  align-items:stretch;
+}
+.land-vault-amount-control input{min-width:0}
+.land-vault-amount-control button{
+  min-width:58px;
+  padding:0 12px;
+  border:1px solid rgba(51,133,121,.16);
+  border-radius:12px;
+  background:linear-gradient(180deg,#f5fffb,#e9f7f2);
+  color:#287665;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.09em;
+}
+.land-vault-amount-control button:disabled{opacity:.42}
+.land-vault-withdraw-nft-note{
+  padding:10px 11px;
+  border:1px solid rgba(43,109,102,.11);
+  border-radius:12px;
+  background:rgba(238,248,245,.72);
+  color:#677f7b;
+  font-size:8px;
+  font-weight:750;
+  line-height:1.45;
+}
+html[data-theme="dark"] .land-vault-withdraw-amount small{color:#92aaa6!important}
+html[data-theme="dark"] .land-vault-amount-control button{
+  background:linear-gradient(180deg,#17413f,#102f2f)!important;
+  border-color:rgba(126,211,196,.16)!important;
+  color:#a8e4d5!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045)!important;
+}
+html[data-theme="dark"] .land-vault-withdraw-nft-note{
+  background:rgba(13,36,38,.62)!important;
+  border-color:rgba(137,215,202,.11)!important;
+  color:#9bb2ae!important;
+}
+.land-vault-withdraw select{
+  width:100%;
+}
+.land-vault-withdraw-token-id small{
+  display:block;
+  margin-top:6px;
+  color:#78908d;
+  font-size:8px;
+  font-weight:800;
+  line-height:1.35;
+}
+html[data-theme="dark"] .land-vault-withdraw select,
+html[data-theme="dark"] .land-vault-withdraw-token-id input{
+  background:#0c2022!important;
+  color:#eaf8f5!important;
+  border-color:rgba(159,224,212,.11)!important;
+}
+html[data-theme="dark"] .land-vault-withdraw-token-id small{color:#92aaa6!important}
+
+/* ========================================================================== */
+/* 2026-08-20 HOME HERO — theme-aware artwork + quieter premium CTA deck      */
+/* ========================================================================== */
+.hero-poster-frame {
+  transform: translateZ(0);
+}
+.hero-poster-image {
+  transition: opacity .2s ease, filter .2s ease;
+}
+.hero-cta-deck {
+  gap: 11px !important;
+}
+.hero-cta {
+  grid-template-columns: 50px minmax(0,1fr) 30px !important;
+  grid-template-rows: 1fr !important;
+  column-gap: 12px !important;
+  min-height: 82px !important;
+  padding: 11px 12px !important;
+  border-radius: 24px !important;
+  isolation: isolate;
+}
+.hero-cta::before {
+  inset: 1px 14px auto !important;
+  height: 24% !important;
+  opacity: .48;
+}
+.hero-cta::after {
+  z-index: 0 !important;
+  left: auto !important;
+  right: -18px !important;
+  top: -26px !important;
+  width: 84px !important;
+  height: 84px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(255,255,255,.62), transparent 67%) !important;
+  opacity: .42;
+}
+.hero-cta > span {
+  grid-row: auto !important;
+}
+.hero-cta-icon,
+.hero-cta-seed-art {
+  position: relative !important;
+  z-index: 2 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 17px !important;
+}
+.hero-cta-icon svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hero-cta-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.hero-cta-copy strong {
+  font-size: 14px !important;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+}
+.hero-cta-copy small {
+  margin-top: 5px;
+  font-size: 10px !important;
+  line-height: 1.25;
+}
+.hero-cta-arrow {
+  position: relative !important;
+  z-index: 2 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.56) !important;
+  border: 1px solid rgba(26,52,66,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.76) !important;
+  transition: transform .18s ease, background .18s ease;
+}
+.hero-cta-arrow svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hero-cta:hover .hero-cta-arrow {
+  transform: translateX(2px);
+}
+
+/* Night hero: use smoked glass around the supplied dark illustration. */
+html[data-theme="dark"] .hero-poster-frame {
+  border-color: rgba(139,218,207,.16) !important;
+  background: #091b1d !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 1px rgba(0,0,0,.18),
+    0 16px 42px rgba(0,0,0,.32) !important;
+}
+html[data-theme="dark"] .hero-poster-frame::after {
+  box-shadow: inset 0 0 0 1px rgba(201,244,237,.045) !important;
+}
+html[data-theme="dark"] .hero-glint {
+  opacity: .18;
+}
+html[data-theme="dark"] .hero-status-rail {
+  border-color: rgba(145,218,207,.15) !important;
+  background: rgba(9,29,31,.88) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 8px 22px rgba(0,0,0,.25) !important;
+}
+html[data-theme="dark"] .hero-status {
+  border-color: rgba(153,221,211,.09) !important;
+  background: rgba(17,43,45,.92) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+html[data-theme="dark"] .hero-status-weth {
+  color: #a9baff !important;
+  background: rgba(39,50,85,.64) !important;
+  border-color: rgba(129,149,226,.16) !important;
+}
+
+html[data-theme="dark"] .hero-cta {
+  color: #edf9f6 !important;
+  border-color: rgba(152,223,212,.13) !important;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(103,197,182,.08), transparent 30%),
+    linear-gradient(150deg, rgba(18,45,47,.98), rgba(9,28,30,.99)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 8px 20px rgba(0,0,0,.19),
+    0 2px 3px rgba(0,0,0,.16) !important;
+}
+html[data-theme="dark"] .hero-cta::before {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent) !important;
+  opacity: 1 !important;
+}
+html[data-theme="dark"] .hero-cta::after {
+  background: radial-gradient(circle, rgba(112,203,189,.10), transparent 68%) !important;
+  opacity: 1;
+}
+html[data-theme="dark"] .hero-cta:hover {
+  transform: translateY(-2px);
+  border-color: rgba(152,223,212,.22) !important;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(103,197,182,.12), transparent 31%),
+    linear-gradient(150deg, rgba(22,53,55,.99), rgba(11,32,34,.99)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 11px 25px rgba(0,0,0,.25) !important;
+}
+html[data-theme="dark"] .hero-cta-copy strong {
+  color: #edf9f6 !important;
+}
+html[data-theme="dark"] .hero-cta-copy small {
+  color: #8fa8a5 !important;
+}
+html[data-theme="dark"] .hero-cta-icon,
+html[data-theme="dark"] .hero-cta-seed-art {
+  border-color: rgba(151,222,211,.13) !important;
+  background:
+    radial-gradient(circle at 35% 20%, rgba(255,255,255,.08), transparent 28%),
+    linear-gradient(145deg, rgba(30,65,67,.98), rgba(15,40,42,.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 6px 14px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .hero-cta-primary .hero-cta-icon {
+  color: #71d5ff !important;
+}
+html[data-theme="dark"] .hero-cta-world .hero-cta-icon {
+  color: #75d8b0 !important;
+}
+html[data-theme="dark"] .hero-cta-arrow {
+  color: #a9c8c3 !important;
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(160,223,214,.10) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+html[data-theme="dark"] .hero-cta-relic {
+  background:
+    radial-gradient(circle at 8% 100%, rgba(78,177,150,.10), transparent 34%),
+    linear-gradient(150deg, rgba(18,45,47,.98), rgba(9,28,30,.99)) !important;
+  border-color: rgba(112,211,177,.15) !important;
+}
+
+@media (max-width:700px) {
+  .hero-cta-deck { gap: 10px !important; }
+  .hero-cta { min-height: 82px !important; padding: 11px 12px !important; }
+  .hero-cta-copy strong { font-size: 14px !important; }
+  .hero-cta-copy small { font-size: 10px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-poster-image,
+  .hero-cta-arrow { transition: none !important; }
+}
+
+/* ========================================================================== */
+/* 2026-08-20 HERO CTA LEGACY-STYLE CLEANUP                                   */
+/* The original globals.css styles every direct <span> inside .hero-cta as an */
+/* icon tile. The newer CTA markup also uses spans for copy + arrow, so those  */
+/* legacy rules must be explicitly neutralized.                                */
+/* ========================================================================== */
+.hero-cta > .hero-cta-copy {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  display: flex !important;
+  place-items: initial !important;
+  grid-row: auto !important;
+  padding: 0 !important;
+}
+.hero-cta > .hero-cta-arrow {
+  grid-row: auto !important;
+}
+.hero-cta > .hero-cta-icon,
+.hero-cta > .hero-cta-seed-art {
+  grid-row: auto !important;
+}
+
+/* Fully retire the old chrome/gloss caps on the home action deck. */
+.hero-cta::before,
+.hero-cta::after {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-theme="dark"] .hero-cta::before,
+html[data-theme="dark"] .hero-cta::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Keep each CTA to one clean row and prevent legacy grid placement from
+   collapsing the label underneath the icon on narrow Base App webviews. */
+.hero-cta {
+  display: grid !important;
+  grid-template-columns: 50px minmax(0, 1fr) 30px !important;
+  grid-template-rows: minmax(50px, auto) !important;
+  align-items: center !important;
+}
+.hero-cta-copy strong,
+.hero-cta-copy small {
+  width: 100% !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+@media (max-width: 700px) {
+  .hero-cta {
+    grid-template-columns: 50px minmax(0, 1fr) 30px !important;
+    min-height: 76px !important;
+    padding: 11px 12px !important;
+  }
+  .hero-cta-copy strong {
+    font-size: 16px !important;
+    line-height: 1.12 !important;
+  }
+  .hero-cta-copy small {
+    font-size: 11px !important;
+    line-height: 1.28 !important;
+  }
+}
+
+/* ========================================================================== */
+/* 2026-08-20 DARK MODE — matte land + pouch cleanup                          */
+/* Removes the remaining bright glass caps and fixes low-contrast land names. */
+/* ========================================================================== */
+
+/* LAND DETAIL HERO --------------------------------------------------------- */
+/* The named land title is user content and must stay readable at night. */
+html[data-theme="dark"] .land-page .land-hero {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(83,190,165,.08), transparent 30%),
+    linear-gradient(150deg, #123436 0%, #0b2527 58%, #081e20 100%) !important;
+  border-color: rgba(151,224,211,.13) !important;
+  color: #edf9f6 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 18px 40px rgba(0,0,0,.22) !important;
+}
+html[data-theme="dark"] .land-page .land-hero::before {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+html[data-theme="dark"] .land-page .land-hero h1,
+html[data-theme="dark"] .land-page .land-hero-copy h1 {
+  color: #f1fbf8 !important;
+  -webkit-text-fill-color: #f1fbf8 !important;
+  text-shadow: 0 1px 12px rgba(0,0,0,.18) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-copy > p {
+  color: #a6bbb7 !important;
+}
+html[data-theme="dark"] .land-page .land-hero .land-section-kicker {
+  color: #79b7ad !important;
+}
+
+/* Keep the actual canonical artwork light; only the surrounding UI is dark. */
+html[data-theme="dark"] .land-page .land-hero-deed-wrap {
+  background: rgba(8,25,27,.62) !important;
+  border-color: rgba(153,224,211,.11) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+html[data-theme="dark"] .land-page .land-hero-deed-label span { color:#88a6a1 !important; }
+html[data-theme="dark"] .land-page .land-hero-deed-label strong { color:#dff4ef !important; }
+
+/* Secondary sharing controls should not become bright paper islands at night. */
+html[data-theme="dark"] .land-page .land-share-actions button:not(:first-child) {
+  background: linear-gradient(150deg, rgba(22,49,51,.98), rgba(13,34,36,.99)) !important;
+  border-color: rgba(153,224,211,.11) !important;
+  color: #dcefeb !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 7px 16px rgba(0,0,0,.13) !important;
+}
+
+/* POUCH ASSET CARDS -------------------------------------------------------- */
+/* Retire the old white capsule/highlight layer completely in dark mode. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card::before,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card::after {
+  content: none !important;
+  display: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-lore,
+html[data-theme="dark"] .taboshi1-page .legacy-land-asset {
+  background: linear-gradient(150deg, #163638 0%, #0e2b2d 100%) !important;
+  border-color: rgba(150,222,210,.10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.028),
+    0 7px 16px rgba(0,0,0,.12) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card.is-selected {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(70,194,158,.10), transparent 42%),
+    linear-gradient(150deg, #1b403d 0%, #103130 100%) !important;
+  border-color: rgba(84,213,172,.30) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 0 0 2px rgba(72,190,156,.05),
+    0 8px 18px rgba(0,0,0,.14) !important;
+}
+
+/* Force every label/value in the asset selector onto the night palette. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy span,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-usd-value {
+  color: #93aaa6 !important;
+  -webkit-text-fill-color: #93aaa6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy strong,
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy b {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card .seedleaf-asset-copy b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* TRANSFER PORTAL ---------------------------------------------------------- */
+/* The legacy lore-transfer gloss is the silver cap visible in the screenshot. */
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card::before,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card::before {
+  content: none !important;
+  display: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card,
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card {
+  background:
+    radial-gradient(circle at 94% 3%, rgba(76,178,158,.055), transparent 27%),
+    linear-gradient(150deg, #143436 0%, #0a2729 100%) !important;
+  border-color: rgba(153,224,211,.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 14px 30px rgba(0,0,0,.17) !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card :is(h2,h3,strong,b),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card :is(h2,h3,strong,b) {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+html[data-theme="dark"] .taboshi1-page .lore-transfer-card :is(p,small,span),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-card :is(p,small,span) {
+  color: #93aaa6 !important;
+}
+
+/* Keep form values brighter than their labels. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-fields :is(input,select),
+html[data-theme="dark"] .taboshi1-page .seedleaf-transfer-summary {
+  color: #edf9f6 !important;
+  -webkit-text-fill-color: #edf9f6 !important;
+}
+
+@media (max-width: 620px) {
+  html[data-theme="dark"] .taboshi1-page .seedleaf-asset-card {
+    min-height: 100px;
+  }
+}
+
+/* ========================================================================== */
+/* TOBYWORLD ASSET FIELD GUIDE — compact, client-only home section            */
+/* ========================================================================== */
+.tw-assets {
+  position: relative;
+  margin: 0 0 26px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 93, 91, .13);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(52, 187, 214, .09), transparent 28%),
+    linear-gradient(145deg, rgba(248,252,250,.98), rgba(238,248,245,.95));
+  box-shadow: 0 18px 42px rgba(18,63,59,.08), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.tw-assets::after {
+  content: "";
+  position: absolute;
+  inset: auto -40px -80px auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(76,190,165,.08), transparent 68%);
+  pointer-events: none;
+}
+.tw-assets-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.tw-assets-eyebrow { display:block; margin-bottom:5px; color:#5e8b86; font-size:11px; font-weight:900; letter-spacing:.22em; }
+.tw-assets h2 { margin:0; color:#103f41; font-size:clamp(27px,4vw,38px); line-height:1; letter-spacing:-.045em; }
+.tw-assets-head p { max-width:620px; margin:8px 0 0; color:#68827f; font-size:14px; line-height:1.55; }
+.tw-assets-hint { flex:0 0 auto; color:#668b86; font-size:11px; font-weight:800; letter-spacing:.05em; }
+.tw-assets-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.tw-asset-chip {
+  position:relative;
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr);
+  align-items:center;
+  gap:11px;
+  min-width:0;
+  min-height:78px;
+  padding:11px 12px;
+  overflow:hidden;
+  text-align:left;
+  border:1px solid rgba(28,86,83,.11);
+  border-radius:22px;
+  background:rgba(255,255,255,.73);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9), 0 7px 16px rgba(16,61,57,.05);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.tw-asset-chip:hover { transform:translateY(-2px); border-color:rgba(37,145,132,.27); box-shadow:0 10px 22px rgba(16,61,57,.09); }
+.tw-asset-chip:active { transform:translateY(0) scale(.985); }
+.tw-asset-art { position:relative; width:52px; height:52px; border-radius:16px; overflow:hidden; background:rgba(236,248,245,.9); box-shadow:inset 0 0 0 1px rgba(25,83,80,.07); }
+.tw-asset-chip-copy { min-width:0; }
+.tw-asset-chip-copy small { display:block; overflow:hidden; color:#7f9b97; font-size:8.5px; font-weight:900; letter-spacing:.15em; white-space:nowrap; text-overflow:ellipsis; }
+.tw-asset-chip-copy strong { display:block; overflow:hidden; margin-top:3px; color:#174b4d; font-size:14px; font-weight:900; letter-spacing:.02em; white-space:nowrap; text-overflow:ellipsis; }
+.tw-asset-live { position:absolute; right:9px; top:8px; display:flex; align-items:center; gap:4px; color:#2e8d6f; font-size:7px; font-weight:900; letter-spacing:.11em; }
+.tw-asset-live i { width:6px; height:6px; border-radius:50%; background:#49c98c; box-shadow:0 0 0 4px rgba(73,201,140,.11); }
+.tw-asset-mystery { position:absolute; right:10px; top:8px; display:grid; place-items:center; width:19px; height:19px; border-radius:50%; color:#628e89; background:rgba(114,187,179,.11); font-size:11px; font-weight:900; }
+.tw-assets-footnote { margin:12px 2px 0; color:#8ca19e; font-size:10px; font-weight:700; }
+
+.tw-asset-modal-backdrop { position:fixed; z-index:1500; inset:0; display:grid; place-items:center; padding:20px; background:rgba(4,15,17,.67); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); }
+.tw-asset-modal { position:relative; width:min(520px,100%); max-height:min(720px,calc(100dvh - 40px)); overflow:auto; padding:24px; border:1px solid rgba(120,202,190,.18); border-radius:30px; background:linear-gradient(155deg,#f8fcfa,#edf7f4); box-shadow:0 28px 80px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.88); }
+.tw-asset-modal-close { position:absolute; z-index:2; right:14px; top:14px; display:grid; place-items:center; width:36px; height:36px; border:1px solid rgba(31,91,87,.11); border-radius:50%; color:#356864; background:rgba(255,255,255,.68); font-size:23px; line-height:1; }
+.tw-asset-modal-top { display:flex; align-items:center; gap:15px; padding-right:38px; }
+.tw-asset-modal-art { position:relative; flex:0 0 78px; width:78px; height:78px; overflow:hidden; border-radius:22px; background:rgba(255,255,255,.7); box-shadow:inset 0 0 0 1px rgba(25,83,80,.08); }
+.tw-asset-modal-top span { color:#648c87; font-size:10px; font-weight:900; letter-spacing:.18em; }
+.tw-asset-modal-top h3 { margin:3px 0 4px; color:#103f41; font-size:27px; line-height:1; letter-spacing:-.035em; }
+.tw-asset-modal-top code { color:#79938f; font-size:11px; font-weight:800; }
+.tw-asset-modal-copy { margin:20px 0 12px; color:#4e6f6c; font-size:15px; line-height:1.65; }
+.tw-asset-modal blockquote { margin:0; padding:14px 16px; border-left:3px solid rgba(55,161,139,.5); border-radius:0 16px 16px 0; color:#2b6962; background:rgba(75,175,153,.07); font-size:13px; font-weight:750; line-height:1.55; }
+.tw-asset-burn-panel { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:15px; padding:12px; border:1px solid rgba(54,155,132,.14); border-radius:20px; background:rgba(66,177,151,.065); }
+.tw-asset-burn-panel span { padding:4px 6px; }
+.tw-asset-burn-panel small { display:block; color:#71928d; font-size:8px; font-weight:900; letter-spacing:.14em; }
+.tw-asset-burn-panel strong { display:block; margin-top:4px; color:#1b665b; font-size:16px; }
+.tw-asset-burn-panel p { grid-column:1/-1; margin:0; padding:8px 6px 2px; color:#79918d; font-size:10px; line-height:1.45; }
+.tw-asset-burn-panel code { font-size:10px; }
+.tw-asset-modal-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+.tw-asset-modal-actions a { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:0 16px; border:1px solid rgba(34,99,94,.13); border-radius:15px; color:#f7fffd; background:linear-gradient(145deg,#176f72,#0f5559); font-size:12px; font-weight:900; box-shadow:0 7px 16px rgba(10,73,73,.14); }
+.tw-asset-modal-actions a.is-secondary { color:#245e5d; background:rgba(255,255,255,.66); box-shadow:none; }
+.tw-asset-unrevealed { color:#6f8884; font-size:12px; font-weight:800; }
+
+html[data-theme="dark"] .tw-assets {
+  border-color:rgba(143,218,207,.11);
+  background:radial-gradient(circle at 92% 0%,rgba(28,130,144,.10),transparent 28%),linear-gradient(145deg,#103033,#092426);
+  box-shadow:0 18px 42px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.025);
+}
+html[data-theme="dark"] .tw-assets-eyebrow { color:#78aaa4; }
+html[data-theme="dark"] .tw-assets h2 { color:#eefaf7; }
+html[data-theme="dark"] .tw-assets-head p, html[data-theme="dark"] .tw-assets-hint { color:#89a29e; }
+html[data-theme="dark"] .tw-asset-chip { border-color:rgba(145,220,208,.09); background:linear-gradient(150deg,#153638,#0d2b2d); box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 7px 16px rgba(0,0,0,.12); }
+html[data-theme="dark"] .tw-asset-chip:hover { border-color:rgba(96,204,182,.25); box-shadow:0 10px 22px rgba(0,0,0,.18); }
+html[data-theme="dark"] .tw-asset-art { background:rgba(5,25,27,.48); box-shadow:inset 0 0 0 1px rgba(153,224,211,.08); }
+html[data-theme="dark"] .tw-asset-chip-copy small { color:#75938f; }
+html[data-theme="dark"] .tw-asset-chip-copy strong { color:#edf9f6; }
+html[data-theme="dark"] .tw-assets-footnote { color:#6f8b87; }
+html[data-theme="dark"] .tw-asset-modal { border-color:rgba(142,218,207,.13); background:radial-gradient(circle at 92% 0%,rgba(29,143,151,.10),transparent 28%),linear-gradient(155deg,#123335,#092426); box-shadow:0 28px 80px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.03); }
+html[data-theme="dark"] .tw-asset-modal-close { border-color:rgba(142,218,207,.11); color:#dff5f0; background:#123638; }
+html[data-theme="dark"] .tw-asset-modal-art { background:rgba(4,23,25,.52); box-shadow:inset 0 0 0 1px rgba(153,224,211,.08); }
+html[data-theme="dark"] .tw-asset-modal-top span { color:#7fa49f; }
+html[data-theme="dark"] .tw-asset-modal-top h3 { color:#f2fbf9; }
+html[data-theme="dark"] .tw-asset-modal-top code { color:#88a29e; }
+html[data-theme="dark"] .tw-asset-modal-copy { color:#a8bfbb; }
+html[data-theme="dark"] .tw-asset-modal blockquote { color:#b7ddd5; background:rgba(67,181,155,.065); }
+html[data-theme="dark"] .tw-asset-burn-panel { border-color:rgba(81,198,168,.13); background:rgba(49,151,128,.07); }
+html[data-theme="dark"] .tw-asset-burn-panel small, html[data-theme="dark"] .tw-asset-burn-panel p { color:#7f9c97; }
+html[data-theme="dark"] .tw-asset-burn-panel strong { color:#72d6bc; }
+html[data-theme="dark"] .tw-asset-modal-actions a.is-secondary { color:#cce8e2; border-color:rgba(145,220,208,.10); background:#143638; }
+html[data-theme="dark"] .tw-asset-unrevealed { color:#90aaa6; }
+
+@media (max-width:800px) { .tw-assets-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px) {
+  .tw-assets { padding:18px 14px; border-radius:26px; }
+  .tw-assets-head { align-items:flex-start; }
+  .tw-assets-hint { display:none; }
+  .tw-assets-grid { gap:8px; }
+  .tw-asset-chip { grid-template-columns:46px minmax(0,1fr); min-height:70px; padding:9px; border-radius:19px; }
+  .tw-asset-art { width:46px; height:46px; border-radius:14px; }
+  .tw-asset-chip-copy strong { font-size:12px; }
+  .tw-asset-chip-copy small { font-size:7.5px; letter-spacing:.12em; }
+  .tw-asset-live { display:none; }
+  .tw-asset-modal-backdrop { padding:12px; align-items:end; }
+  .tw-asset-modal { width:100%; max-height:82dvh; padding:20px; border-radius:27px 27px 22px 22px; }
+  .tw-asset-burn-panel { grid-template-columns:1fr; }
+  .tw-asset-burn-panel p { grid-column:auto; }
+  .tw-asset-modal-actions { display:grid; }
+  .tw-asset-modal-actions a { width:100%; }
+}
+
+/* ==========================================================================\n   TOBYWORLD OFFICIAL + COMMUNITY DIRECTORY\n   Clear source hierarchy without extra API/server work.\n   ========================================================================== */
+.official-tobyworld-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  min-height: 150px;
+  padding: 19px;
+  border: 1px solid rgba(33, 119, 164, .24);
+  border-radius: 27px;
+  color: var(--ink);
+  text-decoration: none;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(56, 173, 233, .17), transparent 35%),
+    radial-gradient(circle at 4% 95%, rgba(87, 198, 157, .13), transparent 38%),
+    linear-gradient(145deg, #f7fcff 0%, #eef8fb 56%, #edf8f3 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.86), 0 14px 30px rgba(27, 80, 102, .10);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.official-tobyworld-card:hover { transform: translateY(-2px); border-color: rgba(27, 130, 184, .38); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 34px rgba(27, 80, 102, .14); }
+.official-site-art {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(41, 127, 158, .14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92), 0 10px 22px rgba(22, 77, 96, .11);
+}
+.official-site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  color: #217a69;
+}
+.official-site-title { display: block; margin-top: 7px; font-size: 22px; line-height: 1.02; letter-spacing: -.025em; }
+.official-site-copy { display: block; margin-top: 7px; max-width: 390px; color: var(--inkSub); font-size: 12px; line-height: 1.55; }
+.official-site-domain { display: block; margin-top: 9px; font-size: 11px; font-weight: 800; color: #247ca3; }
+.official-site-arrow,
+.community-link-arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(64, 130, 139, .16);
+  color: #286d77;
+  background: rgba(255,255,255,.55);
+}
+.official-site-arrow { width: 42px; height: 42px; border-radius: 15px; }
+.community-link-arrow { width: 34px; height: 34px; border-radius: 12px; }
+.official-site-arrow svg,
+.community-link-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.pond-community-block,
+.pond-more-block { margin-top: 22px; }
+.pond-more-block { padding-top: 20px; border-top: 1px solid var(--line); }
+.pond-link-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.pond-link-section-heading h3 { margin-top: 3px; font-size: 19px; font-weight: 900; letter-spacing: -.025em; }
+.pond-link-section-heading-small h3 { font-size: 17px; }
+.pond-link-section-copy { margin: 0 0 13px; color: var(--inkSub); font-size: 12px; line-height: 1.55; }
+.community-independent-pill { border: 1px solid rgba(80, 156, 140, .18); border-radius: 999px; padding: 7px 9px; background: rgba(82, 174, 150, .08); color: #56887e; font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+
+.community-site-card,
+.pond-compact-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(248, 252, 252, .78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.community-site-card { min-height: 102px; padding: 14px; border-radius: 22px; }
+.pond-compact-link { min-height: 82px; padding: 12px 13px; border-radius: 20px; }
+.community-site-card:hover,
+.pond-compact-link:hover { transform: translateY(-1px); border-color: rgba(73, 153, 139, .28); background: rgba(251, 254, 254, .96); }
+.pond-link-gold { background: linear-gradient(145deg, rgba(255, 249, 235, .88), rgba(248, 252, 248, .84)); }
+.pond-community-note { background: rgba(247, 251, 252, .72); }
+
+html[data-theme="dark"] .official-tobyworld-card {
+  color: var(--dark-copy);
+  border-color: rgba(69, 170, 208, .25);
+  background:
+    radial-gradient(circle at 88% 7%, rgba(40, 145, 211, .15), transparent 35%),
+    radial-gradient(circle at 5% 94%, rgba(69, 173, 141, .10), transparent 38%),
+    linear-gradient(145deg, rgba(13, 37, 43, .98), rgba(7, 27, 31, .99));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 16px 34px rgba(0,0,0,.21);
+}
+html[data-theme="dark"] .official-tobyworld-card:hover { border-color: rgba(69, 177, 216, .38); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 18px 38px rgba(0,0,0,.25); }
+html[data-theme="dark"] .official-site-art { background: rgba(221, 246, 244, .07); border-color: rgba(147, 223, 211, .12); box-shadow: none; }
+html[data-theme="dark"] .official-site-badge { color: #79d6bd; }
+html[data-theme="dark"] .official-site-title { color: #f2fbf9; }
+html[data-theme="dark"] .official-site-copy { color: #9fb7b5; }
+html[data-theme="dark"] .official-site-domain { color: #71c9e7; }
+html[data-theme="dark"] .official-site-arrow,
+html[data-theme="dark"] .community-link-arrow { color: #c8eeea; border-color: rgba(151, 223, 213, .13); background: rgba(220, 246, 242, .055); }
+html[data-theme="dark"] .community-independent-pill { color: #86b8ae; border-color: rgba(132, 211, 195, .13); background: rgba(77, 166, 146, .07); }
+html[data-theme="dark"] .pond-more-block { border-top-color: var(--dark-line-soft); }
+html[data-theme="dark"] .community-site-card,
+html[data-theme="dark"] .pond-compact-link,
+html[data-theme="dark"] .pond-link-gold {
+  color: var(--dark-copy);
+  border-color: var(--dark-line-soft);
+  background: linear-gradient(155deg, rgba(17, 41, 43, .91), rgba(10, 30, 32, .95));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.12);
+}
+html[data-theme="dark"] .community-site-card:hover,
+html[data-theme="dark"] .pond-compact-link:hover { background: linear-gradient(155deg, rgba(20, 47, 49, .94), rgba(12, 34, 36, .97)); border-color: var(--dark-line); }
+html[data-theme="dark"] .community-site-card :is(strong, span.font-extrabold),
+html[data-theme="dark"] .pond-compact-link :is(strong, span.font-extrabold),
+html[data-theme="dark"] .pond-link-section-heading h3 { color: var(--dark-copy) !important; }
+html[data-theme="dark"] .community-site-card .text-inkSub,
+html[data-theme="dark"] .pond-compact-link .text-inkSub,
+html[data-theme="dark"] .pond-link-section-copy { color: var(--dark-copy-soft) !important; }
+html[data-theme="dark"] .pond-community-note { background: rgba(13, 34, 36, .75); border-color: var(--dark-line-soft) !important; }
+
+@media (max-width: 520px) {
+  .official-tobyworld-card { align-items: flex-start; min-height: 0; padding: 16px; gap: 13px; }
+  .official-site-art { width: 62px; height: 62px; flex-basis: 62px; border-radius: 20px; }
+  .official-site-title { font-size: 20px; }
+  .official-site-arrow { width: 36px; height: 36px; border-radius: 13px; }
+  .community-site-card { min-height: 0; padding: 13px; }
+  .pond-compact-link { min-height: 0; padding: 11px 12px; }
+}
+
+/* ==========================================================================\n   SWAP TOKEN SELECTOR — DARK MODE\n   The picker is portaled to <body>, so it needs explicit dark-theme surfaces.\n   ========================================================================== */
+html[data-theme="dark"] .token-modal > button[aria-label="Close token selector"] {
+  background: rgba(2, 10, 12, .70) !important;
+  backdrop-filter: blur(7px) saturate(.88) !important;
+  -webkit-backdrop-filter: blur(7px) saturate(.88) !important;
+}
+
+html[data-theme="dark"] .token-modal-card {
+  color: #edf8f6 !important;
+  border: 1px solid rgba(130, 210, 201, .18) !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(55, 155, 181, .10), transparent 34%),
+    linear-gradient(160deg, #102f32 0%, #0b2528 54%, #081f22 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 24px 70px rgba(0,0,0,.46) !important;
+}
+
+html[data-theme="dark"] .token-modal-card .world-kicker {
+  color: #8bbab5 !important;
+}
+
+html[data-theme="dark"] .token-modal-card h3 {
+  color: #f4fbfa !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .token-modal-card .text-inkSub {
+  color: #9db6b4 !important;
+}
+
+html[data-theme="dark"] .token-modal-list {
+  gap: 8px !important;
+}
+
+html[data-theme="dark"] .token-option {
+  color: #edf8f6 !important;
+  border-color: rgba(137, 208, 199, .12) !important;
+  background: linear-gradient(155deg, rgba(22, 50, 52, .96), rgba(13, 36, 39, .98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 7px 16px rgba(0,0,0,.12) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .token-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(103, 195, 211, .27) !important;
+  background: linear-gradient(155deg, rgba(27, 59, 62, .98), rgba(15, 41, 44, .99)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 10px 20px rgba(0,0,0,.16) !important;
+}
+
+html[data-theme="dark"] .token-option-active {
+  border-color: rgba(68, 185, 221, .42) !important;
+  background:
+    radial-gradient(circle at 94% 16%, rgba(64, 187, 224, .12), transparent 34%),
+    linear-gradient(155deg, rgba(21, 58, 64, .99), rgba(11, 39, 44, .99)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(74, 187, 218, .08),
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 9px 22px rgba(0,0,0,.16) !important;
+}
+
+html[data-theme="dark"] .token-option > span:nth-child(2) > span:first-child {
+  color: #f1faf8 !important;
+}
+
+html[data-theme="dark"] .token-option > span:nth-child(2) > span:last-child {
+  color: #98b2af !important;
+}
+
+html[data-theme="dark"] .token-option-icon {
+  border-color: rgba(174, 225, 218, .13) !important;
+  background: rgba(231, 248, 245, .92) !important;
+  box-shadow: 0 5px 13px rgba(0,0,0,.20) !important;
+}
+
+html[data-theme="dark"] .token-option-icon-weth {
+  background: radial-gradient(circle at 32% 25%, #f8fbff 0 25%, #e4ebff 48%, #c9d5ff 100%) !important;
+}
+
+html[data-theme="dark"] .token-option-arrow {
+  color: #76d6ef !important;
+  border-color: rgba(117, 204, 220, .17) !important;
+  background: rgba(209, 242, 238, .055) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+html[data-theme="dark"] .token-option-active .token-option-arrow {
+  color: #d9fbff !important;
+  border-color: rgba(91, 196, 225, .28) !important;
+  background: rgba(44, 145, 178, .20) !important;
+}
+
+html[data-theme="dark"] .token-route-chip {
+  color: #a7dff1 !important;
+  border-color: rgba(100, 193, 220, .18) !important;
+  background: rgba(37, 123, 151, .12) !important;
+}
+
+/* The compact Close control should be matte inside the modal, not chrome. */
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal {
+  color: #dff3ef !important;
+  border-color: rgba(151, 218, 208, .15) !important;
+  background: rgba(216, 242, 238, .065) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal::before,
+html[data-theme="dark"] .token-modal-card .metal-button.compact-metal::after {
+  content: none !important;
+  display: none !important;
+}
+
+html[data-theme="dark"] .token-modal-card .status-dot {
+  box-shadow: 0 0 0 5px rgba(66, 196, 129, .08) !important;
+}
+
+@media (max-width: 520px) {
+  html[data-theme="dark"] .token-modal-card {
+    border-radius: 27px 27px 22px 22px !important;
+  }
+}
+
+/* ========================================================================== */
+/* 2026-08-21 CANONICAL LORE — reveal-ready dynamic metadata traits           */
+/* ========================================================================== */
+.land-traits{
+  margin-top:18px;
+  padding:18px;
+  border:1px solid rgba(25,82,83,.11);
+  border-radius:24px;
+  background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(241,249,247,.9));
+  box-shadow:0 12px 30px rgba(13,61,66,.07),inset 0 1px 0 rgba(255,255,255,.8);
+}
+.land-traits-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:13px}
+.land-traits-head h2{margin:3px 0 0;color:#103b40;font-size:20px;line-height:1.05;letter-spacing:-.035em}
+.land-traits-count{flex:none;padding:6px 9px;border:1px solid rgba(38,111,102,.11);border-radius:999px;background:rgba(56,137,121,.07);color:#4d7a73;font-size:8px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.land-traits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:9px}
+.land-trait-card{min-width:0;padding:12px 13px;border:1px solid rgba(31,87,88,.09);border-radius:16px;background:rgba(255,255,255,.68)}
+.land-trait-card>span{display:block;margin-bottom:5px;color:#728a87;font-size:7px;font-weight:950;letter-spacing:.09em;text-transform:uppercase;overflow-wrap:anywhere}
+.land-trait-card>strong{display:block;color:#123e42;font-size:13px;font-weight:950;line-height:1.25;overflow-wrap:anywhere;word-break:break-word}
+html[data-theme="dark"] .land-traits{border-color:rgba(150,221,209,.11);background:linear-gradient(150deg,#102f31,#0a2325);box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 14px 32px rgba(0,0,0,.18)}
+html[data-theme="dark"] .land-traits-head h2{color:#effaf7!important}
+html[data-theme="dark"] .land-traits-count{border-color:rgba(132,210,197,.13);background:rgba(79,167,150,.08);color:#8fc0b8}
+html[data-theme="dark"] .land-trait-card{border-color:rgba(151,222,210,.09);background:rgba(224,247,242,.035);box-shadow:none}
+html[data-theme="dark"] .land-trait-card>span{color:#83aaa3!important}
+html[data-theme="dark"] .land-trait-card>strong{color:#e9f7f3!important;-webkit-text-fill-color:#e9f7f3!important}
+@media(max-width:560px){.land-traits{padding:15px;border-radius:21px}.land-traits-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.land-traits-head{align-items:flex-start}.land-traits-head h2{font-size:18px}}
+
+/* ========================================================================== */
+/* 2026-08-21 LORE LAND — revealed land focus + trait signature               */
+/* ========================================================================== */
+.land-page .land-hero{
+  grid-template-columns:minmax(0,.82fr) minmax(360px,1.18fr);
+  align-items:stretch;
+  padding:22px;
+  gap:20px;
+}
+.land-page .land-hero-copy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:8px 4px 8px 6px;
+}
+.land-page .land-hero-copy h1{max-width:12ch}
+.land-page .land-hero-deed-wrap{
+  position:relative;
+  padding:9px;
+  border-radius:29px;
+  background:linear-gradient(145deg,rgba(246,252,250,.98),rgba(225,242,238,.96));
+  box-shadow:0 20px 46px rgba(14,61,66,.14),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.land-page .land-hero-deed-label{padding:5px 6px 10px}
+.land-page .land-hero-deed-label span{display:flex;align-items:center;gap:6px}
+.land-page .land-hero-deed-label span i{width:6px;height:6px;border-radius:999px;background:#53c993;box-shadow:0 0 0 5px rgba(83,201,147,.11)}
+.land-page .land-hero-canonical-deed{max-height:none;aspect-ratio:1/1;border-radius:22px;overflow:hidden}
+.land-page .land-hero-canonical-deed img{width:100%;height:100%;object-fit:cover;background:#e9f1ee}
+.land-art-caption{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:10px 6px 2px}
+.land-art-caption span{color:#73918b;font-size:7px;font-weight:1000;letter-spacing:.14em}
+.land-art-caption strong{max-width:70%;overflow:hidden;color:#174b4d;font-size:10px;font-weight:950;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+
+.land-reveal-traits{
+  position:relative;
+  overflow:hidden;
+  margin-top:16px;
+  padding:20px;
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 90% 0,rgba(75,185,150,.13),transparent 28%),
+    linear-gradient(145deg,#f8fcfa,#eef7f4);
+}
+.land-reveal-traits::before{content:"";position:absolute;left:20px;right:20px;top:0;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,#59b99d 25%,#79c6dc 65%,transparent)}
+.land-traits-head{position:relative;z-index:1;align-items:flex-start}
+.land-traits-head h2{font-size:24px}
+.land-traits-head p{max-width:520px;margin:6px 0 0;color:#718985;font-size:10px;line-height:1.5}
+.land-traits-count{display:inline-flex;align-items:center;gap:7px;padding:7px 10px}
+.land-traits-count i{width:7px;height:7px;border-radius:999px;background:#55c693;box-shadow:0 0 0 4px rgba(85,198,147,.11)}
+.land-traits-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.land-trait-card{
+  position:relative;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  min-height:78px;
+  padding:12px;
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(242,249,247,.84));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 7px 18px rgba(23,74,70,.05);
+}
+.land-trait-glyph{display:grid;width:38px;height:38px;place-items:center;border:1px solid rgba(61,137,123,.12);border-radius:13px;background:linear-gradient(145deg,#edf8f4,#e4f3ef);color:#3d8c7b;font-size:17px;font-weight:900}
+.land-trait-copy{min-width:0}
+.land-trait-copy>span{display:block;margin:0 0 4px;color:#78918c;font-size:7px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;overflow-wrap:anywhere}
+.land-trait-copy>strong{display:block;color:#123f42;font-size:14px;font-weight:1000;line-height:1.15;overflow-wrap:anywhere;word-break:break-word}
+.land-trait-card>small{align-self:flex-start;color:#9aadaa;font-size:7px;font-weight:900;letter-spacing:.08em}
+
+html[data-theme="dark"] .land-page .land-hero-deed-wrap{background:linear-gradient(145deg,#123436,#0b2729)!important;border-color:rgba(151,220,207,.12)!important;box-shadow:0 20px 46px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.035)!important}
+html[data-theme="dark"] .land-page .land-hero-canonical-deed img{background:#0e2729!important}
+html[data-theme="dark"] .land-art-caption span{color:#789d96!important}
+html[data-theme="dark"] .land-art-caption strong{color:#eaf8f4!important}
+html[data-theme="dark"] .land-reveal-traits{background:radial-gradient(circle at 90% 0,rgba(77,170,148,.10),transparent 30%),linear-gradient(145deg,#102f31,#092426)!important;border-color:rgba(149,220,208,.11)!important;box-shadow:0 16px 38px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.025)!important}
+html[data-theme="dark"] .land-traits-head p{color:#89a5a0!important}
+html[data-theme="dark"] .land-trait-card{background:linear-gradient(145deg,rgba(224,247,242,.055),rgba(224,247,242,.025))!important;border-color:rgba(150,220,208,.09)!important;box-shadow:none!important}
+html[data-theme="dark"] .land-trait-glyph{border-color:rgba(128,210,194,.12)!important;background:rgba(74,155,139,.08)!important;color:#82c9bb!important}
+html[data-theme="dark"] .land-trait-copy>span{color:#82a7a0!important}
+html[data-theme="dark"] .land-trait-copy>strong{color:#eefaf7!important;-webkit-text-fill-color:#eefaf7!important}
+html[data-theme="dark"] .land-trait-card>small{color:#668781!important}
+
+@media(max-width:850px){
+  .land-page .land-hero{grid-template-columns:1fr}
+  .land-page .land-hero-deed-wrap{order:1}
+  .land-page .land-hero-copy{order:2;padding:4px 2px 0}
+  .land-page .land-hero-copy h1{max-width:none}
+}
+@media(max-width:560px){
+  .land-page .land-hero{padding:12px;border-radius:28px;gap:14px}
+  .land-page .land-hero-deed-wrap{border-radius:23px;padding:7px}
+  .land-page .land-hero-canonical-deed{border-radius:18px}
+  .land-page .land-hero-copy{padding:4px 6px 7px}
+  .land-page .land-hero h1{font-size:34px}
+  .land-art-caption{padding:9px 5px 2px}
+  .land-reveal-traits{padding:16px;border-radius:23px}
+  .land-traits-head h2{font-size:20px}
+  .land-traits-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .land-trait-card{grid-template-columns:32px minmax(0,1fr);min-height:70px;padding:10px;gap:8px}
+  .land-trait-glyph{width:32px;height:32px;border-radius:11px;font-size:14px}
+  .land-trait-copy>strong{font-size:12px}
+  .land-trait-card>small{display:none}
+}
+
+/* ========================================================================== */
+/* 2026-08-21 CANONICAL LORE — revealed() authoritative metadata refresh      */
+/* ========================================================================== */
+.land-metadata-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.land-metadata-actions button{
+  appearance:none;
+  border:1px solid rgba(40,112,102,.13);
+  border-radius:999px;
+  padding:6px 9px;
+  background:rgba(47,129,113,.07);
+  color:#246e63;
+  font:inherit;
+  font-weight:950;
+  cursor:pointer;
+}
+.land-metadata-actions button:disabled{opacity:.55;cursor:default}
+html[data-theme="dark"] .land-metadata-actions button{
+  border-color:rgba(137,214,201,.15);
+  background:rgba(84,175,158,.08);
+  color:#a7d6ce;
+}
+@media(max-width:560px){
+  .land-metadata-actions{justify-content:flex-start}
+}
