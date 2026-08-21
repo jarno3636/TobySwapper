@@ -34,14 +34,12 @@ const IPFS_GATEWAYS = (
   ].join(",")
 )
   .split(",")
-  .map((value) => value.trim())
+  .map((v) => v.trim())
   .filter(Boolean)
-  .map((value) => (value.endsWith("/") ? value : `${value}/`));
+  .map((v) => (v.endsWith("/") ? v : `${v}/`));
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error(
-    "Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SECRET_KEY.",
-  );
+  console.error("Missing Supabase URL or server key.");
   process.exit(1);
 }
 
@@ -52,48 +50,50 @@ const args = Object.fromEntries(
   }),
 );
 
-function numericArg(value, fallback) {
+function numberArg(value, fallback) {
   if (value == null || value === "") return fallback;
 
-  const cleaned = String(value).replace(/,/g, "").trim();
-  const parsed = Number(cleaned);
+  const parsed = Number(
+    String(value).replace(/,/g, "").trim(),
+  );
 
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-const FROM = Math.max(1, numericArg(args.from, 1));
-const TO = Math.min(4000, numericArg(args.to, 4000));
+const FROM = Math.max(1, numberArg(args.from, 1));
+const TO = Math.min(4000, numberArg(args.to, 4000));
 
 const CONCURRENCY = Math.max(
   1,
-  Math.min(6, numericArg(args.concurrency, 3)),
+  Math.min(6, numberArg(args.concurrency, 3)),
 );
 
 const FORCE = args.force === "true";
 const METADATA_ONLY = args["metadata-only"] === "true";
+const RETRY_FAILED_ART = args["retry-art"] !== "false";
 
 const MAX_IMAGE_BYTES =
-  Math.max(1, numericArg(args["max-image-mb"], 12)) * 1024 * 1024;
+  Math.max(1, numberArg(args["max-image-mb"], 12)) *
+  1024 *
+  1024;
 
 const META_TIMEOUT = Math.max(
   2500,
-  numericArg(args["metadata-timeout-ms"], 6500),
+  numberArg(args["metadata-timeout-ms"], 6500),
 );
 
 const IMAGE_TIMEOUT = Math.max(
   3000,
-  numericArg(args["image-timeout-ms"], 15000),
+  numberArg(args["image-timeout-ms"], 15000),
 );
 
 const IMAGE_RACE_WIDTH = Math.max(
   1,
-  Math.min(3, numericArg(args["image-race-width"], 2)),
+  Math.min(3, numberArg(args["image-race-width"], 2)),
 );
 
-const RETRY_FAILED_ART = args["retry-art"] !== "false";
-
 if (TO < FROM) {
-  console.error(`Invalid token range: ${FROM}-${TO}`);
+  console.error(`Invalid range: ${FROM}-${TO}`);
   process.exit(1);
 }
 
@@ -119,7 +119,7 @@ const client = createPublicClient({
   transport: fallback(
     RPCS.map((url) =>
       http(url, {
-        timeout: 8_000,
+        timeout: 8000,
         retryCount: 2,
         retryDelay: 350,
       }),
@@ -278,20 +278,12 @@ function resolveRelative(value, metadataUri) {
   return v;
 }
 
-async function fetchWithTimeout(
-  url,
-  init = {},
-  ms = 6500,
-) {
+async function fetchWithTimeout(url, init = {}, ms = 6500) {
   const controller = new AbortController();
 
-  const timer = setTimeout(
-    () =>
-      controller.abort(
-        new Error(`timeout after ${ms}ms`),
-      ),
-    ms,
-  );
+  const timer = setTimeout(() => {
+    controller.abort(new Error(`timeout after ${ms}ms`));
+  }, ms);
 
   try {
     return await fetch(url, {
@@ -303,28 +295,14 @@ async function fetchWithTimeout(
   }
 }
 
-/* -------------------------------------------------------
-   METADATA
-------------------------------------------------------- */
-
-async function fetchMetadata(
-  tokenUri,
-  tokenId = 0,
-  attempt = 0,
-) {
-  if (
-    tokenUri.startsWith(
-      "data:application/json",
-    )
-  ) {
+async function fetchMetadata(tokenUri, tokenId = 0, attempt = 0) {
+  if (tokenUri.startsWith("data:application/json")) {
     const comma = tokenUri.indexOf(",");
     const header = tokenUri.slice(0, comma);
     const raw = tokenUri.slice(comma + 1);
 
     const text = /;base64/i.test(header)
-      ? Buffer.from(raw, "base64").toString(
-          "utf8",
-        )
+      ? Buffer.from(raw, "base64").toString("utf8")
       : decodeURIComponent(raw);
 
     return {
@@ -338,8 +316,7 @@ async function fetchMetadata(
   const candidates = uriCandidates(tokenUri);
 
   const offset = candidates.length
-    ? (Number(tokenId || 0) + attempt) %
-      candidates.length
+    ? (Number(tokenId) + attempt) % candidates.length
     : 0;
 
   const ordered = candidates.length
@@ -355,8 +332,7 @@ async function fetchMetadata(
         url,
         {
           headers: {
-            accept:
-              "application/json,*/*;q=0.5",
+            accept: "application/json,*/*;q=0.5",
           },
           cache: "no-store",
         },
@@ -368,25 +344,18 @@ async function fetchMetadata(
         continue;
       }
 
-      const parsed = JSON.parse(
-        await response.text(),
-      );
+      const parsed = JSON.parse(await response.text());
 
-      if (
-        parsed &&
-        typeof parsed === "object"
-      ) {
+      if (parsed && typeof parsed === "object") {
         return {
           metadata: parsed,
           metadataUri: url,
         };
       }
 
-      last = `invalid JSON object ${url}`;
+      last = `invalid metadata @ ${url}`;
     } catch (error) {
-      last = `${
-        error?.name || "Error"
-      }: ${String(
+      last = `${error?.name || "Error"}: ${String(
         error?.message || error,
       )} @ ${url}`;
     }
@@ -395,15 +364,17 @@ async function fetchMetadata(
   throw new Error(last);
 }
 
-/* -------------------------------------------------------
-   SUPABASE
-------------------------------------------------------- */
-
+/*
+ * IMPORTANT:
+ * This is intentionally the SAME authentication method
+ * as the original working backfill.
+ */
 async function rest(path, init = {}) {
   const response = await fetch(
     `${SUPABASE_URL}/rest/v1/${path}`,
     {
       ...init,
+
       headers: {
         apikey: SERVICE_KEY,
         Authorization: `Bearer ${SERVICE_KEY}`,
@@ -415,12 +386,9 @@ async function rest(path, init = {}) {
 
   if (!response.ok) {
     throw new Error(
-      `Supabase ${
-        response.status
-      }: ${(await response.text()).slice(
-        0,
-        300,
-      )}`,
+      `Supabase ${response.status}: ${(
+        await response.text()
+      ).slice(0, 500)}`,
     );
   }
 
@@ -454,13 +422,9 @@ async function rpc(name, body) {
   });
 }
 
-async function markArtFailure(
-  tokenId,
-  message,
-) {
+async function markArtFailure(tokenId, message) {
   await rpc("tobyswap_set_lore_art_cache", {
-    p_collection_address:
-      COLLECTION.toLowerCase(),
+    p_collection_address: COLLECTION.toLowerCase(),
     p_token_id: tokenId,
     p_cached_image_url: null,
     p_storage_path: null,
@@ -471,61 +435,37 @@ async function markArtFailure(
   }).catch(() => {});
 }
 
-/* -------------------------------------------------------
-   ARTWORK — PARALLEL GATEWAY RACING
-------------------------------------------------------- */
-
 function contentTypeToExt(contentType) {
-  if (contentType === "image/jpeg") {
-    return "jpg";
-  }
-
-  if (contentType === "image/webp") {
-    return "webp";
-  }
-
-  if (contentType === "image/gif") {
-    return "gif";
-  }
-
-  if (contentType === "image/svg+xml") {
-    return "svg";
-  }
+  if (contentType === "image/jpeg") return "jpg";
+  if (contentType === "image/webp") return "webp";
+  if (contentType === "image/gif") return "gif";
+  if (contentType === "image/svg+xml") return "svg";
 
   return "png";
 }
 
-async function fetchImageCandidate(
-  url,
-  externalSignal,
-) {
+async function fetchImageCandidate(url, signal) {
   const controller = new AbortController();
 
-  const timeout = setTimeout(() => {
+  const timer = setTimeout(() => {
     controller.abort(
-      new Error(
-        `timeout after ${IMAGE_TIMEOUT}ms`,
-      ),
+      new Error(`timeout after ${IMAGE_TIMEOUT}ms`),
     );
   }, IMAGE_TIMEOUT);
 
-  const abortFromParent = () => {
+  const parentAbort = () => {
     controller.abort(
-      new Error(
-        "cancelled after another gateway succeeded",
-      ),
+      new Error("gateway race cancelled"),
     );
   };
 
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      abortFromParent();
+  if (signal) {
+    if (signal.aborted) {
+      parentAbort();
     } else {
-      externalSignal.addEventListener(
-        "abort",
-        abortFromParent,
-        { once: true },
-      );
+      signal.addEventListener("abort", parentAbort, {
+        once: true,
+      });
     }
   }
 
@@ -534,48 +474,36 @@ async function fetchImageCandidate(
       headers: {
         accept: "image/*,*/*;q=0.5",
       },
+
       cache: "no-store",
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      throw new Error(
-        `${response.status} ${url}`,
-      );
+      throw new Error(`${response.status} ${url}`);
     }
 
     const contentType = (
-      response.headers.get("content-type") ||
-      ""
+      response.headers.get("content-type") || ""
     )
       .split(";")[0]
       .toLowerCase();
 
     if (!contentType.startsWith("image/")) {
       throw new Error(
-        `not image: ${
-          contentType || "unknown"
-        } @ ${url}`,
+        `not image: ${contentType || "unknown"} @ ${url}`,
       );
     }
 
-    const contentLength = Number(
-      response.headers.get(
-        "content-length",
-      ) || 0,
+    const declaredLength = Number(
+      response.headers.get("content-length") || 0,
     );
 
     if (
-      contentLength &&
-      contentLength > MAX_IMAGE_BYTES
+      declaredLength &&
+      declaredLength > MAX_IMAGE_BYTES
     ) {
-      throw new Error(
-        `image is ${(
-          contentLength /
-          1024 /
-          1024
-        ).toFixed(2)} MB; over cap`,
-      );
+      throw new Error("image over size cap");
     }
 
     const bytes = Buffer.from(
@@ -583,59 +511,32 @@ async function fetchImageCandidate(
     );
 
     if (!bytes.length) {
-      throw new Error(
-        `empty image @ ${url}`,
-      );
+      throw new Error("empty image");
     }
 
     if (bytes.length > MAX_IMAGE_BYTES) {
-      throw new Error(
-        `image is ${(
-          bytes.length /
-          1024 /
-          1024
-        ).toFixed(2)} MB; over cap`,
-      );
+      throw new Error("image over size cap");
     }
 
     return {
-      bytes,
-      contentType,
       url,
+      contentType,
+      bytes,
     };
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
 
-    if (externalSignal) {
-      externalSignal.removeEventListener(
+    if (signal) {
+      signal.removeEventListener(
         "abort",
-        abortFromParent,
+        parentAbort,
       );
     }
   }
 }
 
-async function raceImageCandidates(
-  candidates,
-) {
-  let lastError = new Error(
-    "image unavailable",
-  );
-
-  /*
-   * Race a SMALL GROUP of gateways.
-   *
-   * With width=2:
-   *
-   * gateway A ─┐
-   *            ├── first success wins
-   * gateway B ─┘
-   *
-   * If both fail, move to the next pair.
-   *
-   * This avoids hammering all gateways while
-   * eliminating the huge serial timeout problem.
-   */
+async function raceImageCandidates(candidates) {
+  let lastError = new Error("image unavailable");
 
   for (
     let i = 0;
@@ -647,37 +548,32 @@ async function raceImageCandidates(
       i + IMAGE_RACE_WIDTH,
     );
 
-    const groupController =
-      new AbortController();
+    const controller = new AbortController();
 
     try {
       const winner = await Promise.any(
-        batch.map((url) =>
-          fetchImageCandidate(
-            url,
-            groupController.signal,
-          ).catch((error) => {
+        batch.map(async (url) => {
+          try {
+            return await fetchImageCandidate(
+              url,
+              controller.signal,
+            );
+          } catch (error) {
             lastError = error;
             throw error;
-          }),
-        ),
+          }
+        }),
       );
 
-      /*
-       * We have the full valid image.
-       * Kill the losing gateway request.
-       */
-      groupController.abort();
+      controller.abort();
 
       return winner;
     } catch (error) {
-      groupController.abort();
+      controller.abort();
 
       if (error?.errors?.length) {
         lastError =
-          error.errors[
-            error.errors.length - 1
-          ];
+          error.errors[error.errors.length - 1];
       } else {
         lastError = error;
       }
@@ -700,27 +596,17 @@ async function uploadArt(
   );
 
   if (!resolved) {
-    throw new Error(
-      "No image URI in metadata",
-    );
+    throw new Error("No image URI in metadata");
   }
 
-  const candidates =
-    uriCandidates(resolved);
+  const candidates = uriCandidates(resolved);
 
   if (!candidates.length) {
-    throw new Error(
-      "No usable image URI",
-    );
+    throw new Error("No usable image candidate");
   }
 
-  /*
-   * Rotate starting position by token ID.
-   * This spreads requests across gateways.
-   */
   const offset =
-    (Number(tokenId || 0) + attempt) %
-    candidates.length;
+    (Number(tokenId) + attempt) % candidates.length;
 
   const ordered = [
     ...candidates.slice(offset),
@@ -730,134 +616,89 @@ async function uploadArt(
   let fetched;
 
   try {
-    fetched =
-      await raceImageCandidates(ordered);
+    fetched = await raceImageCandidates(ordered);
   } catch (error) {
-    const message = `${
-      error?.name || "Error"
-    }: ${String(
+    const message = `${error?.name || "Error"}: ${String(
       error?.message || error,
     )}`;
 
-    await markArtFailure(
-      tokenId,
-      message,
-    );
+    await markArtFailure(tokenId, message);
 
     throw new Error(message);
   }
 
   const { bytes, contentType } = fetched;
 
-  const ext =
-    contentTypeToExt(contentType);
+  const ext = contentTypeToExt(contentType);
 
   const path = `canonical/${tokenId}.${ext}`;
 
-  try {
-    const upload = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
-      {
-        method: "POST",
+  const upload = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
+    {
+      method: "POST",
 
-        headers: {
-          apikey: SERVICE_KEY,
-          Authorization: `Bearer ${SERVICE_KEY}`,
-          "Content-Type": contentType,
-          "x-upsert": "true",
-          "Cache-Control":
-            "public, max-age=31536000, immutable",
-        },
-
-        body: bytes,
+      /*
+       * Same Supabase authentication scheme
+       * as the original working code.
+       */
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": contentType,
+        "x-upsert": "true",
+        "Cache-Control":
+          "public, max-age=31536000, immutable",
       },
-    );
 
-    if (!upload.ok) {
-      throw new Error(
-        `storage ${
-          upload.status
-        }: ${(await upload.text()).slice(
-          0,
-          200,
-        )}`,
-      );
-    }
+      body: bytes,
+    },
+  );
 
-    const publicUrl =
-      `${SUPABASE_URL}` +
-      `/storage/v1/object/public/` +
-      `${BUCKET}/${path}`;
+  if (!upload.ok) {
+    const error = `storage ${upload.status}: ${(
+      await upload.text()
+    ).slice(0, 300)}`;
 
-    await rpc(
-      "tobyswap_set_lore_art_cache",
-      {
-        p_collection_address:
-          COLLECTION.toLowerCase(),
+    await markArtFailure(tokenId, error);
 
-        p_token_id: tokenId,
-
-        p_cached_image_url:
-          publicUrl,
-
-        p_storage_path: path,
-
-        p_content_type:
-          contentType,
-
-        p_image_bytes:
-          bytes.length,
-
-        p_status: "cached",
-
-        p_error: null,
-      },
-    );
-
-    return publicUrl;
-  } catch (error) {
-    const message = `${
-      error?.name || "Error"
-    }: ${String(
-      error?.message || error,
-    )}`;
-
-    await markArtFailure(
-      tokenId,
-      message,
-    );
-
-    throw error;
+    throw new Error(error);
   }
+
+  const publicUrl =
+    `${SUPABASE_URL}/storage/v1/object/public/` +
+    `${BUCKET}/${path}`;
+
+  await rpc("tobyswap_set_lore_art_cache", {
+    p_collection_address: COLLECTION.toLowerCase(),
+    p_token_id: tokenId,
+    p_cached_image_url: publicUrl,
+    p_storage_path: path,
+    p_content_type: contentType,
+    p_image_bytes: bytes.length,
+    p_status: "cached",
+    p_error: null,
+  });
+
+  return publicUrl;
 }
 
-/* -------------------------------------------------------
-   VERIFY REVEAL
-------------------------------------------------------- */
-
-const revealed =
-  await client.readContract({
-    address: COLLECTION,
-    abi,
-    functionName: "revealed",
-  });
+const revealed = await client.readContract({
+  address: COLLECTION,
+  abi,
+  functionName: "revealed",
+});
 
 if (!revealed) {
   console.error(
-    "Canonical collection is not revealed. Backfill stopped.",
+    "Canonical collection is not revealed.",
   );
 
   process.exit(1);
 }
 
-/* -------------------------------------------------------
-   QUEUES + STATS
-------------------------------------------------------- */
-
 const queue = Array.from(
-  {
-    length: TO - FROM + 1,
-  },
+  { length: TO - FROM + 1 },
   (_, i) => FROM + i,
 );
 
@@ -878,18 +719,22 @@ console.log(
 );
 
 console.log(
-  `Workers=${CONCURRENCY} · artwork=${!METADATA_ONLY}`,
+  `workers=${CONCURRENCY} · art=${!METADATA_ONLY}`,
 );
 
 console.log(
-  `Timeouts: metadata=${META_TIMEOUT}ms · image=${IMAGE_TIMEOUT}ms · image-race=${IMAGE_RACE_WIDTH}`,
+  `metadata-timeout=${META_TIMEOUT}ms · ` +
+    `image-timeout=${IMAGE_TIMEOUT}ms · ` +
+    `gateway-race=${IMAGE_RACE_WIDTH}`,
 );
 
 console.log(
-  `IPFS gateways (${IPFS_GATEWAYS.length}): ${IPFS_GATEWAYS.join(
-    " | ",
-  )}`,
+  `IPFS gateways (${IPFS_GATEWAYS.length}):`,
 );
+
+for (const gateway of IPFS_GATEWAYS) {
+  console.log(`  ${gateway}`);
+}
 
 function progress() {
   const processed =
@@ -912,33 +757,21 @@ function progress() {
   }
 }
 
-/* -------------------------------------------------------
-   TOKEN PROCESSING
-------------------------------------------------------- */
-
 async function processToken(tokenId) {
-  const existing =
-    await cachedRecord(tokenId);
+  const existing = await cachedRecord(tokenId);
 
   const metadataReady = Boolean(
     existing &&
-      Number(
-        existing.trait_count || 0,
-      ) > 0 &&
+      Number(existing.trait_count || 0) > 0 &&
       existing.image_uri,
   );
 
   const artReady = Boolean(
     existing &&
-      existing.art_cache_status ===
-        "cached" &&
+      existing.art_cache_status === "cached" &&
       existing.cached_image_url,
   );
 
-  /*
-   * BEST CASE:
-   * Everything is already cached.
-   */
   if (
     metadataReady &&
     (METADATA_ONLY || artReady)
@@ -948,14 +781,6 @@ async function processToken(tokenId) {
     return;
   }
 
-  /*
-   * Metadata exists.
-   * Artwork does NOT.
-   *
-   * Do not hit contract.
-   * Do not retrieve metadata.
-   * ONLY retrieve artwork.
-   */
   if (
     metadataReady &&
     !METADATA_ONLY &&
@@ -976,45 +801,36 @@ async function processToken(tokenId) {
       artRetryQueue.push({
         tokenId,
         image: existing.image_uri,
-        metadataUri:
-          existing.metadata_uri,
-        tokenUri:
-          existing.token_uri,
+        metadataUri: existing.metadata_uri,
+        tokenUri: existing.token_uri,
       });
 
       console.warn(
         `#${tokenId} ART pending: ${String(
           error?.message || error,
-        ).slice(0, 180)}`,
+        ).slice(0, 200)}`,
       );
     }
 
-    /*
-     * This token's metadata was already
-     * complete before this run.
-     */
     stats.metadataCached++;
 
     progress();
+
     return;
   }
 
-  /*
-   * Brand new / incomplete metadata.
-   */
   let tokenUri;
   let metadata;
   let metadataUri;
   let image;
 
   try {
-    tokenUri =
-      await client.readContract({
-        address: COLLECTION,
-        abi,
-        functionName: "tokenURI",
-        args: [BigInt(tokenId)],
-      });
+    tokenUri = await client.readContract({
+      address: COLLECTION,
+      abi,
+      functionName: "tokenURI",
+      args: [BigInt(tokenId)],
+    });
 
     ({
       metadata,
@@ -1024,8 +840,7 @@ async function processToken(tokenId) {
       tokenId,
     ));
 
-    const traits =
-      extractTraits(metadata);
+    const traits = extractTraits(metadata);
 
     image =
       metadata?.image ??
@@ -1040,50 +855,33 @@ async function processToken(tokenId) {
           COLLECTION.toLowerCase(),
 
         p_chain_id: 8453,
-
         p_token_id: tokenId,
 
-        p_token_uri:
-          String(tokenUri),
+        p_token_uri: String(tokenUri),
+        p_metadata_uri: metadataUri,
 
-        p_metadata_uri:
-          metadataUri,
-
-        p_name:
-          asText(metadata?.name),
+        p_name: asText(metadata?.name),
 
         p_description:
-          asText(
-            metadata?.description,
-          ),
+          asText(metadata?.description),
 
-        p_image_uri:
-          asText(image),
+        p_image_uri: asText(image),
 
         p_animation_uri:
-          asText(
-            metadata?.animation_url,
-          ),
+          asText(metadata?.animation_url),
 
         p_external_url:
-          asText(
-            metadata?.external_url,
-          ),
+          asText(metadata?.external_url),
 
-        p_metadata:
-          metadata,
+        p_metadata: metadata,
 
-        p_metadata_hash:
-          null,
+        p_metadata_hash: null,
 
-        p_revealed:
-          true,
+        p_revealed: true,
 
-        p_source:
-          "backfill-v3-race",
+        p_source: "backfill-v3-race",
 
-        p_traits:
-          traits,
+        p_traits: traits,
       },
     );
 
@@ -1104,10 +902,6 @@ async function processToken(tokenId) {
     return;
   }
 
-  /*
-   * Metadata is safely stored.
-   * Artwork failure cannot undo it.
-   */
   if (!METADATA_ONLY) {
     try {
       await uploadArt(
@@ -1125,14 +919,13 @@ async function processToken(tokenId) {
         tokenId,
         image,
         metadataUri,
-        tokenUri:
-          String(tokenUri),
+        tokenUri: String(tokenUri),
       });
 
       console.warn(
-        `#${tokenId} ART pending; metadata + traits saved: ${String(
+        `#${tokenId} ART pending; metadata saved: ${String(
           error?.message || error,
-        ).slice(0, 180)}`,
+        ).slice(0, 200)}`,
       );
     }
   }
@@ -1140,14 +933,9 @@ async function processToken(tokenId) {
   progress();
 }
 
-/* -------------------------------------------------------
-   MAIN WORKERS
-------------------------------------------------------- */
-
 async function worker() {
   while (queue.length) {
-    const tokenId =
-      queue.shift();
+    const tokenId = queue.shift();
 
     if (!tokenId) return;
 
@@ -1157,32 +945,18 @@ async function worker() {
 
 await Promise.all(
   Array.from(
-    {
-      length: CONCURRENCY,
-    },
+    { length: CONCURRENCY },
     () => worker(),
   ),
 );
-
-/* -------------------------------------------------------
-   ART-ONLY RETRY PASS
-------------------------------------------------------- */
 
 if (
   !METADATA_ONLY &&
   RETRY_FAILED_ART &&
   artRetryQueue.length
 ) {
-  const retryItems = [
-    ...artRetryQueue,
-  ];
+  const retryItems = [...artRetryQueue];
 
-  artRetryQueue.length = 0;
-
-  /*
-   * Retry art slightly more conservatively.
-   * Metadata is NOT touched.
-   */
   const RETRY_WORKERS = Math.min(
     3,
     Math.max(1, CONCURRENCY),
@@ -1194,17 +968,10 @@ if (
 
   let cursor = 0;
 
-  const retryWorker = async () => {
-    while (
-      cursor < retryItems.length
-    ) {
-      const item =
-        retryItems[cursor++];
+  async function retryWorker() {
+    while (cursor < retryItems.length) {
+      const item = retryItems[cursor++];
 
-      /*
-       * Tiny stagger prevents all retry
-       * workers from firing simultaneously.
-       */
       await sleep(200);
 
       try {
@@ -1218,11 +985,10 @@ if (
 
         stats.artCached++;
 
-        stats.artFailed =
-          Math.max(
-            0,
-            stats.artFailed - 1,
-          );
+        stats.artFailed = Math.max(
+          0,
+          stats.artFailed - 1,
+        );
 
         console.log(
           `#${item.tokenId} ART repaired`,
@@ -1235,53 +1001,27 @@ if (
         );
       }
     }
-  };
+  }
 
   await Promise.all(
     Array.from(
-      {
-        length: RETRY_WORKERS,
-      },
+      { length: RETRY_WORKERS },
       () => retryWorker(),
     ),
   );
 }
 
-/* -------------------------------------------------------
-   FINAL SUMMARY
-------------------------------------------------------- */
-
 console.log("");
-console.log("──────── BACKFILL COMPLETE ────────");
-
+console.log("────── BACKFILL COMPLETE ──────");
+console.log(`metadata: ${stats.metadataCached}`);
+console.log(`art: ${stats.artCached}`);
+console.log(`skipped: ${stats.skipped}`);
 console.log(
-  `Metadata handled: ${stats.metadataCached}`,
+  `metadataFailed: ${stats.metadataFailed}`,
 );
+console.log(`artPending: ${stats.artFailed}`);
+console.log("───────────────────────────────");
 
-console.log(
-  `Artwork cached/repaired: ${stats.artCached}`,
-);
-
-console.log(
-  `Fully skipped: ${stats.skipped}`,
-);
-
-console.log(
-  `Metadata failures: ${stats.metadataFailed}`,
-);
-
-console.log(
-  `Artwork still pending: ${stats.artFailed}`,
-);
-
-console.log("───────────────────────────────────");
-
-/*
- * Artwork failure does NOT fail the Action.
- * We can safely repair it later.
- *
- * Metadata failure DOES matter.
- */
 if (stats.metadataFailed) {
   process.exitCode = 2;
 }
