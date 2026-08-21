@@ -178,7 +178,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
             {visibleDeeds.map((deed, index) => (
               <article key={deed.tokenId} className={`mytw-deed-tile theme-${deed.bannerTheme || "moss"}`}>
                 <Link prefetch={false} href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
-                  <LoreDeedArt tokenId={deed.tokenId} label={deed.communityName || undefined} eager={index < 2} />
+                  <LoreDeedArt tokenId={deed.tokenId} label={deed.communityName || undefined} eager={index < 2} revealed={revealed} />
                 </Link>
                 <div className="mytw-deed-tile-copy">
                   <small>{deed.communityName || "LORE LAND"}</small>

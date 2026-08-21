@@ -16,12 +16,14 @@ export default function LoreDeedArt({
   className = "",
   eager = false,
   showStatus = false,
+  revealed = false,
 }: {
   tokenId: string | bigint;
   label?: string;
   className?: string;
   eager?: boolean;
   showStatus?: boolean;
+  revealed?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(eager);
@@ -59,24 +61,28 @@ export default function LoreDeedArt({
     chainId: base.id,
     query: {
       enabled: visible,
-      staleTime: 30 * 60_000,
+      staleTime: revealed ? 15_000 : 5 * 60_000,
       gcTime: 60 * 60_000,
       refetchInterval: false,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: revealed,
       retry: 1,
     },
   });
+
+  useEffect(() => {
+    if (visible && revealed) void uriRead.refetch();
+  }, [visible, revealed, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!visible || typeof uriRead.data !== "string") return;
     let cancelled = false;
     setImageIndex(0);
     setProxyTried(false);
-    fetchLoreMetadataResult(uriRead.data).then((value) => {
+    fetchLoreMetadataResult(uriRead.data, revealed).then((value) => {
       if (!cancelled) setResult(value);
     });
     return () => { cancelled = true; };
-  }, [uriRead.data, visible]);
+  }, [uriRead.data, visible, revealed]);
 
   const images = useMemo(
     () => {
