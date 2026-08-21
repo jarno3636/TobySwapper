@@ -1,6 +1,7 @@
 "use client";
 
 import { loreUriCandidates, resolveLoreUri } from "@/lib/lore-deeds";
+import { extractLoreTraits, metadataHasLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
 
 export type LoreMetadata = {
   name?: string;
@@ -10,7 +11,10 @@ export type LoreMetadata = {
   imageUrl?: string;
   animation_url?: string;
   external_url?: string;
-  attributes?: Array<{ trait_type?: string; value?: unknown }>;
+  attributes?: Array<{ trait_type?: string; value?: unknown; display_type?: string }>;
+  traits?: unknown;
+  features?: unknown;
+  properties?: Record<string, unknown>;
 };
 
 export type LoreMetadataResult = {
@@ -26,7 +30,7 @@ const UNREVEALED_CACHE_MS = 5 * 60_000;
 
 function cacheMsFor(result?: LoreMetadataResult | null) {
   const metadata = result?.metadata;
-  const hasTraits = Array.isArray(metadata?.attributes) && metadata!.attributes!.some((trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "");
+  const hasTraits = metadataHasLoreTraits(metadata);
   // Placeholder metadata often includes an image too, so artwork alone cannot
   // safely tell us that the collection is revealed. Keep image-only metadata
   // on the short cache until real attributes arrive. The caller can force a
@@ -104,11 +108,10 @@ export function loreImage(metadata?: LoreMetadata | null) {
 }
 
 export function hasLoreTraits(metadata?: LoreMetadata | null) {
-  return Array.isArray(metadata?.attributes) && metadata!.attributes!.some((trait) => {
-    const value = trait?.value;
-    return value !== null && value !== undefined && String(value).trim() !== "";
-  });
+  return metadataHasLoreTraits(metadata);
 }
+
+export { extractLoreTraits };
 
 export function looksLikePreRevealMetadata(metadata?: LoreMetadata | null) {
   if (!metadata) return true;
@@ -158,7 +161,8 @@ export async function fetchLoreMetadataResult(
   const request = (async () => {
     // Inline JSON metadata is common for unrevealed NFTs.
     if (original.startsWith("data:application/json")) {
-      const metadata = decodeJsonDataUri(original);
+      const decoded = decodeJsonDataUri(original);
+      const metadata = decoded ? normalizeLoreMetadata(decoded, original, original) as LoreMetadata : null;
       const result: LoreMetadataResult = metadata
         ? {
             metadata,
@@ -222,8 +226,9 @@ export async function fetchLoreMetadataResult(
         try {
           const parsed = JSON.parse(text);
           if (parsed && typeof parsed === "object") {
+            const normalized = normalizeLoreMetadata(parsed, uri, original) as LoreMetadata;
             const result: LoreMetadataResult = {
-              metadata: parsed as LoreMetadata,
+              metadata: normalized,
               sourceUri: original,
               resolvedMetadataUri: uri,
               directImage: null,
