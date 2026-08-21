@@ -259,7 +259,7 @@ export default function LandPage() {
               </div>
             </section>
 
-            <LandTraits metadata={metadata} />
+            <LandTraits metadata={metadata} revealed={loreRevealed} loading={metadataRefreshing} error={metadataResult?.error || null} onRefresh={refreshCanonicalMetadata} />
 
             <LandCommunityProfile tokenId={tokenId!} owner={owner} onProfile={setCommunityProfile} />
 
