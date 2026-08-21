@@ -107,14 +107,14 @@ export async function GET(request: NextRequest) {
       const metadata = decodeInlineJson(tokenUri);
       return NextResponse.json(
         { tokenId: tokenIdText, tokenUri, metadata, image: metadata?.image || metadata?.image_url || metadata?.imageUrl || null, source: "inline" },
-        { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
+        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
       );
     }
 
     if (isImageUri(tokenUri)) {
       return NextResponse.json(
         { tokenId: tokenIdText, tokenUri, metadata: null, image: tokenUri, source: "direct-image" },
-        { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
+        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
       );
     }
 
@@ -124,7 +124,9 @@ export async function GET(request: NextRequest) {
       try {
         const response = await fetch(candidate, {
           headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5" },
-          next: { revalidate: 21600 },
+          // This route is only a fallback for gateways that block browser CORS.
+          // Do not let a pre-reveal gateway response sit in Next's data cache.
+          cache: "no-store",
         });
 
         if (!response.ok) {
@@ -136,7 +138,7 @@ export async function GET(request: NextRequest) {
         if (isImageUri(candidate, contentType)) {
           return NextResponse.json(
             { tokenId: tokenIdText, tokenUri, metadataUri: candidate, metadata: null, image: candidate, source: "direct-image" },
-            { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
+            { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
           );
         }
 
@@ -153,7 +155,7 @@ export async function GET(request: NextRequest) {
             image: metadata.image || metadata.image_url || metadata.imageUrl || null,
             source: "metadata",
           },
-          { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
+          { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
         );
       } catch (error: any) {
         lastError = String(error?.message || "Metadata source failed.").slice(0, 160);
