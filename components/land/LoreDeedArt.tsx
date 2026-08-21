@@ -30,6 +30,7 @@ export default function LoreDeedArt({
   const [result, setResult] = useState<LoreMetadataResult | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [proxyTried, setProxyTried] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const id = typeof tokenId === "bigint" ? tokenId : BigInt(tokenId);
 
@@ -78,7 +79,39 @@ export default function LoreDeedArt({
     let cancelled = false;
     setImageIndex(0);
     setProxyTried(false);
-    fetchLoreMetadataResult(uriRead.data, revealed).then((value) => {
+    setImageLoaded(false);
+    fetchLoreMetadataResult(uriRead.data, revealed).then(async (value) => {
+      if (cancelled) return;
+
+      const hasTraits = Array.isArray(value.metadata?.attributes) && value.metadata!.attributes!.some(
+        (trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "",
+      );
+      const looksPreReveal = Boolean(
+        value.error ||
+        !value.metadata ||
+        !hasTraits ||
+        /sealed|behind the veil|waits behind|unrevealed/i.test(`${value.metadata?.name || ""} ${value.metadata?.description || ""}`),
+      );
+
+      if (revealed && looksPreReveal) {
+        try {
+          const response = await fetch(`/api/lore/metadata?tokenId=${id.toString()}&reveal=1`, { cache: "no-store" });
+          if (response.ok) {
+            const payload = await response.json();
+            if (!cancelled && payload?.metadata && typeof payload.metadata === "object") {
+              setResult({
+                metadata: payload.metadata,
+                sourceUri: typeof payload.tokenUri === "string" ? payload.tokenUri : uriRead.data,
+                resolvedMetadataUri: typeof payload.metadataUri === "string" ? payload.metadataUri : null,
+                directImage: payload.source === "direct-image" && typeof payload.image === "string" ? payload.image : null,
+                error: null,
+              });
+              return;
+            }
+          }
+        } catch {}
+      }
+
       if (!cancelled) setResult(value);
     });
     return () => { cancelled = true; };
@@ -111,7 +144,9 @@ export default function LoreDeedArt({
           alt={metadataName}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
+          onLoad={() => setImageLoaded(true)}
           onError={() => {
+            setImageLoaded(false);
             if (usingProxy) setProxyTried(true);
             else setImageIndex((index) => index + 1);
           }}
@@ -129,8 +164,8 @@ export default function LoreDeedArt({
       )}
       <span className="canonical-deed-art-id">#{id.toString()}</span>
       {showStatus && typeof uriRead.data === "string" ? (
-        <span className={`canonical-deed-source ${image ? "ready" : ""}`}>
-          {image ? (usingProxy ? "CANONICAL ART · CACHED ✓" : "CANONICAL ART ✓") : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
+        <span className={`canonical-deed-source ${imageLoaded ? "ready" : ""}`}>
+          {imageLoaded ? "CANONICAL ART ✓" : image ? "LOADING CANONICAL ART…" : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
         </span>
       ) : null}
     </div>
