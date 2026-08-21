@@ -116,19 +116,18 @@ export default function LoreDeedArt({
   );
   const directImage = images[imageIndex] || null;
 
-  // Revealed canonical land is special: mobile wallet webviews frequently block
-  // or inconsistently render public IPFS gateways even when the metadata itself
-  // resolves correctly. For the authoritative Land page, use our existing
-  // canonical image proxy first. The response is CDN-cacheable, so this is one
-  // origin fetch per cached token image rather than a request on every view.
-  // If the proxy ever fails, fall back to the direct gateway candidates.
-  const preferCanonicalProxy = visible && authoritative && revealed && !proxyTried;
-  const fallbackProxy = visible && result && !directImage && !proxyTried;
+  // Image source priority matters on mobile. A backfilled Supabase Storage URL
+  // is already a stable CDN asset and should never be replaced by the Vercel
+  // resolver. Next try the image candidates normalized from canonical metadata.
+  // Only after every direct candidate fails do we use /api/lore/image as the
+  // final compatibility fallback. This keeps both the Land page and My
+  // Tobyworld thumbnails fast while retaining the server safety net.
   const proxyImage =
-    preferCanonicalProxy || fallbackProxy
-      ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=canonical-reveal-2" : ""}`
+    visible && result && !proxyTried
+      ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=canonical-reveal-3" : ""}`
       : null;
-  const image = preferCanonicalProxy ? proxyImage : (directImage || proxyImage);
+  const exhaustedDirectCandidates = imageIndex >= images.length;
+  const image = directImage || (exhaustedDirectCandidates ? proxyImage : null);
   const usingProxy = Boolean(proxyImage && image === proxyImage);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
   const loading = visible && (authoritative ? !metadataOverride && !directImageOverride : (uriRead.isLoading || (typeof uriRead.data === "string" && !result)));
