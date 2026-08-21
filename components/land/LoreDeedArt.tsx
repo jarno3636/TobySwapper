@@ -7,6 +7,7 @@ import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import {
   fetchLoreMetadataResult,
   loreImageCandidates,
+  type LoreMetadata,
   type LoreMetadataResult,
 } from "@/lib/lore-metadata";
 
@@ -17,6 +18,9 @@ export default function LoreDeedArt({
   eager = false,
   showStatus = false,
   revealed = false,
+  authoritative = false,
+  metadataOverride = null,
+  directImageOverride = null,
 }: {
   tokenId: string | bigint;
   label?: string;
@@ -24,6 +28,9 @@ export default function LoreDeedArt({
   eager?: boolean;
   showStatus?: boolean;
   revealed?: boolean;
+  authoritative?: boolean;
+  metadataOverride?: LoreMetadata | null;
+  directImageOverride?: string | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(eager);
@@ -58,10 +65,10 @@ export default function LoreDeedArt({
     address: LORE_COLLECTION_ADDRESS,
     abi: LORE_DEEDS_ABI,
     functionName: "tokenURI",
-    args: visible ? [id] : undefined,
+    args: visible && !authoritative ? [id] : undefined,
     chainId: base.id,
     query: {
-      enabled: visible,
+      enabled: visible && !authoritative,
       staleTime: revealed ? 15_000 : 5 * 60_000,
       gcTime: 60 * 60_000,
       refetchInterval: false,
@@ -71,51 +78,32 @@ export default function LoreDeedArt({
   });
 
   useEffect(() => {
-    if (visible && revealed) void uriRead.refetch();
-  }, [visible, revealed, id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (visible && revealed && !authoritative) void uriRead.refetch();
+  }, [visible, revealed, id, authoritative]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!visible || typeof uriRead.data !== "string") return;
-    let cancelled = false;
     setImageIndex(0);
     setProxyTried(false);
     setImageLoaded(false);
-    fetchLoreMetadataResult(uriRead.data, revealed).then(async (value) => {
-      if (cancelled) return;
 
-      const hasTraits = Array.isArray(value.metadata?.attributes) && value.metadata!.attributes!.some(
-        (trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "",
-      );
-      const looksPreReveal = Boolean(
-        value.error ||
-        !value.metadata ||
-        !hasTraits ||
-        /sealed|behind the veil|waits behind|unrevealed/i.test(`${value.metadata?.name || ""} ${value.metadata?.description || ""}`),
-      );
+    if (authoritative) {
+      setResult({
+        metadata: metadataOverride,
+        sourceUri: null,
+        resolvedMetadataUri: null,
+        directImage: directImageOverride,
+        error: metadataOverride || directImageOverride ? null : "Waiting for revealed metadata.",
+      });
+      return;
+    }
 
-      if (revealed && looksPreReveal) {
-        try {
-          const response = await fetch(`/api/lore/metadata?tokenId=${id.toString()}&reveal=1`, { cache: "no-store" });
-          if (response.ok) {
-            const payload = await response.json();
-            if (!cancelled && payload?.metadata && typeof payload.metadata === "object") {
-              setResult({
-                metadata: payload.metadata,
-                sourceUri: typeof payload.tokenUri === "string" ? payload.tokenUri : uriRead.data,
-                resolvedMetadataUri: typeof payload.metadataUri === "string" ? payload.metadataUri : null,
-                directImage: payload.source === "direct-image" && typeof payload.image === "string" ? payload.image : null,
-                error: null,
-              });
-              return;
-            }
-          }
-        } catch {}
-      }
-
+    if (!visible || typeof uriRead.data !== "string") return;
+    let cancelled = false;
+    fetchLoreMetadataResult(uriRead.data, revealed).then((value) => {
       if (!cancelled) setResult(value);
     });
     return () => { cancelled = true; };
-  }, [uriRead.data, visible, revealed]);
+  }, [uriRead.data, visible, revealed, authoritative, metadataOverride, directImageOverride]);
 
   const images = useMemo(
     () => {
@@ -129,12 +117,12 @@ export default function LoreDeedArt({
   const directImage = images[imageIndex] || null;
   const proxyImage =
     visible && result && !directImage && !proxyTried
-      ? `/api/lore/image?tokenId=${id.toString()}`
+      ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=revealed" : ""}`
       : null;
   const image = directImage || proxyImage;
   const usingProxy = Boolean(proxyImage && !directImage);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
-  const loading = visible && (uriRead.isLoading || (typeof uriRead.data === "string" && !result));
+  const loading = visible && (authoritative ? !metadataOverride && !directImageOverride : (uriRead.isLoading || (typeof uriRead.data === "string" && !result)));
 
   return (
     <div ref={ref} className={`canonical-deed-art ${image ? "has-image" : "is-metadata-fallback"} ${className}`}>
@@ -163,9 +151,9 @@ export default function LoreDeedArt({
         </div>
       )}
       <span className="canonical-deed-art-id">#{id.toString()}</span>
-      {showStatus && typeof uriRead.data === "string" ? (
+      {showStatus && (authoritative || typeof uriRead.data === "string") ? (
         <span className={`canonical-deed-source ${imageLoaded ? "ready" : ""}`}>
-          {imageLoaded ? "CANONICAL ART ✓" : image ? "LOADING CANONICAL ART…" : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
+          {imageLoaded ? "CANONICAL ART ✓" : image ? "LOADING CANONICAL ART…" : revealed ? "REFRESHING REVEALED ART…" : result?.error ? "TOKEN URI FOUND" : "METADATA FOUND"}
         </span>
       ) : null}
     </div>
