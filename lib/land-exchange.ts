@@ -28,7 +28,7 @@ export const MARKETPLACE_ASSETS: readonly MarketplaceAsset[] = [
     standard: "ERC-1155",
     address: TABOSHI_SEEDS_ADDRESS,
     tokenId: TABOSHI_SEED_ID,
-    image: "/seed.png",
+    image: "/ui/seed.webp",
     quantityBased: true,
   },
   {
