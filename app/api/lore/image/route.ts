@@ -70,12 +70,25 @@ function imageField(metadata: any) {
   return metadata?.image || metadata?.image_url || metadata?.imageUrl || null;
 }
 
+function hasTraits(metadata: any) {
+  return Array.isArray(metadata?.attributes) && metadata.attributes.some((trait: any) => {
+    const value = trait?.value;
+    return value !== null && value !== undefined && String(value).trim() !== "";
+  });
+}
+
+function looksPreReveal(metadata: any) {
+  if (!metadata || typeof metadata !== "object") return true;
+  const text = `${metadata.name || ""} ${metadata.description || ""}`.toLowerCase();
+  return !hasTraits(metadata) || /sealed|behind the veil|waits behind|unrevealed|not revealed|landscape still waits/.test(text);
+}
+
 function isDirectImage(value: string) {
   return value.startsWith("data:image/") ||
     /\.(png|jpe?g|gif|webp|svg)(?:$|[?#])/i.test(value);
 }
 
-async function resolveMetadata(tokenUri: string) {
+async function resolveMetadata(tokenUri: string, revealed: boolean) {
   if (tokenUri.startsWith("data:application/json")) {
     return decodeInlineJson(tokenUri);
   }
@@ -86,8 +99,11 @@ async function resolveMetadata(tokenUri: string) {
 
   for (const uri of candidates(tokenUri)) {
     try {
-      const response = await fetch(uri, {
-        headers: { accept: "application/json,*/*;q=0.5" },
+      const requestUri = revealed && /^https?:\/\//i.test(uri)
+        ? `${uri}${uri.includes("?") ? "&" : "?"}tobyswap_reveal=${Date.now()}`
+        : uri;
+      const response = await fetch(requestUri, {
+        headers: { accept: "application/json,*/*;q=0.5", "cache-control": "no-cache" },
         // Avoid pinning pre-reveal metadata inside Next's fetch cache. This
         // endpoint is only reached when direct client image loading has failed.
         cache: "no-store",
@@ -102,7 +118,10 @@ async function resolveMetadata(tokenUri: string) {
       const text = await response.text();
       try {
         const parsed = JSON.parse(text);
-        if (parsed && typeof parsed === "object") return parsed;
+        if (parsed && typeof parsed === "object") {
+          if (revealed && looksPreReveal(parsed)) continue;
+          return parsed;
+        }
       } catch {}
     } catch {}
   }
@@ -123,18 +142,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokenUri = await client.readContract({
-      address: LORE_COLLECTION_ADDRESS,
-      abi: LORE_DEEDS_ABI,
-      functionName: "tokenURI",
-      args: [tokenId],
-    });
+    const [revealedRaw, unrevealedUriRaw, tokenUriRaw] = await Promise.all([
+      client.readContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "revealed" }),
+      client.readContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "unrevealedURI" }),
+      client.readContract({ address: LORE_COLLECTION_ADDRESS, abi: LORE_DEEDS_ABI, functionName: "tokenURI", args: [tokenId] }),
+    ]);
+    const revealed = revealedRaw === true;
+    const tokenUri = typeof tokenUriRaw === "string" ? tokenUriRaw.trim() : "";
+    const unrevealedUri = typeof unrevealedUriRaw === "string" ? unrevealedUriRaw.trim() : "";
 
-    if (typeof tokenUri !== "string" || !tokenUri.trim()) {
-      return NextResponse.json({ error: "No token URI." }, { status: 404 });
+    if (!tokenUri) {
+      return NextResponse.json({ error: "No token URI." }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
+    if (revealed && unrevealedUri && tokenUri === unrevealedUri) {
+      return NextResponse.json({ error: "Reveal is live but tokenURI still equals unrevealedURI." }, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
 
-    const metadata = await resolveMetadata(tokenUri);
+    const metadata = await resolveMetadata(tokenUri, revealed);
     const rawImage = imageField(metadata);
 
     if (typeof rawImage !== "string" || !rawImage.trim()) {
@@ -155,16 +179,19 @@ export async function GET(request: NextRequest) {
       return new NextResponse(bytes, {
         headers: {
           "Content-Type": mime,
-          "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+          "Cache-Control": revealed ? "public, s-maxage=3600, stale-while-revalidate=86400" : "public, s-maxage=300, stale-while-revalidate=3600",
         },
       });
     }
 
     for (const uri of candidates(rawImage)) {
       try {
-        const response = await fetch(uri, {
-          headers: { accept: "image/*,*/*;q=0.5" },
-          next: { revalidate: 86400 },
+        const requestUri = revealed && /^https?:\/\//i.test(uri)
+          ? `${uri}${uri.includes("?") ? "&" : "?"}tobyswap_reveal=${Date.now()}`
+          : uri;
+        const response = await fetch(requestUri, {
+          headers: { accept: "image/*,*/*;q=0.5", "cache-control": "no-cache" },
+          cache: revealed ? "no-store" : "force-cache",
         });
         if (!response.ok) continue;
 
@@ -174,7 +201,7 @@ export async function GET(request: NextRequest) {
         return new NextResponse(bytes, {
           headers: {
             "Content-Type": contentType,
-            "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+            "Cache-Control": revealed ? "public, s-maxage=3600, stale-while-revalidate=86400" : "public, s-maxage=300, stale-while-revalidate=3600",
           },
         });
       } catch {}
