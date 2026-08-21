@@ -115,12 +115,21 @@ export default function LoreDeedArt({
     [result],
   );
   const directImage = images[imageIndex] || null;
+
+  // Revealed canonical land is special: mobile wallet webviews frequently block
+  // or inconsistently render public IPFS gateways even when the metadata itself
+  // resolves correctly. For the authoritative Land page, use our existing
+  // canonical image proxy first. The response is CDN-cacheable, so this is one
+  // origin fetch per cached token image rather than a request on every view.
+  // If the proxy ever fails, fall back to the direct gateway candidates.
+  const preferCanonicalProxy = visible && authoritative && revealed && !proxyTried;
+  const fallbackProxy = visible && result && !directImage && !proxyTried;
   const proxyImage =
-    visible && result && !directImage && !proxyTried
-      ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=revealed" : ""}`
+    preferCanonicalProxy || fallbackProxy
+      ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=canonical-reveal-2" : ""}`
       : null;
-  const image = directImage || proxyImage;
-  const usingProxy = Boolean(proxyImage && !directImage);
+  const image = preferCanonicalProxy ? proxyImage : (directImage || proxyImage);
+  const usingProxy = Boolean(proxyImage && image === proxyImage);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
   const loading = visible && (authoritative ? !metadataOverride && !directImageOverride : (uriRead.isLoading || (typeof uriRead.data === "string" && !result)));
 
