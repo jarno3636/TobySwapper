@@ -12,6 +12,7 @@ export type TokenAddress = Address | typeof NATIVE_ETH;
 /* ------------------------------- Core tokens ------------------------------- */
 export const WETH: Address = "0x4200000000000000000000000000000000000006";
 export const USDC: Address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+export const CBBTC: Address = "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf";
 
 /* ----------------------------- Tobyworld tokens ---------------------------- */
 export const TOBY: Address     = "0xb8D98a102b0079B69FFbc760C8d857A31653e56e";
@@ -39,6 +40,7 @@ export type TokenInfo = { symbol: string; address: TokenAddress; decimals: numbe
 export const TOKENS: readonly TokenInfo[] = [
   { symbol: "ETH",      address: NATIVE_ETH, decimals: 18 }, // native Base ETH (gas)
   { symbol: "WETH",     address: WETH,       decimals: 18 }, // wrapped ETH (ERC-20)
+  { symbol: "cbBTC",    address: CBBTC,      decimals: 8 },
   { symbol: "TOBY",     address: TOBY,       decimals: 18 },
   { symbol: "PATIENCE", address: PATIENCE,   decimals: 18 },
   { symbol: "TABOSHI",  address: TABOSHI,    decimals: 18 },
