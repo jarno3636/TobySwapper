@@ -11,6 +11,7 @@ import MiniAppGate from "@/components/MiniAppGate";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
 import LandIdentity from "@/components/land/LandIdentity";
+import LandTraits from "@/components/land/LandTraits";
 import LoreDeedArt from "@/components/land/LoreDeedArt";
 import LandVault from "@/components/land/LandVault";
 import LandGarden from "@/components/land/LandGarden";
@@ -164,6 +165,8 @@ export default function LandPage() {
                 ) : null}
               </div>
             </section>
+
+            <LandTraits metadata={metadata} />
 
             <LandCommunityProfile tokenId={tokenId!} owner={owner} onProfile={setCommunityProfile} />
 
