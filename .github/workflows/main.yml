@@ -14,7 +14,7 @@ on:
       concurrency:
         description: "Workers (1-4 recommended)"
         required: true
-        default: "2"
+        default: "1"
       force_refresh:
         description: "Replace already cached records"
         required: true
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   backfill:
-    name: Backfill Lore ${{ inputs.from_token }}-${{ inputs.to_token }}
+    name: Backfill Lore
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -40,14 +40,14 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
 
-        steps:
+    steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: "24"
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -59,34 +59,34 @@ jobs:
           test -n "$SUPABASE_SERVICE_ROLE_KEY" || (echo "Missing GitHub secret: SUPABASE_SERVICE_ROLE_KEY" && exit 1)
 
           if [ -z "$BASE_RPC_URL" ]; then
-            echo "BASE_RPC_URL is not set; the script will use its public Base fallback."
+            echo "BASE_RPC_URL is not set. Public Base fallback will be used."
           fi
 
-      - name: Backfill Lore metadata, traits and art
+      - name: Backfill Lore
         shell: bash
         run: |
-          EXTRA=""
+          EXTRA_ARGS=""
 
           if [ "${{ inputs.force_refresh }}" = "true" ]; then
-            EXTRA="$EXTRA --force=true"
+            EXTRA_ARGS="$EXTRA_ARGS --force=true"
           fi
 
           if [ "${{ inputs.metadata_only }}" = "true" ]; then
-            EXTRA="$EXTRA --metadata-only=true"
+            EXTRA_ARGS="$EXTRA_ARGS --metadata-only=true"
           fi
 
           npm run backfill:lore -- \
             --from=${{ inputs.from_token }} \
             --to=${{ inputs.to_token }} \
             --concurrency=${{ inputs.concurrency }} \
-            $EXTRA
+            $EXTRA_ARGS
 
-      - name: Write run summary
+      - name: Run summary
         if: always()
         shell: bash
         run: |
-          echo "## Tobyworld Lore backfill" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Range: **${{ inputs.from_token }} → ${{ inputs.to_token }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Concurrency: **${{ inputs.concurrency }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Force refresh: **${{ inputs.force_refresh }}**" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Metadata only: **${{ inputs.metadata_only }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Tobyworld Lore Backfill" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Range: ${{ inputs.from_token }} to ${{ inputs.to_token }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workers: ${{ inputs.concurrency }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Replace cached: ${{ inputs.force_refresh }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metadata only: ${{ inputs.metadata_only }}" >> "$GITHUB_STEP_SUMMARY"
