@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "format": "prettier --cache --write ."
+    "format": "prettier --cache --write .",
+    "backfill:lore": "node scripts/backfill-lore-supabase.mjs"
   },
   "dependencies": {
     "@farcaster/miniapp-sdk": "latest",
