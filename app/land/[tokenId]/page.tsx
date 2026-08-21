@@ -131,9 +131,22 @@ export default function LandPage() {
       // the metadata is healthy. Once the contract says reveal is live, use the
       // existing server resolver only as a fallback so the normal path stays
       // client-side and Hobby-tier friendly.
-      if (loreRevealed && result.error && tokenId !== null) {
+      const hasRevealedTraits = Array.isArray(result.metadata?.attributes) && result.metadata!.attributes!.some(
+        (trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "",
+      );
+      const looksPreReveal = Boolean(
+        result.error ||
+        !result.metadata ||
+        !hasRevealedTraits ||
+        /sealed|behind the veil|waits behind|unrevealed/i.test(`${result.metadata?.name || ""} ${result.metadata?.description || ""}`),
+      );
+
+      // A successful gateway response can still be stale pre-reveal metadata.
+      // Once the onchain reveal flag is true, treat metadata without real traits
+      // as suspect and ask our canonical server reader for the latest tokenURI.
+      if (loreRevealed && looksPreReveal && tokenId !== null) {
         try {
-          const response = await fetch(`/api/lore/metadata?tokenId=${tokenId.toString()}`, { cache: "no-store" });
+          const response = await fetch(`/api/lore/metadata?tokenId=${tokenId.toString()}&reveal=1`, { cache: "no-store" });
           if (response.ok) {
             const payload = await response.json();
             if (!cancelled && payload?.metadata && typeof payload.metadata === "object") {
@@ -186,15 +199,15 @@ export default function LandPage() {
           <>
             <section className="land-hero">
               <div className="land-hero-copy">
-                <span className="land-section-kicker">YOUR PLACE IN TOBYWORLD</span>
+                <span className="land-section-kicker">A PLACE IN TOBYWORLD</span>
                 <h1>{communityProfile?.communityName || metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
                 <p>{communityProfile?.description || metadata?.description || (hasArtwork ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
               <div className="land-hero-deed-wrap">
                 <div className="land-hero-deed-label">
-                  <span><i aria-hidden="true" /> REVEALED CANONICAL LAND</span>
-                  <strong>DEED #{tokenId!.toString()}</strong>
+                  <span>CANONICAL LORE DEED</span>
+                  <strong>#{tokenId!.toString()}</strong>
                 </div>
                 <LoreDeedArt
                   tokenId={tokenId!}
@@ -204,7 +217,6 @@ export default function LandPage() {
                   showStatus
                   revealed={loreRevealed}
                 />
-                {loreRevealed && hasArtwork ? <div className="land-art-caption"><span>YOUR LAND</span><strong>{metadata?.name || `Lore Land Deed #${tokenId!.toString()}`}</strong></div> : null}
                 {typeof uriRead.data === "string" ? (
                   <div className="land-metadata-row">
                     <span>{metadataResult?.error ? "Metadata needs attention" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
