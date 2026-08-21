@@ -4836,3 +4836,115 @@ html[data-theme="dark"] .land-page .land-trait-canonical{border-color:rgba(128,2
   .land-page .land-trait-canonical{width:17px;height:17px}.land-page .land-trait-watermark{width:70px;height:70px;right:-14px;bottom:-18px}
   .land-page .land-trait-card:last-child:nth-child(odd){grid-column:1/-1}
 }
+
+/* ========================================================================== */
+/* 2026-08-21 · Land profile hierarchy / trait rarity-ready polish           */
+/* ========================================================================== */
+.land-showcase-tools{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  padding:.72rem .15rem .1rem;
+}
+.land-refresh-mini{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.42rem;
+  min-height:36px;
+  padding:.5rem .78rem;
+  border:1px solid rgba(50,112,107,.24);
+  border-radius:999px;
+  background:rgba(245,252,249,.78);
+  color:#285f5c;
+  font-size:.72rem;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  box-shadow:0 8px 22px rgba(18,62,58,.06);
+}
+.land-refresh-mini svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.land-refresh-mini:disabled{opacity:.62;cursor:wait}
+
+/* Keep the personal title as the opening statement, then art, then signature. */
+.land-nameplate{margin-bottom:1rem}
+.land-showcase{display:flex;flex-direction:column}
+.land-showcase-art{order:1}
+.land-reveal-traits{order:2;margin-top:1rem}
+.land-showcase-share{order:3;margin-top:1rem}
+
+.land-trait-meta{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:.42rem .62rem;
+  margin-top:.62rem;
+}
+.land-trait-meta>small{margin:0!important}
+.land-trait-rarity{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  min-height:25px;
+  padding:.28rem .48rem;
+  border-radius:999px;
+  border:1px solid rgba(49,111,104,.16);
+  background:rgba(233,247,241,.7);
+  color:#527a76;
+  white-space:nowrap;
+}
+.land-trait-rarity b{
+  font-size:.56rem;
+  line-height:1;
+  letter-spacing:.13em;
+  font-weight:900;
+}
+.land-trait-rarity em{
+  font-style:normal;
+  font-size:.69rem;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.land-trait-rarity.is-pending em{color:#7a918e}
+.land-trait-rarity.is-known{
+  background:rgba(197,241,220,.78);
+  border-color:rgba(42,139,101,.25);
+  color:#17684f;
+}
+
+/* Give each signature tile more depth without returning to the heavy glass look. */
+.land-trait-card{
+  overflow:hidden;
+  isolation:isolate;
+}
+.land-trait-card .land-trait-icon{
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 8px 20px rgba(17,68,62,.08);
+}
+.land-trait-copy strong{letter-spacing:-.02em}
+.land-trait-watermark{opacity:.055!important;transform:scale(1.18)}
+
+html[data-theme="dark"] .land-refresh-mini{
+  background:#10312f;
+  color:#bce9df;
+  border-color:rgba(119,205,188,.2);
+  box-shadow:none;
+}
+html[data-theme="dark"] .land-trait-rarity{
+  background:#112f2c;
+  border-color:rgba(121,194,180,.16);
+  color:#8fbab2;
+}
+html[data-theme="dark"] .land-trait-rarity.is-known{
+  background:#12382f;
+  border-color:rgba(91,210,164,.24);
+  color:#8be4bc;
+}
+
+@media (max-width:680px){
+  .land-nameplate{margin-bottom:.78rem}
+  .land-showcase-tools{padding:.62rem .08rem 0}
+  .land-refresh-mini{min-height:32px;padding:.4rem .65rem;font-size:.66rem}
+  .land-trait-meta{gap:.38rem;margin-top:.52rem}
+  .land-trait-rarity{padding:.25rem .42rem}
+}
