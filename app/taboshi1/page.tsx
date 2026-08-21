@@ -27,7 +27,7 @@ import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
 import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
-import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
+import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
 import {
   TABOSHI1_ADDRESS,
   TABOSHI1_TOKEN_ID,
@@ -48,7 +48,7 @@ import {
 } from "@/lib/lore-deeds";
 
 type TxState = "idle" | "sending" | "success" | "error";
-type AssetKind = "toby" | "patience" | "taboshi" | "leaf" | "seed" | "lore";
+type AssetKind = "toby" | "patience" | "taboshi" | "cbbtc" | "leaf" | "seed" | "lore";
 type Metadata = { name?: string; description?: string; image?: string };
 
 function shortAddress(value?: string) {
@@ -241,6 +241,7 @@ export default function TaboshiOnePage() {
   const tobyWallet = useTokenBalance(address, TOBY, { chainId: base.id });
   const patienceWallet = useTokenBalance(address, PATIENCE, { chainId: base.id });
   const taboshiWallet = useTokenBalance(address, TABOSHI, { chainId: base.id });
+  const cbbtcWallet = useTokenBalance(address, CBBTC, { chainId: base.id });
   const { prices: pondPrices } = useUsdPrices([TOBY, PATIENCE, TABOSHI]);
   const tobyUsd = pondPrices[TOBY.toLowerCase()];
   const patienceUsd = pondPrices[PATIENCE.toLowerCase()];
@@ -273,6 +274,7 @@ export default function TaboshiOnePage() {
     { key: "toby" as const, symbol: "TOBY", label: "Pond token", icon: "/tokens/toby.PNG", value: tobyWallet.value ?? 0n, decimals: tobyWallet.decimals, standard: "ERC-20", address: TOBY, usdPrice: tobyUsd },
     { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
     { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
+    { key: "cbbtc" as const, symbol: "cbBTC", label: "Bitcoin on Base", icon: "/tokens/cbbtc.svg", value: cbbtcWallet.value ?? 0n, decimals: cbbtcWallet.decimals, standard: "ERC-20", address: CBBTC, usdPrice: undefined },
     { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
     { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
     { key: "lore" as const, symbol: "LORE DEED", label: "Lore land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
@@ -388,6 +390,7 @@ export default function TaboshiOnePage() {
       seedUriRead.refetch(),
       seedSupplyRead.refetch(),
       loreBalanceRead.refetch(),
+      Promise.resolve(cbbtcWallet.refetch()),
       legacyLoreBalanceRead.refetch(),
       tobyWallet.refetch(),
       patienceWallet.refetch(),
