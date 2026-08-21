@@ -23,7 +23,7 @@ import LandCommunityProfile from "@/components/land/LandCommunityProfile";
 import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
-import { fetchLoreMetadataResult, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
+import { fetchLoreMetadataResult, looksLikePreRevealMetadata, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
@@ -43,6 +43,8 @@ export default function LandPage() {
   const [metadata, setMetadata] = useState<LoreMetadata | null>(null);
   const [metadataResult, setMetadataResult] = useState<LoreMetadataResult | null>(null);
   const [communityProfile, setCommunityProfile] = useState<LandProfile | null>(null);
+  const [metadataRefreshNonce, setMetadataRefreshNonce] = useState(0);
+  const [metadataRefreshing, setMetadataRefreshing] = useState(false);
 
   const ownerRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
@@ -118,60 +120,78 @@ export default function LandPage() {
   }, [loreRevealed, tokenId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (typeof uriRead.data !== "string") {
-      setMetadata(null);
-      setMetadataResult(null);
-      return;
-    }
     let cancelled = false;
-    fetchLoreMetadataResult(uriRead.data, loreRevealed).then(async (result) => {
+
+    const applyResult = (result: LoreMetadataResult) => {
       if (cancelled) return;
+      setMetadata(result.metadata);
+      setMetadataResult(result);
+    };
 
-      // Public IPFS gateways can occasionally reject browser requests even when
-      // the metadata is healthy. Once the contract says reveal is live, use the
-      // existing server resolver only as a fallback so the normal path stays
-      // client-side and Hobby-tier friendly.
-      const hasRevealedTraits = Array.isArray(result.metadata?.attributes) && result.metadata!.attributes!.some(
-        (trait) => trait?.value !== null && trait?.value !== undefined && String(trait.value).trim() !== "",
-      );
-      const looksPreReveal = Boolean(
-        result.error ||
-        !result.metadata ||
-        !hasRevealedTraits ||
-        /sealed|behind the veil|waits behind|unrevealed/i.test(`${result.metadata?.name || ""} ${result.metadata?.description || ""}`),
-      );
-
-      // A successful gateway response can still be stale pre-reveal metadata.
-      // Once the onchain reveal flag is true, treat metadata without real traits
-      // as suspect and ask our canonical server reader for the latest tokenURI.
-      if (loreRevealed && looksPreReveal && tokenId !== null) {
+    const load = async () => {
+      // revealed() is the source of truth. Once it is true, never let prereveal
+      // local/browser metadata win. Resolve the current tokenURI fresh once.
+      if (loreRevealed && tokenId !== null) {
+        setMetadataRefreshing(true);
         try {
-          const response = await fetch(`/api/lore/metadata?tokenId=${tokenId.toString()}&reveal=1`, { cache: "no-store" });
-          if (response.ok) {
-            const payload = await response.json();
-            if (!cancelled && payload?.metadata && typeof payload.metadata === "object") {
-              const fallbackResult: LoreMetadataResult = {
-                metadata: payload.metadata as LoreMetadata,
-                sourceUri: typeof payload.tokenUri === "string" ? payload.tokenUri : uriRead.data,
-                resolvedMetadataUri: typeof payload.metadataUri === "string" ? payload.metadataUri : null,
-                directImage: payload.source === "direct-image" && typeof payload.image === "string" ? payload.image : null,
-                error: null,
-              };
-              setMetadata(fallbackResult.metadata);
-              setMetadataResult(fallbackResult);
-              return;
-            }
+          const response = await fetch(
+            `/api/lore/metadata?tokenId=${tokenId.toString()}&fresh=1&r=${metadataRefreshNonce}`,
+            { cache: "no-store", headers: { "cache-control": "no-cache" } },
+          );
+          const payload = await response.json().catch(() => null);
+          if (cancelled) return;
+
+          if (response.ok && payload?.metadata && typeof payload.metadata === "object" && !looksLikePreRevealMetadata(payload.metadata)) {
+            applyResult({
+              metadata: payload.metadata as LoreMetadata,
+              sourceUri: typeof payload.tokenUri === "string" ? payload.tokenUri : null,
+              resolvedMetadataUri: typeof payload.metadataUri === "string" ? payload.metadataUri : null,
+              directImage: payload.source === "direct-image" && typeof payload.image === "string" ? payload.image : null,
+              error: null,
+            });
+            return;
           }
-        } catch {}
+
+          applyResult({
+            metadata: null,
+            sourceUri: typeof payload?.tokenUri === "string" ? payload.tokenUri : null,
+            resolvedMetadataUri: null,
+            directImage: null,
+            error: typeof payload?.error === "string" ? payload.error : "Revealed metadata is refreshing. Try again in a moment.",
+          });
+        } catch {
+          if (!cancelled) applyResult({
+            metadata: null,
+            sourceUri: null,
+            resolvedMetadataUri: null,
+            directImage: null,
+            error: "Revealed metadata could not be refreshed yet.",
+          });
+        } finally {
+          if (!cancelled) setMetadataRefreshing(false);
+        }
+        return;
       }
 
-      if (!cancelled) {
-        setMetadata(result.metadata);
-        setMetadataResult(result);
+      if (typeof uriRead.data !== "string") {
+        if (!cancelled) {
+          setMetadata(null);
+          setMetadataResult(null);
+        }
+        return;
       }
-    });
+
+      applyResult(await fetchLoreMetadataResult(uriRead.data, false));
+    };
+
+    void load();
     return () => { cancelled = true; };
-  }, [uriRead.data, loreRevealed]);
+  }, [uriRead.data, loreRevealed, tokenId, metadataRefreshNonce]);
+
+  const refreshCanonicalMetadata = () => {
+    void uriRead.refetch();
+    setMetadataRefreshNonce((value) => value + 1);
+  };
 
   const hasArtwork = Boolean(
     metadataResult?.directImage ||
@@ -199,15 +219,15 @@ export default function LandPage() {
           <>
             <section className="land-hero">
               <div className="land-hero-copy">
-                <span className="land-section-kicker">A PLACE IN TOBYWORLD</span>
+                <span className="land-section-kicker">YOUR PLACE IN TOBYWORLD</span>
                 <h1>{communityProfile?.communityName || metadata?.name || `Lore Land #${tokenId!.toString()}`}</h1>
                 <p>{communityProfile?.description || metadata?.description || (hasArtwork ? "A place in Tobyworld with a story of its own." : "The deed is real. The landscape still waits behind the veil.")}</p>
                 <LandShareActions tokenId={tokenId!} />
               </div>
               <div className="land-hero-deed-wrap">
                 <div className="land-hero-deed-label">
-                  <span>CANONICAL LORE DEED</span>
-                  <strong>#{tokenId!.toString()}</strong>
+                  <span><i aria-hidden="true" /> REVEALED CANONICAL LAND</span>
+                  <strong>DEED #{tokenId!.toString()}</strong>
                 </div>
                 <LoreDeedArt
                   tokenId={tokenId!}
@@ -216,13 +236,24 @@ export default function LandPage() {
                   eager
                   showStatus
                   revealed={loreRevealed}
+                  authoritative={loreRevealed}
+                  metadataOverride={metadata}
+                  directImageOverride={metadataResult?.directImage || null}
                 />
+                {loreRevealed && hasArtwork ? <div className="land-art-caption"><span>YOUR LAND</span><strong>{metadata?.name || `Lore Land Deed #${tokenId!.toString()}`}</strong></div> : null}
                 {typeof uriRead.data === "string" ? (
                   <div className="land-metadata-row">
-                    <span>{metadataResult?.error ? "Metadata needs attention" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
-                    {metadataResult?.resolvedMetadataUri && !metadataResult.resolvedMetadataUri.startsWith("data:") ? (
-                      <a href={metadataResult.resolvedMetadataUri} target="_blank" rel="noreferrer">View metadata ↗</a>
-                    ) : null}
+                    <span>{metadataRefreshing ? "Refreshing revealed land…" : metadataResult?.error ? "Revealed metadata needs a refresh" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
+                    <div className="land-metadata-actions">
+                      {loreRevealed ? (
+                        <button type="button" onClick={refreshCanonicalMetadata} disabled={metadataRefreshing}>
+                          {metadataRefreshing ? "Refreshing…" : "Refresh metadata"}
+                        </button>
+                      ) : null}
+                      {metadataResult?.resolvedMetadataUri && !metadataResult.resolvedMetadataUri.startsWith("data:") ? (
+                        <a href={metadataResult.resolvedMetadataUri} target="_blank" rel="noreferrer">View metadata ↗</a>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
