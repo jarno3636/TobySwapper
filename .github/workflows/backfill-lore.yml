@@ -1,0 +1,110 @@
+name: Backfill Lore
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "First Lore deed ID"
+        required: true
+        default: "1"
+      to:
+        description: "Last Lore deed ID"
+        required: true
+        default: "2869"
+      concurrency:
+        description: "Token workers"
+        required: true
+        default: "3"
+      image_timeout_ms:
+        description: "Timeout per artwork gateway"
+        required: true
+        default: "15000"
+      image_race_width:
+        description: "Artwork gateways raced at once"
+        required: true
+        default: "2"
+      retry_art:
+        description: "Retry artwork failures at end"
+        type: boolean
+        required: true
+        default: true
+      metadata_only:
+        description: "Metadata/traits only"
+        type: boolean
+        required: true
+        default: false
+      force:
+        description: "Ignore existing cache"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    name: Backfill Lore
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate secrets
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" || { echo "Missing SUPABASE_URL"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
+          test -n "$BASE_RPC_URL" || { echo "Missing BASE_RPC_URL"; exit 1; }
+
+      - name: Backfill Lore
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+          LORE_ART_BUCKET: tobyswap-lore-art
+          IPFS_GATEWAYS: https://ipfs.io/ipfs/,https://dweb.link/ipfs/,https://w3s.link/ipfs/,https://nftstorage.link/ipfs/,https://gateway.pinata.cloud/ipfs/
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXTRA_ARGS=""
+
+          if [ "${{ inputs.retry_art }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --retry-art=true"
+          else
+            EXTRA_ARGS="$EXTRA_ARGS --retry-art=false"
+          fi
+
+          if [ "${{ inputs.metadata_only }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --metadata-only=true"
+          fi
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --force=true"
+          fi
+
+          npm run backfill:lore -- \
+            --from=${{ inputs.from }} \
+            --to=${{ inputs.to }} \
+            --concurrency=${{ inputs.concurrency }} \
+            --metadata-timeout-ms=6500 \
+            --image-timeout-ms=${{ inputs.image_timeout_ms }} \
+            --image-race-width=${{ inputs.image_race_width }} \
+            $EXTRA_ARGS
