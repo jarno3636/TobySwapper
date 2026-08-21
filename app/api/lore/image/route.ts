@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
+import { extractLoreTraits, normalizeLoreMetadata, resolveMetadataAssetUri } from "@/lib/lore-metadata-shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,10 +72,7 @@ function imageField(metadata: any) {
 }
 
 function hasTraits(metadata: any) {
-  return Array.isArray(metadata?.attributes) && metadata.attributes.some((trait: any) => {
-    const value = trait?.value;
-    return value !== null && value !== undefined && String(value).trim() !== "";
-  });
+  return extractLoreTraits(metadata).length > 0;
 }
 
 function looksPreReveal(metadata: any) {
@@ -90,7 +88,7 @@ function isDirectImage(value: string) {
 
 async function resolveMetadata(tokenUri: string, revealed: boolean) {
   if (tokenUri.startsWith("data:application/json")) {
-    return decodeInlineJson(tokenUri);
+    return normalizeLoreMetadata(decodeInlineJson(tokenUri), tokenUri, tokenUri);
   }
 
   if (isDirectImage(tokenUri)) {
@@ -119,8 +117,9 @@ async function resolveMetadata(tokenUri: string, revealed: boolean) {
       try {
         const parsed = JSON.parse(text);
         if (parsed && typeof parsed === "object") {
-          if (revealed && looksPreReveal(parsed)) continue;
-          return parsed;
+          const normalized = normalizeLoreMetadata(parsed, uri, tokenUri);
+          if (revealed && looksPreReveal(normalized)) continue;
+          return normalized;
         }
       } catch {}
     } catch {}
@@ -159,7 +158,7 @@ export async function GET(request: NextRequest) {
     }
 
     const metadata = await resolveMetadata(tokenUri, revealed);
-    const rawImage = imageField(metadata);
+    const rawImage = resolveMetadataAssetUri(imageField(metadata), null, tokenUri);
 
     if (typeof rawImage !== "string" || !rawImage.trim()) {
       return NextResponse.json({ error: "No image in canonical metadata." }, { status: 404 });
