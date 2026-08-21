@@ -112,7 +112,7 @@ async function loadSeedMetadata(uri: string | null, setter: (v: Metadata | null)
 function SeedArt({ name }: { image?: string | null; name?: string }) {
   return (
     <Image
-      src="/ui/seed.webp"
+      src="/seed.png"
       alt={name || "Taboshi Seed"}
       fill
       sizes="(max-width: 680px) 180px, 220px"
@@ -222,6 +222,13 @@ export default function TaboshiOnePage() {
     chainId: base.id,
     query: { enabled: Boolean(address), staleTime: 15_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: true, refetchOnMount: "always" },
   });
+  const loreRevealedRead = useReadContract({
+    address: LORE_COLLECTION_ADDRESS,
+    abi: LORE_DEEDS_ABI,
+    functionName: "revealed",
+    chainId: base.id,
+    query: { staleTime: 15_000, refetchInterval: false, refetchOnWindowFocus: true, refetchOnReconnect: true, refetchOnMount: "always", retry: 1 },
+  });
   const legacyLoreBalanceRead = useReadContract({
     address: LEGACY_LORE_DEED_ADDRESS,
     abi: LEGACY_LORE_DEED_ABI,
@@ -259,14 +266,14 @@ export default function TaboshiOnePage() {
   const loreBalance = typeof loreBalanceRead.data === "bigint" ? loreBalanceRead.data : 0n;
   const legacyLoreBalance = typeof legacyLoreBalanceRead.data === "bigint" ? legacyLoreBalanceRead.data : 0n;
   const seedSupply = typeof seedSupplyRead.data === "bigint" ? seedSupplyRead.data : null;
-  const loreRevealed = true;
+  const loreRevealed = loreRevealedRead.data === true;
   const leafArtwork = resolveIpfs(leafMetadata?.image);
 
   const assets = [
     { key: "toby" as const, symbol: "TOBY", label: "Pond token", icon: "/tokens/toby.PNG", value: tobyWallet.value ?? 0n, decimals: tobyWallet.decimals, standard: "ERC-20", address: TOBY, usdPrice: tobyUsd },
-    { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/ui/patience.webp", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
-    { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/ui/taboshi.webp", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
-    { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/ui/taboshi.webp", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
+    { key: "patience" as const, symbol: "PATIENCE", label: "Ancient flame", icon: "/tokens/patience.PNG", value: patienceWallet.value ?? 0n, decimals: patienceWallet.decimals, standard: "ERC-20", address: PATIENCE, usdPrice: patienceUsd },
+    { key: "taboshi" as const, symbol: "TABOSHI", label: "Awakened leaf", icon: "/tokens/taboshi.PNG", value: taboshiWallet.value ?? 0n, decimals: taboshiWallet.decimals, standard: "ERC-20", address: TABOSHI, usdPrice: taboshiUsd },
+    { key: "leaf" as const, symbol: "TABOSHI 1", label: "Old leaf", icon: leafArtwork || "/tokens/taboshi.PNG", value: leafBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI1_ADDRESS, usdPrice: undefined },
     { key: "seed" as const, symbol: "SEED", label: "New seed", icon: null, value: seedBalance, decimals: 0, standard: "ERC-1155", address: TABOSHI_SEEDS_ADDRESS, usdPrice: undefined },
     { key: "lore" as const, symbol: "LORE DEED", label: "Lore land", icon: null, value: loreBalance, decimals: 0, standard: "ERC-721", address: LORE_COLLECTION_ADDRESS, usdPrice: undefined },
   ];
@@ -283,10 +290,10 @@ export default function TaboshiOnePage() {
 
   const profileSignals = [
     { key: "toby", label: "TOBY", note: "Pond affiliation", icon: "/tokens/toby.PNG", found: holdingFlags.toby },
-    { key: "patience", label: "PATIENCE", note: "Ancient flame", icon: "/ui/patience.webp", found: holdingFlags.patience },
-    { key: "taboshi", label: "TABOSHI", note: "Awakened leaf", icon: "/ui/taboshi.webp", found: holdingFlags.taboshi },
-    { key: "leaf", label: "OLD LEAF", note: "History remembered", icon: leafArtwork || "/ui/taboshi.webp", found: holdingFlags.leaf },
-    { key: "seed", label: "SEED", note: "Something planted", icon: "/ui/seed.webp", found: holdingFlags.seed },
+    { key: "patience", label: "PATIENCE", note: "Ancient flame", icon: "/tokens/patience.PNG", found: holdingFlags.patience },
+    { key: "taboshi", label: "TABOSHI", note: "Awakened leaf", icon: "/tokens/taboshi.PNG", found: holdingFlags.taboshi },
+    { key: "leaf", label: "OLD LEAF", note: "History remembered", icon: leafArtwork || "/tokens/taboshi.PNG", found: holdingFlags.leaf },
+    { key: "seed", label: "SEED", note: "Something planted", icon: "/seed.png", found: holdingFlags.seed },
     { key: "legacyLore", label: "OLD LAND", note: "Earlier land", icon: null, found: holdingFlags.legacyLore },
     { key: "lore", label: "LORE LAND", note: "Your place", icon: null, found: holdingFlags.lore },
   ] as const;
@@ -668,7 +675,7 @@ COMPLETION</span>
           </article>
 
           <article className={`mytw-action-card mytw-seed-garden seed-stage-${seedStage.level}`}>
-            <div className="mytw-action-head"><span className="mytw-action-icon mytw-seed-icon"><Image src="/ui/seed.webp" alt="" fill sizes="58px" className="object-cover" /></span><div><small>YOUR SEEDS</small><h2>{isConnected ? `${seedBalance.toLocaleString()} SEED` : "A garden waits"}</h2></div></div>
+            <div className="mytw-action-head"><span className="mytw-action-icon mytw-seed-icon"><Image src="/seed.png" alt="" fill sizes="58px" className="object-cover" /></span><div><small>YOUR SEEDS</small><h2>{isConnected ? `${seedBalance.toLocaleString()} SEED` : "A garden waits"}</h2></div></div>
             <div className="mytw-garden" aria-label={`Visual seed stage: ${seedStage.label}`}>
               <span className="mytw-soil" />
               <i className="sprout s1" /><i className="sprout s2" /><i className="sprout s3" /><i className="sprout s4" /><i className="sprout s5" />
@@ -698,7 +705,7 @@ COMPLETION</span>
 
           <article className="taboshi1-card seedleaf-relic-card lore-relic-panel">
             <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">THE OLD LEAF</span><h2>{leafMetadata?.name || "twpot #1"}</h2></div><span className="lore-soft-chip green">RETURNED</span></div>
-            <div className="taboshi1-showcase"><div className="taboshi1-token-art">{leafArtwork ? <img src={leafArtwork} alt={leafMetadata?.name || "twpot #1"} className="taboshi1-real-art" /> : <Image src="/ui/taboshi.webp" alt="Taboshi 1" fill sizes="220px" className="object-contain p-7" />}</div><div className="taboshi1-balance"><small>IN YOUR POUCH</small><strong>{isConnected ? leafBalance.toLocaleString() : "—"}</strong><span>Taboshi 1 · early leaf</span></div></div>
+            <div className="taboshi1-showcase"><div className="taboshi1-token-art">{leafArtwork ? <img src={leafArtwork} alt={leafMetadata?.name || "twpot #1"} className="taboshi1-real-art" /> : <Image src="/tokens/taboshi.PNG" alt="Taboshi 1" fill sizes="220px" className="object-contain p-7" />}</div><div className="taboshi1-balance"><small>IN YOUR POUCH</small><strong>{isConnected ? leafBalance.toLocaleString() : "—"}</strong><span>Taboshi 1 · early leaf</span></div></div>
             <div className="lore-whisper green"><span>◌</span><p>Before the seed, there was the leaf. An early relic carried forward from the first pond.</p></div>
           </article>
 
@@ -866,7 +873,7 @@ COMPLETION</span>
           </div>
         </section>
 
-        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/ui/taboshi.webp" alt="" fill sizes="64px" className="object-contain" /></span></section>
+        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
       </div>
       <Footer />
       <PondDock active="pouch" />
