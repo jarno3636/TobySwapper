@@ -76,6 +76,10 @@ function isImageUri(uri: string, contentType?: string | null) {
 
 export async function GET(request: NextRequest) {
   const tokenIdText = request.nextUrl.searchParams.get("tokenId") || "";
+  const revealRefresh = request.nextUrl.searchParams.get("reveal") === "1";
+  const cacheHeader = revealRefresh
+    ? "no-store, max-age=0"
+    : "public, s-maxage=300, stale-while-revalidate=900";
 
   if (!/^\d+$/.test(tokenIdText)) {
     return NextResponse.json({ error: "Invalid tokenId." }, { status: 400 });
@@ -107,14 +111,14 @@ export async function GET(request: NextRequest) {
       const metadata = decodeInlineJson(tokenUri);
       return NextResponse.json(
         { tokenId: tokenIdText, tokenUri, metadata, image: metadata?.image || metadata?.image_url || metadata?.imageUrl || null, source: "inline" },
-        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+        { headers: { "Cache-Control": cacheHeader } },
       );
     }
 
     if (isImageUri(tokenUri)) {
       return NextResponse.json(
         { tokenId: tokenIdText, tokenUri, metadata: null, image: tokenUri, source: "direct-image" },
-        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+        { headers: { "Cache-Control": cacheHeader } },
       );
     }
 
@@ -122,7 +126,10 @@ export async function GET(request: NextRequest) {
 
     for (const candidate of uriCandidates(tokenUri)) {
       try {
-        const response = await fetch(candidate, {
+        const requestUri = revealRefresh && /^https?:\/\//i.test(candidate)
+          ? `${candidate}${candidate.includes("?") ? "&" : "?"}tobyswap_reveal=1`
+          : candidate;
+        const response = await fetch(requestUri, {
           headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5" },
           // This route is only a fallback for gateways that block browser CORS.
           // Do not let a pre-reveal gateway response sit in Next's data cache.
@@ -138,7 +145,7 @@ export async function GET(request: NextRequest) {
         if (isImageUri(candidate, contentType)) {
           return NextResponse.json(
             { tokenId: tokenIdText, tokenUri, metadataUri: candidate, metadata: null, image: candidate, source: "direct-image" },
-            { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+            { headers: { "Cache-Control": cacheHeader } },
           );
         }
 
@@ -155,7 +162,7 @@ export async function GET(request: NextRequest) {
             image: metadata.image || metadata.image_url || metadata.imageUrl || null,
             source: "metadata",
           },
-          { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } },
+          { headers: { "Cache-Control": cacheHeader } },
         );
       } catch (error: any) {
         lastError = String(error?.message || "Metadata source failed.").slice(0, 160);
