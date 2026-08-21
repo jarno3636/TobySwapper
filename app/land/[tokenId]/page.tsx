@@ -19,7 +19,7 @@ import LandProductionPlaceholder from "@/components/land/LandProductionPlacehold
 import LandShareActions from "@/components/land/LandShareActions";
 import LandExchangePreview from "@/components/world/LandExchangePreview";
 import LandCommunityProfile from "@/components/land/LandCommunityProfile";
-import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
+import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { fetchLoreMetadataResult, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
 import { clearCachedLoreMetadata, readCachedLoreMetadata, type CachedLoreMetadata } from "@/lib/lore-cache";
@@ -99,6 +99,7 @@ export default function LandPage() {
       { address: TOBY, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
       { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
       { address: TABOSHI, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
+      { address: CBBTC, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
       { address: TABOSHI1_ADDRESS, abi: TABOSHI1_ABI, functionName: "balanceOf", args: [owner, TABOSHI1_TOKEN_ID], chainId: base.id },
       { address: TABOSHI_SEEDS_ADDRESS, abi: TABOSHI_SEEDS_ABI, functionName: "balanceOf", args: [owner, TABOSHI_SEED_ID], chainId: base.id },
     ] as const : [],
@@ -109,8 +110,9 @@ export default function LandPage() {
   const toby = typeof values[0]?.result === "bigint" ? values[0].result : 0n;
   const patience = typeof values[1]?.result === "bigint" ? values[1].result : 0n;
   const taboshi = typeof values[2]?.result === "bigint" ? values[2].result : 0n;
-  const oldLeaf = typeof values[3]?.result === "bigint" ? values[3].result : 0n;
-  const seed = typeof values[4]?.result === "bigint" ? values[4].result : 0n;
+  const cbbtc = typeof values[3]?.result === "bigint" ? values[3].result : 0n;
+  const oldLeaf = typeof values[4]?.result === "bigint" ? values[4].result : 0n;
+  const seed = typeof values[5]?.result === "bigint" ? values[5].result : 0n;
 
   const loreRevealed = revealedRead.data === true;
 
@@ -255,14 +257,11 @@ export default function LandPage() {
                   metadataOverride={metadata}
                   directImageOverride={cachedLore?.directImage || metadataResult?.directImage || null}
                 />
-                <div className="land-metadata-row land-showcase-meta">
-                  <span>{cachedLore ? "Fast cache · Supabase" : metadataResult?.error ? "Metadata needs attention" : loreRevealed ? "Reveal live · canonical metadata connected" : "Canonical tokenURI connected"}</span>
-                  <button type="button" onClick={refreshMetadata} disabled={metadataRefreshing}>
-                    {metadataRefreshing ? "Refreshing…" : "Refresh metadata"}
+                <div className="land-showcase-tools">
+                  <button className="land-refresh-mini" type="button" onClick={refreshMetadata} disabled={metadataRefreshing} aria-label="Refresh land">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.8 7.1A6.25 6.25 0 1 0 16 12"/><path d="M15.8 3.8v3.7h-3.7"/></svg>
+                    {metadataRefreshing ? "Refreshing…" : "Refresh"}
                   </button>
-                  {metadataResult?.resolvedMetadataUri && !metadataResult.resolvedMetadataUri.startsWith("data:") ? (
-                    <a href={metadataResult.resolvedMetadataUri} target="_blank" rel="noreferrer">View metadata ↗</a>
-                  ) : null}
                 </div>
               </div>
 
@@ -288,7 +287,7 @@ export default function LandPage() {
               <LandProductionPlaceholder revealed={hasArtwork} />
             </div>
 
-            <LandRelics toby={toby} patience={patience} taboshi={taboshi} oldLeaf={oldLeaf} seed={seed} />
+            <LandRelics toby={toby} patience={patience} taboshi={taboshi} cbbtc={cbbtc} oldLeaf={oldLeaf} seed={seed} />
             <LandExchangePreview compact />
 
           </>
