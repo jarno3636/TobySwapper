@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
-import { extractLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
+import { metadataHasLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
+import { persistLoreMetadata } from "@/lib/lore-cache-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,14 +71,10 @@ function isImageUri(uri: string, contentType?: string | null) {
   return /\.(png|jpe?g|gif|webp|svg)(?:$|[?#])/i.test(uri);
 }
 
-function hasTraits(metadata: any) {
-  return extractLoreTraits(metadata).length > 0;
-}
-
 function looksPreReveal(metadata: any) {
   if (!metadata || typeof metadata !== "object") return true;
   const text = `${metadata.name || ""} ${metadata.description || ""}`.toLowerCase();
-  return !hasTraits(metadata) || /sealed|behind the veil|waits behind|unrevealed|not revealed|landscape still waits/.test(text);
+  return !metadataHasLoreTraits(metadata) || /sealed|behind the veil|waits behind|unrevealed|not revealed|landscape still waits/.test(text);
 }
 
 function responseHeaders(revealed: boolean, forceFresh: boolean) {
@@ -154,12 +151,15 @@ export async function GET(request: NextRequest) {
 
     if (tokenUri.startsWith("data:application/json")) {
       const decoded = decodeInlineJson(tokenUri);
-      const metadata = normalizeLoreMetadata(decoded, tokenUri, tokenUri);
+      const metadata = decoded ? normalizeLoreMetadata(decoded, tokenUri, tokenUri) : null;
       if (revealed && looksPreReveal(metadata)) {
         return NextResponse.json(
           { tokenId: tokenIdText, revealed, tokenUri, metadata: null, image: null, error: "Reveal is live but inline metadata still looks prereveal." },
           { status: 409, headers },
         );
+      }
+      if (metadata && revealed) {
+        await persistLoreMetadata({ tokenId, tokenUri, metadataUri: tokenUri, metadata, revealed, source: "inline" });
       }
       return NextResponse.json(
         { tokenId: tokenIdText, revealed, tokenUri, metadata, image: metadata?.image || metadata?.image_url || metadata?.imageUrl || null, source: "inline" },
@@ -210,6 +210,17 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        if (revealed) {
+          await persistLoreMetadata({
+            tokenId,
+            tokenUri,
+            metadataUri: candidate,
+            metadata,
+            revealed,
+            source: "canonical",
+          });
+        }
+
         return NextResponse.json(
           {
             tokenId: tokenIdText,
@@ -219,7 +230,6 @@ export async function GET(request: NextRequest) {
             metadata,
             image: metadata.image || metadata.image_url || metadata.imageUrl || null,
             source: "metadata",
-            traitCount: extractLoreTraits(metadata).length,
           },
           { headers },
         );
