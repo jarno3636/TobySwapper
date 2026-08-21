@@ -1,0 +1,93 @@
+name: Lore Supabase Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_token:
+        description: "First Lore deed ID"
+        required: true
+        default: "30"
+      to_token:
+        description: "Last Lore deed ID"
+        required: true
+        default: "30"
+      concurrency:
+        description: "Workers (1-4 recommended)"
+        required: true
+        default: "2"
+      force_refresh:
+        description: "Replace already cached records"
+        required: true
+        type: boolean
+        default: false
+      metadata_only:
+        description: "Skip artwork upload"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    name: Backfill Lore ${{ inputs.from_token }}-${{ inputs.to_token }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_URL" || (echo "Missing GitHub secret: SUPABASE_URL" && exit 1)
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || (echo "Missing GitHub secret: SUPABASE_SERVICE_ROLE_KEY" && exit 1)
+
+          if [ -z "$BASE_RPC_URL" ]; then
+            echo "BASE_RPC_URL is not set; the script will use its public Base fallback."
+          fi
+
+      - name: Backfill Lore metadata, traits and art
+        shell: bash
+        run: |
+          EXTRA=""
+
+          if [ "${{ inputs.force_refresh }}" = "true" ]; then
+            EXTRA="$EXTRA --force=true"
+          fi
+
+          if [ "${{ inputs.metadata_only }}" = "true" ]; then
+            EXTRA="$EXTRA --metadata-only=true"
+          fi
+
+          npm run backfill:lore -- \
+            --from=${{ inputs.from_token }} \
+            --to=${{ inputs.to_token }} \
+            --concurrency=${{ inputs.concurrency }} \
+            $EXTRA
+
+      - name: Write run summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Tobyworld Lore backfill" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Range: **${{ inputs.from_token }} → ${{ inputs.to_token }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Concurrency: **${{ inputs.concurrency }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Force refresh: **${{ inputs.force_refresh }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metadata only: **${{ inputs.metadata_only }}**" >> "$GITHUB_STEP_SUMMARY"
