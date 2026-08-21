@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
+import { extractLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,10 +71,7 @@ function isImageUri(uri: string, contentType?: string | null) {
 }
 
 function hasTraits(metadata: any) {
-  return Array.isArray(metadata?.attributes) && metadata.attributes.some((trait: any) => {
-    const value = trait?.value;
-    return value !== null && value !== undefined && String(value).trim() !== "";
-  });
+  return extractLoreTraits(metadata).length > 0;
 }
 
 function looksPreReveal(metadata: any) {
@@ -155,7 +153,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (tokenUri.startsWith("data:application/json")) {
-      const metadata = decodeInlineJson(tokenUri);
+      const decoded = decodeInlineJson(tokenUri);
+      const metadata = normalizeLoreMetadata(decoded, tokenUri, tokenUri);
       if (revealed && looksPreReveal(metadata)) {
         return NextResponse.json(
           { tokenId: tokenIdText, revealed, tokenUri, metadata: null, image: null, error: "Reveal is live but inline metadata still looks prereveal." },
@@ -199,8 +198,9 @@ export async function GET(request: NextRequest) {
         }
 
         const text = await response.text();
-        const metadata = JSON.parse(text);
-        if (!metadata || typeof metadata !== "object") continue;
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object") continue;
+        const metadata = normalizeLoreMetadata(parsed, candidate, tokenUri);
 
         // Revealed() is authoritative. Never return a successful sealed/no-trait
         // payload after reveal; try the next gateway instead.
@@ -219,6 +219,7 @@ export async function GET(request: NextRequest) {
             metadata,
             image: metadata.image || metadata.image_url || metadata.imageUrl || null,
             source: "metadata",
+            traitCount: extractLoreTraits(metadata).length,
           },
           { headers },
         );
