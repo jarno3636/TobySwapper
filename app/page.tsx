@@ -27,7 +27,7 @@ function HeroArtwork() {
 
   return (
     <Image
-      src={theme === "dark" ? "/hero/tobyswap-hero-dark.png" : "/hero/tobyswap-hero.png"}
+      src={theme === "dark" ? "/ui/tobyswap-hero-dark.webp" : "/ui/tobyswap-hero.webp"}
       alt="TobySwap with Toby, Patience, Taboshi and Sato in the pond"
       width={1536}
       height={1024}
@@ -88,7 +88,7 @@ export default function Page() {
               <span className="hero-cta-arrow"><ArrowIcon /></span>
             </a>
             <Link prefetch={false} href="/taboshi1" className="hero-cta hero-cta-relic">
-              <span className="hero-cta-seed-art"><Image src="/seed.png" alt="" fill sizes="46px" className="object-cover" /></span>
+              <span className="hero-cta-seed-art"><Image src="/ui/seed.webp" alt="" fill sizes="46px" className="object-cover" /></span>
               <span className="hero-cta-copy"><strong>My Tobyworld</strong><small>Your pouch · land · seeds · discoveries</small></span>
               <span className="hero-cta-arrow"><ArrowIcon /></span>
             </Link>
