@@ -24,6 +24,7 @@ import type { LandCommunityProfile as LandProfile } from "@/lib/land-profile";
 import { TOBY, PATIENCE, TABOSHI } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { fetchLoreMetadataResult, looksLikePreRevealMetadata, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
+import { clearCachedLoreMetadata, readCachedLoreMetadata } from "@/lib/lore-cache";
 import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
@@ -134,6 +135,17 @@ export default function LandPage() {
       if (loreRevealed && tokenId !== null) {
         setMetadataRefreshing(true);
         try {
+          // Supabase is a read-through cache only. The canonical contract/tokenURI
+          // remains authoritative, but once a revealed token has been validated and
+          // stored we can render it without another Vercel/RPC/IPFS round trip.
+          if (metadataRefreshNonce === 0) {
+            const cached = await readCachedLoreMetadata(tokenId);
+            if (cached?.metadata && !looksLikePreRevealMetadata(cached.metadata)) {
+              applyResult(cached);
+              return;
+            }
+          }
+
           const response = await fetch(
             `/api/lore/metadata?tokenId=${tokenId.toString()}&fresh=1&r=${metadataRefreshNonce}`,
             { cache: "no-store", headers: { "cache-control": "no-cache" } },
@@ -189,6 +201,7 @@ export default function LandPage() {
   }, [uriRead.data, loreRevealed, tokenId, metadataRefreshNonce]);
 
   const refreshCanonicalMetadata = () => {
+    if (tokenId !== null) clearCachedLoreMetadata(tokenId);
     void uriRead.refetch();
     setMetadataRefreshNonce((value) => value + 1);
   };
