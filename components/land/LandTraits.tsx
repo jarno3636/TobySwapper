@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 import type { LoreMetadata } from "@/lib/lore-metadata";
 import { extractLoreTraits } from "@/lib/lore-metadata-shared";
@@ -190,10 +192,23 @@ export default function LandTraits({ tokenId, metadata, revealed = false, loadin
                 <span>{trait.label}</span>
                 <strong title={trait.value}>{trait.value}</strong>
                 <div className="land-trait-meta">
-                  <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`} title={typeof trait.rarity === "number" ? `${trait.rarity.toFixed(2)}% of all 2,869 canonical Lore Deeds share this exact trait value.` : "Collection rarity is being calculated."}>
-                    <b>{typeof trait.rarity === "number" ? `${Math.round((trait.rarity / 100) * 2869).toLocaleString()} LANDS` : "COLLECTION SHARE"}</b>
-                    <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : rarityReady ? "—" : "…"}</em>
-                  </span>
+                  {typeof trait.rarity === "number" ? (
+                    <Link
+                      prefetch={false}
+                      href={`/world?trait=${encodeURIComponent(trait.label)}&value=${encodeURIComponent(trait.value)}#atlas-results`}
+                      className="land-trait-rarity is-known is-discoverable"
+                      title={`${trait.rarity.toFixed(2)}% of all 2,869 canonical Lore Deeds share this exact trait value. Explore them in the Atlas.`}
+                    >
+                      <b>{`${Math.round((trait.rarity / 100) * 2869).toLocaleString()} LANDS`}</b>
+                      <em>{`${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%`}</em>
+                      <i>EXPLORE ↗</i>
+                    </Link>
+                  ) : (
+                    <span className="land-trait-rarity is-pending" title="Collection share is being calculated.">
+                      <b>COLLECTION SHARE</b>
+                      <em>{rarityReady ? "—" : "…"}</em>
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="land-trait-watermark" aria-hidden="true"><TraitIcon label={trait.label} tone={trait.tone} /></div>
