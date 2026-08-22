@@ -1,24 +1,41 @@
 #!/usr/bin/env node
 
-import { createPublicClient, fallback, http } from "viem";
+import {
+  createPublicClient,
+  fallback,
+  http,
+} from "viem";
+
 import { base } from "viem/chains";
 
 /* =========================================================
-   TOBYWORLD LORE — TARGETED SUPABASE REPAIR
+   TOBYWORLD LORE — FINAL TARGETED REPAIR
 
-   Expected minted token IDs:
+   Canonical NFT:
+   0x0495601Af6f86efb14C9D478eA46b2Aa09cB164A
+
+   Actual minted IDs:
    - Community: 1–1369
    - Treasury:  2501–3500
    - Reserve:   3501–4000
-   Total:       2869
+
+   Total minted: 2869
 
    This script:
-   1) Audits Supabase first.
-   2) Retries ONLY missing/incomplete metadata.
-   3) Retries ONLY missing artwork.
-   4) Learns a working gateway per IPFS CID and reuses it.
-   5) Leaves completed records completely untouched.
-   6) Finishes green even if a few IPFS files remain pending.
+   - Reads Supabase first.
+   - Never touches already-complete NFTs.
+   - Repairs only missing metadata / artwork.
+   - Uses multiple repair passes.
+   - Groups artwork by CID.
+   - Learns successful gateways by CID.
+   - Rotates gateway order each pass.
+   - Retries Supabase transient failures.
+   - Reports remaining IDs.
+   - Exits green even if a few remote IPFS files remain.
+========================================================= */
+
+/* =========================================================
+   CORE CONFIG
 ========================================================= */
 
 const COLLECTION =
@@ -42,152 +59,273 @@ const SERVICE_KEY =
   process.env.SUPABASE_SECRET_KEY ||
   "";
 
-const RPCS = [
-  process.env.BASE_RPC_URL,
-  process.env.NEXT_PUBLIC_BASE_RPC_URL,
-  "https://mainnet.base.org",
-].filter(Boolean);
-
-const PRIMARY_GATEWAY = String(
-  process.env.IPFS_PRIMARY_GATEWAY || "",
-)
-  .trim()
-  .replace(/\/+$/, "");
-
-const PUBLIC_GATEWAYS = (
-  process.env.IPFS_GATEWAYS ||
-  [
-    "https://ipfs.io/ipfs/",
-    "https://dweb.link/ipfs/",
-    "https://w3s.link/ipfs/",
-    "https://nftstorage.link/ipfs/",
-    "https://gateway.pinata.cloud/ipfs/",
-  ].join(",")
-)
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean)
-  .map((value) =>
-    value.endsWith("/")
-      ? value
-      : `${value}/`,
+if (!SUPABASE_URL) {
+  console.error(
+    "Missing SUPABASE_URL.",
   );
 
-const IPFS_GATEWAYS = [
-  ...(PRIMARY_GATEWAY
-    ? [
-        PRIMARY_GATEWAY.endsWith("/ipfs")
-          ? `${PRIMARY_GATEWAY}/`
-          : PRIMARY_GATEWAY.endsWith("/ipfs/")
-            ? PRIMARY_GATEWAY
-            : `${PRIMARY_GATEWAY}/ipfs/`,
-      ]
-    : []),
-  ...PUBLIC_GATEWAYS,
-].filter(
-  (value, index, arr) =>
-    arr.indexOf(value) === index,
-);
+  process.exit(1);
+}
 
-if (!SUPABASE_URL || !SERVICE_KEY) {
+if (!SERVICE_KEY) {
   console.error(
-    "Missing Supabase URL or server key.",
+    "Missing Supabase server/service-role key.",
   );
 
   process.exit(1);
 }
 
 /* =========================================================
-   CLI
+   RPC
 ========================================================= */
 
-const args = Object.fromEntries(
-  process.argv
-    .slice(2)
-    .map((arg) => {
-      const [key, value = "true"] =
-        arg
+const RPC_URLS = [
+  process.env.BASE_RPC_URL,
+  process.env.NEXT_PUBLIC_BASE_RPC_URL,
+
+  // Last-resort fallback.
+  "https://mainnet.base.org",
+].filter(Boolean);
+
+const client =
+  createPublicClient({
+    chain: base,
+
+    transport: fallback(
+      RPC_URLS.map((url) =>
+        http(url, {
+          timeout: 12000,
+          retryCount: 3,
+          retryDelay: 750,
+        }),
+      ),
+    ),
+  });
+
+/* =========================================================
+   IPFS GATEWAYS
+========================================================= */
+
+function normalizeGateway(value) {
+  let gateway =
+    String(value || "").trim();
+
+  if (!gateway) {
+    return null;
+  }
+
+  gateway =
+    gateway.replace(
+      /\/+$/,
+      "",
+    );
+
+  if (
+    gateway.endsWith("/ipfs")
+  ) {
+    return `${gateway}/`;
+  }
+
+  return `${gateway}/ipfs/`;
+}
+
+const PRIMARY_GATEWAY =
+  normalizeGateway(
+    process.env
+      .IPFS_PRIMARY_GATEWAY,
+  );
+
+const ENV_GATEWAYS = (
+  process.env.IPFS_GATEWAYS ||
+  ""
+)
+  .split(",")
+  .map((value) =>
+    value.trim(),
+  )
+  .filter(Boolean)
+  .map((value) => {
+    if (
+      value.endsWith(
+        "/ipfs/",
+      )
+    ) {
+      return value;
+    }
+
+    if (
+      value.endsWith(
+        "/ipfs",
+      )
+    ) {
+      return `${value}/`;
+    }
+
+    return normalizeGateway(
+      value,
+    );
+  })
+  .filter(Boolean);
+
+const DEFAULT_GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://ipfs.io/ipfs/",
+  "https://dweb.link/ipfs/",
+  "https://w3s.link/ipfs/",
+  "https://nftstorage.link/ipfs/",
+];
+
+const IPFS_GATEWAYS = [
+  ...(PRIMARY_GATEWAY
+    ? [PRIMARY_GATEWAY]
+    : []),
+
+  ...ENV_GATEWAYS,
+
+  ...DEFAULT_GATEWAYS,
+].filter(
+  (
+    value,
+    index,
+    array,
+  ) =>
+    value &&
+    array.indexOf(value) ===
+      index,
+);
+
+/* =========================================================
+   CLI ARGS
+========================================================= */
+
+const args =
+  Object.fromEntries(
+    process.argv
+      .slice(2)
+      .map((argument) => {
+        const [
+          key,
+          value = "true",
+        ] = argument
           .replace(/^--/, "")
           .split("=");
 
-      return [key, value];
-    }),
-);
+        return [
+          key,
+          value,
+        ];
+      }),
+  );
 
-function num(value, fallback) {
+function numericArg(
+  value,
+  fallbackValue,
+) {
   if (
     value == null ||
     value === ""
   ) {
-    return fallback;
+    return fallbackValue;
   }
 
-  const parsed = Number(
-    String(value)
-      .replace(/,/g, "")
-      .trim(),
-  );
+  const parsed =
+    Number(
+      String(value)
+        .replace(/,/g, "")
+        .trim(),
+    );
 
-  return Number.isFinite(parsed)
+  return Number.isFinite(
+    parsed,
+  )
     ? parsed
-    : fallback;
+    : fallbackValue;
 }
 
-const METADATA_WORKERS = Math.max(
-  1,
-  Math.min(
-    4,
-    num(
-      args["metadata-workers"],
-      2,
-    ),
-  ),
-);
-
-const ART_WORKERS = Math.max(
-  1,
-  Math.min(
-    6,
-    num(
-      args["art-workers"],
+const METADATA_WORKERS =
+  Math.max(
+    1,
+    Math.min(
       3,
+      numericArg(
+        args[
+          "metadata-workers"
+        ],
+        1,
+      ),
     ),
-  ),
-);
+  );
 
-const META_TIMEOUT = Math.max(
-  3000,
-  num(
-    args["metadata-timeout-ms"],
-    9000,
-  ),
-);
-
-const IMAGE_TIMEOUT = Math.max(
-  5000,
-  num(
-    args["image-timeout-ms"],
-    18000,
-  ),
-);
-
-const IMAGE_RACE_WIDTH = Math.max(
-  1,
-  Math.min(
-    3,
-    num(
-      args["image-race-width"],
-      2,
+const ART_WORKERS =
+  Math.max(
+    1,
+    Math.min(
+      4,
+      numericArg(
+        args[
+          "art-workers"
+        ],
+        2,
+      ),
     ),
-  ),
-);
+  );
+
+const META_TIMEOUT =
+  Math.max(
+    5000,
+    numericArg(
+      args[
+        "metadata-timeout-ms"
+      ],
+      18000,
+    ),
+  );
+
+const IMAGE_TIMEOUT =
+  Math.max(
+    8000,
+    numericArg(
+      args[
+        "image-timeout-ms"
+      ],
+      30000,
+    ),
+  );
+
+const IMAGE_RACE_WIDTH =
+  Math.max(
+    1,
+    Math.min(
+      3,
+      numericArg(
+        args[
+          "image-race-width"
+        ],
+        3,
+      ),
+    ),
+  );
+
+const REPAIR_PASSES =
+  Math.max(
+    1,
+    Math.min(
+      5,
+      numericArg(
+        args.passes,
+        3,
+      ),
+    ),
+  );
 
 const MAX_IMAGE_BYTES =
   Math.max(
     1,
-    num(
-      args["max-image-mb"],
-      12,
+    numericArg(
+      args[
+        "max-image-mb"
+      ],
+      15,
     ),
   ) *
   1024 *
@@ -201,34 +339,53 @@ const PAGE_SIZE = 1000;
 
 const EXPECTED_IDS = [
   ...Array.from(
-    { length: 1369 },
-    (_, i) => i + 1,
+    {
+      length: 1369,
+    },
+    (_, index) =>
+      index + 1,
   ),
 
   ...Array.from(
-    { length: 1000 },
-    (_, i) => 2501 + i,
+    {
+      length: 1000,
+    },
+    (_, index) =>
+      2501 + index,
   ),
 
   ...Array.from(
-    { length: 500 },
-    (_, i) => 3501 + i,
+    {
+      length: 500,
+    },
+    (_, index) =>
+      3501 + index,
   ),
 ];
 
 const EXPECTED_SET =
-  new Set(EXPECTED_IDS);
+  new Set(
+    EXPECTED_IDS,
+  );
+
+const EXPECTED_TOTAL =
+  EXPECTED_IDS.length;
 
 /* =========================================================
    CONTRACT ABI
 ========================================================= */
 
-const abi = [
+const ABI = [
   {
     type: "function",
+
     name: "revealed",
-    stateMutability: "view",
+
+    stateMutability:
+      "view",
+
     inputs: [],
+
     outputs: [
       {
         type: "bool",
@@ -238,13 +395,18 @@ const abi = [
 
   {
     type: "function",
+
     name: "tokenURI",
-    stateMutability: "view",
+
+    stateMutability:
+      "view",
+
     inputs: [
       {
         type: "uint256",
       },
     ],
+
     outputs: [
       {
         type: "string",
@@ -253,28 +415,17 @@ const abi = [
   },
 ];
 
-const client =
-  createPublicClient({
-    chain: base,
-
-    transport: fallback(
-      RPCS.map((url) =>
-        http(url, {
-          timeout: 10000,
-          retryCount: 3,
-          retryDelay: 500,
-        }),
-      ),
-    ),
-  });
-
 /* =========================================================
-   HELPERS
+   BASIC HELPERS
 ========================================================= */
 
 const sleep = (ms) =>
-  new Promise((resolve) =>
-    setTimeout(resolve, ms),
+  new Promise(
+    (resolve) =>
+      setTimeout(
+        resolve,
+        ms,
+      ),
   );
 
 const scalar = (value) =>
@@ -283,280 +434,189 @@ const scalar = (value) =>
     "string",
     "number",
     "boolean",
-  ].includes(typeof value);
+  ].includes(
+    typeof value,
+  );
 
 const asText = (value) =>
   value == null
     ? null
-    : typeof value === "string"
+    : typeof value ===
+        "string"
       ? value
       : scalar(value)
         ? String(value)
-        : JSON.stringify(value);
+        : JSON.stringify(
+            value,
+          );
 
 /* =========================================================
    TRAITS
 ========================================================= */
 
-function extractTraits(metadata) {
-  const sources = [
+function extractTraits(
+  metadata,
+) {
+  const possibleSources = [
     metadata?.attributes,
     metadata?.traits,
     metadata?.features,
-    metadata?.properties
+    metadata
+      ?.properties
       ?.attributes,
-    metadata?.properties?.traits,
+    metadata
+      ?.properties
+      ?.traits,
   ];
 
   let raw =
-    sources.find(Array.isArray);
+    possibleSources.find(
+      Array.isArray,
+    );
 
   if (
     !raw &&
     metadata?.properties &&
-    typeof metadata.properties ===
+    typeof metadata
+      .properties ===
       "object" &&
     !Array.isArray(
       metadata.properties,
     )
   ) {
-    raw = Object.entries(
-      metadata.properties,
-    )
-      .filter(
-        ([key, value]) =>
-          ![
-            "name",
-            "description",
-            "image",
-            "image_url",
-            "animation_url",
-            "external_url",
-            "attributes",
-            "traits",
-          ].includes(key) &&
-          scalar(value),
+    raw =
+      Object.entries(
+        metadata.properties,
       )
-      .map(
-        ([key, value]) => ({
-          trait_type: key,
-          value,
-        }),
-      );
+        .filter(
+          ([
+            key,
+            value,
+          ]) =>
+            ![
+              "name",
+              "description",
+              "image",
+              "image_url",
+              "animation_url",
+              "external_url",
+              "attributes",
+              "traits",
+            ].includes(
+              key,
+            ) &&
+            scalar(value),
+        )
+        .map(
+          ([
+            key,
+            value,
+          ]) => ({
+            trait_type:
+              key,
+
+            value,
+          }),
+        );
   }
 
-  if (!Array.isArray(raw)) {
+  if (
+    !Array.isArray(raw)
+  ) {
     return [];
   }
 
   return raw
-    .map((item, index) => {
-      if (
-        item &&
-        typeof item === "object" &&
-        !Array.isArray(item)
-      ) {
-        const traitType =
-          item.trait_type ??
-          item.traitType ??
-          item.type ??
-          item.name ??
-          `Trait ${index + 1}`;
+    .map(
+      (
+        item,
+        index,
+      ) => {
+        if (
+          item &&
+          typeof item ===
+            "object" &&
+          !Array.isArray(
+            item,
+          )
+        ) {
+          const traitType =
+            item.trait_type ??
+            item.traitType ??
+            item.type ??
+            item.name ??
+            `Trait ${
+              index + 1
+            }`;
 
-        const value =
-          item.value ??
-          item.trait_value ??
-          item.traitValue ??
-          item.val ??
-          null;
+          const value =
+            item.value ??
+            item.trait_value ??
+            item.traitValue ??
+            item.val ??
+            null;
+
+          return {
+            index,
+
+            trait_type:
+              String(
+                traitType,
+              ),
+
+            value,
+
+            value_text:
+              asText(
+                value,
+              ),
+
+            display_type:
+              item.display_type ??
+              item.displayType ??
+              null,
+          };
+        }
 
         return {
           index,
 
           trait_type:
-            String(traitType),
+            `Trait ${
+              index + 1
+            }`,
 
-          value,
+          value:
+            item,
 
           value_text:
-            asText(value),
+            asText(
+              item,
+            ),
 
           display_type:
-            item.display_type ??
-            item.displayType ??
             null,
         };
-      }
-
-      return {
-        index,
-
-        trait_type:
-          `Trait ${index + 1}`,
-
-        value: item,
-
-        value_text:
-          asText(item),
-
-        display_type: null,
-      };
-    })
+      },
+    )
     .filter(
-      (item) =>
-        item.trait_type.trim(),
+      (trait) =>
+        trait.trait_type
+          .trim()
+          .length > 0,
     );
 }
 
 /* =========================================================
-   IPFS HELPERS
-========================================================= */
-
-function parseIpfs(value) {
-  const uri = String(
-    value || "",
-  ).trim();
-
-  let path = null;
-
-  if (
-    uri.startsWith(
-      "ipfs://ipfs/",
-    )
-  ) {
-    path = uri.slice(12);
-  } else if (
-    uri.startsWith(
-      "ipfs://",
-    )
-  ) {
-    path = uri.slice(7);
-  }
-
-  if (!path) {
-    return null;
-  }
-
-  const slash =
-    path.indexOf("/");
-
-  return {
-    cid:
-      slash === -1
-        ? path
-        : path.slice(
-            0,
-            slash,
-          ),
-
-    path,
-  };
-}
-
-function uriCandidates(
-  value,
-  preferredGateway = null,
-) {
-  const uri = String(
-    value || "",
-  ).trim();
-
-  if (!uri) {
-    return [];
-  }
-
-  if (
-    /^https?:\/\//i.test(
-      uri,
-    ) ||
-    uri.startsWith("data:")
-  ) {
-    return [uri];
-  }
-
-  if (
-    uri.startsWith("ar://")
-  ) {
-    return [
-      `https://arweave.net/${uri.slice(
-        5,
-      )}`,
-    ];
-  }
-
-  const parsed =
-    parseIpfs(uri);
-
-  if (!parsed) {
-    return [uri];
-  }
-
-  const gateways = [
-    ...(preferredGateway
-      ? [preferredGateway]
-      : []),
-
-    ...IPFS_GATEWAYS,
-  ].filter(
-    (value, index, arr) =>
-      value &&
-      arr.indexOf(value) ===
-        index,
-  );
-
-  return gateways.map(
-    (gateway) =>
-      `${gateway}${parsed.path}`,
-  );
-}
-
-function resolveRelative(
-  value,
-  metadataUri,
-) {
-  if (
-    typeof value !== "string" ||
-    !value.trim()
-  ) {
-    return null;
-  }
-
-  const v =
-    value.trim();
-
-  if (
-    /^(ipfs|ar|data|https?):\/\//i.test(
-      v,
-    )
-  ) {
-    return v;
-  }
-
-  if (
-    /^https?:\/\//i.test(
-      metadataUri || "",
-    )
-  ) {
-    try {
-      return new URL(
-        v,
-        metadataUri,
-      ).toString();
-    } catch {}
-  }
-
-  return v;
-}
-
-/* =========================================================
-   SUPABASE RETRY WRAPPER
+   SUPABASE
 ========================================================= */
 
 function supabaseHeaders(
   extra = {},
 ) {
   return {
-    apikey: SERVICE_KEY,
+    apikey:
+      SERVICE_KEY,
 
     Authorization:
       `Bearer ${SERVICE_KEY}`,
@@ -572,91 +632,109 @@ async function supabaseFetch(
     parseJson = false,
   } = {},
 ) {
-  const maxAttempts = 6;
+  const MAX_ATTEMPTS = 7;
 
   for (
     let attempt = 1;
-    attempt <= maxAttempts;
+    attempt <=
+    MAX_ATTEMPTS;
     attempt++
   ) {
     try {
       const response =
-        await fetch(url, {
-          ...init,
+        await fetch(
+          url,
+          {
+            ...init,
 
-          headers:
-            supabaseHeaders(
-              init.headers || {},
-            ),
-        });
+            headers:
+              supabaseHeaders(
+                init.headers ||
+                  {},
+              ),
+          },
+        );
 
       const text =
         await response.text();
 
       if (response.ok) {
-        if (!parseJson) {
-          return {
-            response,
-            text,
-          };
-        }
-
         return {
           response,
+
           text,
 
           data:
+            parseJson &&
             text
-              ? JSON.parse(text)
+              ? JSON.parse(
+                  text,
+                )
               : null,
         };
       }
 
       const jwtFuture =
-        response.status === 401 &&
+        response.status ===
+          401 &&
         text.includes(
           "JWT issued at future",
         );
 
       const retryable =
         jwtFuture ||
-        response.status === 408 ||
-        response.status === 429 ||
-        response.status >= 500;
+        response.status ===
+          408 ||
+        response.status ===
+          425 ||
+        response.status ===
+          429 ||
+        response.status >=
+          500;
 
       if (
         retryable &&
-        attempt < maxAttempts
+        attempt <
+          MAX_ATTEMPTS
       ) {
-        const waitMs =
-          jwtFuture
-            ? Math.min(
-                60000,
-                12000 *
-                  attempt,
-              )
-            : Math.min(
-                15000,
-                750 *
-                  2 **
-                    (attempt -
-                      1),
-              );
+        let waitMs;
+
+        if (jwtFuture) {
+          waitMs =
+            Math.min(
+              60000,
+              12000 *
+                attempt,
+            );
+        } else {
+          waitMs =
+            Math.min(
+              20000,
+              1000 *
+                2 **
+                  (attempt -
+                    1),
+            );
+        }
 
         console.warn(
-          `Supabase ${response.status}` +
-            ` attempt ${attempt}/${maxAttempts}` +
+          `Supabase ${
+            response.status
+          } attempt ${attempt}/${MAX_ATTEMPTS}` +
             `${
               jwtFuture
                 ? " · JWT clock skew"
                 : ""
             }` +
-            ` · retrying in ${Math.round(
-              waitMs / 1000,
+            ` · retry in ${Math.round(
+              waitMs /
+                1000,
             )}s`,
         );
 
-        await sleep(waitMs);
+        await sleep(
+          waitMs,
+        );
 
         continue;
       }
@@ -685,36 +763,40 @@ async function supabaseFetch(
       }
 
       if (
-        attempt >= maxAttempts
+        attempt >=
+        MAX_ATTEMPTS
       ) {
         throw error;
       }
 
       const waitMs =
         Math.min(
-          15000,
-          750 *
+          20000,
+          1000 *
             2 **
               (attempt - 1),
         );
 
       console.warn(
-        `Supabase network error attempt ${attempt}/${maxAttempts}: ` +
+        `Supabase network error attempt ${attempt}/${MAX_ATTEMPTS}: ` +
           `${message.slice(
             0,
-            160,
+            180,
           )}` +
-          ` · retrying in ${Math.round(
-            waitMs / 1000,
+          ` · retry in ${Math.round(
+            waitMs /
+              1000,
           )}s`,
       );
 
-      await sleep(waitMs);
+      await sleep(
+        waitMs,
+      );
     }
   }
 
   throw new Error(
-    "Supabase request exhausted retries",
+    "Supabase retries exhausted",
   );
 }
 
@@ -739,7 +821,8 @@ async function rest(
       },
 
       {
-        parseJson: true,
+        parseJson:
+          true,
       },
     );
 
@@ -754,16 +837,19 @@ async function rpc(
     `rpc/${name}`,
 
     {
-      method: "POST",
+      method:
+        "POST",
 
       body:
-        JSON.stringify(body),
+        JSON.stringify(
+          body,
+        ),
     },
   );
 }
 
 /* =========================================================
-   AUDIT SUPABASE
+   LOAD SUPABASE COLLECTION
 ========================================================= */
 
 async function loadAllLoreRows() {
@@ -807,16 +893,21 @@ async function loadAllLoreRows() {
         },
 
         {
-          parseJson: true,
+          parseJson:
+            true,
         },
       );
 
     const page =
-      Array.isArray(result.data)
+      Array.isArray(
+        result.data,
+      )
         ? result.data
         : [];
 
-    rows.push(...page);
+    rows.push(
+      ...page,
+    );
 
     if (
       page.length <
@@ -832,7 +923,9 @@ async function loadAllLoreRows() {
   return rows;
 }
 
-function metadataReady(row) {
+function metadataReady(
+  row,
+) {
   return Boolean(
     row &&
       Number(
@@ -845,7 +938,9 @@ function metadataReady(row) {
   );
 }
 
-function artReady(row) {
+function artworkReady(
+  row,
+) {
   return Boolean(
     row &&
       row.art_cache_status ===
@@ -857,14 +952,184 @@ function artReady(row) {
 }
 
 /* =========================================================
-   METADATA FETCH
+   IPFS
+========================================================= */
+
+function parseIpfs(
+  value,
+) {
+  const uri =
+    String(
+      value || "",
+    ).trim();
+
+  let path = null;
+
+  if (
+    uri.startsWith(
+      "ipfs://ipfs/",
+    )
+  ) {
+    path =
+      uri.slice(12);
+  } else if (
+    uri.startsWith(
+      "ipfs://",
+    )
+  ) {
+    path =
+      uri.slice(7);
+  }
+
+  if (!path) {
+    return null;
+  }
+
+  const slash =
+    path.indexOf("/");
+
+  const cid =
+    slash === -1
+      ? path
+      : path.slice(
+          0,
+          slash,
+        );
+
+  return {
+    cid,
+    path,
+  };
+}
+
+function rotateArray(
+  array,
+  amount,
+) {
+  if (!array.length) {
+    return array;
+  }
+
+  const offset =
+    ((amount %
+      array.length) +
+      array.length) %
+    array.length;
+
+  return [
+    ...array.slice(
+      offset,
+    ),
+
+    ...array.slice(
+      0,
+      offset,
+    ),
+  ];
+}
+
+function uriCandidates(
+  value,
+  gatewayRotation = 0,
+) {
+  const uri =
+    String(
+      value || "",
+    ).trim();
+
+  if (!uri) {
+    return [];
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      uri,
+    ) ||
+    uri.startsWith(
+      "data:",
+    )
+  ) {
+    return [uri];
+  }
+
+  if (
+    uri.startsWith(
+      "ar://",
+    )
+  ) {
+    return [
+      `https://arweave.net/${uri.slice(
+        5,
+      )}`,
+    ];
+  }
+
+  const parsed =
+    parseIpfs(uri);
+
+  if (!parsed) {
+    return [uri];
+  }
+
+  const gateways =
+    rotateArray(
+      IPFS_GATEWAYS,
+      gatewayRotation,
+    );
+
+  return gateways.map(
+    (gateway) =>
+      `${gateway}${parsed.path}`,
+  );
+}
+
+function resolveRelative(
+  value,
+  metadataUri,
+) {
+  if (
+    typeof value !==
+      "string" ||
+    !value.trim()
+  ) {
+    return null;
+  }
+
+  const v =
+    value.trim();
+
+  if (
+    /^(ipfs|ar|data|https?):\/\//i.test(
+      v,
+    )
+  ) {
+    return v;
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      metadataUri || "",
+    )
+  ) {
+    try {
+      return new URL(
+        v,
+        metadataUri,
+      ).toString();
+    } catch {}
+  }
+
+  return v;
+}
+
+/* =========================================================
+   GENERAL FETCH TIMEOUT
 ========================================================= */
 
 async function fetchWithTimeout(
   url,
   init = {},
-  timeoutMs =
-    META_TIMEOUT,
+  timeoutMs,
 ) {
   const controller =
     new AbortController();
@@ -884,7 +1149,6 @@ async function fetchWithTimeout(
   try {
     return await fetch(
       url,
-
       {
         ...init,
 
@@ -893,14 +1157,20 @@ async function fetchWithTimeout(
       },
     );
   } finally {
-    clearTimeout(timer);
+    clearTimeout(
+      timer,
+    );
   }
 }
+
+/* =========================================================
+   METADATA FETCH
+========================================================= */
 
 async function fetchMetadata(
   tokenUri,
   tokenId,
-  attempt = 0,
+  passNumber = 0,
 ) {
   if (
     tokenUri.startsWith(
@@ -908,7 +1178,9 @@ async function fetchMetadata(
     )
   ) {
     const comma =
-      tokenUri.indexOf(",");
+      tokenUri.indexOf(
+        ",",
+      );
 
     const header =
       tokenUri.slice(
@@ -937,7 +1209,9 @@ async function fetchMetadata(
 
     return {
       metadata:
-        JSON.parse(text),
+        JSON.parse(
+          text,
+        ),
 
       metadataUri:
         tokenUri,
@@ -947,35 +1221,19 @@ async function fetchMetadata(
   const candidates =
     uriCandidates(
       tokenUri,
+      Number(tokenId) +
+        passNumber,
     );
 
-  const offset =
-    candidates.length
-      ? (Number(
-          tokenId,
-        ) +
-          attempt) %
-        candidates.length
-      : 0;
+  let lastError =
+    new Error(
+      "metadata unavailable",
+    );
 
-  const ordered =
-    candidates.length
-      ? [
-          ...candidates.slice(
-            offset,
-          ),
-
-          ...candidates.slice(
-            0,
-            offset,
-          ),
-        ]
-      : candidates;
-
-  let last =
-    "metadata unavailable";
-
-  for (const url of ordered) {
+  for (
+    const url
+    of candidates
+  ) {
     try {
       const response =
         await fetchWithTimeout(
@@ -995,50 +1253,50 @@ async function fetchMetadata(
         );
 
       if (!response.ok) {
-        last =
-          `${response.status} ${url}`;
+        lastError =
+          new Error(
+            `${response.status} ${url}`,
+          );
 
         continue;
       }
 
-      const parsed =
+      const text =
+        await response.text();
+
+      const metadata =
         JSON.parse(
-          await response.text(),
+          text,
         );
 
       if (
-        parsed &&
-        typeof parsed ===
+        metadata &&
+        typeof metadata ===
           "object"
       ) {
         return {
-          metadata:
-            parsed,
+          metadata,
 
           metadataUri:
             url,
         };
       }
 
-      last =
-        `invalid metadata @ ${url}`;
+      lastError =
+        new Error(
+          `Invalid metadata from ${url}`,
+        );
     } catch (error) {
-      last =
-        `${
-          error?.name ||
-          "Error"
-        }: ${String(
-          error?.message ||
-            error,
-        )} @ ${url}`;
+      lastError =
+        error;
     }
   }
 
-  throw new Error(last);
+  throw lastError;
 }
 
 /* =========================================================
-   ARTWORK FETCH
+   IMAGE DOWNLOAD
 ========================================================= */
 
 const CID_GATEWAY =
@@ -1047,38 +1305,27 @@ const CID_GATEWAY =
 function contentTypeToExt(
   contentType,
 ) {
-  if (
-    contentType ===
-    "image/jpeg"
+  switch (
+    contentType
   ) {
-    return "jpg";
-  }
+    case "image/jpeg":
+      return "jpg";
 
-  if (
-    contentType ===
-    "image/webp"
-  ) {
-    return "webp";
-  }
+    case "image/webp":
+      return "webp";
 
-  if (
-    contentType ===
-    "image/gif"
-  ) {
-    return "gif";
-  }
+    case "image/gif":
+      return "gif";
 
-  if (
-    contentType ===
-    "image/svg+xml"
-  ) {
-    return "svg";
-  }
+    case "image/svg+xml":
+      return "svg";
 
-  return "png";
+    default:
+      return "png";
+  }
 }
 
-function gatewayFromUrl(
+function gatewayFromImageUrl(
   url,
   parsed,
 ) {
@@ -1086,12 +1333,9 @@ function gatewayFromUrl(
     return null;
   }
 
-  const suffix =
-    parsed.path;
-
   if (
     !url.endsWith(
-      suffix,
+      parsed.path,
     )
   ) {
     return null;
@@ -1100,7 +1344,7 @@ function gatewayFromUrl(
   return url.slice(
     0,
     url.length -
-      suffix.length,
+      parsed.path.length,
   );
 }
 
@@ -1123,10 +1367,10 @@ async function fetchImageCandidate(
       IMAGE_TIMEOUT,
     );
 
-  const parentAbort = () =>
+  const cancel = () =>
     controller.abort(
       new Error(
-        "gateway race cancelled after winner",
+        "cancelled after gateway winner",
       ),
     );
 
@@ -1134,11 +1378,11 @@ async function fetchImageCandidate(
     if (
       parentSignal.aborted
     ) {
-      parentAbort();
+      cancel();
     } else {
       parentSignal.addEventListener(
         "abort",
-        parentAbort,
+        cancel,
         {
           once: true,
         },
@@ -1150,7 +1394,6 @@ async function fetchImageCandidate(
     const response =
       await fetch(
         url,
-
         {
           headers: {
             accept:
@@ -1167,7 +1410,9 @@ async function fetchImageCandidate(
 
     if (!response.ok) {
       throw new Error(
-        `${response.status} ${url}`,
+        `HTTP ${
+          response.status
+        } @ ${url}`,
       );
     }
 
@@ -1177,6 +1422,7 @@ async function fetchImageCandidate(
       ) || ""
     )
       .split(";")[0]
+      .trim()
       .toLowerCase();
 
     if (
@@ -1185,14 +1431,11 @@ async function fetchImageCandidate(
       )
     ) {
       throw new Error(
-        `not image: ${
-          contentType ||
-          "unknown"
-        } @ ${url}`,
+        `Not an image (${contentType}) @ ${url}`,
       );
     }
 
-    const contentLength =
+    const declaredBytes =
       Number(
         response.headers.get(
           "content-length",
@@ -1200,12 +1443,11 @@ async function fetchImageCandidate(
       );
 
     if (
-      contentLength &&
-      contentLength >
-        MAX_IMAGE_BYTES
+      declaredBytes >
+      MAX_IMAGE_BYTES
     ) {
       throw new Error(
-        "image exceeds size cap",
+        "Image exceeds configured size limit",
       );
     }
 
@@ -1216,7 +1458,7 @@ async function fetchImageCandidate(
 
     if (!bytes.length) {
       throw new Error(
-        "empty image",
+        "Empty image",
       );
     }
 
@@ -1225,44 +1467,50 @@ async function fetchImageCandidate(
       MAX_IMAGE_BYTES
     ) {
       throw new Error(
-        "image exceeds size cap",
+        "Image exceeds configured size limit",
       );
     }
 
     return {
       bytes,
+
       contentType,
+
       url,
     };
   } finally {
-    clearTimeout(timer);
+    clearTimeout(
+      timer,
+    );
 
     if (parentSignal) {
       parentSignal.removeEventListener(
         "abort",
-        parentAbort,
+        cancel,
       );
     }
   }
 }
 
-async function raceCandidates(
+async function raceImageCandidates(
   candidates,
 ) {
   let lastError =
     new Error(
-      "image unavailable",
+      "No gateway succeeded",
     );
 
   for (
-    let i = 0;
-    i < candidates.length;
-    i += IMAGE_RACE_WIDTH
+    let index = 0;
+    index <
+    candidates.length;
+    index +=
+      IMAGE_RACE_WIDTH
   ) {
     const batch =
       candidates.slice(
-        i,
-        i +
+        index,
+        index +
           IMAGE_RACE_WIDTH,
       );
 
@@ -1273,18 +1521,19 @@ async function raceCandidates(
       const winner =
         await Promise.any(
           batch.map(
-            (url) =>
-              fetchImageCandidate(
-                url,
-                controller.signal,
-              ).catch(
-                (error) => {
-                  lastError =
-                    error;
+            async (url) => {
+              try {
+                return await fetchImageCandidate(
+                  url,
+                  controller.signal,
+                );
+              } catch (error) {
+                lastError =
+                  error;
 
-                  throw error;
-                },
-              ),
+                throw error;
+              }
+            },
           ),
         );
 
@@ -1295,16 +1544,16 @@ async function raceCandidates(
       controller.abort();
 
       if (
-        error?.errors?.length
+        Array.isArray(
+          error?.errors,
+        ) &&
+        error.errors.length
       ) {
         lastError =
           error.errors[
             error.errors.length -
               1
           ];
-      } else {
-        lastError =
-          error;
       }
     }
   }
@@ -1312,83 +1561,84 @@ async function raceCandidates(
   throw lastError;
 }
 
-async function downloadArt(
-  imageValue,
+async function downloadArtwork(
+  imageUri,
   metadataUri,
   tokenUri,
+  passNumber,
 ) {
   const resolved =
     resolveRelative(
-      imageValue,
+      imageUri,
       metadataUri ||
         tokenUri,
     );
 
   if (!resolved) {
     throw new Error(
-      "No image URI",
+      "No artwork URI",
     );
   }
 
   const parsed =
-    parseIpfs(resolved);
-
-  const preferred =
-    parsed
-      ? CID_GATEWAY.get(
-          parsed.cid,
-        ) || null
-      : null;
+    parseIpfs(
+      resolved,
+    );
 
   /*
-   * If we've already learned a working
-   * gateway for this CID, try it FIRST.
+   * FIRST:
+   * If this CID already succeeded through a
+   * gateway, give that gateway one direct try.
    */
-  if (
-    parsed &&
-    preferred
-  ) {
-    try {
-      const url =
-        `${preferred}${parsed.path}`;
-
-      return await fetchImageCandidate(
-        url,
-      );
-    } catch {
-      CID_GATEWAY.delete(
+  if (parsed) {
+    const learned =
+      CID_GATEWAY.get(
         parsed.cid,
       );
+
+    if (learned) {
+      try {
+        return await fetchImageCandidate(
+          `${learned}${parsed.path}`,
+        );
+      } catch {
+        CID_GATEWAY.delete(
+          parsed.cid,
+        );
+      }
     }
   }
 
   const candidates =
     uriCandidates(
       resolved,
+      passNumber,
     );
 
-  if (!candidates.length) {
+  if (
+    !candidates.length
+  ) {
     throw new Error(
-      "No image candidates",
+      "No artwork gateway candidates",
     );
   }
 
   const winner =
-    await raceCandidates(
+    await raceImageCandidates(
       candidates,
     );
 
   if (parsed) {
-    const winningGateway =
-      gatewayFromUrl(
+    const gateway =
+      gatewayFromImageUrl(
         winner.url,
         parsed,
       );
 
-    if (winningGateway) {
+    if (gateway) {
       CID_GATEWAY.set(
         parsed.cid,
-        winningGateway,
+        gateway,
       );
     }
   }
@@ -1396,9 +1646,13 @@ async function downloadArt(
   return winner;
 }
 
+/* =========================================================
+   ART CACHE
+========================================================= */
+
 async function markArtFailure(
   tokenId,
-  message,
+  error,
 ) {
   await rpc(
     "tobyswap_set_lore_art_cache",
@@ -1427,46 +1681,46 @@ async function markArtFailure(
 
       p_error:
         String(
-          message,
+          error,
         ).slice(
           0,
           500,
         ),
     },
-  ).catch(() => {});
+  ).catch(
+    () => {},
+  );
 }
 
-async function uploadArt(
-  tokenId,
-  imageValue,
-  metadataUri,
-  tokenUri,
+async function uploadArtwork(
+  item,
+  passNumber,
 ) {
+  const {
+    tokenId,
+    image,
+    metadataUri,
+    tokenUri,
+  } = item;
+
   let fetched;
 
   try {
     fetched =
-      await downloadArt(
-        imageValue,
+      await downloadArtwork(
+        image,
         metadataUri,
         tokenUri,
+        passNumber,
       );
   } catch (error) {
-    const message =
-      `${
-        error?.name ||
-        "Error"
-      }: ${String(
-        error?.message ||
-          error,
-      )}`;
-
     await markArtFailure(
       tokenId,
-      message,
+      error?.message ||
+        error,
     );
 
-    throw new Error(message);
+    throw error;
   }
 
   const {
@@ -1474,17 +1728,17 @@ async function uploadArt(
     contentType,
   } = fetched;
 
-  const ext =
+  const extension =
     contentTypeToExt(
       contentType,
     );
 
-  const path =
-    `canonical/${tokenId}.${ext}`;
+  const storagePath =
+    `canonical/${tokenId}.${extension}`;
 
-  const result =
+  const upload =
     await supabaseFetch(
-      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
+      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`,
 
       {
         method:
@@ -1507,17 +1761,15 @@ async function uploadArt(
     );
 
   if (
-    !result.response.ok
+    !upload.response.ok
   ) {
     throw new Error(
-      `storage ${result.response.status}`,
+      `Storage upload failed ${upload.response.status}`,
     );
   }
 
   const publicUrl =
-    `${SUPABASE_URL}` +
-    `/storage/v1/object/public/` +
-    `${BUCKET}/${path}`;
+    `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
 
   await rpc(
     "tobyswap_set_lore_art_cache",
@@ -1533,7 +1785,7 @@ async function uploadArt(
         publicUrl,
 
       p_storage_path:
-        path,
+        storagePath,
 
       p_content_type:
         contentType,
@@ -1553,7 +1805,7 @@ async function uploadArt(
 }
 
 /* =========================================================
-   WORKER POOL
+   POOL
 ========================================================= */
 
 async function runPool(
@@ -1561,6 +1813,10 @@ async function runPool(
   workerCount,
   handler,
 ) {
+  if (!items.length) {
+    return;
+  }
+
   let cursor = 0;
 
   async function worker() {
@@ -1568,26 +1824,29 @@ async function runPool(
       cursor <
       items.length
     ) {
-      const item =
-        items[
-          cursor++
-        ];
+      const index =
+        cursor++;
 
-      await handler(item);
+      const item =
+        items[index];
+
+      await handler(
+        item,
+      );
     }
   }
+
+  const actualWorkers =
+    Math.min(
+      workerCount,
+      items.length,
+    );
 
   await Promise.all(
     Array.from(
       {
         length:
-          Math.min(
-            workerCount,
-            Math.max(
-              1,
-              items.length,
-            ),
-          ),
+          actualWorkers,
       },
 
       () => worker(),
@@ -1596,7 +1855,228 @@ async function runPool(
 }
 
 /* =========================================================
-   START
+   AUDIT
+========================================================= */
+
+async function audit() {
+  const rows =
+    await loadAllLoreRows();
+
+  const rowMap =
+    new Map(
+      rows
+        .filter((row) =>
+          EXPECTED_SET.has(
+            Number(
+              row.token_id,
+            ),
+          ),
+        )
+        .map((row) => [
+          Number(
+            row.token_id,
+          ),
+
+          row,
+        ]),
+    );
+
+  const missingMetadata =
+    [];
+
+  const pendingArt =
+    [];
+
+  let complete = 0;
+
+  for (
+    const tokenId
+    of EXPECTED_IDS
+  ) {
+    const row =
+      rowMap.get(
+        tokenId,
+      );
+
+    if (
+      !metadataReady(
+        row,
+      )
+    ) {
+      missingMetadata.push(
+        tokenId,
+      );
+
+      continue;
+    }
+
+    if (
+      !artworkReady(
+        row,
+      )
+    ) {
+      pendingArt.push({
+        tokenId,
+
+        image:
+          row.image_uri,
+
+        metadataUri:
+          row.metadata_uri,
+
+        tokenUri:
+          row.token_uri,
+      });
+
+      continue;
+    }
+
+    complete++;
+  }
+
+  return {
+    rows,
+
+    rowMap,
+
+    complete,
+
+    missingMetadata,
+
+    pendingArt,
+  };
+}
+
+/* =========================================================
+   METADATA REPAIR
+========================================================= */
+
+async function repairMetadataToken(
+  tokenId,
+  passNumber,
+) {
+  const tokenUri =
+    await client.readContract({
+      address:
+        COLLECTION,
+
+      abi:
+        ABI,
+
+      functionName:
+        "tokenURI",
+
+      args: [
+        BigInt(
+          tokenId,
+        ),
+      ],
+    });
+
+  const {
+    metadata,
+    metadataUri,
+  } =
+    await fetchMetadata(
+      String(
+        tokenUri,
+      ),
+
+      tokenId,
+
+      passNumber,
+    );
+
+  const traits =
+    extractTraits(
+      metadata,
+    );
+
+  const image =
+    metadata?.image ??
+    metadata?.image_url ??
+    metadata?.imageUrl ??
+    null;
+
+  await rpc(
+    "tobyswap_upsert_lore_metadata",
+
+    {
+      p_collection_address:
+        COLLECTION_LOWER,
+
+      p_chain_id:
+        8453,
+
+      p_token_id:
+        tokenId,
+
+      p_token_uri:
+        String(
+          tokenUri,
+        ),
+
+      p_metadata_uri:
+        metadataUri,
+
+      p_name:
+        asText(
+          metadata?.name,
+        ),
+
+      p_description:
+        asText(
+          metadata?.description,
+        ),
+
+      p_image_uri:
+        asText(
+          image,
+        ),
+
+      p_animation_uri:
+        asText(
+          metadata?.animation_url,
+        ),
+
+      p_external_url:
+        asText(
+          metadata?.external_url,
+        ),
+
+      p_metadata:
+        metadata,
+
+      p_metadata_hash:
+        null,
+
+      p_revealed:
+        true,
+
+      p_source:
+        "repair-final-v2",
+
+      p_traits:
+        traits,
+    },
+  );
+
+  return {
+    tokenId,
+
+    image,
+
+    metadataUri,
+
+    tokenUri:
+      String(
+        tokenUri,
+      ),
+  };
+}
+
+/* =========================================================
+   VERIFY REVEAL
 ========================================================= */
 
 const revealed =
@@ -1604,7 +2084,8 @@ const revealed =
     address:
       COLLECTION,
 
-    abi,
+    abi:
+      ABI,
 
     functionName:
       "revealed",
@@ -1612,19 +2093,31 @@ const revealed =
 
 if (!revealed) {
   console.error(
-    "Canonical collection is not revealed.",
+    "Canonical collection reports revealed=false.",
   );
 
   process.exit(1);
 }
 
+/* =========================================================
+   START
+========================================================= */
+
 console.log("");
 console.log(
-  "──── TOBYWORLD LORE TARGETED REPAIR ────",
+  "══════════════════════════════════════════",
 );
 
 console.log(
-  `Expected minted deeds: ${EXPECTED_IDS.length}`,
+  " TOBYWORLD FINAL LORE REPAIR",
+);
+
+console.log(
+  "══════════════════════════════════════════",
+);
+
+console.log(
+  `Expected minted: ${EXPECTED_TOTAL}`,
 );
 
 console.log(
@@ -1636,518 +2129,364 @@ console.log(
 );
 
 console.log(
-  `Artwork gateway race width: ${IMAGE_RACE_WIDTH}`,
+  `Repair passes: ${REPAIR_PASSES}`,
 );
 
 console.log(
-  `Primary gateway configured: ${
-    PRIMARY_GATEWAY
-      ? "yes"
-      : "no"
-  }`,
+  `Metadata timeout: ${META_TIMEOUT}ms`,
+);
+
+console.log(
+  `Artwork timeout: ${IMAGE_TIMEOUT}ms`,
+);
+
+console.log(
+  `Gateway race width: ${IMAGE_RACE_WIDTH}`,
+);
+
+console.log(
+  `IPFS gateways: ${IPFS_GATEWAYS.length}`,
 );
 
 console.log("");
 
+let totalMetadataRepaired =
+  0;
+
+let totalArtworkRepaired =
+  0;
+
 /* =========================================================
-   AUDIT CURRENT DB
+   MULTI-PASS REPAIR
 ========================================================= */
 
-const rows =
-  await loadAllLoreRows();
+for (
+  let pass = 0;
+  pass <
+  REPAIR_PASSES;
+  pass++
+) {
+  const passNumber =
+    pass + 1;
 
-const rowMap =
-  new Map(
-    rows
-      .filter((row) =>
-        EXPECTED_SET.has(
-          Number(
-            row.token_id,
-          ),
-        ),
-      )
-      .map((row) => [
-        Number(
-          row.token_id,
-        ),
-
-        row,
-      ]),
+  console.log("");
+  console.log(
+    `──── REPAIR PASS ${passNumber}/${REPAIR_PASSES} ────`,
   );
 
-const missingMetadata = [];
+  const before =
+    await audit();
 
-const pendingArt = [];
+  console.log(
+    `Complete: ${before.complete}/${EXPECTED_TOTAL}`,
+  );
 
-for (
-  const tokenId
-  of EXPECTED_IDS
-) {
-  const row =
-    rowMap.get(
-      tokenId,
-    );
+  console.log(
+    `Metadata missing: ${before.missingMetadata.length}`,
+  );
+
+  console.log(
+    `Artwork pending: ${before.pendingArt.length}`,
+  );
 
   if (
-    !metadataReady(row)
+    before.complete ===
+    EXPECTED_TOTAL
   ) {
-    missingMetadata.push(
-      tokenId,
+    console.log(
+      "Collection already fully cached.",
     );
 
-    continue;
+    break;
   }
 
-  if (!artReady(row)) {
-    pendingArt.push({
-      tokenId,
+  /* -------------------------
+     Metadata
+  ------------------------- */
 
-      image:
-        row.image_uri,
+  const newArtworkItems =
+    [];
 
-      metadataUri:
-        row.metadata_uri,
+  if (
+    before
+      .missingMetadata
+      .length
+  ) {
+    console.log("");
+    console.log(
+      `Repairing ${before.missingMetadata.length} metadata record(s)...`,
+    );
 
-      tokenUri:
-        row.token_uri,
-    });
-  }
-}
+    await runPool(
+      before.missingMetadata,
 
-console.log(
-  `Audit: ${
-    2869 -
-    missingMetadata.length -
-    pendingArt.length
-  } complete`,
-);
+      METADATA_WORKERS,
 
-console.log(
-  `Audit: ${pendingArt.length} artwork pending`,
-);
-
-console.log(
-  `Audit: ${missingMetadata.length} metadata missing/incomplete`,
-);
-
-console.log("");
-
-/* =========================================================
-   REPAIR METADATA
-========================================================= */
-
-const metadataStats = {
-  repaired: 0,
-  failed: [],
-};
-
-const metadataArtItems = [];
-
-await runPool(
-  missingMetadata,
-  METADATA_WORKERS,
-
-  async (tokenId) => {
-    try {
-      const tokenUri =
-        await client.readContract({
-          address:
-            COLLECTION,
-
-          abi,
-
-          functionName:
-            "tokenURI",
-
-          args: [
-            BigInt(
-              tokenId,
-            ),
-          ],
-        });
-
-      let result = null;
-      let lastError = null;
-
-      /*
-       * Two metadata passes.
-       * Second pass rotates gateway order.
-       */
-      for (
-        let attempt = 0;
-        attempt < 2 &&
-        !result;
-        attempt++
-      ) {
+      async (
+        tokenId,
+      ) => {
         try {
-          result =
-            await fetchMetadata(
-              String(
-                tokenUri,
-              ),
-
+          const item =
+            await repairMetadataToken(
               tokenId,
-              attempt,
+
+              pass,
             );
-        } catch (error) {
-          lastError =
-            error;
+
+          totalMetadataRepaired++;
+
+          console.log(
+            `#${tokenId} METADATA repaired`,
+          );
 
           if (
-            attempt === 0
+            item.image
           ) {
-            await sleep(
-              500,
+            newArtworkItems.push(
+              item,
             );
           }
+        } catch (error) {
+          console.warn(
+            `#${tokenId} METADATA pending: ${String(
+              error?.message ||
+                error,
+            ).slice(
+              0,
+              220,
+            )}`,
+          );
         }
-      }
-
-      if (!result) {
-        throw (
-          lastError ||
-          new Error(
-            "metadata unavailable",
-          )
-        );
-      }
-
-      const {
-        metadata,
-        metadataUri,
-      } = result;
-
-      const traits =
-        extractTraits(
-          metadata,
-        );
-
-      const image =
-        metadata?.image ??
-        metadata?.image_url ??
-        metadata?.imageUrl ??
-        null;
-
-      await rpc(
-        "tobyswap_upsert_lore_metadata",
-
-        {
-          p_collection_address:
-            COLLECTION_LOWER,
-
-          p_chain_id:
-            8453,
-
-          p_token_id:
-            tokenId,
-
-          p_token_uri:
-            String(
-              tokenUri,
-            ),
-
-          p_metadata_uri:
-            metadataUri,
-
-          p_name:
-            asText(
-              metadata?.name,
-            ),
-
-          p_description:
-            asText(
-              metadata?.description,
-            ),
-
-          p_image_uri:
-            asText(
-              image,
-            ),
-
-          p_animation_uri:
-            asText(
-              metadata?.animation_url,
-            ),
-
-          p_external_url:
-            asText(
-              metadata?.external_url,
-            ),
-
-          p_metadata:
-            metadata,
-
-          p_metadata_hash:
-            null,
-
-          p_revealed:
-            true,
-
-          p_source:
-            "repair-targeted-v1",
-
-          p_traits:
-            traits,
-        },
-      );
-
-      metadataStats.repaired++;
-
-      console.log(
-        `#${tokenId} METADATA repaired`,
-      );
-
-      if (image) {
-        metadataArtItems.push({
-          tokenId,
-          image,
-          metadataUri,
-
-          tokenUri:
-            String(
-              tokenUri,
-            ),
-        });
-      }
-    } catch (error) {
-      metadataStats.failed.push(
-        tokenId,
-      );
-
-      console.warn(
-        `#${tokenId} METADATA still missing: ${String(
-          error?.message ||
-            error,
-        ).slice(
-          0,
-          220,
-        )}`,
-      );
-    }
-  },
-);
-
-/* =========================================================
-   BUILD ART QUEUE
-========================================================= */
-
-const artItemsById =
-  new Map();
-
-for (
-  const item
-  of [
-    ...pendingArt,
-    ...metadataArtItems,
-  ]
-) {
-  artItemsById.set(
-    item.tokenId,
-    item,
-  );
-}
-
-const artItems = [
-  ...artItemsById.values(),
-];
-
-/*
- * Group by CID so once a gateway works
- * for a CID, nearby jobs reuse it.
- */
-artItems.sort(
-  (a, b) => {
-    const cidA =
-      parseIpfs(
-        a.image,
-      )?.cid || "";
-
-    const cidB =
-      parseIpfs(
-        b.image,
-      )?.cid || "";
-
-    return (
-      cidA.localeCompare(
-        cidB,
-      ) ||
-      a.tokenId -
-        b.tokenId
+      },
     );
-  },
-);
+  }
 
-/* =========================================================
-   REPAIR ART
-========================================================= */
+  /* -------------------------
+     Artwork
+  ------------------------- */
 
-const artStats = {
-  repaired: 0,
-  failed: [],
-};
+  const artMap =
+    new Map();
 
-await runPool(
-  artItems,
-  ART_WORKERS,
+  for (
+    const item
+    of [
+      ...before.pendingArt,
+      ...newArtworkItems,
+    ]
+  ) {
+    artMap.set(
+      item.tokenId,
+      item,
+    );
+  }
 
-  async (item) => {
-    try {
-      await uploadArt(
-        item.tokenId,
-        item.image,
-        item.metadataUri,
-        item.tokenUri,
-      );
+  const artworkItems =
+    [
+      ...artMap.values(),
+    ];
 
-      artStats.repaired++;
-
-      const parsed =
+  /*
+   * Keep same-CID artwork close together
+   * so learned gateways are useful.
+   */
+  artworkItems.sort(
+    (
+      first,
+      second,
+    ) => {
+      const firstCid =
         parseIpfs(
-          item.image,
-        );
+          first.image,
+        )?.cid || "";
 
-      const learned =
-        parsed
-          ? CID_GATEWAY.get(
-              parsed.cid,
-            )
-          : null;
+      const secondCid =
+        parseIpfs(
+          second.image,
+        )?.cid || "";
 
-      console.log(
-        `#${item.tokenId} ART repaired` +
-          `${
-            learned
-              ? ` · ${
-                  new URL(
-                    learned,
-                  ).hostname
-                }`
-              : ""
-          }`,
+      return (
+        firstCid.localeCompare(
+          secondCid,
+        ) ||
+        first.tokenId -
+          second.tokenId
       );
-    } catch (error) {
-      artStats.failed.push(
-        item.tokenId,
-      );
+    },
+  );
 
-      console.warn(
-        `#${item.tokenId} ART still pending: ${String(
-          error?.message ||
-            error,
-        ).slice(
-          0,
-          200,
-        )}`,
-      );
-    }
-  },
-);
+  if (
+    artworkItems.length
+  ) {
+    console.log("");
+    console.log(
+      `Repairing ${artworkItems.length} artwork item(s)...`,
+    );
+
+    await runPool(
+      artworkItems,
+
+      ART_WORKERS,
+
+      async (item) => {
+        try {
+          await uploadArtwork(
+            item,
+            pass,
+          );
+
+          totalArtworkRepaired++;
+
+          const cid =
+            parseIpfs(
+              item.image,
+            )?.cid;
+
+          const learned =
+            cid
+              ? CID_GATEWAY.get(
+                  cid,
+                )
+              : null;
+
+          console.log(
+            `#${item.tokenId} ART repaired` +
+              `${
+                learned
+                  ? ` · ${new URL(
+                      learned,
+                    ).hostname}`
+                  : ""
+              }`,
+          );
+        } catch (error) {
+          console.warn(
+            `#${item.tokenId} ART pending: ${String(
+              error?.message ||
+                error,
+            ).slice(
+              0,
+              200,
+            )}`,
+          );
+        }
+      },
+    );
+  }
+
+  const after =
+    await audit();
+
+  console.log("");
+  console.log(
+    `Pass ${passNumber} result:`,
+  );
+
+  console.log(
+    `  Complete: ${after.complete}/${EXPECTED_TOTAL}`,
+  );
+
+  console.log(
+    `  Metadata missing: ${after.missingMetadata.length}`,
+  );
+
+  console.log(
+    `  Artwork pending: ${after.pendingArt.length}`,
+  );
+
+  if (
+    after.complete ===
+    EXPECTED_TOTAL
+  ) {
+    break;
+  }
+
+  /*
+   * Don't immediately hammer the same
+   * gateway/CID again.
+   */
+  if (
+    passNumber <
+    REPAIR_PASSES
+  ) {
+    console.log(
+      "Cooling down 8 seconds before next pass...",
+    );
+
+    await sleep(
+      8000,
+    );
+  }
+}
 
 /* =========================================================
    FINAL AUDIT
 ========================================================= */
 
-const finalRows =
-  await loadAllLoreRows();
-
-const finalMap =
-  new Map(
-    finalRows
-      .filter((row) =>
-        EXPECTED_SET.has(
-          Number(
-            row.token_id,
-          ),
-        ),
-      )
-      .map((row) => [
-        Number(
-          row.token_id,
-        ),
-
-        row,
-      ]),
-  );
-
-const finalMetadataMissing = [];
-
-const finalArtPending = [];
-
-let complete = 0;
-
-for (
-  const tokenId
-  of EXPECTED_IDS
-) {
-  const row =
-    finalMap.get(
-      tokenId,
-    );
-
-  if (
-    !metadataReady(row)
-  ) {
-    finalMetadataMissing.push(
-      tokenId,
-    );
-  } else if (
-    !artReady(row)
-  ) {
-    finalArtPending.push(
-      tokenId,
-    );
-  } else {
-    complete++;
-  }
-}
-
-/* =========================================================
-   FINAL REPORT
-========================================================= */
+const finalAudit =
+  await audit();
 
 console.log("");
-
 console.log(
-  "════════ REPAIR COMPLETE ════════",
+  "════════ FINAL REPAIR REPORT ════════",
 );
 
 console.log(
-  `Complete collection: ${complete}/2869`,
+  `Complete collection: ${finalAudit.complete}/${EXPECTED_TOTAL}`,
 );
 
 console.log(
-  `Metadata repaired this run: ${metadataStats.repaired}`,
+  `Metadata repaired during job: ${totalMetadataRepaired}`,
 );
 
 console.log(
-  `Artwork repaired this run: ${artStats.repaired}`,
+  `Artwork repaired during job: ${totalArtworkRepaired}`,
 );
 
 console.log(
-  `Metadata still missing: ${finalMetadataMissing.length}`,
+  `Metadata still missing: ${finalAudit.missingMetadata.length}`,
 );
 
 console.log(
-  `Artwork still pending: ${finalArtPending.length}`,
+  `Artwork still pending: ${finalAudit.pendingArt.length}`,
 );
 
 if (
-  finalMetadataMissing.length
+  finalAudit
+    .missingMetadata
+    .length
 ) {
+  console.log("");
+
   console.log(
-    `Remaining metadata IDs: ${finalMetadataMissing.join(
+    "Remaining metadata IDs:",
+  );
+
+  console.log(
+    finalAudit.missingMetadata.join(
       ",",
-    )}`,
+    ),
   );
 }
 
 if (
-  finalArtPending.length
+  finalAudit
+    .pendingArt
+    .length
 ) {
+  console.log("");
+
   console.log(
-    `Remaining artwork IDs: ${finalArtPending.join(
-      ",",
-    )}`,
+    "Remaining artwork IDs:",
+  );
+
+  console.log(
+    finalAudit.pendingArt
+      .map(
+        (item) =>
+          item.tokenId,
+      )
+      .join(","),
   );
 }
 
@@ -2155,9 +2494,8 @@ if (
   CID_GATEWAY.size
 ) {
   console.log("");
-
   console.log(
-    "Working gateway learned by CID:",
+    "Successful gateways learned:",
   );
 
   for (
@@ -2168,19 +2506,24 @@ if (
     of CID_GATEWAY.entries()
   ) {
     console.log(
-      `  ${cid} -> ${gateway}`,
+      `${cid} -> ${gateway}`,
     );
   }
 }
 
+console.log("");
 console.log(
-  "═════════════════════════════════",
+  "══════════════════════════════════════",
 );
 
 /*
- * Intentionally exit successfully.
+ * IMPORTANT:
  *
- * If a few remote IPFS files are still unavailable,
- * the workflow remains GREEN and reports exactly
- * which token IDs still need another repair run.
+ * Do NOT make GitHub Actions red just
+ * because an external IPFS file is still
+ * temporarily unavailable.
+ *
+ * A successful execution exits 0 and
+ * reports any remaining records.
  */
+process.exitCode = 0;
