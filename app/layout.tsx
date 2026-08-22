@@ -22,19 +22,19 @@ const themeBoot = `
 
 export const metadata = {
   metadataBase: new URL(SITE),
-  title: "Toby Swapper",
-  description: "Swap ETH, WETH, TOBY, PATIENCE and TABOSHI on Base with an automatic TOBY burn.",
+  title: "TobySwapper · Tobyworld Community",
+  description: "Explore Tobyworld Lore Lands, Keeper Marks, canonical signs, community paths and pond utilities on Base.",
   manifest: "/site.webmanifest",
   themeColor: "#faf9f6",
   openGraph: {
-    title: "Toby Swapper",
-    description: "Swap across the Tobyworld pond on Base. TOBY, PATIENCE, TABOSHI, ETH and WETH.",
+    title: "TobySwapper · Tobyworld Community",
+    description: "Explore all 2,869 Lore Lands, Keeper Marks, canonical signs and community paths through Tobyworld.",
     images: [`${SITE}/og/tobyswap-card-1200x630.png`],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Toby Swapper",
-    description: "Swap across the Tobyworld pond on Base.",
+    title: "TobySwapper · Tobyworld Community",
+    description: "Explore Lore Lands, Keeper Marks and Tobyworld community paths on Base.",
     images: [`${SITE}/og/tobyswap-card-1200x630.png`],
   },
 } as const;
