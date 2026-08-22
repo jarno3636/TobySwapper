@@ -9,6 +9,7 @@ import WorldAtlas from "@/components/world/WorldAtlas";
 import WorldOnboarding from "@/components/world/WorldOnboarding";
 import LandExchangePreview from "@/components/world/LandExchangePreview";
 import KeeperSpotlight from "@/components/world/KeeperSpotlight";
+import WorldPulse from "@/components/world/WorldPulse";
 
 export default function WorldPage() {
   return (
@@ -20,6 +21,7 @@ export default function WorldPage() {
           <div className="world-hero-art" aria-hidden="true"><span className="world-hero-sun" /><span className="world-island island-a" /><span className="world-island island-b" /><span className="world-island island-c" /><span className="world-river" /><Image src="/tokens/toby.PNG" alt="" width={88} height={88} className="world-hero-frog" /><span className="world-hero-rune">△</span></div>
         </section>
         <WorldOnboarding />
+        <WorldPulse />
         <KeeperSpotlight />
         <div id="atlas" className="scroll-mt-24"><WorldAtlas /></div>
         <LandExchangePreview />
