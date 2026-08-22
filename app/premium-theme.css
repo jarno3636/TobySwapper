@@ -5206,3 +5206,72 @@ html[data-theme="dark"] .taboshi1-page .seedleaf-assets-note {
   color:#839f98!important;
 }
 html[data-theme="dark"] .taboshi1-page .mytw-land-engine-launch input {background:#0d292b!important;color:#edf9f5!important;border-color:rgba(128,202,188,.08)!important}
+
+/* ==========================================================================\n   PHASE 4.1 — LAND MEMORY + PUBLIC LAND POLISH\n   Keeper history is lore-first: wallet addresses remain data, not decoration.\n   ========================================================================== */
+.keeper-history{
+  position:relative;margin:18px 0 16px;padding:22px;border:1px solid rgba(41,92,94,.13);
+  border-radius:28px;overflow:hidden;background:linear-gradient(155deg,rgba(248,252,249,.98),rgba(236,246,242,.96));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.88),0 18px 44px rgba(23,61,63,.07)
+}
+.keeper-history:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 92% 2%,rgba(96,183,159,.12),transparent 31%)}
+.keeper-history-head{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:18px;border-bottom:1px solid rgba(37,87,89,.09)}
+.keeper-history-head h2{margin:5px 0 7px;font-size:27px;line-height:1.02;letter-spacing:-.035em;color:#163f43}
+.keeper-history-head p{max-width:480px;margin:0;color:#718b88;font-size:12px;line-height:1.6}
+.keeper-history-count{display:inline-flex!important;align-items:center;gap:7px;flex:0 0 auto;padding:8px 11px;border:1px solid rgba(50,111,101,.12);border-radius:999px;background:rgba(255,255,255,.52);color:#577a74!important;font-size:8px!important;font-weight:900;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.keeper-history-count i{width:7px;height:7px;border-radius:50%;background:#62c6a4;box-shadow:0 0 0 4px rgba(98,198,164,.11)}
+.keeper-history-list{position:relative;display:grid;gap:10px;padding-top:14px}
+.keeper-history-entry{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr);gap:13px;padding:16px;border:1px solid rgba(42,91,91,.10);border-radius:20px;background:rgba(255,255,255,.44);box-shadow:inset 0 1px 0 rgba(255,255,255,.62)}
+.keeper-history-entry:after{content:"";position:absolute;left:36px;top:56px;bottom:-11px;width:1px;background:linear-gradient(rgba(73,137,122,.18),transparent)}
+.keeper-history-entry:last-child:after{display:none}
+.keeper-history-sigil{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(75,145,126,.14);border-radius:14px;background:rgba(89,169,146,.08);color:#549b87;font-size:17px}
+.keeper-history-copy{min-width:0}
+.keeper-history-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:1px 0 7px}
+.keeper-history-meta strong{color:#5b8178!important;font-size:7px!important;font-weight:1000!important;letter-spacing:.18em;text-transform:uppercase}
+.keeper-history-meta time{color:#829994;font-size:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+.keeper-history-name{margin-bottom:5px;color:#244f50;font-size:11px;font-weight:850}
+.keeper-history-copy h3{margin:0 0 7px;color:#173f43;font-size:18px;line-height:1.15;letter-spacing:-.018em}
+.keeper-history-copy blockquote{margin:0;padding:0;border:0;color:#587672;font-size:12px;line-height:1.55;font-style:normal}
+.keeper-history-empty{margin:0!important;color:#8aa09c!important;font-size:10px!important;font-style:italic}
+.keeper-history-links{margin-top:10px}
+.keeper-history-links a{display:inline-flex;align-items:center;gap:6px;color:#347966;font-size:9px;font-weight:900;text-decoration:none}
+.keeper-history-toggle{position:relative;width:100%;margin-top:12px;padding:12px 14px;border:1px solid rgba(47,104,96,.11);border-radius:14px;background:rgba(255,255,255,.44);color:#426d66;font-size:9px;font-weight:950;letter-spacing:.05em}
+.keeper-history-loading{position:relative;padding:18px 2px 2px;color:#78918c;font-size:10px}
+
+/* Infrastructure stays available without visually outranking the land itself. */
+.land-vault-address{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;border-radius:14px!important;opacity:.72!important}
+.land-vault-address>span{font-size:6px!important;letter-spacing:.16em!important}
+.land-vault-address code{overflow:hidden;text-overflow:ellipsis;color:#557a75!important;font-size:8px!important}
+.land-vault-address button{min-height:30px!important;padding:0 10px!important;border-radius:10px!important;font-size:7px!important}
+
+html[data-theme="dark"] .keeper-history{border-color:rgba(130,204,190,.10);background:radial-gradient(circle at 92% 2%,rgba(75,157,137,.09),transparent 31%),linear-gradient(155deg,#0d2b2d,#092426);box-shadow:inset 0 1px 0 rgba(211,244,236,.035),0 18px 44px rgba(0,0,0,.12)}
+html[data-theme="dark"] .keeper-history-head{border-color:rgba(142,207,195,.08)}
+html[data-theme="dark"] .keeper-history-head h2{color:#f0faf7!important;-webkit-text-fill-color:#f0faf7!important}
+html[data-theme="dark"] .keeper-history-head p{color:#9bb2ad!important}
+html[data-theme="dark"] .keeper-history-count{border-color:rgba(135,205,191,.10);background:rgba(17,52,53,.78);color:#a8c7bf!important}
+html[data-theme="dark"] .keeper-history-entry{border-color:rgba(136,205,191,.08);background:rgba(17,48,50,.72);box-shadow:inset 0 1px 0 rgba(222,248,242,.025)}
+html[data-theme="dark"] .keeper-history-sigil{border-color:rgba(122,199,180,.11);background:rgba(72,147,128,.09);color:#79bba9}
+html[data-theme="dark"] .keeper-history-meta strong{color:#8fb9ae!important}
+html[data-theme="dark"] .keeper-history-meta time{color:#78958f!important}
+html[data-theme="dark"] .keeper-history-name{color:#c4dcd6!important}
+html[data-theme="dark"] .keeper-history-copy h3{color:#eff9f6!important;-webkit-text-fill-color:#eff9f6!important}
+html[data-theme="dark"] .keeper-history-copy blockquote{color:#a8beb8!important}
+html[data-theme="dark"] .keeper-history-empty{color:#78938d!important}
+html[data-theme="dark"] .keeper-history-links a{color:#80cbb6!important}
+html[data-theme="dark"] .keeper-history-toggle{border-color:rgba(135,205,191,.09);background:#102f31;color:#a9cbc2}
+html[data-theme="dark"] .keeper-history-loading{color:#8fa8a2}
+html[data-theme="dark"] .land-vault-address{background:#0c292b!important;opacity:1!important}
+html[data-theme="dark"] .land-vault-address>span{color:#789b93!important}
+html[data-theme="dark"] .land-vault-address code{color:#a5c2bb!important}
+html[data-theme="dark"] .land-vault-address button{background:#153638!important;color:#d8ebe6!important;border-color:rgba(135,205,191,.08)!important}
+
+@media(max-width:680px){
+  .keeper-history{padding:17px;border-radius:24px}
+  .keeper-history-head{display:grid;gap:12px}
+  .keeper-history-head h2{font-size:25px}
+  .keeper-history-count{justify-self:start}
+  .keeper-history-entry{grid-template-columns:36px minmax(0,1fr);gap:11px;padding:14px}
+  .keeper-history-sigil{width:36px;height:36px;border-radius:12px}
+  .keeper-history-entry:after{left:31px;top:50px}
+  .keeper-history-meta{align-items:flex-start}
+  .keeper-history-copy h3{font-size:17px}
+}
