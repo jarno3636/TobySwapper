@@ -11,10 +11,6 @@ type Keeper = {
   storyCount: number;
 };
 
-function shortAddress(value: string) {
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
-
 export default function KeeperSpotlight() {
   const [keepers, setKeepers] = useState<Keeper[]>([]);
 
@@ -44,7 +40,7 @@ export default function KeeperSpotlight() {
           const land = keeper.currentLands[0];
           return <Link prefetch={false} href={`/keeper/${keeper.ownerAddress}`} className="keeper-spotlight-card" key={keeper.ownerAddress}>
             <div className="keeper-spotlight-art">{land?.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <span>◌</span>}</div>
-            <div><span>KEEPER MARK</span><strong>{keeper.keeperName || keeper.keeperSocial || shortAddress(keeper.ownerAddress)}</strong><small>{keeper.currentLands.length} current {keeper.currentLands.length === 1 ? "land" : "lands"} · {keeper.storyCount} {keeper.storyCount === 1 ? "story" : "stories"}</small></div>
+            <div><span>KEEPER MARK</span><strong>{keeper.keeperName || keeper.keeperSocial || (land ? `Keeper of #${land.tokenId}` : "A Tobyworld Keeper")}</strong><small>{keeper.currentLands.length} current {keeper.currentLands.length === 1 ? "land" : "lands"} · {keeper.storyCount} {keeper.storyCount === 1 ? "story" : "stories"}</small></div>
             <b>→</b>
           </Link>;
         })}
