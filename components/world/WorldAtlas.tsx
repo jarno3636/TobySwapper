@@ -36,7 +36,9 @@ export default function WorldAtlas() {
       (land) =>
         land.tokenId.includes(q) ||
         land.communityName?.toLowerCase().includes(q) ||
-        land.description?.toLowerCase().includes(q),
+        land.description?.toLowerCase().includes(q) ||
+        land.keeperName?.toLowerCase().includes(q) ||
+        land.keeperSocial?.toLowerCase().includes(q),
     );
   }, [lands, query]);
 
@@ -84,58 +86,33 @@ export default function WorldAtlas() {
     <>
       <section className="world-search-panel">
         <div className="world-search-copy">
-          <span>EXPLORE THE LAND</span>
-          <h2>Find your way into Tobyworld</h2>
-          <p>Search named community lands, jump straight to a deed, or paste any wallet address to find the Lore Deeds it holds.</p>
+          <span>ENTER TOBYWORLD</span>
+          <h2>Find a land. Follow a keeper. Wander.</h2>
+          <p>Open a Lore Land by deed number or paste a Base wallet to find the lands it keeps. Use Atlas Search to filter named community places.</p>
         </div>
 
         <div className="world-search-controls">
-          <label className="world-search-field">
-            <span>SEARCH THE ATLAS</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Land name, story, or #742" />
-          </label>
-
           <div className={`world-deed-jump ${walletJump ? "is-wallet" : numericJump ? "is-deed" : ""}`}>
-            <div className="world-jump-mark" aria-hidden="true">
-              {walletJump ? "◈" : "△"}
-            </div>
+            <div className="world-jump-mark" aria-hidden="true">{walletJump ? "◈" : "△"}</div>
             <label>
-              <span>OPEN A LAND</span>
-              <input
-                value={jumpValue}
-                onChange={(event) => {
-                  setJumpValue(event.target.value);
-                  setJumpMessage("");
-                  setWalletDeeds([]);
-                }}
-                onKeyDown={(event) => { if (event.key === "Enter") void openJump(); }}
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="#742 or 0x wallet"
-                aria-label="Lore Deed number or wallet address"
-              />
-              <small>{walletJump ? "Wallet detected" : numericJump ? `Lore Deed #${numericJump}` : "Deed number or Base wallet"}</small>
+              <span>OPEN A LORE LAND</span>
+              <input value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpMessage(""); setWalletDeeds([]); }} onKeyDown={(event) => { if (event.key === "Enter") void openJump(); }} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Deed #30 or 0x wallet" aria-label="Lore Deed number or wallet address" />
+              <small>{walletJump ? "Base wallet detected · find its Lore Deeds" : numericJump ? `Ready to visit Lore Land #${numericJump}` : "Deed number or Base wallet address"}</small>
             </label>
-            <button type="button" onClick={() => void openJump()} disabled={!canJump || jumpLoading}>
-              {jumpLoading ? "Finding…" : walletJump ? "Find lands →" : "Enter →"}
-            </button>
+            <button type="button" onClick={() => void openJump()} disabled={!canJump || jumpLoading}>{jumpLoading ? "Following trail…" : walletJump ? "Find lands →" : "Visit land →"}</button>
           </div>
+
+          <div className="world-search-divider"><span>OR</span></div>
+
+          <label className="world-search-field">
+            <span>SEARCH NAMED COMMUNITY LANDS</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search land name or keeper story…" />
+          </label>
 
           {(jumpMessage || walletDeeds.length > 0) ? (
             <div className={`world-wallet-results ${walletDeeds.length ? "has-deeds" : ""}`} role="status">
               {jumpMessage ? <p>{jumpMessage}</p> : null}
-              {walletDeeds.length ? (
-                <div>
-                  {walletDeeds.map((deed) => (
-                    <Link prefetch={false} href={`/land/${deed.tokenId}`} key={deed.tokenId}>
-                      <span>DEED #{deed.tokenId}</span>
-                      <strong>{deed.communityName || `Lore Land #${deed.tokenId}`}</strong>
-                      <b>Visit ↗</b>
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
+              {walletDeeds.length ? <div>{walletDeeds.map((deed) => <Link prefetch={false} href={`/land/${deed.tokenId}`} key={deed.tokenId}><span>LORE DEED #{deed.tokenId}</span><strong>{deed.communityName || `Lore Land #${deed.tokenId}`}</strong><b>Visit ↗</b></Link>)}</div> : null}
             </div>
           ) : null}
         </div>
@@ -169,7 +146,7 @@ export default function WorldAtlas() {
                 <div className="world-land-copy">
                   <span className="world-land-id">LORE LAND #{land.tokenId}</span>
                   <h3>{land.communityName || `Land #${land.tokenId}`}</h3>
-                  <p>{land.description || "A place in Tobyworld waiting to tell more of its story."}</p>
+                  <p>{land.description || (land.keeperName ? `Kept by ${land.keeperName}.` : "A place in Tobyworld waiting for its keeper-written story.")}</p>
                   <div><small>LORE DEED #{land.tokenId}</small><b>Visit Land →</b></div>
                 </div>
               </Link>
