@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import type { LoreMetadata } from "@/lib/lore-metadata";
 import { extractLoreTraits } from "@/lib/lore-metadata-shared";
 
@@ -9,7 +10,8 @@ type Props = {
   loading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
-  /** Future-ready map keyed as `${trait_type}::${value}`. Values are collection percentages. */
+  tokenId?: bigint | string | null;
+  /** Optional override keyed as `${trait_type}::${value}`. Values are collection percentages. */
   rarityByTrait?: Record<string, number | null | undefined>;
 };
 
@@ -116,13 +118,52 @@ function TraitIcon({ label, tone }: { label: string; tone: TraitTone }) {
   return <svg {...common}><path d={`M12 3.4 19 7.2v9.6L12 20.6 5 16.8V7.2L12 3.4Z`}/><path d={`M${notch} 8.1 12 11.6 17 8.1M12 11.6v5.2`}/><circle cx={dotA} cy="15.2" r=".8"/><circle cx={dotB} cy="15.2" r=".8"/></svg>;
 }
 
-export default function LandTraits({ metadata, revealed = false, loading = false, error = null, onRefresh, rarityByTrait = {} }: Props) {
+export default function LandTraits({ tokenId, metadata, revealed = false, loading = false, error = null, onRefresh, rarityByTrait = {} }: Props) {
+  const [liveRarity, setLiveRarity] = useState<Record<string, number | null>>({});
+  const [rarityReady, setRarityReady] = useState(false);
+
+  useEffect(() => {
+    if (!revealed || tokenId == null) {
+      setLiveRarity({});
+      setRarityReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    setRarityReady(false);
+
+    fetch(`/api/lore/rarity?tokenId=${encodeURIComponent(String(tokenId))}`, { cache: "force-cache" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("rarity unavailable");
+        return response.json();
+      })
+      .then((payload) => {
+        if (cancelled || !Array.isArray(payload?.traits)) return;
+        const next: Record<string, number | null> = {};
+        for (const trait of payload.traits) {
+          const label = String(trait?.traitType ?? "").trim();
+          const value = textValue(trait?.value).trim();
+          if (!label || !value) continue;
+          next[`${label}::${value}`] = typeof trait?.percentage === "number" ? trait.percentage : null;
+        }
+        setLiveRarity(next);
+        setRarityReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setRarityReady(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [revealed, tokenId]);
+
+  const rarity = useMemo(() => ({ ...liveRarity, ...rarityByTrait }), [liveRarity, rarityByTrait]);
+
   const traits = extractLoreTraits(metadata)
     .map((trait, index) => ({
       label: (trait.trait_type || `Trait ${index + 1}`).trim(),
       value: textValue(trait.value).trim(),
       tone: traitTone(trait.trait_type || ""),
-      rarity: rarityByTrait[`${(trait.trait_type || `Trait ${index + 1}`).trim()}::${textValue(trait.value).trim()}`],
+      rarity: rarity[`${(trait.trait_type || `Trait ${index + 1}`).trim()}::${textValue(trait.value).trim()}`],
       index,
     }))
     .filter((trait) => trait.value.length > 0);
@@ -149,9 +190,9 @@ export default function LandTraits({ metadata, revealed = false, loading = false
                 <span>{trait.label}</span>
                 <strong title={trait.value}>{trait.value}</strong>
                 <div className="land-trait-meta">
-                  <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`}>
-                    <b>RARITY</b>
-                    <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : "TBD"}</em>
+                  <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`} title={typeof trait.rarity === "number" ? `${trait.rarity.toFixed(2)}% of all 2,869 canonical Lore Deeds share this exact trait value.` : "Collection rarity is being calculated."}>
+                    <b>{typeof trait.rarity === "number" ? "COLLECTION" : "RARITY"}</b>
+                    <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : rarityReady ? "—" : "…"}</em>
                   </span>
                 </div>
               </div>
