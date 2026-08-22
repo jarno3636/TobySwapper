@@ -2,8 +2,13 @@ export type LandBannerTheme = "moss" | "moon" | "lotus" | "ember" | "tide" | "du
 
 export type LandCommunityProfile = {
   tokenId: string;
+  ownerAddress: string | null;
+  transferNonce: string | null;
   communityName: string | null;
   description: string | null;
+  keeperName: string | null;
+  keeperSocial: string | null;
+  keeperLink: string | null;
   bannerTheme: LandBannerTheme;
   updatedAt: string | null;
 };
@@ -16,6 +21,21 @@ export function normalizeLandTheme(value: unknown): LandBannerTheme {
   return THEMES.includes(value as LandBannerTheme) ? (value as LandBannerTheme) : "moss";
 }
 
+function toProfile(row: any, cacheKey: string): LandCommunityProfile {
+  return {
+    tokenId: String(row.token_id ?? row.tokenId ?? cacheKey),
+    ownerAddress: row.owner_address ?? row.ownerAddress ?? null,
+    transferNonce: row.transfer_nonce == null ? null : String(row.transfer_nonce),
+    communityName: row.community_name ?? row.communityName ?? null,
+    description: row.description ?? null,
+    keeperName: row.keeper_name ?? row.keeperName ?? null,
+    keeperSocial: row.keeper_social ?? row.keeperSocial ?? null,
+    keeperLink: row.keeper_link ?? row.keeperLink ?? null,
+    bannerTheme: normalizeLandTheme(row.banner_theme ?? row.bannerTheme),
+    updatedAt: row.updated_at ?? row.updatedAt ?? null,
+  };
+}
+
 export async function readPublicLandProfile(tokenId: bigint): Promise<LandCommunityProfile | null> {
   const cacheKey = tokenId.toString();
   const cached = memory.get(cacheKey);
@@ -23,12 +43,13 @@ export async function readPublicLandProfile(tokenId: bigint): Promise<LandCommun
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const select = "token_id,owner_address,transfer_nonce,community_name,description,keeper_name,keeper_social,keeper_link,banner_theme,updated_at";
 
   try {
     let response: Response;
     if (url && key) {
       response = await fetch(
-        `${url}/rest/v1/tobyswap_land_profiles?token_id=eq.${cacheKey}&select=token_id,community_name,description,banner_theme,updated_at&limit=1`,
+        `${url}/rest/v1/tobyswap_land_profiles?token_id=eq.${cacheKey}&select=${select}&limit=1`,
         { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "force-cache" },
       );
     } else {
@@ -41,13 +62,7 @@ export async function readPublicLandProfile(tokenId: bigint): Promise<LandCommun
       memory.set(cacheKey, { at: Date.now(), profile: null });
       return null;
     }
-    const profile: LandCommunityProfile = {
-      tokenId: String(row.token_id ?? row.tokenId ?? cacheKey),
-      communityName: row.community_name ?? row.communityName ?? null,
-      description: row.description ?? null,
-      bannerTheme: normalizeLandTheme(row.banner_theme ?? row.bannerTheme),
-      updatedAt: row.updated_at ?? row.updatedAt ?? null,
-    };
+    const profile = toProfile(row, cacheKey);
     memory.set(cacheKey, { at: Date.now(), profile });
     return profile;
   } catch {
@@ -61,16 +76,24 @@ export function rememberPublicLandProfile(profile: LandCommunityProfile) {
 
 export function landProfileMessage(input: {
   tokenId: bigint;
+  transferNonce: bigint;
   communityName: string;
   description: string;
+  keeperName: string;
+  keeperSocial: string;
+  keeperLink: string;
   bannerTheme: LandBannerTheme;
   timestamp: number;
 }) {
   return [
-    "TobySwap Land Profile",
+    "TobySwap Keeper Mark",
     `Deed: ${input.tokenId.toString()}`,
-    `Name: ${input.communityName.trim()}`,
-    `Description: ${input.description.trim()}`,
+    `Generation: ${input.transferNonce.toString()}`,
+    `Land name: ${input.communityName.trim()}`,
+    `Keeper story: ${input.description.trim()}`,
+    `Keeper name: ${input.keeperName.trim()}`,
+    `Keeper social: ${input.keeperSocial.trim()}`,
+    `Keeper link: ${input.keeperLink.trim()}`,
     `Banner: ${input.bannerTheme}`,
     `Timestamp: ${input.timestamp}`,
   ].join("\n");

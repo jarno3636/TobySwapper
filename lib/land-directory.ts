@@ -2,6 +2,8 @@ export type WorldLandSummary = {
   tokenId: string;
   communityName: string | null;
   description: string | null;
+  keeperName: string | null;
+  keeperSocial: string | null;
   bannerTheme: "moss" | "moon" | "lotus" | "ember" | "tide" | "dusk" | "bloom" | "gold";
   updatedAt: string | null;
 };
@@ -9,7 +11,7 @@ export type WorldLandSummary = {
 let memory: { at: number; rows: WorldLandSummary[] } | null = null;
 let inflight: Promise<WorldLandSummary[]> | null = null;
 const MEMORY_MS = 20 * 60_000;
-const SESSION_KEY = "tobyswap:world-directory:v2";
+const SESSION_KEY = "tobyswap:world-directory:v3";
 
 function normalizeTheme(value: unknown): WorldLandSummary["bannerTheme"] {
   return value === "moon" ||
@@ -30,6 +32,8 @@ function normalizeRows(input: unknown): WorldLandSummary[] {
       tokenId: String(row?.token_id ?? row?.tokenId ?? ""),
       communityName: typeof (row?.community_name ?? row?.communityName) === "string" ? (row.community_name ?? row.communityName) : null,
       description: typeof row?.description === "string" ? row.description : null,
+      keeperName: typeof (row?.keeper_name ?? row?.keeperName) === "string" ? (row.keeper_name ?? row.keeperName) : null,
+      keeperSocial: typeof (row?.keeper_social ?? row?.keeperSocial) === "string" ? (row.keeper_social ?? row.keeperSocial) : null,
       bannerTheme: normalizeTheme(row?.banner_theme ?? row?.bannerTheme),
       updatedAt: typeof (row?.updated_at ?? row?.updatedAt) === "string" ? (row.updated_at ?? row.updatedAt) : null,
     }))
@@ -61,7 +65,7 @@ async function fetchDirectory(): Promise<WorldLandSummary[]> {
     let response: Response;
     if (url && key) {
       response = await fetch(
-        `${url}/rest/v1/tobyswap_land_profiles?select=token_id,community_name,description,banner_theme,updated_at&order=updated_at.desc&limit=120`,
+        `${url}/rest/v1/tobyswap_land_profiles?select=token_id,community_name,description,keeper_name,keeper_social,banner_theme,updated_at&order=updated_at.desc&limit=120`,
         { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "force-cache" },
       );
     } else {
