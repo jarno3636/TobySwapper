@@ -290,50 +290,19 @@ export default function TaboshiOnePage() {
     legacyLore: legacyLoreBalance > 0n,
   };
 
-  const profileSignals = [
-    { key: "toby", label: "TOBY", note: "Pond affiliation", icon: "/tokens/toby.PNG", found: holdingFlags.toby },
-    { key: "patience", label: "PATIENCE", note: "Ancient flame", icon: "/tokens/patience.PNG", found: holdingFlags.patience },
-    { key: "taboshi", label: "TABOSHI", note: "Awakened leaf", icon: "/tokens/taboshi.PNG", found: holdingFlags.taboshi },
-    { key: "leaf", label: "OLD LEAF", note: "History remembered", icon: leafArtwork || "/tokens/taboshi.PNG", found: holdingFlags.leaf },
-    { key: "seed", label: "SEED", note: "Something planted", icon: "/seed.png", found: holdingFlags.seed },
-    { key: "legacyLore", label: "OLD LAND", note: "Earlier land", icon: null, found: holdingFlags.legacyLore },
-    { key: "lore", label: "LORE LAND", note: "Your place", icon: null, found: holdingFlags.lore },
-  ] as const;
-
-  const foundSignals = profileSignals.filter((item) => item.found).length;
-  const loreCompletion = Math.round((foundSignals / profileSignals.length) * 100);
-
-  const seedStage = seedBalance >= 1_000_000n
-    ? { level: 4, label: "Lush garden", copy: "The pouch carries enough SEED to paint the land in full bloom." }
-    : seedBalance >= 111_110n
-      ? { level: 3, label: "Growing garden", copy: "Vegetation is spreading across your visual garden." }
-      : seedBalance >= 11_111n
-        ? { level: 2, label: "First seedlings", copy: "The first shoots have broken the surface." }
-        : seedBalance > 0n
-          ? { level: 1, label: "A seed stirs", copy: "Something small has taken root." }
-          : { level: 0, label: "Quiet soil", copy: "No SEED is carried by this wallet yet." };
+  const foundSignals = Object.values(holdingFlags).filter(Boolean).length;
 
   const discoveryLine = !isConnected
-    ? "Connect a Base wallet and let Tobyworld introduce itself."
+    ? "Connect a Base wallet to see your land and pouch."
     : holdingFlags.lore
-      ? "A place in the world. Lore Land discovered."
+      ? "Your Lore Deed anchors a place in Tobyworld."
       : holdingFlags.leaf
-        ? "An Old Leaf rests in your pouch."
+        ? "An Old Leaf is remembered in your pouch."
         : holdingFlags.seed
-          ? "Something has taken root. SEED discovered."
+          ? "SEED is present in your pouch."
           : foundSignals > 0
-            ? "The pond recognizes something you carry."
-            : "A new frog enters the pond.";
-
-  const nextPath = !isConnected
-    ? { label: "Connect your wallet", href: "#pouch" }
-    : !holdingFlags.seed
-      ? { label: "Get your first SEED", href: "https://tobyworld.app/faucet/" }
-      : !holdingFlags.toby
-        ? { label: "Enter the Pond", href: "/#swap" }
-        : holdingFlags.lore
-          ? { label: "Visit your land", href: "#land" }
-          : { label: "Explore your world", href: "#land" };
+            ? "The pond recognizes assets you carry."
+            : "This wallet is quiet in Tobyworld for now.";
 
   const selectedAsset = assets.find((asset) => asset.key === selected)!;
   const is1155 = selectedAsset.standard === "ERC-1155";
@@ -604,7 +573,7 @@ export default function TaboshiOnePage() {
           <div className="taboshi1-hero-copy">
             <span className="taboshi1-kicker">YOUR PLACE IN TOBYWORLD</span>
             <h1>My Tobyworld</h1>
-            <p>Your wallet becomes a living Tobyworld profile—what you carry, what you have discovered, where your land waits, and what you can do next.</p>
+            <p>Your land comes first. Your pouch supports it. Explore your places, Keeper Mark, public world and onchain assets without repeating the same inventory everywhere.</p>
             <div className="taboshi1-hero-actions">
               <a href="#pouch" className="metal-button taboshi1-primary">Open my pouch</a>
               <a href="#next-path" className="metal-button">Find my next path ↓</a>
@@ -620,50 +589,42 @@ export default function TaboshiOnePage() {
         </section>
 
         <nav className="mytw-world-nav" aria-label="My Tobyworld sections">
-          <Link prefetch={false} href="/#swap"><span><PondGlyph kind="swap" /></span><b>POND</b><small>Swap & contribute</small></Link>
+          <Link prefetch={false} href="/#swap"><span className="mytw-nav-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="32px" className="object-contain" /></span><b>POND</b><small>Swap utility</small></Link>
           <a href="#pouch"><span><PondGlyph kind="pouch" /></span><b>POUCH</b><small>What you carry</small></a>
           <a href="#land"><span><PondGlyph kind="land" /></span><b>LAND</b><small>Your place</small></a>
           <Link prefetch={false} href="/world"><span><PondGlyph kind="world" /></span><b>WORLD</b><small>Visit & explore</small></Link>
         </nav>
 
-        <section className="mytw-profile-card" aria-label="Your Tobyworld profile">
-          <div className="mytw-profile-head">
+        <section className="mytw-profile-card mytw-place-card" aria-label="Your Tobyworld overview">
+          <div className="mytw-place-head">
+            <span className="mytw-place-sigil"><Image src="/tokens/patience.PNG" alt="" fill sizes="58px" className="object-contain" /></span>
             <div>
-              <span className="taboshi1-kicker">POND PROFILE</span>
-              <h2>{isConnected ? "The pond recognizes this wallet" : "Find your place in Tobyworld"}</h2>
+              <span className="taboshi1-kicker">YOUR TOBYWORLD</span>
+              <h2>{isConnected ? "Your place, without the clutter." : "Find your place in Tobyworld"}</h2>
               <p>{discoveryLine}</p>
             </div>
-            <div className="mytw-completion-orb" aria-label={`${loreCompletion}% lore completion`}>
-              <strong>{isConnected ? `${loreCompletion}%` : "?"}</strong>
-              <span>LORE
-COMPLETION</span>
-            </div>
           </div>
-
-          <div className="mytw-path-chain" aria-label="Tobyworld ecosystem path">
-            {profileSignals.map((item, index) => (
-              <div key={item.key} className={`mytw-path-node ${item.found ? "is-found" : ""}`}>
-                <span className="mytw-path-icon">
-                  {item.key === "lore" ? <LoreDeedArt revealed /> : item.key === "legacyLore" ? <span className="mytw-legacy-land-icon">△</span> : <img src={item.icon!} alt="" />}
-                </span>
-                <b>{item.label}</b>
-                {index < profileSignals.length - 1 && <i aria-hidden="true">→</i>}
-              </div>
-            ))}
+          <div className="mytw-place-metrics">
+            <span><small>LORE LANDS</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span>
+            <span><small>POUCH SIGNALS</small><b>{isConnected ? foundSignals.toLocaleString() : "—"}</b></span>
+            <span><small>WORLD</small><b>2,869</b></span>
           </div>
-
-          <div className="mytw-completion-track" aria-hidden="true"><span style={{ width: `${isConnected ? loreCompletion : 0}%` }} /></div>
-          <div className="mytw-profile-foot"><span>{isConnected ? `${foundSignals} of ${profileSignals.length} ecosystem signals discovered` : "Connect to reveal your profile"}</span><span>A playful community measure · nothing more</span></div>
+          <div className="mytw-place-actions">
+            <Link prefetch={false} href="/world"><strong>Explore World</strong><small>Atlas · signs · wander</small><b>→</b></Link>
+            <Link prefetch={false} href="/keepers"><strong>Meet Keepers</strong><small>Identity · stories · legacy</small><b>→</b></Link>
+            <Link prefetch={false} href="/#swap" className="is-patience"><span><Image src="/tokens/patience.PNG" alt="" fill sizes="34px" className="object-contain" /></span><div><strong>Pond Utility</strong><small>Swap when you need it</small></div><b>→</b></Link>
+          </div>
         </section>
 
-        <section id="next-path" className="mytw-action-grid scroll-mt-24">
+        <section id="next-path" className="mytw-action-grid mytw-action-grid-single scroll-mt-24">
           <article id="land" className="mytw-action-card mytw-land-card scroll-mt-24">
             <div className="mytw-action-head"><span className="mytw-action-icon"><LoreDeedArt revealed /></span><div><small>YOUR LAND</small><h2>{loreBalance > 0n ? `${loreBalance.toLocaleString()} Lore Deed${loreBalance === 1n ? "" : "s"}` : "The land waits"}</h2></div></div>
-            <p>{loreBalance > 0n ? "Your deed anchors a place in Tobyworld. Visit it, name it, and make it feel like yours." : "You do not carry a Lore Deed in this wallet yet. The land waits for a future keeper."}</p>
+            <p>{loreBalance > 0n ? "Your deed anchors a public place in Tobyworld. Visit it, write your Keeper Mark, and see what the deed itself carries." : "You do not carry a Lore Deed in this wallet yet. The World is still open to explore."}</p>
             <div className="mytw-land-stats"><span><small>COLLECTION</small><b>CANONICAL</b></span><span><small>DEEDS HELD</small><b>{isConnected ? loreBalance.toLocaleString() : "—"}</b></span></div>
             <MyLoreDeeds owner={address} expectedCount={loreBalance} revealed={loreRevealed} />
             <div className="mytw-land-quicklinks">
               <Link prefetch={false} href="/world">Explore World</Link>
+              <Link prefetch={false} href="/keepers">Meet Keepers</Link>
               <Link prefetch={false} href="/world/exchange">Tobyworld Market <small>live</small></Link>
               <a href="#wallet-viewer" className="mytw-manual-wallet-link">View a wallet manually <small>no connect</small></a>
             </div>
@@ -674,50 +635,12 @@ COMPLETION</span>
             <button type="button" className="mytw-secondary-land-action" disabled={loreBalance === 0n} onClick={() => { setSelected("lore"); document.getElementById("transfer")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
               {loreBalance > 0n ? "Move one of my deeds" : "No deed in this wallet yet"}
             </button>
-            <div className="mytw-production-slot"><span>BEYOND THE VEIL</span><b>AWAITING THE POND</b><small>Something about the land has not been revealed yet.</small></div>
           </article>
-
-          <article className={`mytw-action-card mytw-seed-garden seed-stage-${seedStage.level}`}>
-            <div className="mytw-action-head"><span className="mytw-action-icon mytw-seed-icon"><Image src="/seed.png" alt="" fill sizes="58px" className="object-cover" /></span><div><small>YOUR SEEDS</small><h2>{isConnected ? `${seedBalance.toLocaleString()} SEED` : "A garden waits"}</h2></div></div>
-            <div className="mytw-garden" aria-label={`Visual seed stage: ${seedStage.label}`}>
-              <span className="mytw-soil" />
-              <i className="sprout s1" /><i className="sprout s2" /><i className="sprout s3" /><i className="sprout s4" /><i className="sprout s5" />
-              <div className="mytw-garden-glow" />
-            </div>
-            <strong className="mytw-stage-label">{seedStage.label}</strong>
-            <p>{seedStage.copy}</p>
-            <div className="mytw-seed-actions">
-              <LinkMaybeMini href="https://tobyworld.app/faucet/" className="mytw-inline-action is-primary">Get SEED →</LinkMaybeMini>
-              <span>Your garden reflects the SEED you carry</span>
-            </div>
-            <div className="mytw-mystery-line"><span>?</span><p><b>What will grow here?</b><br/>The pond has not revealed everything yet.</p></div>
-          </article>
-
         </section>
 
-        <section className="mytw-section-heading"><span className="taboshi1-kicker">RELICS &amp; LAND</span><h2>The things that make up your world</h2><p>Seeds, old leaves, and land gathered into one place.</p></section>
-
-        <section id="relics" className="seedleaf-relic-triad scroll-mt-24">
-          <article className="taboshi1-card seedleaf-relic-card seedleaf-seed-card lore-relic-panel">
-            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">THE NEW SEED</span><h2>{seedMetadata?.name || "Taboshi Seeds"}</h2></div><span className="lore-soft-chip">AWAKE</span></div>
-            <div className="taboshi1-showcase seedleaf-seed-showcase"><div className="taboshi1-token-art seedleaf-seed-art"><SeedArt name={seedMetadata?.name} /></div><div className="taboshi1-balance seedleaf-seed-balance"><small>IN YOUR POUCH</small><strong>{isConnected ? (seedBalanceRead.isLoading ? "…" : seedBalance.toLocaleString()) : "—"}</strong><span>SEED · the faucet's draw</span></div></div>
-            <div className="lore-whisper"><span>✦</span><p>New seeds wake when the faucet runs. Supply grows only through the bound Faucet.</p></div>
-            <div className="lore-mini-stats"><span><small>DRAWN</small><b>{seedSupply === null ? "—" : seedSupply.toLocaleString()}</b></span><span><small>FORM</small><b>WHOLE SEED</b></span></div>
-
-          </article>
-
-          <article className="taboshi1-card seedleaf-relic-card lore-relic-panel">
-            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">THE OLD LEAF</span><h2>{leafMetadata?.name || "twpot #1"}</h2></div><span className="lore-soft-chip green">RETURNED</span></div>
-            <div className="taboshi1-showcase"><div className="taboshi1-token-art">{leafArtwork ? <img src={leafArtwork} alt={leafMetadata?.name || "twpot #1"} className="taboshi1-real-art" /> : <Image src="/tokens/taboshi.PNG" alt="Taboshi 1" fill sizes="220px" className="object-contain p-7" />}</div><div className="taboshi1-balance"><small>IN YOUR POUCH</small><strong>{isConnected ? leafBalance.toLocaleString() : "—"}</strong><span>Taboshi 1 · early leaf</span></div></div>
-            <div className="lore-whisper green"><span>◌</span><p>Before the seed, there was the leaf. An early relic carried forward from the first pond.</p></div>
-          </article>
-
-          <article className="taboshi1-card seedleaf-relic-card lore-deed-card lore-relic-panel canonical-land-card">
-            <div className="taboshi1-card-head"><div><span className="taboshi1-kicker">CANONICAL LAND</span><h2>Lore Land Deeds</h2></div><span className="lore-soft-chip purple is-live">CANONICAL</span></div>
-            <div className="taboshi1-showcase lore-deed-showcase"><div className="taboshi1-token-art lore-deed-token"><LoreDeedArt revealed /></div><div className="taboshi1-balance lore-deed-balance"><small>DEEDS HELD</small><strong>{isConnected ? loreBalance.toLocaleString() : "—"}</strong><span>Canonical Lore Land · token IDs stay with the land</span></div></div>
-            <div className="lore-whisper purple"><span>△</span><p>Your canonical deed is the key to its persistent Tobyworld land number.</p></div>
-            <div className="lore-mini-stats"><span><small>TYPE</small><b>ERC-721</b></span><span><small>NETWORK</small><b>BASE</b></span></div>
-          </article>
+        <section className="mytw-pouch-bridge">
+          <div><span className="taboshi1-kicker">ONE POUCH · ONE INVENTORY</span><h2>Your assets appear once, where they are useful.</h2><p>The duplicate Seed, Leaf and token showcases have been removed. Your live balances now live in the Pouch below, where you can select and transfer them.</p></div>
+          <a href="#pouch">Open my pouch ↓</a>
         </section>
 
         <section id="wallet-viewer" className="watch-pouch-card scroll-mt-24">
