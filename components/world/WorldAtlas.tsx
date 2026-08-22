@@ -1,51 +1,128 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAddress } from "viem";
-import { readWorldLandDirectory, type WorldLandSummary } from "@/lib/land-directory";
 
-type WalletDeed = {
+type AtlasTrait = { traitType: string; value: string };
+type AtlasLand = {
   tokenId: string;
-  communityName?: string | null;
+  canonicalName: string | null;
+  imageUrl: string | null;
+  traits: AtlasTrait[];
+  communityName: string | null;
+  keeperStory: string | null;
+  keeperName: string | null;
+  keeperSocial: string | null;
+  bannerTheme: string;
 };
+type DiscoveryValue = { value: string; count: number; percentage: number };
+type DiscoveryGroup = { traitType: string; count: number; values: DiscoveryValue[] };
+type WalletDeed = { tokenId: string; communityName?: string | null };
+
+const PER_PAGE = 36;
+
+function traitValue(land: AtlasLand, label: string) {
+  return land.traits.find((trait) => trait.traitType.toLowerCase() === label.toLowerCase())?.value || null;
+}
+
+function compactSigns(land: AtlasLand) {
+  const priority = ["Land", "Core", "Keeper", "Relic", "Background"];
+  const chosen: AtlasTrait[] = [];
+  for (const label of priority) {
+    const match = land.traits.find((trait) => trait.traitType.toLowerCase() === label.toLowerCase());
+    if (match) chosen.push(match);
+  }
+  for (const trait of land.traits) {
+    if (chosen.length >= 4) break;
+    if (!chosen.some((item) => item.traitType === trait.traitType && item.value === trait.value)) chosen.push(trait);
+  }
+  return chosen.slice(0, 4);
+}
+
+function randomLoreId() {
+  const roll = Math.floor(Math.random() * 2869);
+  if (roll < 1369) return roll + 1;
+  if (roll < 2369) return 2501 + (roll - 1369);
+  return 3501 + (roll - 2369);
+}
 
 export default function WorldAtlas() {
   const router = useRouter();
-  const [lands, setLands] = useState<WorldLandSummary[]>([]);
+  const [lands, setLands] = useState<AtlasLand[]>([]);
+  const [groups, setGroups] = useState<DiscoveryGroup[]>([]);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [jumpValue, setJumpValue] = useState("");
+  const [traitType, setTraitType] = useState("");
+  const [traitValueFilter, setTraitValueFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(2869);
   const [loading, setLoading] = useState(true);
   const [jumpLoading, setJumpLoading] = useState(false);
   const [jumpMessage, setJumpMessage] = useState("");
   const [walletDeeds, setWalletDeeds] = useState<WalletDeed[]>([]);
 
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("q") || "");
+    setTraitType(params.get("trait") || "");
+    setTraitValueFilter(params.get("value") || "");
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   useEffect(() => {
     let cancelled = false;
-    readWorldLandDirectory()
-      .then((rows) => { if (!cancelled) setLands(rows); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    fetch("/api/lore/discovery", { cache: "force-cache" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((payload) => { if (!cancelled && Array.isArray(payload?.groups)) setGroups(payload.groups); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return lands;
-    return lands.filter(
-      (land) =>
-        land.tokenId.includes(q) ||
-        land.communityName?.toLowerCase().includes(q) ||
-        land.description?.toLowerCase().includes(q) ||
-        land.keeperName?.toLowerCase().includes(q) ||
-        land.keeperSocial?.toLowerCase().includes(q),
-    );
-  }, [lands, query]);
+  const loadAtlas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(PER_PAGE) });
+      if (debouncedQuery) params.set("q", debouncedQuery);
+      if (traitType && traitValueFilter) {
+        params.set("traitType", traitType);
+        params.set("traitValue", traitValueFilter);
+      }
+      const response = await fetch(`/api/lore/atlas?${params.toString()}`, { cache: "force-cache" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error("Atlas unavailable");
+      setLands(Array.isArray(payload?.lands) ? payload.lands : []);
+      setTotal(Number(payload?.total || 0));
+      setPageCount(Math.max(1, Number(payload?.pageCount || 1)));
+    } catch {
+      setLands([]);
+      setTotal(0);
+      setPageCount(1);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, debouncedQuery, traitType, traitValueFilter]);
+
+  useEffect(() => { void loadAtlas(); }, [loadAtlas]);
+  useEffect(() => { setPage(1); }, [debouncedQuery, traitType, traitValueFilter]);
 
   const cleanJump = jumpValue.trim();
   const numericJump = /^#?\d+$/.test(cleanJump) ? cleanJump.replace(/^#/, "") : "";
   const walletJump = isAddress(cleanJump);
   const canJump = Boolean(numericJump || walletJump);
+  const activeDiscovery = useMemo(
+    () => groups.find((group) => group.traitType === traitType)?.values.find((value) => value.value === traitValueFilter) || null,
+    [groups, traitType, traitValueFilter],
+  );
 
   async function openJump() {
     if (!canJump || jumpLoading) return;
@@ -62,17 +139,9 @@ export default function WorldAtlas() {
       const response = await fetch(`/api/land/owned?owner=${encodeURIComponent(cleanJump)}`, { cache: "no-store" });
       const payload = await response.json().catch(() => null);
       const deeds = Array.isArray(payload?.deeds) ? payload.deeds as WalletDeed[] : [];
-
       if (!response.ok) throw new Error("That wallet could not be searched.");
-      if (deeds.length === 0) {
-        setJumpMessage("No canonical Lore Deeds were found in that wallet.");
-        return;
-      }
-      if (deeds.length === 1) {
-        router.push(`/land/${deeds[0].tokenId}`);
-        return;
-      }
-
+      if (deeds.length === 0) return setJumpMessage("No canonical Lore Deeds were found in that wallet.");
+      if (deeds.length === 1) return router.push(`/land/${deeds[0].tokenId}`);
       setWalletDeeds(deeds);
       setJumpMessage(`${deeds.length} Lore Deeds found — choose a land.`);
     } catch (error: any) {
@@ -82,77 +151,68 @@ export default function WorldAtlas() {
     }
   }
 
+  function chooseTrait(nextType: string, nextValue: string) {
+    if (traitType === nextType && traitValueFilter === nextValue) {
+      setTraitType("");
+      setTraitValueFilter("");
+      return;
+    }
+    setTraitType(nextType);
+    setTraitValueFilter(nextValue);
+    document.getElementById("atlas-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <>
-      <section className="world-search-panel">
-        <div className="world-search-copy">
-          <span>ENTER TOBYWORLD</span>
-          <h2>Find a land. Follow a keeper. Wander.</h2>
-          <p>Open a Lore Land by deed number or paste a Base wallet to find the lands it keeps. Use Atlas Search to filter named community places.</p>
+      <section className="world-entry-panel">
+        <div className="world-entry-copy">
+          <span className="land-section-kicker">ENTER TOBYWORLD</span>
+          <h2>2,869 lands. One world to wander.</h2>
+          <p>Every canonical Lore Land is now in the Atlas. Visit a deed, find the lands held by a wallet, or let the pond choose your next destination.</p>
         </div>
-
-        <div className="world-search-controls">
+        <div className="world-entry-actions">
+          <button type="button" className="world-wander-button" onClick={() => router.push(`/land/${randomLoreId()}`)}><span aria-hidden="true">◌</span><b>Wander</b><small>Visit a random canonical land</small><i>→</i></button>
           <div className={`world-deed-jump ${walletJump ? "is-wallet" : numericJump ? "is-deed" : ""}`}>
             <div className="world-jump-mark" aria-hidden="true">{walletJump ? "◈" : "△"}</div>
-            <label>
-              <span>OPEN A LORE LAND</span>
-              <input value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpMessage(""); setWalletDeeds([]); }} onKeyDown={(event) => { if (event.key === "Enter") void openJump(); }} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Deed #30 or 0x wallet" aria-label="Lore Deed number or wallet address" />
-              <small>{walletJump ? "Base wallet detected · find its Lore Deeds" : numericJump ? `Ready to visit Lore Land #${numericJump}` : "Deed number or Base wallet address"}</small>
-            </label>
-            <button type="button" onClick={() => void openJump()} disabled={!canJump || jumpLoading}>{jumpLoading ? "Following trail…" : walletJump ? "Find lands →" : "Visit land →"}</button>
+            <label><span>OPEN A LORE LAND</span><input value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpMessage(""); setWalletDeeds([]); }} onKeyDown={(event) => { if (event.key === "Enter") void openJump(); }} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Deed #30 or 0x wallet" /><small>{walletJump ? "Base wallet detected" : numericJump ? `Ready for Lore Land #${numericJump}` : "Deed number or Base wallet"}</small></label>
+            <button type="button" onClick={() => void openJump()} disabled={!canJump || jumpLoading}>{jumpLoading ? "Following…" : walletJump ? "Find lands →" : "Visit →"}</button>
           </div>
-
-          <div className="world-search-divider"><span>OR</span></div>
-
-          <label className="world-search-field">
-            <span>SEARCH NAMED COMMUNITY LANDS</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search land name or keeper story…" />
-          </label>
-
-          {(jumpMessage || walletDeeds.length > 0) ? (
-            <div className={`world-wallet-results ${walletDeeds.length ? "has-deeds" : ""}`} role="status">
-              {jumpMessage ? <p>{jumpMessage}</p> : null}
-              {walletDeeds.length ? <div>{walletDeeds.map((deed) => <Link prefetch={false} href={`/land/${deed.tokenId}`} key={deed.tokenId}><span>LORE DEED #{deed.tokenId}</span><strong>{deed.communityName || `Lore Land #${deed.tokenId}`}</strong><b>Visit ↗</b></Link>)}</div> : null}
-            </div>
-          ) : null}
+          {(jumpMessage || walletDeeds.length > 0) ? <div className="world-wallet-results" role="status">{jumpMessage ? <p>{jumpMessage}</p> : null}{walletDeeds.length ? <div>{walletDeeds.map((deed) => <Link prefetch={false} href={`/land/${deed.tokenId}`} key={deed.tokenId}><span>LORE DEED #{deed.tokenId}</span><strong>{deed.communityName || `Lore Land #${deed.tokenId}`}</strong><b>Visit ↗</b></Link>)}</div> : null}</div> : null}
         </div>
       </section>
 
-      <section className="world-atlas-section">
+      <section className="trait-atlas-panel" aria-labelledby="trait-atlas-title">
+        <div className="trait-atlas-head"><div><span className="land-section-kicker">CANONICAL DISCOVERY</span><h2 id="trait-atlas-title">Study what appeared</h2><p>Explore the world by exact canonical signs. Counts use all 2,869 revealed Lore Lands.</p></div>{traitType && traitValueFilter ? <button type="button" onClick={() => { setTraitType(""); setTraitValueFilter(""); }}>Clear sign ×</button> : null}</div>
+        <div className="trait-atlas-groups">
+          {groups.map((group) => (
+            <details className="trait-atlas-group" key={group.traitType} open={group.traitType === traitType}>
+              <summary><span>{group.traitType}</span><b>{group.values.length} signs</b><i>⌄</i></summary>
+              <div className="trait-atlas-values">
+                {group.values.map((item) => <button type="button" key={`${group.traitType}:${item.value}`} className={traitType === group.traitType && traitValueFilter === item.value ? "is-active" : ""} onClick={() => chooseTrait(group.traitType, item.value)}><strong>{item.value}</strong><span>{item.count.toLocaleString()} lands</span><em>{item.percentage.toFixed(item.percentage < 1 ? 2 : 1)}%</em></button>)}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="world-atlas-section" id="atlas-results">
         <div className="world-atlas-head">
-          <div>
-            <span>COMMUNITY LANDS</span>
-            <h2>{loading ? "Opening the atlas…" : `${filtered.length} place${filtered.length === 1 ? "" : "s"} to explore`}</h2>
-          </div>
-          <div className="world-atlas-head-actions">
-            <Link prefetch={false} href="/taboshi1#land">My Land</Link>
-            <Link prefetch={false} href="/world/exchange" className="is-exchange">Market</Link>
-          </div>
+          <div><span>THE WORLD ATLAS</span><h2>{loading ? "Opening the atlas…" : activeDiscovery ? `${activeDiscovery.value} · ${total.toLocaleString()} lands` : `${total.toLocaleString()} lands to explore`}</h2><p>{activeDiscovery ? `${activeDiscovery.percentage.toFixed(activeDiscovery.percentage < 1 ? 2 : 1)}% of the canonical collection carries this sign.` : "Canonical lands appear here whether or not a keeper has written a community profile."}</p></div>
+          <div className="world-atlas-head-actions"><Link prefetch={false} href="/taboshi1#land">My Land</Link><Link prefetch={false} href="/world/exchange" className="is-exchange">Market</Link></div>
         </div>
 
-        {!loading && filtered.length === 0 ? (
-          <div className="world-empty">
-            <span>△</span>
-            <h3>{lands.length === 0 ? "The atlas is waiting for its first names." : "No land matched that trail."}</h3>
-            <p>{lands.length === 0 ? "Landowners can name their place from their public land page." : "Try a deed number, wallet, or land name."}</p>
-          </div>
-        ) : (
-          <div className="world-land-grid">
-            {filtered.map((land) => (
-              <Link prefetch={false} key={land.tokenId} href={`/land/${land.tokenId}`} className={`world-land-card theme-${land.bannerTheme}`}>
-                <div className="world-land-scene" aria-hidden="true">
-                  <span className="world-land-sky" /><span className="world-land-moon" /><span className="world-land-hill h1" /><span className="world-land-hill h2" /><span className="world-land-water" /><span className="world-land-rune">△</span>
-                </div>
-                <div className="world-land-copy">
-                  <span className="world-land-id">LORE LAND #{land.tokenId}</span>
-                  <h3>{land.communityName || `Land #${land.tokenId}`}</h3>
-                  <p>{land.description || (land.keeperName ? `Kept by ${land.keeperName}.` : "A place in Tobyworld waiting for its keeper-written story.")}</p>
-                  <div><small>LORE DEED #{land.tokenId}</small><b>Visit Land →</b></div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <div className="world-atlas-toolbar"><label><span>SEARCH THE WORLD</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Land, keeper, trait, #30…" /></label>{traitType && traitValueFilter ? <div className="world-active-filter"><span>{traitType}</span><b>{traitValueFilter}</b><button type="button" onClick={() => { setTraitType(""); setTraitValueFilter(""); }}>×</button></div> : null}</div>
+
+        {!loading && lands.length === 0 ? <div className="world-empty"><span>△</span><h3>No land matched that trail.</h3><p>Clear a sign or try another land name, keeper, trait, or deed number.</p></div> : <div className={`world-land-grid ${loading ? "is-loading" : ""}`}>{lands.map((land) => {
+          const signs = compactSigns(land);
+          const landSign = traitValue(land, "Land");
+          return <Link prefetch={false} key={land.tokenId} href={`/land/${land.tokenId}`} className="world-land-card world-land-card-canonical">
+            <div className="world-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <div className={`world-land-scene theme-${land.bannerTheme}`} aria-hidden="true"><span className="world-land-moon" /><span className="world-land-hill h1" /><span className="world-land-hill h2" /><span className="world-land-water" /></div>}<span className="world-land-number">#{land.tokenId}</span><span className="world-land-canonical">CANONICAL</span></div>
+            <div className="world-land-copy"><span className="world-land-id">{landSign ? `${landSign} · LORE LAND #${land.tokenId}` : `LORE LAND #${land.tokenId}`}</span><h3>{land.communityName || `Lore Land #${land.tokenId}`}</h3>{land.keeperStory ? <p className="has-story">“{land.keeperStory}”</p> : <p>{land.keeperName ? `Kept by ${land.keeperName}.` : "No keeper-written story yet."}</p>}<div className="world-land-signs">{signs.map((sign) => <span key={`${sign.traitType}:${sign.value}`}><small>{sign.traitType}</small>{sign.value}</span>)}</div><footer><small>{land.keeperName ? `KEEPER · ${land.keeperName}` : "KEEPER MARK OPEN"}</small><b>Visit Land →</b></footer></div>
+          </Link>;
+        })}</div>}
+
+        {pageCount > 1 ? <nav className="world-pagination" aria-label="Atlas pages"><button type="button" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>← Previous</button><span>Page <b>{page}</b> of {pageCount}</span><button type="button" disabled={page >= pageCount || loading} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next →</button></nav> : null}
       </section>
     </>
   );

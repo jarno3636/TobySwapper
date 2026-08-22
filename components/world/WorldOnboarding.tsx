@@ -44,12 +44,12 @@ export default function WorldOnboarding() {
         <div>
           <span className="land-section-kicker">FIND YOUR PLACE</span>
           <h2>{!isConnected ? "A new frog enters the world." : ownsLand ? `Your ${landCount === 1n ? "land is" : "lands are"} waiting.` : "Every frog starts somewhere."}</h2>
-          <p>{!isConnected ? "Explore first. Connect when you are ready to see what your wallet carries." : ownsLand ? `You carry ${landCount.toLocaleString()} Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to see each deed number and visit your places.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Wander the atlas, tend your visual garden, or enter the pond.` : "Wander community lands, take a sip from the Faucet, or enter the pond. There is no required path."}</p>
+          <p>{!isConnected ? "Explore first. Connect when you are ready to see what your wallet carries." : ownsLand ? `You carry ${landCount.toLocaleString()} Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to see each deed number and visit your places.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Wander the Atlas, study the canonical signs, or enter the pond.` : "Wander community lands, take a sip from the Faucet, or enter the pond. There is no required path."}</p>
         </div>
       </div>
 
       <div className="world-onboarding-paths">
-        <a href="#atlas" className="world-path-card is-explore"><span>◌</span><strong>Explore Land</strong><small>Wander the community atlas</small><b>↓</b></a>
+        <a href="#atlas" className="world-path-card is-explore"><span>◌</span><strong>Explore the World</strong><small>Wander all 2,869 canonical lands</small><b>↓</b></a>
         {!ownsLand && <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer" className="world-path-card is-seed"><span className="world-path-seed"><Image src="/ui/seed.webp" alt="" fill sizes="44px" className="object-cover" /></span><strong>{seedCount > 0n ? "Visit the Faucet" : "Get SEED"}</strong><small>{seedCount > 0n ? "The faucet may not flow forever" : "A beginning for new frogs"}</small><b>↗</b></a>}
         {!ownsLand && <Link prefetch={false} href="/#swap" className="world-path-card is-pond"><span>⇄</span><strong>Enter the Pond</strong><small>TOBY · PATIENCE · TABOSHI</small><b>→</b></Link>}
         {ownsLand && <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Land</strong><small>See deed IDs and visit your places</small><b>→</b></Link>}
