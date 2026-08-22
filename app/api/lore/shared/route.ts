@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const index = await getLoreAtlasIndex();
-    const related = sharedSigns(index, tokenId, 6).map(({ land, shared }) => ({
+    const related = sharedSigns(index, tokenId, 6).map(({ land, shared, echoScore }) => ({
       ...land,
       shared,
       sharedCount: shared.length,
+      echoScore: Number(echoScore.toFixed(2)),
     }));
     return NextResponse.json(
       { tokenId, related },
