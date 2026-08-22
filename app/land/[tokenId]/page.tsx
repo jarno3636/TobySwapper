@@ -17,6 +17,7 @@ import LandShareActions from "@/components/land/LandShareActions";
 import LandExchangePreview from "@/components/world/LandExchangePreview";
 import LandCommunityProfile from "@/components/land/LandCommunityProfile";
 import LandKeeperStory from "@/components/land/LandKeeperStory";
+import SharedSigns from "@/components/world/SharedSigns";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { fetchLoreMetadataResult, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
 import { clearCachedLoreMetadata, readCachedLoreMetadata, type CachedLoreMetadata } from "@/lib/lore-cache";
@@ -319,6 +320,8 @@ export default function LandPage() {
               <div><span className="land-section-kicker">CARRY THE STORY</span><h2>Share this place</h2><p>Send another visitor here, or carry this land beyond the edge of the map.</p></div>
               <LandShareActions tokenId={tokenId!} />
             </section>
+
+            <SharedSigns tokenId={tokenId!} />
 
             <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} travels={transferNonce} genesisSealed={genesisRead.data === true} />
 
