@@ -143,12 +143,12 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
 
     try {
       setBusy("create");
-      setMessage("Checking your Land Vault…");
+      setMessage("Checking the deed pouch…");
 
       // A previous attempt may actually have completed even if the embedded
       // wallet UI never returned control to the page.
       if (await checkVaultDeployment()) {
-        setMessage("Land Vault is already ready.");
+        setMessage("Deed pouch is already ready.");
         return;
       }
 
@@ -178,7 +178,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
         "Vault preflight timed out.",
       );
 
-      setMessage("Confirm Create Land Vault in your wallet.");
+      setMessage("Confirm Open Deed Pouch in your wallet.");
 
       // Submit a clean connector-native request. Most important change:
       // this cannot hold the UI in "Creating…" forever.
@@ -215,7 +215,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       const ready = await checkVaultDeployment();
 
       if (ready) {
-        setMessage("Land Vault ready ✓");
+        setMessage("Deed pouch ready ✓");
         await vaultReads.refetch();
       } else {
         setMessage(
@@ -227,7 +227,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       // though the user successfully confirmed the transaction.
       const ready = await checkVaultDeployment();
       if (ready) {
-        setMessage("Land Vault ready ✓");
+        setMessage("Deed pouch ready ✓");
         return;
       }
 
@@ -246,7 +246,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       } else if (/reject|denied|cancel|user rejected/i.test(text)) {
         setMessage("Vault creation was cancelled in your wallet.");
       } else if (/already|deployed|create2/i.test(text)) {
-        setMessage("This Land Vault may already exist. Tap Check Vault.");
+        setMessage("This deed pouch may already exist. Tap Check Vault.");
       } else if (/nonexistent|not minted|invalid token/i.test(text)) {
         setMessage("The canonical contract does not recognize this Lore Deed as minted.");
       } else {
@@ -264,12 +264,12 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
   async function manuallyCheckVault() {
     if (busy) return;
     setBusy("check");
-    setMessage("Checking the vault on Base…");
+    setMessage("Checking the deed pouch on Base…");
     const ready = await checkVaultDeployment();
     setMessage(
       ready
-        ? "Land Vault ready ✓"
-        : "The vault is not deployed yet. You can safely try Create Land Vault again.",
+        ? "Deed pouch ready ✓"
+        : "The vault is not deployed yet. You can safely try Open Deed Pouch again.",
     );
     setBusy("");
   }
@@ -343,7 +343,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
         functionName: "supportsInterface",
         args: [ERC6551_EXECUTABLE_INTERFACE],
       }).catch(() => false);
-      if (!supported) throw new Error("This Land Vault does not expose the standard ERC-6551 execution interface.");
+      if (!supported) throw new Error("This deed pouch does not expose the standard ERC-6551 execution interface.");
 
       const recipient = getAddress(withdrawRecipient);
       let data: `0x${string}`;
@@ -352,13 +352,13 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       if (asset.kind === "erc20") {
         const value = parseUnits(withdrawAmount || "0", asset.decimals);
         if (value <= 0n) throw new Error("Enter an amount greater than zero.");
-        if (value > current) throw new Error(`Only ${formatUnits(current, asset.decimals)} ${asset.id} is in this Land Vault.`);
+        if (value > current) throw new Error(`Only ${formatUnits(current, asset.decimals)} ${asset.id} is in this deed pouch.`);
         data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [recipient, value] });
         movementLabel = `${withdrawAmount} ${selected}`;
       } else if (asset.kind === "erc1155") {
         const value = BigInt(withdrawAmount || "0");
         if (value <= 0n) throw new Error("Enter an amount greater than zero.");
-        if (value > current) throw new Error(`Only ${current.toString()} ${asset.id} is in this Land Vault.`);
+        if (value > current) throw new Error(`Only ${current.toString()} ${asset.id} is in this deed pouch.`);
         data = encodeFunctionData({
           abi: selected === "SEED" ? TABOSHI_SEEDS_ABI : TABOSHI1_ABI,
           functionName: "safeTransferFrom",
@@ -375,7 +375,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
           args: [oldLandTokenId],
         });
         if (getAddress(currentOwner as Address) !== getAddress(vault)) {
-          throw new Error(`Old Lore Land #${assetTokenId} is not inside this Land Vault.`);
+          throw new Error(`Old Lore Land #${assetTokenId} is not inside this deed pouch.`);
         }
         data = encodeFunctionData({
           abi: LEGACY_LORE_DEED_ABI,
@@ -423,12 +423,9 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
     <section className="land-vault-card">
       <div className="land-vault-head">
         <div>
-          <span className="land-section-kicker">LAND VAULT</span>
-          <h2>Your deed&apos;s onchain wallet</h2>
-          <p>
-            Every canonical Lore Deed has a deterministic ERC-6551 account. Once deployed,
-            the current deed owner can use that account to manage assets held with the land.
-          </p>
+          <span className="land-section-kicker">THE DEED&apos;S POUCH · ONCHAIN</span>
+          <h2>What this land carries</h2>
+          <p>These are the actual assets held by this Lore Deed&apos;s ERC-6551 account. They travel with the deed when ownership changes.</p>
         </div>
         <span className={`land-vault-state ${deployed ? "awake" : "sleeping"}`}>
           {deployed ? "READY" : deployed === false ? "NOT DEPLOYED" : "CHECKING"}
@@ -436,7 +433,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       </div>
 
       <div className="land-vault-address">
-        <span>VAULT ADDRESS</span>
+        <span>POUCH ADDRESS</span>
         <code>{vault ? `${vault.slice(0, 8)}…${vault.slice(-6)}` : "Resolving…"}</code>
         {vault ? <button onClick={() => navigator.clipboard.writeText(vault)}>Copy</button> : null}
       </div>
@@ -460,7 +457,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
             <>
               <div className="land-vault-travel-warning" role="note">
                 <span aria-hidden="true">!</span>
-                <p><strong>Before transferring this Lore Deed:</strong> anything left in its Land Vault goes with the NFT. Use Unpack Land below to move out anything you want to keep.</p>
+                <p><strong>This pouch travels with the deed:</strong> anything left here goes with the Lore Deed when it transfers. Move out anything you want to keep first.</p>
               </div>
               <div className="land-vault-actions">
               <div className="land-vault-send">
@@ -494,7 +491,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
               <div className="land-vault-withdraw">
                 <div>
                   <span className="land-section-kicker">UNPACK LAND</span>
-                  <strong>Move an asset out of this deed</strong>
+                  <strong>Take something out of this land</strong>
                   <p>Choose an asset, set the destination, and move it back out before transferring the deed. Each unpack is a single vault transaction.</p>
                 </div>
                 <label>
@@ -515,7 +512,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                       />
                       <button type="button" onClick={useMaxWithdraw} disabled={selectedVaultBalance === 0n}>MAX</button>
                     </div>
-                    <small>{selectedVaultBalanceLabel} {selected} available in this Land Vault</small>
+                    <small>{selectedVaultBalanceLabel} {selected} available in this deed pouch</small>
                   </label>
                 ) : (
                   <label className="land-vault-withdraw-token-id">
@@ -554,7 +551,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
       ) : (
         <div className="land-vault-create-panel">
           <div>
-            <strong>Create the Land Vault</strong>
+            <strong>Open the deed's pouch</strong>
             <p>
               This deploys the deed&apos;s already-determined token-bound account. It does not
               change the deed, mint anything, or move any assets.
@@ -567,7 +564,7 @@ export default function LandVault({ tokenId, owner }: { tokenId: bigint; owner?:
                 onClick={createVault}
                 disabled={Boolean(busy) || !vault}
               >
-                {busy === "create" ? "Waiting for wallet…" : "Create Land Vault"}
+                {busy === "create" ? "Waiting for wallet…" : "Open Deed Pouch"}
               </button>
               <button
                 type="button"

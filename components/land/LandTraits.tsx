@@ -174,9 +174,9 @@ export default function LandTraits({ tokenId, metadata, revealed = false, loadin
     <section className={`land-traits land-reveal-traits ${traits.length ? "has-traits" : "is-waiting"}`} aria-labelledby="land-traits-title">
       <div className="land-traits-head">
         <div>
-          <span className="land-section-kicker">LAND SIGNATURE · {revealed ? "REVEALED" : "METADATA"}</span>
-          <h2 id="land-traits-title">What makes this place unique</h2>
-          <p>{traits.length ? "Traits read directly from the revealed canonical metadata." : "The deed is revealed. TobySwap is reading its canonical trait signature."}</p>
+          <span className="land-section-kicker">CANONICAL SIGNS · {revealed ? "REVEALED" : "METADATA"}</span>
+          <h2 id="land-traits-title">What appeared here</h2>
+          <p>{traits.length ? "Five canonical signs read directly from the revealed deed metadata. Collection share is based on all 2,869 lands." : "The deed is revealed. TobySwap is reading its canonical trait signature."}</p>
         </div>
         <span className="land-traits-count"><i aria-hidden="true" />{traits.length ? `${traits.length} ${traits.length === 1 ? "trait" : "traits"}` : loading ? "reading" : "waiting"}</span>
       </div>
@@ -191,7 +191,7 @@ export default function LandTraits({ tokenId, metadata, revealed = false, loadin
                 <strong title={trait.value}>{trait.value}</strong>
                 <div className="land-trait-meta">
                   <span className={`land-trait-rarity ${typeof trait.rarity === "number" ? "is-known" : "is-pending"}`} title={typeof trait.rarity === "number" ? `${trait.rarity.toFixed(2)}% of all 2,869 canonical Lore Deeds share this exact trait value.` : "Collection rarity is being calculated."}>
-                    <b>{typeof trait.rarity === "number" ? "COLLECTION" : "RARITY"}</b>
+                    <b>{typeof trait.rarity === "number" ? `${Math.round((trait.rarity / 100) * 2869).toLocaleString()} LANDS` : "COLLECTION SHARE"}</b>
                     <em>{typeof trait.rarity === "number" ? `${trait.rarity.toFixed(trait.rarity < 1 ? 2 : 1)}%` : rarityReady ? "—" : "…"}</em>
                   </span>
                 </div>
