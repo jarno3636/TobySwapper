@@ -212,6 +212,7 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
                 </div>
                 <div className="mytw-deed-tile-actions">
                   <Link prefetch={false} href={`/land/${deed.tokenId}`}>Visit</Link>
+                  {!readOnly ? <Link prefetch={false} href={`/land/${deed.tokenId}#keeper-mark`}>Keeper Mark</Link> : null}
                   {!readOnly ? <button type="button" onClick={() => sendToDeed(deed.tokenId)}>Send assets</button> : null}
                   <button type="button" onClick={() => copyTokenId(deed.tokenId)}>
                     {copied === deed.tokenId ? "Copied" : "Copy ID"}

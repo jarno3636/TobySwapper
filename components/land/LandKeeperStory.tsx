@@ -92,7 +92,7 @@ export default function LandKeeperStory({ tokenId, owner, transferNonce }: { tok
   const markName = visible?.keeperName || visible?.keeperSocial || "";
 
   return (
-    <section className="land-keeper-story" aria-labelledby="keeper-story-title">
+    <section id="keeper-mark" className="land-keeper-story scroll-mt-24" aria-labelledby="keeper-story-title">
       <div className="land-keeper-story-head">
         <div>
           <span className="land-section-kicker">KEEPER-WRITTEN</span>
