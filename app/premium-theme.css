@@ -4987,3 +4987,105 @@ html[data-theme="dark"] .land-vault-card{background:radial-gradient(circle at 90
 html[data-theme="dark"] .world-deed-jump{background:linear-gradient(145deg,#113234,#0b2729)!important}html[data-theme="dark"] .world-search-field{background:#0e2b2d!important}.world-search-divider{color:#748e89}html[data-theme="dark"] .world-search-divider:before,html[data-theme="dark"] .world-search-divider:after{background:rgba(131,204,190,.08)}
 
 @media(max-width:680px){.land-keeper-story{padding:16px;border-radius:23px}.land-keeper-story-head{flex-direction:column}.land-keeper-story-head>button{width:100%}.keeper-story-editor{grid-template-columns:1fr}.keeper-story-wide{grid-column:auto}.keeper-mark-row{grid-template-columns:35px minmax(0,1fr)}.keeper-mark-row>a{grid-column:2}.land-vault-assets{grid-template-columns:repeat(2,minmax(0,1fr))!important}.land-public-actions{grid-template-columns:1fr;padding:15px}.world-deed-jump{grid-template-columns:42px minmax(0,1fr)!important}.world-deed-jump>button{grid-column:1/-1!important;width:100%!important}.world-search-copy h2{font-size:24px!important}.land-page .land-trait-card{min-height:88px!important;padding:10px!important}.land-page .land-trait-rarity b{font-size:4.9px!important}.land-page .land-trait-rarity em{font-size:7.5px!important}}
+
+/* =========================================================
+   PHASE 2 · FULL LORE ATLAS / DISCOVERY
+   ========================================================= */
+.world-entry-panel{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:18px;margin-top:18px;padding:22px;border:1px solid rgba(24,79,78,.11);border-radius:30px;background:radial-gradient(circle at 0 0,rgba(91,184,151,.10),transparent 36%),linear-gradient(145deg,#fbfdfb,#edf6f2);box-shadow:0 18px 42px rgba(15,54,61,.07),inset 0 1px 0 rgba(255,255,255,.9)}
+.world-entry-copy{align-self:center;padding:4px}.world-entry-copy h2{max-width:510px;margin:6px 0 7px;color:#143f43;font-size:32px;line-height:1.02;letter-spacing:-.045em}.world-entry-copy p{max-width:530px;margin:0;color:#718886;font-size:11px;line-height:1.55}.world-entry-actions{display:grid;gap:10px}.world-wander-button{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr) auto;grid-template-rows:auto auto;gap:0 11px;align-items:center;min-height:82px;padding:13px 15px;border:1px solid rgba(26,97,87,.13);border-radius:22px;background:linear-gradient(135deg,#1c6b61,#114f51);box-shadow:inset 0 1px 0 rgba(255,255,255,.17),0 12px 24px rgba(22,83,76,.15);color:#effbf7;text-align:left}.world-wander-button>span{grid-row:1/3;display:grid;width:44px;height:44px;place-items:center;border:1px solid rgba(197,239,226,.20);border-radius:50%;background:rgba(207,247,233,.08);font-size:24px}.world-wander-button b{align-self:end;font-size:17px;letter-spacing:-.02em}.world-wander-button small{align-self:start;color:#add1c7;font-size:8px;font-weight:750}.world-wander-button i{grid-column:3;grid-row:1/3;color:#82d9b8;font-size:24px;font-style:normal}.world-entry-panel .world-deed-jump{display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important;align-items:center!important;gap:10px!important;padding:10px!important;border:1px solid rgba(26,87,81,.10)!important;border-radius:22px!important;background:rgba(255,255,255,.55)!important}.world-entry-panel .world-deed-jump label{width:auto!important;min-height:58px!important;padding:7px 2px!important;border:0!important;background:transparent!important;box-shadow:none!important}.world-entry-panel .world-deed-jump input{font-size:14px!important}.world-entry-panel .world-deed-jump>button{min-width:96px;min-height:48px;padding:0 13px;border:0;border-radius:15px;background:linear-gradient(180deg,#3d8577,#27675f);color:white;font-size:9px;font-weight:950}.world-entry-panel .world-deed-jump>button:disabled{opacity:.38}.world-entry-panel .world-jump-mark{display:grid;width:42px;height:42px;place-items:center;border:1px solid rgba(48,120,106,.13);border-radius:14px;background:#e7f5ef;color:#397d6e;font-size:20px}
+
+.trait-atlas-panel{margin-top:18px;padding:22px;border:1px solid rgba(22,75,79,.10);border-radius:30px;background:radial-gradient(circle at 90% 0,rgba(116,139,204,.08),transparent 29%),linear-gradient(145deg,#fff,#f4f8f6);box-shadow:0 18px 42px rgba(15,54,61,.065),inset 0 1px 0 #fff}.trait-atlas-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.trait-atlas-head h2{margin:5px 0 4px;color:#153f46;font-size:27px;letter-spacing:-.04em}.trait-atlas-head p{max-width:600px;margin:0;color:#768c8c;font-size:10px;line-height:1.5}.trait-atlas-head>button{min-height:34px;padding:0 11px;border:1px solid rgba(35,99,91,.11);border-radius:12px;background:#edf7f3;color:#367568;font-size:7px;font-weight:950}.trait-atlas-groups{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.trait-atlas-group{min-width:0;border:1px solid rgba(25,76,79,.09);border-radius:17px;background:rgba(250,253,251,.75);overflow:hidden}.trait-atlas-group summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:center;padding:13px;cursor:pointer;list-style:none}.trait-atlas-group summary::-webkit-details-marker{display:none}.trait-atlas-group summary span{overflow:hidden;color:#315d60;font-size:9px;font-weight:1000;letter-spacing:.08em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}.trait-atlas-group summary b{color:#91a2a0;font-size:6px;white-space:nowrap}.trait-atlas-group summary i{color:#77a096;font-size:11px;font-style:normal}.trait-atlas-values{display:grid;max-height:300px;overflow:auto;padding:0 8px 8px;gap:5px}.trait-atlas-values button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 7px;min-width:0;padding:8px 9px;border:1px solid transparent;border-radius:11px;background:#eef6f2;text-align:left}.trait-atlas-values button strong{overflow:hidden;color:#214e51;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.trait-atlas-values button span{grid-row:2;color:#8a9d9a;font-size:6.5px}.trait-atlas-values button em{grid-column:2;grid-row:1/3;align-self:center;color:#5b917f;font-size:8px;font-style:normal;font-weight:950}.trait-atlas-values button.is-active{border-color:rgba(67,151,126,.26);background:#dff2e9;box-shadow:inset 0 0 0 1px rgba(64,145,121,.06)}
+
+.world-atlas-section#atlas-results{scroll-margin-top:92px}.world-atlas-head p{max-width:560px;margin:3px 0 0;color:#7b8e8d;font-size:9px;line-height:1.45}.world-atlas-toolbar{display:flex;align-items:center;gap:9px;margin-bottom:14px}.world-atlas-toolbar>label{display:flex;min-height:50px;flex:1;flex-direction:column;justify-content:center;padding:7px 12px;border:1px solid rgba(23,75,78,.10);border-radius:15px;background:rgba(246,251,248,.82)}.world-atlas-toolbar>label span{color:#829694;font-size:6.5px;font-weight:950;letter-spacing:.10em}.world-atlas-toolbar input{border:0;outline:0;background:transparent;color:#16484c;font-size:11px;font-weight:800}.world-active-filter{display:grid;grid-template-columns:auto auto 26px;align-items:center;gap:5px;min-height:50px;padding:7px 8px 7px 11px;border:1px solid rgba(62,145,118,.16);border-radius:15px;background:#e5f4ed}.world-active-filter span{color:#6a9489;font-size:6px;font-weight:950;letter-spacing:.09em;text-transform:uppercase}.world-active-filter b{color:#286454;font-size:9px}.world-active-filter button{display:grid;width:26px;height:26px;place-items:center;border:0;border-radius:9px;background:rgba(63,122,105,.10);color:#487d70}
+.world-land-card-canonical{border-color:rgba(22,74,77,.11)!important;background:#fff!important}.world-land-art{position:relative;height:190px;overflow:hidden;background:#dfece5}.world-land-art>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .28s ease}.world-land-card-canonical:hover .world-land-art>img{transform:scale(1.025)}.world-land-art .world-land-scene{height:100%}.world-land-number,.world-land-canonical{position:absolute;bottom:10px;z-index:2;display:inline-flex;min-height:25px;align-items:center;padding:0 8px;border:1px solid rgba(255,255,255,.30);border-radius:999px;background:rgba(18,55,56,.68);backdrop-filter:blur(8px);color:#f6fffc;font-size:7px;font-weight:1000;letter-spacing:.06em}.world-land-number{right:10px}.world-land-canonical{left:10px;color:#c4f4df}.world-land-card-canonical .world-land-copy{padding:13px 13px 12px}.world-land-card-canonical .world-land-copy h3{font-size:17px}.world-land-card-canonical .world-land-copy>p{min-height:28px}.world-land-card-canonical .world-land-copy>p.has-story{font-style:italic}.world-land-signs{display:flex!important;align-items:flex-start!important;justify-content:flex-start!important;flex-wrap:wrap!important;gap:5px!important;margin-top:9px!important;padding:0!important;border:0!important}.world-land-signs span{display:inline-flex;max-width:100%;align-items:center;gap:4px;padding:5px 7px;border:1px solid rgba(33,86,81,.08);border-radius:9px;background:#f0f6f3;color:#3d6d65;font-size:7px;font-weight:850}.world-land-signs small{color:#91a19d!important;font-size:5px!important;font-weight:950!important;letter-spacing:.07em!important}.world-land-copy footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid rgba(15,70,79,.07)}.world-land-copy footer small{overflow:hidden;max-width:62%;color:#829694;font-size:6px;text-overflow:ellipsis;white-space:nowrap}.world-land-copy footer b{color:#347b6b;font-size:8px}.world-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:17px}.world-pagination button{min-height:37px;padding:0 12px;border:1px solid rgba(26,84,80,.10);border-radius:12px;background:#edf7f3;color:#326e63;font-size:8px;font-weight:950}.world-pagination button:disabled{opacity:.38}.world-pagination span{color:#829591;font-size:8px}.world-pagination span b{color:#346b61}
+
+.land-page .land-trait-rarity.is-discoverable{position:relative;text-decoration:none;padding-right:51px!important}.land-page .land-trait-rarity.is-discoverable i{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#629586;font-size:5.5px;font-style:normal;font-weight:1000;letter-spacing:.06em}.land-page .land-trait-rarity.is-discoverable:hover{border-color:rgba(73,154,129,.23)!important;background:rgba(92,170,145,.09)!important}
+
+.shared-signs-panel{margin-top:18px;padding:20px;border:1px solid rgba(22,77,77,.10);border-radius:28px;background:radial-gradient(circle at 100% 0,rgba(90,171,150,.08),transparent 30%),linear-gradient(145deg,#fbfdfb,#f0f7f3);box-shadow:0 15px 36px rgba(15,55,59,.055),inset 0 1px 0 #fff}.shared-signs-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:13px}.shared-signs-head h2{margin:5px 0 3px;color:#153f45;font-size:23px;letter-spacing:-.035em}.shared-signs-head p{margin:0;color:#7b8e8c;font-size:9px}.shared-signs-head>a{display:inline-flex;min-height:34px;align-items:center;padding:0 10px;border:1px solid rgba(30,94,86,.10);border-radius:11px;background:#edf7f3;color:#397469;text-decoration:none;font-size:7px;font-weight:950;white-space:nowrap}.shared-signs-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.shared-sign-card{display:grid;grid-template-columns:68px minmax(0,1fr);gap:10px;min-width:0;padding:8px;border:1px solid rgba(24,77,76,.09);border-radius:17px;background:rgba(255,255,255,.70);color:inherit;text-decoration:none}.shared-sign-art{position:relative;overflow:hidden;width:68px;height:68px;border-radius:13px;background:#dcebe4}.shared-sign-art img{width:100%;height:100%;object-fit:cover}.shared-sign-art>span{display:grid;width:100%;height:100%;place-items:center;color:#659388}.shared-sign-art>b{position:absolute;right:5px;bottom:5px;padding:3px 5px;border-radius:999px;background:rgba(15,54,55,.70);color:#fff;font-size:5.5px}.shared-sign-card>div:last-child{min-width:0;align-self:center}.shared-sign-card>div:last-child>span{display:block;color:#6f9589;font-size:5.5px;font-weight:1000;letter-spacing:.09em}.shared-sign-card h3{margin:2px 0 3px;overflow:hidden;color:#214d50;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.shared-sign-card p{margin:0;overflow:hidden;color:#798e8b;font-size:7px;text-overflow:ellipsis;white-space:nowrap}.shared-sign-card small{display:block;margin-top:5px;color:#43806f;font-size:6px;font-weight:900}
+
+html[data-theme="dark"] .world-entry-panel,html[data-theme="dark"] .trait-atlas-panel,html[data-theme="dark"] .shared-signs-panel{border-color:rgba(124,207,190,.09)!important;background:radial-gradient(circle at 100% 0,rgba(67,150,132,.055),transparent 30%),linear-gradient(145deg,#0d292b,#0b2426)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 18px 42px rgba(0,0,0,.13)!important}html[data-theme="dark"] .world-entry-copy h2,html[data-theme="dark"] .trait-atlas-head h2,html[data-theme="dark"] .shared-signs-head h2{color:#eef9f5!important}html[data-theme="dark"] .world-entry-copy p,html[data-theme="dark"] .trait-atlas-head p,html[data-theme="dark"] .shared-signs-head p{color:#88a6a0!important}html[data-theme="dark"] .world-entry-panel .world-deed-jump{border-color:rgba(128,203,188,.08)!important;background:rgba(220,247,239,.025)!important}html[data-theme="dark"] .world-entry-panel .world-jump-mark{border-color:rgba(128,210,191,.09)!important;background:#123638!important;color:#78bda9!important}html[data-theme="dark"] .trait-atlas-group{border-color:rgba(132,207,191,.075)!important;background:rgba(222,246,239,.025)!important}html[data-theme="dark"] .trait-atlas-group summary span{color:#a7ccc3!important}html[data-theme="dark"] .trait-atlas-values button{background:#123235!important}html[data-theme="dark"] .trait-atlas-values button strong{color:#e4f4ef!important}html[data-theme="dark"] .trait-atlas-values button span{color:#74968e!important}html[data-theme="dark"] .trait-atlas-values button em{color:#8fd0ba!important}html[data-theme="dark"] .trait-atlas-values button.is-active{border-color:rgba(104,197,164,.22)!important;background:#173d38!important}html[data-theme="dark"] .world-atlas-toolbar>label{border-color:rgba(131,207,191,.08)!important;background:#0f2c2e!important}html[data-theme="dark"] .world-atlas-toolbar input{color:#edf9f5!important}html[data-theme="dark"] .world-active-filter{border-color:rgba(99,183,154,.14)!important;background:#15382f!important}html[data-theme="dark"] .world-land-card-canonical{border-color:rgba(135,211,195,.08)!important;background:#0e292b!important}html[data-theme="dark"] .world-land-signs span{border-color:rgba(130,203,187,.07)!important;background:#123235!important;color:#a9cfc5!important}html[data-theme="dark"] .world-land-copy footer{border-color:rgba(137,207,193,.07)!important}html[data-theme="dark"] .world-pagination button,html[data-theme="dark"] .shared-signs-head>a{border-color:rgba(129,205,190,.08)!important;background:#123235!important;color:#9bcbbf!important}html[data-theme="dark"] .shared-sign-card{border-color:rgba(133,207,192,.075)!important;background:#102e30!important}html[data-theme="dark"] .shared-sign-card h3{color:#e7f5f1!important}html[data-theme="dark"] .shared-sign-card p{color:#819f98!important}html[data-theme="dark"] .land-page .land-trait-rarity.is-discoverable i{color:#73a89a!important}
+
+@media(max-width:900px){.world-entry-panel{grid-template-columns:1fr}.trait-atlas-groups{grid-template-columns:repeat(3,minmax(0,1fr))}.shared-signs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.world-entry-panel,.trait-atlas-panel,.shared-signs-panel{padding:16px;border-radius:24px}.world-entry-copy h2{font-size:26px}.world-entry-panel .world-deed-jump{grid-template-columns:39px minmax(0,1fr)!important}.world-entry-panel .world-deed-jump>button{grid-column:1/-1;width:100%}.trait-atlas-head,.shared-signs-head{flex-direction:column}.trait-atlas-groups{grid-template-columns:1fr}.trait-atlas-group summary{padding:12px}.trait-atlas-values{max-height:240px}.world-atlas-toolbar{align-items:stretch;flex-direction:column}.world-active-filter{grid-template-columns:auto minmax(0,1fr) 26px}.world-land-art{height:270px}.shared-signs-grid{grid-template-columns:1fr}.shared-sign-card{grid-template-columns:76px minmax(0,1fr)}.shared-sign-art{width:76px;height:76px}.land-page .land-trait-rarity.is-discoverable{padding-right:8px!important}.land-page .land-trait-rarity.is-discoverable i{display:none}}
+
+
+/* ==========================================================================\n   PHASE 2 · FINAL DARK-SURFACE RECONCILIATION\n   Keep World surfaces matte and consistent even when older light rules win\n   earlier in the cascade.\n   ========================================================================== */
+html[data-theme="dark"] .world-page .world-onboarding,
+html[data-theme="dark"] .world-page .world-onboarding.has-land,
+html[data-theme="dark"] .world-page .world-entry-panel,
+html[data-theme="dark"] .world-page .trait-atlas-panel,
+html[data-theme="dark"] .world-page .world-atlas-section,
+html[data-theme="dark"] .world-page .shared-signs-panel,
+html[data-theme="dark"] .world-page .world-official-atlas {
+  border-color: rgba(126, 204, 189, .09) !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(67, 150, 132, .055), transparent 30%),
+    linear-gradient(145deg, #0d292b, #0a2224) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 18px 42px rgba(0,0,0,.14) !important;
+}
+html[data-theme="dark"] .world-page .world-path-card,
+html[data-theme="dark"] .world-page .world-path-card.is-explore,
+html[data-theme="dark"] .world-page .world-path-card.is-seed,
+html[data-theme="dark"] .world-page .world-path-card.is-pond,
+html[data-theme="dark"] .world-page .world-path-card.is-land {
+  border-color: rgba(130, 204, 190, .085) !important;
+  background: linear-gradient(150deg, #123033, #0d2729) !important;
+  color: #e9f7f3 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 9px 22px rgba(0,0,0,.10) !important;
+}
+html[data-theme="dark"] .world-page .world-path-card > span:first-child {
+  border-color: rgba(127, 205, 190, .08) !important;
+  background: #15383a !important;
+  color: #79c5af !important;
+}
+html[data-theme="dark"] .world-page .world-path-card strong { color: #edf9f5 !important; }
+html[data-theme="dark"] .world-page .world-path-card small { color: #849f99 !important; }
+html[data-theme="dark"] .world-page .world-path-card > b { color: #73c9aa !important; }
+html[data-theme="dark"] .world-page .world-entry-panel .world-deed-jump,
+html[data-theme="dark"] .world-page .world-atlas-toolbar > label,
+html[data-theme="dark"] .world-page .world-search-field,
+html[data-theme="dark"] .world-page .world-wallet-results,
+html[data-theme="dark"] .world-page .trait-atlas-group,
+html[data-theme="dark"] .world-page .world-land-card-canonical,
+html[data-theme="dark"] .land-page .keeper-story-empty,
+html[data-theme="dark"] .land-page .keeper-story-editor input,
+html[data-theme="dark"] .land-page .keeper-story-editor textarea {
+  border-color: rgba(130, 204, 190, .08) !important;
+  background: #102d2f !important;
+  color: #e9f7f3 !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .world-page .world-entry-panel .world-jump-mark {
+  border-color: rgba(127,205,190,.09) !important;
+  background: #15383a !important;
+  color: #77c4ae !important;
+}
+html[data-theme="dark"] .world-page .world-deed-jump input,
+html[data-theme="dark"] .world-page .world-search-field input,
+html[data-theme="dark"] .world-page .world-atlas-toolbar input,
+html[data-theme="dark"] .land-page .keeper-story-editor input,
+html[data-theme="dark"] .land-page .keeper-story-editor textarea {
+  color: #edf9f5 !important;
+}
+html[data-theme="dark"] .world-page input::placeholder,
+html[data-theme="dark"] .land-page input::placeholder,
+html[data-theme="dark"] .land-page textarea::placeholder { color: #647e79 !important; opacity: 1; }
+html[data-theme="dark"] .world-page .world-land-signs span,
+html[data-theme="dark"] .world-page .trait-atlas-values button,
+html[data-theme="dark"] .world-page .shared-sign-card,
+html[data-theme="dark"] .world-page .world-pagination button,
+html[data-theme="dark"] .world-page .shared-signs-head > a {
+  border-color: rgba(128, 201, 188, .07) !important;
+  background: #123235 !important;
+}
+html[data-theme="dark"] .world-page .world-active-filter {
+  border-color: rgba(99,183,154,.14) !important;
+  background: #15382f !important;
+}
+html[data-theme="dark"] .world-page .world-land-art,
+html[data-theme="dark"] .world-page .shared-sign-art { background: #143335 !important; }
+html[data-theme="dark"] .world-page .world-land-card-canonical .world-land-copy h3,
+html[data-theme="dark"] .world-page .shared-sign-card h3,
+html[data-theme="dark"] .land-page .keeper-story-empty strong { color: #e8f6f2 !important; }
+html[data-theme="dark"] .land-page .keeper-story-empty,
+html[data-theme="dark"] .land-page .keeper-story-empty-copy { color: #829d97 !important; }
