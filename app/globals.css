@@ -3011,3 +3011,219 @@ button,a,select,input{touch-action:manipulation}
 .mytw-record-progress{position:relative;z-index:1;height:7px;margin-top:12px;overflow:hidden;border-radius:999px;background:rgba(37,89,96,.1);box-shadow:inset 0 1px 2px rgba(28,67,72,.08)}.mytw-record-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#3ba9d0,#5ad1bd,#86d6a2);box-shadow:0 0 13px rgba(68,195,188,.24);transition:width .45s ease}
 .mytw-record-foot{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}.mytw-record-foot>small{font-size:7px;color:#809397;font-weight:800}.mytw-record-foot .mytw-inline-action{margin:0;padding:9px 13px;font-size:7px;min-height:34px}
 @media(max-width:680px){.mytw-pond-record{padding:17px;border-radius:25px}.mytw-record-score{padding:7px 9px}.mytw-record-score strong{font-size:15px}.mytw-record-hero{grid-template-columns:86px 1fr;gap:11px;padding:11px}.mytw-record-ring{width:74px;height:74px}.mytw-record-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mytw-record-burn-line{grid-template-columns:34px 1fr}.mytw-record-burn-line>em{grid-column:2;text-align:left;max-width:none}.mytw-record-foot{align-items:flex-start;flex-direction:column}.mytw-record-foot .mytw-inline-action{width:100%;justify-content:center}}
+
+/* ========================================================================== */
+/* 2026-08-22 · World finder + completed trait rarity polish                  */
+/* ========================================================================== */
+.world-search-panel{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);
+  padding:24px;
+  border-radius:30px;
+  background:
+    radial-gradient(circle at 8% 0%,rgba(104,207,176,.16),transparent 29%),
+    radial-gradient(circle at 100% 100%,rgba(91,161,201,.12),transparent 34%),
+    linear-gradient(145deg,#fbfffd,#eef8f5);
+}
+.world-search-panel:before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width:190px;
+  height:190px;
+  right:-74px;
+  top:-84px;
+  border:1px solid rgba(52,125,117,.08);
+  border-radius:50%;
+  box-shadow:0 0 0 28px rgba(64,143,131,.025),0 0 0 58px rgba(64,143,131,.018);
+}
+.world-search-copy h2{max-width:430px;font-size:27px;line-height:1.04}
+.world-search-copy p{max-width:500px;font-size:10.5px;line-height:1.65}
+.world-search-controls{grid-template-columns:1fr;gap:10px}
+.world-search-field{min-height:58px;padding:9px 14px;border-radius:17px}
+.world-search-field input{margin-top:2px;font-size:13px}
+
+.world-deed-jump{
+  position:relative;
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:stretch;
+  padding:7px;
+  border:1px solid rgba(23,89,88,.13);
+  border-radius:21px;
+  background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(239,249,246,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 10px 24px rgba(24,78,73,.07);
+}
+.world-jump-mark{
+  display:grid;
+  place-items:center;
+  min-height:58px;
+  border:1px solid rgba(46,116,107,.12);
+  border-radius:15px;
+  background:linear-gradient(145deg,#e8f8f2,#d8efe8);
+  color:#317a6f;
+  font-size:21px;
+  font-weight:950;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+}
+.world-deed-jump.is-wallet .world-jump-mark{
+  background:linear-gradient(145deg,#e8f5fb,#dcebf7);
+  color:#537ea2;
+}
+.world-deed-jump label{
+  width:auto;
+  min-height:58px;
+  padding:7px 4px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.world-deed-jump label>span{color:#658c87;font-size:7px;font-weight:1000;letter-spacing:.14em}
+.world-deed-jump input{margin-top:1px;font-size:13px!important;font-weight:900!important;letter-spacing:-.01em}
+.world-deed-jump label>small{display:block;margin-top:2px;color:#8ca19d;font-size:7px;font-weight:800}
+.world-deed-jump>button{
+  align-self:stretch;
+  min-width:112px;
+  padding:0 16px;
+  border:1px solid rgba(16,79,73,.12);
+  border-radius:15px;
+  background:linear-gradient(180deg,#2e8175,#195b57);
+  color:#fff;
+  font-size:9px;
+  font-weight:950;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 16px rgba(18,83,74,.14);
+  transition:transform .16s ease,filter .16s ease,opacity .16s ease;
+}
+.world-deed-jump>button:not(:disabled):hover{transform:translateY(-1px);filter:brightness(1.04)}
+.world-deed-jump>button:not(:disabled):active{transform:translateY(1px)}
+.world-deed-jump>button:disabled{opacity:.42;cursor:not-allowed}
+.world-deed-jump.is-wallet>button{background:linear-gradient(180deg,#557f9d,#385e78)}
+
+.world-wallet-results{
+  padding:10px 12px;
+  border:1px solid rgba(30,102,94,.11);
+  border-radius:18px;
+  background:rgba(248,253,251,.78);
+}
+.world-wallet-results>p{margin:0;color:#62807d;font-size:9px;font-weight:800}
+.world-wallet-results.has-deeds>p{margin-bottom:8px}
+.world-wallet-results>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:260px;overflow:auto;padding-right:2px}
+.world-wallet-results a{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:2px 8px;
+  padding:10px 11px;
+  border:1px solid rgba(41,105,97,.11);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+  text-decoration:none;
+}
+.world-wallet-results a span{grid-column:1/-1;color:#7e9894;font-size:6px;font-weight:1000;letter-spacing:.12em}
+.world-wallet-results a strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#174a48;font-size:10px}
+.world-wallet-results a b{color:#47867b;font-size:8px}
+
+/* Completed collection percentages now read as a collectible stat, not a placeholder pill. */
+.land-page .land-trait-rarity.is-known{
+  min-height:27px;
+  padding:.3rem .52rem;
+  background:linear-gradient(145deg,rgba(209,245,228,.92),rgba(235,249,242,.86));
+  border-color:rgba(43,139,104,.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.72);
+}
+.land-page .land-trait-rarity.is-known b{color:#4e7f6d}
+.land-page .land-trait-rarity.is-known em{color:#126249;font-size:.74rem}
+.land-page .land-trait-card:has(.land-trait-rarity.is-known){
+  background:
+    radial-gradient(circle at 100% 0,color-mix(in srgb,var(--trait-accent) 10%,transparent),transparent 44%),
+    rgba(255,255,255,.7);
+}
+
+/* Dark-mode cleanup for the World surfaces and the new finder. */
+html[data-theme="dark"] .world-search-panel{
+  border-color:rgba(126,207,191,.11)!important;
+  background:
+    radial-gradient(circle at 8% 0%,rgba(58,162,139,.1),transparent 30%),
+    radial-gradient(circle at 100% 100%,rgba(65,124,163,.08),transparent 36%),
+    linear-gradient(145deg,#0d2c2e,#081f21)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 18px 40px rgba(0,0,0,.18)!important;
+}
+html[data-theme="dark"] .world-search-panel:before{border-color:rgba(122,204,188,.07);box-shadow:0 0 0 28px rgba(71,165,145,.018),0 0 0 58px rgba(71,165,145,.012)}
+html[data-theme="dark"] .world-search-field{
+  border-color:rgba(128,202,188,.12)!important;
+  background:#102f31!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+html[data-theme="dark"] .world-search-field input{color:#effaf7!important;-webkit-text-fill-color:#effaf7!important}
+html[data-theme="dark"] .world-search-field input::placeholder{color:#647f7b!important;-webkit-text-fill-color:#647f7b!important}
+html[data-theme="dark"] .world-deed-jump{
+  border-color:rgba(128,202,188,.12);
+  background:linear-gradient(145deg,#103032,#0a2527);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 24px rgba(0,0,0,.13);
+}
+html[data-theme="dark"] .world-jump-mark{border-color:rgba(125,204,187,.11);background:linear-gradient(145deg,#173d39,#102e2d);color:#8dd1c2;box-shadow:none}
+html[data-theme="dark"] .world-deed-jump.is-wallet .world-jump-mark{background:linear-gradient(145deg,#193644,#102a35);color:#9bc9e4}
+html[data-theme="dark"] .world-deed-jump label{background:transparent!important;border:0!important;box-shadow:none!important}
+html[data-theme="dark"] .world-deed-jump label>span{color:#7ea49d!important}
+html[data-theme="dark"] .world-deed-jump input{color:#f0faf7!important;-webkit-text-fill-color:#f0faf7!important}
+html[data-theme="dark"] .world-deed-jump input::placeholder{color:#607c78!important;-webkit-text-fill-color:#607c78!important}
+html[data-theme="dark"] .world-deed-jump label>small{color:#6e8c87!important}
+html[data-theme="dark"] .world-wallet-results{border-color:rgba(124,202,187,.1);background:#0c292b}
+html[data-theme="dark"] .world-wallet-results>p{color:#8aa9a4!important}
+html[data-theme="dark"] .world-wallet-results a{border-color:rgba(126,203,188,.1);background:#113234}
+html[data-theme="dark"] .world-wallet-results a span{color:#779b95!important}
+html[data-theme="dark"] .world-wallet-results a strong{color:#edf9f6!important;-webkit-text-fill-color:#edf9f6!important}
+html[data-theme="dark"] .world-wallet-results a b{color:#8ecabd!important}
+html[data-theme="dark"] .world-atlas-section,
+html[data-theme="dark"] .world-official-atlas{
+  background:linear-gradient(145deg,#0d2b2d,#091f21)!important;
+  border-color:rgba(126,203,188,.1)!important;
+}
+html[data-theme="dark"] .world-empty{border-color:rgba(126,203,188,.09)!important;background:#0e2c2e!important}
+html[data-theme="dark"] .world-empty h3{color:#eef9f6!important;-webkit-text-fill-color:#eef9f6!important}
+html[data-theme="dark"] .world-empty p{color:#86a29e!important}
+html[data-theme="dark"] .land-page .land-trait-rarity.is-known{
+  background:linear-gradient(145deg,#143b33,#102f2b);
+  border-color:rgba(94,208,166,.19);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+html[data-theme="dark"] .land-page .land-trait-rarity.is-known b{color:#8db5a8!important}
+html[data-theme="dark"] .land-page .land-trait-rarity.is-known em{color:#8be7bd!important}
+html[data-theme="dark"] .land-page .land-trait-card:has(.land-trait-rarity.is-known){
+  background:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--trait-accent) 9%,transparent),transparent 45%),linear-gradient(145deg,rgba(231,249,245,.048),rgba(231,249,245,.022))!important;
+}
+
+@media(max-width:760px){
+  .world-search-panel{grid-template-columns:1fr;padding:17px;border-radius:24px}
+  .world-search-copy h2{font-size:23px}
+  .world-deed-jump{grid-template-columns:42px minmax(0,1fr);padding:6px;border-radius:18px}
+  .world-jump-mark{min-height:54px;border-radius:13px}
+  .world-deed-jump>button{grid-column:1/-1;min-height:44px;width:100%;border-radius:13px}
+  .world-wallet-results>div{grid-template-columns:1fr;max-height:300px}
+}
+
+/* Small dark-mode stragglers found during the World/Land pass. */
+html[data-theme="dark"] .land-not-found{
+  border-color:rgba(126,203,188,.1)!important;
+  background:linear-gradient(145deg,#0e2d2f,#091f21)!important;
+  box-shadow:0 18px 40px rgba(0,0,0,.18)!important;
+}
+html[data-theme="dark"] .land-not-found h1{color:#effaf7!important;-webkit-text-fill-color:#effaf7!important}
+html[data-theme="dark"] .land-not-found p{color:#88a39f!important}
+html[data-theme="dark"] .land-not-found a{background:linear-gradient(180deg,#2b756c,#194f4e)!important;color:#fff!important}
+html[data-theme="dark"] .mytw-discoveries-card{
+  border-color:rgba(126,203,188,.1)!important;
+  background:radial-gradient(circle at 92% 8%,rgba(71,140,182,.08),transparent 31%),linear-gradient(145deg,#0e2d2f,#092123)!important;
+}
+html[data-theme="dark"] .mytw-discovery{border-color:rgba(126,203,188,.08)!important;background:#102c2e!important}
+html[data-theme="dark"] .mytw-discovery.is-found{border-color:rgba(87,190,151,.13)!important;background:linear-gradient(145deg,#12362f,#0e2c29)!important}
+html[data-theme="dark"] .mytw-discovery b{color:#eaf7f4!important;-webkit-text-fill-color:#eaf7f4!important}
+html[data-theme="dark"] .mytw-discovery small{color:#789591!important}
+html[data-theme="dark"] .taboshi1-trade{
+  color:#a9e3bd!important;
+  background:linear-gradient(180deg,#173a2e,#102b25)!important;
+  border-color:rgba(104,199,135,.14)!important;
+}
