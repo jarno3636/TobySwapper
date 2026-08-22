@@ -69,10 +69,14 @@ export default function WorldAtlas() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    if (params.get("wander") === "1") {
+      router.replace(`/land/${randomLoreId()}`);
+      return;
+    }
     setQuery(params.get("q") || "");
     setTraitType(params.get("trait") || "");
     setTraitValueFilter(params.get("value") || "");
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);

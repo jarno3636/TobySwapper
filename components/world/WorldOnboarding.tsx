@@ -40,20 +40,21 @@ export default function WorldOnboarding() {
   return (
     <section className={`world-onboarding ${ownsLand ? "has-land" : ""}`}>
       <div className="world-onboarding-intro">
-        <div className="world-onboarding-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="72px" className="object-contain" /></div>
+        <div className="world-onboarding-frog world-onboarding-patience"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="72px" className="object-contain" /></div>
         <div>
           <span className="land-section-kicker">FIND YOUR PLACE</span>
-          <h2>{!isConnected ? "A new frog enters the world." : ownsLand ? `Your ${landCount === 1n ? "land is" : "lands are"} waiting.` : "Every frog starts somewhere."}</h2>
-          <p>{!isConnected ? "Explore first. Connect when you are ready to see what your wallet carries." : ownsLand ? `You carry ${landCount.toLocaleString()} Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to see each deed number and visit your places.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Wander the Atlas, study the canonical signs, or enter the pond.` : "Wander community lands, take a sip from the Faucet, or enter the pond. There is no required path."}</p>
+          <h2>{!isConnected ? "The World is open before you connect." : ownsLand ? `Your ${landCount === 1n ? "land is" : "lands are"} waiting.` : "There is more than one way into Tobyworld."}</h2>
+          <p>{!isConnected ? "Wander the Atlas, study canonical signs and meet the keepers first. Connect only when you want to see your own pouch and land." : ownsLand ? `You carry ${landCount.toLocaleString()} Lore ${landCount === 1n ? "Deed" : "Deeds"}. Open My Tobyworld to visit your places and write your Keeper Mark.` : seedCount > 0n ? `You already carry ${seedCount.toLocaleString()} SEED. Explore the World, meet its keepers, or use the pond utility when you need it.` : "Explore lands, meet their keepers, visit the Faucet, or look for a deed. No single path is required."}</p>
         </div>
       </div>
 
       <div className="world-onboarding-paths">
-        <a href="#atlas" className="world-path-card is-explore"><span>◌</span><strong>Explore the World</strong><small>Wander all 2,869 canonical lands</small><b>↓</b></a>
-        {!ownsLand && <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer" className="world-path-card is-seed"><span className="world-path-seed"><Image src="/ui/seed.webp" alt="" fill sizes="44px" className="object-cover" /></span><strong>{seedCount > 0n ? "Visit the Faucet" : "Get SEED"}</strong><small>{seedCount > 0n ? "The faucet may not flow forever" : "A beginning for new frogs"}</small><b>↗</b></a>}
+        <a href="#atlas" className="world-path-card is-explore"><span>◎</span><strong>Explore the World</strong><small>All 2,869 canonical lands</small><b>↓</b></a>
+        <Link prefetch={false} href="/keepers" className="world-path-card is-keepers"><span>◌</span><strong>Meet the Keepers</strong><small>Community identity & land legacy</small><b>→</b></Link>
         {!ownsLand && <Link prefetch={false} href="/world/exchange" className="world-path-card is-market"><span>△</span><strong>Find a Lore Deed</strong><small>Browse listings or leave a buy request</small><b>→</b></Link>}
-        {!ownsLand && <Link prefetch={false} href="/#swap" className="world-path-card is-pond"><span>⇄</span><strong>Enter the Pond</strong><small>TOBY · PATIENCE · TABOSHI</small><b>→</b></Link>}
-        {ownsLand && <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Land</strong><small>See deed IDs and visit your places</small><b>→</b></Link>}
+        {!ownsLand && <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer" className="world-path-card is-seed"><span className="world-path-seed"><Image src="/ui/seed.webp" alt="" fill sizes="44px" className="object-cover" /></span><strong>{seedCount > 0n ? "Visit the Faucet" : "Find SEED"}</strong><small>{seedCount > 0n ? "The faucet may not flow forever" : "An official Tobyworld path"}</small><b>↗</b></a>}
+        {!ownsLand && <Link prefetch={false} href="/#swap" className="world-path-card is-pond"><span className="world-path-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="44px" className="object-contain" /></span><strong>Pond Utility</strong><small>TOBY · PATIENCE · TABOSHI swaps</small><b>→</b></Link>}
+        {ownsLand && <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Tobyworld</strong><small>Visit land · manage pouch · Keeper Mark</small><b>→</b></Link>}
       </div>
     </section>
   );
