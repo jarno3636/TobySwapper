@@ -210,14 +210,21 @@ export function sharedSigns(index: AtlasIndex, tokenId: string, limit = 6) {
   const source = index.byId[tokenId];
   if (!source) return [];
   const sourceKeys = new Set(source.traits.map((trait) => traitKey(trait.traitType, trait.value)));
+  const frequencies = new Map<string, number>();
+  for (const group of index.discovery) for (const value of group.values) frequencies.set(traitKey(group.traitType, value.value), value.percentage);
 
   return index.lands
     .filter((land) => land.tokenId !== tokenId)
     .map((land) => {
       const shared = land.traits.filter((trait) => sourceKeys.has(traitKey(trait.traitType, trait.value)));
-      return { land, shared };
+      // Less-common exact signs carry more discovery weight, without presenting a casino-style rarity score.
+      const echoScore = shared.reduce((score, trait) => {
+        const pct = Math.max(0.1, frequencies.get(traitKey(trait.traitType, trait.value)) || 100);
+        return score + Math.log2(100 / pct + 1);
+      }, 0);
+      return { land, shared, echoScore };
     })
     .filter((item) => item.shared.length > 0)
-    .sort((a, b) => b.shared.length - a.shared.length || Number(a.land.tokenId) - Number(b.land.tokenId))
+    .sort((a, b) => b.echoScore - a.echoScore || b.shared.length - a.shared.length || Number(a.land.tokenId) - Number(b.land.tokenId))
     .slice(0, limit);
 }
