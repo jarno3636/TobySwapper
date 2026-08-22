@@ -4,15 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
 
-function SwapDockIcon() {
-  return (
-    <span className="dock-art dock-art-swap" aria-hidden="true">
-      <svg viewBox="0 0 64 64"><path d="M15 23h28l-7-7" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/><path d="M49 41H21l7 7" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-      <i className="dock-glint" />
-    </span>
-  );
-}
-
 function AtlasDockIcon() {
   return (
     <span className="dock-art dock-art-atlas" aria-hidden="true">
@@ -22,23 +13,21 @@ function AtlasDockIcon() {
   );
 }
 
-
 const items = [
-  { id: "swap", label: "Pond", href: "/#swap", custom: "swap" as const },
-  { id: "pouch", label: "Pouch", href: "/taboshi1#pouch", icon: "/ui/seed.webp" },
   { id: "world", label: "World", href: "/world", custom: "atlas" as const },
+  { id: "pouch", label: "My World", href: "/taboshi1", icon: "/ui/new-lore.webp" },
+  { id: "swap", label: "Pond", href: "/#swap", icon: "/tokens/patience.PNG" },
   { id: "market", label: "Market", href: "/world/exchange", icon: "/ui/taboshi.webp" },
 ] as const;
 
 function DockVisual({ item }: { item: (typeof items)[number] }) {
-  if ("custom" in item && item.custom === "swap") return <SwapDockIcon />;
   if ("custom" in item && item.custom === "atlas") return <AtlasDockIcon />;
-  return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/toby.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
+  return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/patience.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
 }
 
 export default function PondDock({ active }: { active?: "swap" | "pouch" | "world" | "market" }) {
   return (
-    <nav className="pond-dock-wrap" aria-label="TobySwap shortcuts">
+    <nav className="pond-dock-wrap" aria-label="Tobyworld shortcuts">
       <div className="pond-dock-shine" aria-hidden="true" />
       <div className="pond-dock">
         {items.map((item) => {

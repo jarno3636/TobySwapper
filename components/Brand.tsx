@@ -6,9 +6,9 @@ import ConnectPill from "@/components/ConnectPill";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const quickLinks = [
-  { href: "/#swap", label: "Pond" },
-  { href: "/taboshi1", label: "Pouch" },
   { href: "/world", label: "World" },
+  { href: "/taboshi1", label: "My Tobyworld" },
+  { href: "/#swap", label: "Pond" },
   { href: "/world/exchange", label: "Market" },
 ] as const;
 
@@ -21,7 +21,7 @@ export default function Brand() {
             <Image src="/tokens/toby.PNG" alt="Toby" fill sizes="44px" className="object-contain p-[2px]" priority />
           </span>
           <span className="brand-copy">
-            <span className="brand-eyebrow">TOBYWORLD</span>
+            <span className="brand-eyebrow">TOBYWORLD · COMMUNITY</span>
             <span className="brand-title">TobySwapper</span>
           </span>
         </Link>
