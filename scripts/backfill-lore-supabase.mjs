@@ -4,11 +4,28 @@ import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
 
 /* =========================================================
-   CONFIG
+   TOBYWORLD LORE — TARGETED SUPABASE REPAIR
+
+   Expected minted token IDs:
+   - Community: 1–1369
+   - Treasury:  2501–3500
+   - Reserve:   3501–4000
+   Total:       2869
+
+   This script:
+   1) Audits Supabase first.
+   2) Retries ONLY missing/incomplete metadata.
+   3) Retries ONLY missing artwork.
+   4) Learns a working gateway per IPFS CID and reuses it.
+   5) Leaves completed records completely untouched.
+   6) Finishes green even if a few IPFS files remain pending.
 ========================================================= */
 
 const COLLECTION =
   "0x0495601Af6f86efb14C9D478eA46b2Aa09cB164A";
+
+const COLLECTION_LOWER =
+  COLLECTION.toLowerCase();
 
 const BUCKET =
   process.env.LORE_ART_BUCKET ||
@@ -31,7 +48,13 @@ const RPCS = [
   "https://mainnet.base.org",
 ].filter(Boolean);
 
-const IPFS_GATEWAYS = (
+const PRIMARY_GATEWAY = String(
+  process.env.IPFS_PRIMARY_GATEWAY || "",
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+const PUBLIC_GATEWAYS = (
   process.env.IPFS_GATEWAYS ||
   [
     "https://ipfs.io/ipfs/",
@@ -42,37 +65,60 @@ const IPFS_GATEWAYS = (
   ].join(",")
 )
   .split(",")
-  .map((v) => v.trim())
+  .map((value) => value.trim())
   .filter(Boolean)
-  .map((v) =>
-    v.endsWith("/") ? v : `${v}/`,
+  .map((value) =>
+    value.endsWith("/")
+      ? value
+      : `${value}/`,
   );
+
+const IPFS_GATEWAYS = [
+  ...(PRIMARY_GATEWAY
+    ? [
+        PRIMARY_GATEWAY.endsWith("/ipfs")
+          ? `${PRIMARY_GATEWAY}/`
+          : PRIMARY_GATEWAY.endsWith("/ipfs/")
+            ? PRIMARY_GATEWAY
+            : `${PRIMARY_GATEWAY}/ipfs/`,
+      ]
+    : []),
+  ...PUBLIC_GATEWAYS,
+].filter(
+  (value, index, arr) =>
+    arr.indexOf(value) === index,
+);
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error(
     "Missing Supabase URL or server key.",
   );
+
   process.exit(1);
 }
 
 /* =========================================================
-   CLI ARGS
+   CLI
 ========================================================= */
 
 const args = Object.fromEntries(
   process.argv
     .slice(2)
     .map((arg) => {
-      const [key, value = "true"] = arg
-        .replace(/^--/, "")
-        .split("=");
+      const [key, value = "true"] =
+        arg
+          .replace(/^--/, "")
+          .split("=");
 
       return [key, value];
     }),
 );
 
-function numericArg(value, fallback) {
-  if (value == null || value === "") {
+function num(value, fallback) {
+  if (
+    value == null ||
+    value === ""
+  ) {
     return fallback;
   }
 
@@ -87,57 +133,41 @@ function numericArg(value, fallback) {
     : fallback;
 }
 
-const FROM = Math.max(
-  1,
-  numericArg(args.from, 1),
-);
-
-const TO = Math.min(
-  4000,
-  numericArg(args.to, 4000),
-);
-
-const CONCURRENCY = Math.max(
+const METADATA_WORKERS = Math.max(
   1,
   Math.min(
-    6,
-    numericArg(args.concurrency, 3),
+    4,
+    num(
+      args["metadata-workers"],
+      2,
+    ),
   ),
 );
 
-const FORCE =
-  args.force === "true";
-
-const METADATA_ONLY =
-  args["metadata-only"] === "true";
-
-const RETRY_FAILED_ART =
-  args["retry-art"] !== "false";
-
-const MAX_IMAGE_BYTES =
-  Math.max(
-    1,
-    numericArg(
-      args["max-image-mb"],
-      12,
+const ART_WORKERS = Math.max(
+  1,
+  Math.min(
+    6,
+    num(
+      args["art-workers"],
+      3,
     ),
-  ) *
-  1024 *
-  1024;
+  ),
+);
 
 const META_TIMEOUT = Math.max(
-  2500,
-  numericArg(
+  3000,
+  num(
     args["metadata-timeout-ms"],
-    6500,
+    9000,
   ),
 );
 
 const IMAGE_TIMEOUT = Math.max(
-  3000,
-  numericArg(
+  5000,
+  num(
     args["image-timeout-ms"],
-    15000,
+    18000,
   ),
 );
 
@@ -145,47 +175,52 @@ const IMAGE_RACE_WIDTH = Math.max(
   1,
   Math.min(
     3,
-    numericArg(
+    num(
       args["image-race-width"],
       2,
     ),
   ),
 );
 
-if (TO < FROM) {
-  console.error(
-    `Invalid range ${FROM}-${TO}`,
-  );
-  process.exit(1);
-}
+const MAX_IMAGE_BYTES =
+  Math.max(
+    1,
+    num(
+      args["max-image-mb"],
+      12,
+    ),
+  ) *
+  1024 *
+  1024;
+
+const PAGE_SIZE = 1000;
 
 /* =========================================================
-   EXACT MINTED RANGES
-
-   Community minted: 1-1369
-   1370-2500: NEVER MINTED
-   Treasury: 2501-3500
-   Reserve: 3501-4000
-
-   Total = 1369 + 1000 + 500 = 2869
+   EXPECTED TOKEN IDS
 ========================================================= */
 
-const MINTED_RANGES = [
-  [1, 1369],
-  [2501, 3500],
-  [3501, 4000],
+const EXPECTED_IDS = [
+  ...Array.from(
+    { length: 1369 },
+    (_, i) => i + 1,
+  ),
+
+  ...Array.from(
+    { length: 1000 },
+    (_, i) => 2501 + i,
+  ),
+
+  ...Array.from(
+    { length: 500 },
+    (_, i) => 3501 + i,
+  ),
 ];
 
-function isMintedId(tokenId) {
-  return MINTED_RANGES.some(
-    ([start, end]) =>
-      tokenId >= start &&
-      tokenId <= end,
-  );
-}
+const EXPECTED_SET =
+  new Set(EXPECTED_IDS);
 
 /* =========================================================
-   CONTRACT
+   CONTRACT ABI
 ========================================================= */
 
 const abi = [
@@ -225,9 +260,9 @@ const client =
     transport: fallback(
       RPCS.map((url) =>
         http(url, {
-          timeout: 8000,
-          retryCount: 2,
-          retryDelay: 350,
+          timeout: 10000,
+          retryCount: 3,
+          retryDelay: 500,
         }),
       ),
     ),
@@ -337,6 +372,7 @@ function extractTraits(metadata) {
 
         return {
           index,
+
           trait_type:
             String(traitType),
 
@@ -354,6 +390,7 @@ function extractTraits(metadata) {
 
       return {
         index,
+
         trait_type:
           `Trait ${index + 1}`,
 
@@ -372,10 +409,54 @@ function extractTraits(metadata) {
 }
 
 /* =========================================================
-   IPFS
+   IPFS HELPERS
 ========================================================= */
 
-function uriCandidates(value) {
+function parseIpfs(value) {
+  const uri = String(
+    value || "",
+  ).trim();
+
+  let path = null;
+
+  if (
+    uri.startsWith(
+      "ipfs://ipfs/",
+    )
+  ) {
+    path = uri.slice(12);
+  } else if (
+    uri.startsWith(
+      "ipfs://",
+    )
+  ) {
+    path = uri.slice(7);
+  }
+
+  if (!path) {
+    return null;
+  }
+
+  const slash =
+    path.indexOf("/");
+
+  return {
+    cid:
+      slash === -1
+        ? path
+        : path.slice(
+            0,
+            slash,
+          ),
+
+    path,
+  };
+}
+
+function uriCandidates(
+  value,
+  preferredGateway = null,
+) {
   const uri = String(
     value || "",
   ).trim();
@@ -385,7 +466,9 @@ function uriCandidates(value) {
   }
 
   if (
-    /^https?:\/\//i.test(uri) ||
+    /^https?:\/\//i.test(
+      uri,
+    ) ||
     uri.startsWith("data:")
   ) {
     return [uri];
@@ -401,24 +484,29 @@ function uriCandidates(value) {
     ];
   }
 
-  const path =
-    uri.startsWith(
-      "ipfs://ipfs/",
-    )
-      ? uri.slice(12)
-      : uri.startsWith(
-            "ipfs://",
-          )
-        ? uri.slice(7)
-        : null;
+  const parsed =
+    parseIpfs(uri);
 
-  if (!path) {
+  if (!parsed) {
     return [uri];
   }
 
-  return IPFS_GATEWAYS.map(
+  const gateways = [
+    ...(preferredGateway
+      ? [preferredGateway]
+      : []),
+
+    ...IPFS_GATEWAYS,
+  ].filter(
+    (value, index, arr) =>
+      value &&
+      arr.indexOf(value) ===
+        index,
+  );
+
+  return gateways.map(
     (gateway) =>
-      `${gateway}${path}`,
+      `${gateway}${parsed.path}`,
   );
 }
 
@@ -433,7 +521,8 @@ function resolveRelative(
     return null;
   }
 
-  const v = value.trim();
+  const v =
+    value.trim();
 
   if (
     /^(ipfs|ar|data|https?):\/\//i.test(
@@ -459,178 +548,31 @@ function resolveRelative(
   return v;
 }
 
-async function fetchWithTimeout(
+/* =========================================================
+   SUPABASE RETRY WRAPPER
+========================================================= */
+
+function supabaseHeaders(
+  extra = {},
+) {
+  return {
+    apikey: SERVICE_KEY,
+
+    Authorization:
+      `Bearer ${SERVICE_KEY}`,
+
+    ...extra,
+  };
+}
+
+async function supabaseFetch(
   url,
   init = {},
-  ms = 6500,
+  {
+    parseJson = false,
+  } = {},
 ) {
-  const controller =
-    new AbortController();
-
-  const timer = setTimeout(
-    () =>
-      controller.abort(
-        new Error(
-          `timeout after ${ms}ms`,
-        ),
-      ),
-    ms,
-  );
-
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/* =========================================================
-   METADATA FETCH
-========================================================= */
-
-async function fetchMetadata(
-  tokenUri,
-  tokenId = 0,
-  attempt = 0,
-) {
-  if (
-    tokenUri.startsWith(
-      "data:application/json",
-    )
-  ) {
-    const comma =
-      tokenUri.indexOf(",");
-
-    const header =
-      tokenUri.slice(0, comma);
-
-    const raw =
-      tokenUri.slice(comma + 1);
-
-    const text =
-      /;base64/i.test(header)
-        ? Buffer.from(
-            raw,
-            "base64",
-          ).toString("utf8")
-        : decodeURIComponent(raw);
-
-    return {
-      metadata:
-        JSON.parse(text),
-
-      metadataUri:
-        tokenUri,
-    };
-  }
-
-  let last =
-    "metadata unavailable";
-
-  const candidates =
-    uriCandidates(tokenUri);
-
-  const offset =
-    candidates.length
-      ? (Number(tokenId) +
-          attempt) %
-        candidates.length
-      : 0;
-
-  const ordered =
-    candidates.length
-      ? [
-          ...candidates.slice(
-            offset,
-          ),
-
-          ...candidates.slice(
-            0,
-            offset,
-          ),
-        ]
-      : candidates;
-
-  for (const url of ordered) {
-    try {
-      const response =
-        await fetchWithTimeout(
-          url,
-
-          {
-            headers: {
-              accept:
-                "application/json,*/*;q=0.5",
-            },
-
-            cache: "no-store",
-          },
-
-          META_TIMEOUT,
-        );
-
-      if (!response.ok) {
-        last =
-          `${response.status} ${url}`;
-
-        continue;
-      }
-
-      const parsed =
-        JSON.parse(
-          await response.text(),
-        );
-
-      if (
-        parsed &&
-        typeof parsed ===
-          "object"
-      ) {
-        return {
-          metadata: parsed,
-          metadataUri: url,
-        };
-      }
-
-      last =
-        `invalid metadata @ ${url}`;
-    } catch (error) {
-      last =
-        `${
-          error?.name ||
-          "Error"
-        }: ` +
-        `${String(
-          error?.message ||
-            error,
-        )} @ ${url}`;
-    }
-  }
-
-  throw new Error(last);
-}
-
-/* =========================================================
-   SUPABASE
-
-   Keeps the SAME authentication pattern
-   that worked in your original backfill.
-
-   Adds safe retries for:
-   - JWT issued at future
-   - 429
-   - 5xx
-   - transient network errors
-========================================================= */
-
-async function rest(
-  path,
-  init = {},
-) {
-  const maxAttempts = 5;
+  const maxAttempts = 6;
 
   for (
     let attempt = 1;
@@ -639,35 +581,35 @@ async function rest(
   ) {
     try {
       const response =
-        await fetch(
-          `${SUPABASE_URL}/rest/v1/${path}`,
+        await fetch(url, {
+          ...init,
 
-          {
-            ...init,
-
-            headers: {
-              apikey:
-                SERVICE_KEY,
-
-              Authorization:
-                `Bearer ${SERVICE_KEY}`,
-
-              "Content-Type":
-                "application/json",
-
-              ...(init.headers ||
-                {}),
-            },
-          },
-        );
+          headers:
+            supabaseHeaders(
+              init.headers || {},
+            ),
+        });
 
       const text =
         await response.text();
 
       if (response.ok) {
-        return text
-          ? JSON.parse(text)
-          : null;
+        if (!parseJson) {
+          return {
+            response,
+            text,
+          };
+        }
+
+        return {
+          response,
+          text,
+
+          data:
+            text
+              ? JSON.parse(text)
+              : null,
+        };
       }
 
       const jwtFuture =
@@ -677,19 +619,29 @@ async function rest(
         );
 
       const retryable =
+        jwtFuture ||
+        response.status === 408 ||
         response.status === 429 ||
         response.status >= 500;
 
       if (
-        (jwtFuture ||
-          retryable) &&
+        retryable &&
         attempt < maxAttempts
       ) {
         const waitMs =
           jwtFuture
-            ? 15000 * attempt
-            : 1000 *
-              2 ** (attempt - 1);
+            ? Math.min(
+                60000,
+                12000 *
+                  attempt,
+              )
+            : Math.min(
+                15000,
+                750 *
+                  2 **
+                    (attempt -
+                      1),
+              );
 
         console.warn(
           `Supabase ${response.status}` +
@@ -739,12 +691,15 @@ async function rest(
       }
 
       const waitMs =
-        1000 *
-        2 ** (attempt - 1);
+        Math.min(
+          15000,
+          750 *
+            2 **
+              (attempt - 1),
+        );
 
       console.warn(
-        `Supabase network error` +
-          ` attempt ${attempt}/${maxAttempts}: ` +
+        `Supabase network error attempt ${attempt}/${maxAttempts}: ` +
           `${message.slice(
             0,
             160,
@@ -763,33 +718,32 @@ async function rest(
   );
 }
 
-async function cachedRecord(
-  tokenId,
+async function rest(
+  path,
+  init = {},
 ) {
-  if (FORCE) {
-    return null;
-  }
+  const result =
+    await supabaseFetch(
+      `${SUPABASE_URL}/rest/v1/${path}`,
 
-  const q =
-    new URLSearchParams({
-      collection_address:
-        `eq.${COLLECTION.toLowerCase()}`,
+      {
+        ...init,
 
-      token_id:
-        `eq.${tokenId}`,
+        headers: {
+          "Content-Type":
+            "application/json",
 
-      select:
-        "token_id,token_uri,metadata_uri,image_uri,trait_count,art_cache_status,cached_image_url",
+          ...(init.headers ||
+            {}),
+        },
+      },
 
-      limit: "1",
-    });
-
-  const rows =
-    await rest(
-      `tobyswap_lore_tokens?${q}`,
+      {
+        parseJson: true,
+      },
     );
 
-  return rows?.[0] || null;
+  return result.data;
 }
 
 async function rpc(
@@ -808,47 +762,287 @@ async function rpc(
   );
 }
 
-async function markArtFailure(
-  tokenId,
-  message,
-) {
-  await rpc(
-    "tobyswap_set_lore_art_cache",
+/* =========================================================
+   AUDIT SUPABASE
+========================================================= */
 
-    {
-      p_collection_address:
-        COLLECTION.toLowerCase(),
+async function loadAllLoreRows() {
+  const rows = [];
 
-      p_token_id:
-        tokenId,
+  let start = 0;
 
-      p_cached_image_url:
-        null,
+  while (true) {
+    const end =
+      start +
+      PAGE_SIZE -
+      1;
 
-      p_storage_path:
-        null,
+    const query =
+      new URLSearchParams({
+        collection_address:
+          `eq.${COLLECTION_LOWER}`,
 
-      p_content_type:
-        null,
+        select:
+          "token_id,token_uri,metadata_uri,image_uri,trait_count,art_cache_status,cached_image_url",
 
-      p_image_bytes:
-        null,
+        order:
+          "token_id.asc",
+      });
 
-      p_status:
-        "failed",
+    const result =
+      await supabaseFetch(
+        `${SUPABASE_URL}/rest/v1/tobyswap_lore_tokens?${query}`,
 
-      p_error:
-        String(message).slice(
+        {
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Range:
+              `${start}-${end}`,
+
+            Prefer:
+              "count=none",
+          },
+        },
+
+        {
+          parseJson: true,
+        },
+      );
+
+    const page =
+      Array.isArray(result.data)
+        ? result.data
+        : [];
+
+    rows.push(...page);
+
+    if (
+      page.length <
+      PAGE_SIZE
+    ) {
+      break;
+    }
+
+    start +=
+      PAGE_SIZE;
+  }
+
+  return rows;
+}
+
+function metadataReady(row) {
+  return Boolean(
+    row &&
+      Number(
+        row.trait_count ||
           0,
-          500,
-        ),
-    },
-  ).catch(() => {});
+      ) > 0 &&
+      typeof row.image_uri ===
+        "string" &&
+      row.image_uri.trim(),
+  );
+}
+
+function artReady(row) {
+  return Boolean(
+    row &&
+      row.art_cache_status ===
+        "cached" &&
+      typeof row.cached_image_url ===
+        "string" &&
+      row.cached_image_url.trim(),
+  );
 }
 
 /* =========================================================
-   IMAGE RACING
+   METADATA FETCH
 ========================================================= */
+
+async function fetchWithTimeout(
+  url,
+  init = {},
+  timeoutMs =
+    META_TIMEOUT,
+) {
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(
+      () =>
+        controller.abort(
+          new Error(
+            `timeout after ${timeoutMs}ms`,
+          ),
+        ),
+
+      timeoutMs,
+    );
+
+  try {
+    return await fetch(
+      url,
+
+      {
+        ...init,
+
+        signal:
+          controller.signal,
+      },
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchMetadata(
+  tokenUri,
+  tokenId,
+  attempt = 0,
+) {
+  if (
+    tokenUri.startsWith(
+      "data:application/json",
+    )
+  ) {
+    const comma =
+      tokenUri.indexOf(",");
+
+    const header =
+      tokenUri.slice(
+        0,
+        comma,
+      );
+
+    const raw =
+      tokenUri.slice(
+        comma + 1,
+      );
+
+    const text =
+      /;base64/i.test(
+        header,
+      )
+        ? Buffer.from(
+            raw,
+            "base64",
+          ).toString(
+            "utf8",
+          )
+        : decodeURIComponent(
+            raw,
+          );
+
+    return {
+      metadata:
+        JSON.parse(text),
+
+      metadataUri:
+        tokenUri,
+    };
+  }
+
+  const candidates =
+    uriCandidates(
+      tokenUri,
+    );
+
+  const offset =
+    candidates.length
+      ? (Number(
+          tokenId,
+        ) +
+          attempt) %
+        candidates.length
+      : 0;
+
+  const ordered =
+    candidates.length
+      ? [
+          ...candidates.slice(
+            offset,
+          ),
+
+          ...candidates.slice(
+            0,
+            offset,
+          ),
+        ]
+      : candidates;
+
+  let last =
+    "metadata unavailable";
+
+  for (const url of ordered) {
+    try {
+      const response =
+        await fetchWithTimeout(
+          url,
+
+          {
+            headers: {
+              accept:
+                "application/json,*/*;q=0.5",
+            },
+
+            cache:
+              "no-store",
+          },
+
+          META_TIMEOUT,
+        );
+
+      if (!response.ok) {
+        last =
+          `${response.status} ${url}`;
+
+        continue;
+      }
+
+      const parsed =
+        JSON.parse(
+          await response.text(),
+        );
+
+      if (
+        parsed &&
+        typeof parsed ===
+          "object"
+      ) {
+        return {
+          metadata:
+            parsed,
+
+          metadataUri:
+            url,
+        };
+      }
+
+      last =
+        `invalid metadata @ ${url}`;
+    } catch (error) {
+      last =
+        `${
+          error?.name ||
+          "Error"
+        }: ${String(
+          error?.message ||
+            error,
+        )} @ ${url}`;
+    }
+  }
+
+  throw new Error(last);
+}
+
+/* =========================================================
+   ARTWORK FETCH
+========================================================= */
+
+const CID_GATEWAY =
+  new Map();
 
 function contentTypeToExt(
   contentType,
@@ -884,6 +1078,32 @@ function contentTypeToExt(
   return "png";
 }
 
+function gatewayFromUrl(
+  url,
+  parsed,
+) {
+  if (!parsed) {
+    return null;
+  }
+
+  const suffix =
+    parsed.path;
+
+  if (
+    !url.endsWith(
+      suffix,
+    )
+  ) {
+    return null;
+  }
+
+  return url.slice(
+    0,
+    url.length -
+      suffix.length,
+  );
+}
+
 async function fetchImageCandidate(
   url,
   parentSignal,
@@ -891,20 +1111,22 @@ async function fetchImageCandidate(
   const controller =
     new AbortController();
 
-  const timer = setTimeout(
-    () =>
-      controller.abort(
-        new Error(
-          `timeout after ${IMAGE_TIMEOUT}ms`,
+  const timer =
+    setTimeout(
+      () =>
+        controller.abort(
+          new Error(
+            `timeout after ${IMAGE_TIMEOUT}ms`,
+          ),
         ),
-      ),
-    IMAGE_TIMEOUT,
-  );
+
+      IMAGE_TIMEOUT,
+    );
 
   const parentAbort = () =>
     controller.abort(
       new Error(
-        "gateway race cancelled",
+        "gateway race cancelled after winner",
       ),
     );
 
@@ -926,17 +1148,22 @@ async function fetchImageCandidate(
 
   try {
     const response =
-      await fetch(url, {
-        headers: {
-          accept:
-            "image/*,*/*;q=0.5",
+      await fetch(
+        url,
+
+        {
+          headers: {
+            accept:
+              "image/*,*/*;q=0.5",
+          },
+
+          cache:
+            "no-store",
+
+          signal:
+            controller.signal,
         },
-
-        cache: "no-store",
-
-        signal:
-          controller.signal,
-      });
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -965,7 +1192,7 @@ async function fetchImageCandidate(
       );
     }
 
-    const declaredLength =
+    const contentLength =
       Number(
         response.headers.get(
           "content-length",
@@ -973,8 +1200,8 @@ async function fetchImageCandidate(
       );
 
     if (
-      declaredLength &&
-      declaredLength >
+      contentLength &&
+      contentLength >
         MAX_IMAGE_BYTES
     ) {
       throw new Error(
@@ -989,7 +1216,7 @@ async function fetchImageCandidate(
 
     if (!bytes.length) {
       throw new Error(
-        "empty image response",
+        "empty image",
       );
     }
 
@@ -1003,9 +1230,9 @@ async function fetchImageCandidate(
     }
 
     return {
-      url,
-      contentType,
       bytes,
+      contentType,
+      url,
     };
   } finally {
     clearTimeout(timer);
@@ -1019,7 +1246,7 @@ async function fetchImageCandidate(
   }
 }
 
-async function raceImageCandidates(
+async function raceCandidates(
   candidates,
 ) {
   let lastError =
@@ -1046,26 +1273,21 @@ async function raceImageCandidates(
       const winner =
         await Promise.any(
           batch.map(
-            async (url) => {
-              try {
-                return await fetchImageCandidate(
-                  url,
-                  controller.signal,
-                );
-              } catch (error) {
-                lastError =
-                  error;
+            (url) =>
+              fetchImageCandidate(
+                url,
+                controller.signal,
+              ).catch(
+                (error) => {
+                  lastError =
+                    error;
 
-                throw error;
-              }
-            },
+                  throw error;
+                },
+              ),
           ),
         );
 
-      /*
-       * One complete image won.
-       * Kill the losing request.
-       */
       controller.abort();
 
       return winner;
@@ -1081,7 +1303,8 @@ async function raceImageCandidates(
               1
           ];
       } else {
-        lastError = error;
+        lastError =
+          error;
       }
     }
   }
@@ -1089,16 +1312,10 @@ async function raceImageCandidates(
   throw lastError;
 }
 
-/* =========================================================
-   ART CACHE
-========================================================= */
-
-async function uploadArt(
-  tokenId,
+async function downloadArt(
   imageValue,
   metadataUri,
   tokenUri,
-  attempt = 0,
 ) {
   const resolved =
     resolveRelative(
@@ -1109,12 +1326,46 @@ async function uploadArt(
 
   if (!resolved) {
     throw new Error(
-      "No image URI in metadata",
+      "No image URI",
     );
   }
 
+  const parsed =
+    parseIpfs(resolved);
+
+  const preferred =
+    parsed
+      ? CID_GATEWAY.get(
+          parsed.cid,
+        ) || null
+      : null;
+
+  /*
+   * If we've already learned a working
+   * gateway for this CID, try it FIRST.
+   */
+  if (
+    parsed &&
+    preferred
+  ) {
+    try {
+      const url =
+        `${preferred}${parsed.path}`;
+
+      return await fetchImageCandidate(
+        url,
+      );
+    } catch {
+      CID_GATEWAY.delete(
+        parsed.cid,
+      );
+    }
+  }
+
   const candidates =
-    uriCandidates(resolved);
+    uriCandidates(
+      resolved,
+    );
 
   if (!candidates.length) {
     throw new Error(
@@ -1122,32 +1373,83 @@ async function uploadArt(
     );
   }
 
-  /*
-   * Spread first-choice gateway
-   * across tokens.
-   */
-  const offset =
-    (Number(tokenId) +
-      attempt) %
-    candidates.length;
+  const winner =
+    await raceCandidates(
+      candidates,
+    );
 
-  const ordered = [
-    ...candidates.slice(
-      offset,
-    ),
+  if (parsed) {
+    const winningGateway =
+      gatewayFromUrl(
+        winner.url,
+        parsed,
+      );
 
-    ...candidates.slice(
-      0,
-      offset,
-    ),
-  ];
+    if (winningGateway) {
+      CID_GATEWAY.set(
+        parsed.cid,
+        winningGateway,
+      );
+    }
+  }
 
+  return winner;
+}
+
+async function markArtFailure(
+  tokenId,
+  message,
+) {
+  await rpc(
+    "tobyswap_set_lore_art_cache",
+
+    {
+      p_collection_address:
+        COLLECTION_LOWER,
+
+      p_token_id:
+        tokenId,
+
+      p_cached_image_url:
+        null,
+
+      p_storage_path:
+        null,
+
+      p_content_type:
+        null,
+
+      p_image_bytes:
+        null,
+
+      p_status:
+        "failed",
+
+      p_error:
+        String(
+          message,
+        ).slice(
+          0,
+          500,
+        ),
+    },
+  ).catch(() => {});
+}
+
+async function uploadArt(
+  tokenId,
+  imageValue,
+  metadataUri,
+  tokenUri,
+) {
   let fetched;
 
   try {
     fetched =
-      await raceImageCandidates(
-        ordered,
+      await downloadArt(
+        imageValue,
+        metadataUri,
+        tokenUri,
       );
   } catch (error) {
     const message =
@@ -1180,20 +1482,15 @@ async function uploadArt(
   const path =
     `canonical/${tokenId}.${ext}`;
 
-  const upload =
-    await fetch(
+  const result =
+    await supabaseFetch(
       `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
 
       {
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
-          apikey:
-            SERVICE_KEY,
-
-          Authorization:
-            `Bearer ${SERVICE_KEY}`,
-
           "Content-Type":
             contentType,
 
@@ -1204,27 +1501,17 @@ async function uploadArt(
             "public, max-age=31536000, immutable",
         },
 
-        body: bytes,
+        body:
+          bytes,
       },
     );
 
-  if (!upload.ok) {
-    const message =
-      `storage ${
-        upload.status
-      }: ${(
-        await upload.text()
-      ).slice(
-        0,
-        300,
-      )}`;
-
-    await markArtFailure(
-      tokenId,
-      message,
+  if (
+    !result.response.ok
+  ) {
+    throw new Error(
+      `storage ${result.response.status}`,
     );
-
-    throw new Error(message);
   }
 
   const publicUrl =
@@ -1237,7 +1524,7 @@ async function uploadArt(
 
     {
       p_collection_address:
-        COLLECTION.toLowerCase(),
+        COLLECTION_LOWER,
 
       p_token_id:
         tokenId,
@@ -1266,7 +1553,50 @@ async function uploadArt(
 }
 
 /* =========================================================
-   CHECK REVEAL
+   WORKER POOL
+========================================================= */
+
+async function runPool(
+  items,
+  workerCount,
+  handler,
+) {
+  let cursor = 0;
+
+  async function worker() {
+    while (
+      cursor <
+      items.length
+    ) {
+      const item =
+        items[
+          cursor++
+        ];
+
+      await handler(item);
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      {
+        length:
+          Math.min(
+            workerCount,
+            Math.max(
+              1,
+              items.length,
+            ),
+          ),
+      },
+
+      () => worker(),
+    ),
+  );
+}
+
+/* =========================================================
+   START
 ========================================================= */
 
 const revealed =
@@ -1288,585 +1618,569 @@ if (!revealed) {
   process.exit(1);
 }
 
-/* =========================================================
-   BUILD QUEUE
-
-   THIS is what prevents 1370-2500
-   from ever being touched.
-========================================================= */
-
-const requestedIds =
-  Array.from(
-    {
-      length:
-        TO - FROM + 1,
-    },
-
-    (_, i) =>
-      FROM + i,
-  );
-
-const queue =
-  requestedIds.filter(
-    isMintedId,
-  );
-
-const excludedUnminted =
-  requestedIds.length -
-  queue.length;
-
-const total =
-  queue.length;
-
-const artRetryQueue = [];
-
-const stats = {
-  metadataCached: 0,
-  artCached: 0,
-  skipped: 0,
-  metadataFailed: 0,
-  artFailed: 0,
-};
-
 console.log("");
 console.log(
-  "──── TOBYWORLD LORE BACKFILL ────",
+  "──── TOBYWORLD LORE TARGETED REPAIR ────",
 );
 
 console.log(
-  `Requested: ${FROM}-${TO}`,
+  `Expected minted deeds: ${EXPECTED_IDS.length}`,
 );
 
 console.log(
-  `Minted queued: ${total}`,
+  `Metadata workers: ${METADATA_WORKERS}`,
 );
 
 console.log(
-  `Unminted excluded: ${excludedUnminted}`,
+  `Artwork workers: ${ART_WORKERS}`,
 );
 
 console.log(
-  "Ranges: 1-1369 | 2501-3500 | 3501-4000",
+  `Artwork gateway race width: ${IMAGE_RACE_WIDTH}`,
 );
 
 console.log(
-  `Workers: ${CONCURRENCY}`,
+  `Primary gateway configured: ${
+    PRIMARY_GATEWAY
+      ? "yes"
+      : "no"
+  }`,
 );
 
-console.log(
-  `Metadata timeout: ${META_TIMEOUT}ms`,
-);
+console.log("");
 
-console.log(
-  `Image timeout: ${IMAGE_TIMEOUT}ms`,
-);
+/* =========================================================
+   AUDIT CURRENT DB
+========================================================= */
 
-console.log(
-  `Gateway race: ${IMAGE_RACE_WIDTH}`,
-);
+const rows =
+  await loadAllLoreRows();
 
-console.log(
-  `Artwork: ${!METADATA_ONLY}`,
-);
+const rowMap =
+  new Map(
+    rows
+      .filter((row) =>
+        EXPECTED_SET.has(
+          Number(
+            row.token_id,
+          ),
+        ),
+      )
+      .map((row) => [
+        Number(
+          row.token_id,
+        ),
 
-console.log(
-  `Force: ${FORCE}`,
-);
+        row,
+      ]),
+  );
 
-console.log(
-  `Gateways (${IPFS_GATEWAYS.length}):`,
-);
+const missingMetadata = [];
+
+const pendingArt = [];
 
 for (
-  const gateway
-  of IPFS_GATEWAYS
+  const tokenId
+  of EXPECTED_IDS
 ) {
-  console.log(
-    `  ${gateway}`,
-  );
-}
-
-if (total === 0) {
-  console.log(
-    "No minted IDs in requested range.",
-  );
-
-  process.exit(0);
-}
-
-/* =========================================================
-   PROGRESS
-========================================================= */
-
-function progress() {
-  const processed =
-    stats.metadataCached +
-    stats.skipped +
-    stats.metadataFailed;
-
-  if (
-    processed % 25 === 0 ||
-    processed === total
-  ) {
-    console.log(
-      `progress ${processed}/${total}` +
-        ` · metadata ${stats.metadataCached}` +
-        ` · art ${stats.artCached}` +
-        ` · skipped ${stats.skipped}` +
-        ` · metadata-failed ${stats.metadataFailed}` +
-        ` · art-pending ${stats.artFailed}`,
-    );
-  }
-}
-
-/* =========================================================
-   PROCESS TOKEN
-========================================================= */
-
-async function processToken(
-  tokenId,
-) {
-  /*
-   * Additional belt-and-suspenders check.
-   * Queue should already contain only minted IDs.
-   */
-  if (
-    !isMintedId(tokenId)
-  ) {
-    return;
-  }
-
-  const existing =
-    await cachedRecord(
+  const row =
+    rowMap.get(
       tokenId,
     );
 
-  const metadataReady =
-    Boolean(
-      existing &&
-        Number(
-          existing.trait_count ||
-            0,
-        ) > 0 &&
-        existing.image_uri,
-    );
-
-  const artReady =
-    Boolean(
-      existing &&
-        existing.art_cache_status ===
-          "cached" &&
-        existing.cached_image_url,
-    );
-
-  /*
-   * EVERYTHING DONE:
-   * zero RPC
-   * zero metadata fetch
-   * zero artwork fetch
-   */
   if (
-    metadataReady &&
-    (METADATA_ONLY ||
-      artReady)
+    !metadataReady(row)
   ) {
-    stats.skipped++;
+    missingMetadata.push(
+      tokenId,
+    );
 
-    progress();
-
-    return;
+    continue;
   }
 
-  /*
-   * Metadata already cached.
-   * Only repair artwork.
-   */
-  if (
-    metadataReady &&
-    !METADATA_ONLY &&
-    !artReady
-  ) {
+  if (!artReady(row)) {
+    pendingArt.push({
+      tokenId,
+
+      image:
+        row.image_uri,
+
+      metadataUri:
+        row.metadata_uri,
+
+      tokenUri:
+        row.token_uri,
+    });
+  }
+}
+
+console.log(
+  `Audit: ${
+    2869 -
+    missingMetadata.length -
+    pendingArt.length
+  } complete`,
+);
+
+console.log(
+  `Audit: ${pendingArt.length} artwork pending`,
+);
+
+console.log(
+  `Audit: ${missingMetadata.length} metadata missing/incomplete`,
+);
+
+console.log("");
+
+/* =========================================================
+   REPAIR METADATA
+========================================================= */
+
+const metadataStats = {
+  repaired: 0,
+  failed: [],
+};
+
+const metadataArtItems = [];
+
+await runPool(
+  missingMetadata,
+  METADATA_WORKERS,
+
+  async (tokenId) => {
     try {
-      await uploadArt(
-        tokenId,
-        existing.image_uri,
-        existing.metadata_uri,
-        existing.token_uri,
+      const tokenUri =
+        await client.readContract({
+          address:
+            COLLECTION,
+
+          abi,
+
+          functionName:
+            "tokenURI",
+
+          args: [
+            BigInt(
+              tokenId,
+            ),
+          ],
+        });
+
+      let result = null;
+      let lastError = null;
+
+      /*
+       * Two metadata passes.
+       * Second pass rotates gateway order.
+       */
+      for (
+        let attempt = 0;
+        attempt < 2 &&
+        !result;
+        attempt++
+      ) {
+        try {
+          result =
+            await fetchMetadata(
+              String(
+                tokenUri,
+              ),
+
+              tokenId,
+              attempt,
+            );
+        } catch (error) {
+          lastError =
+            error;
+
+          if (
+            attempt === 0
+          ) {
+            await sleep(
+              500,
+            );
+          }
+        }
+      }
+
+      if (!result) {
+        throw (
+          lastError ||
+          new Error(
+            "metadata unavailable",
+          )
+        );
+      }
+
+      const {
+        metadata,
+        metadataUri,
+      } = result;
+
+      const traits =
+        extractTraits(
+          metadata,
+        );
+
+      const image =
+        metadata?.image ??
+        metadata?.image_url ??
+        metadata?.imageUrl ??
+        null;
+
+      await rpc(
+        "tobyswap_upsert_lore_metadata",
+
+        {
+          p_collection_address:
+            COLLECTION_LOWER,
+
+          p_chain_id:
+            8453,
+
+          p_token_id:
+            tokenId,
+
+          p_token_uri:
+            String(
+              tokenUri,
+            ),
+
+          p_metadata_uri:
+            metadataUri,
+
+          p_name:
+            asText(
+              metadata?.name,
+            ),
+
+          p_description:
+            asText(
+              metadata?.description,
+            ),
+
+          p_image_uri:
+            asText(
+              image,
+            ),
+
+          p_animation_uri:
+            asText(
+              metadata?.animation_url,
+            ),
+
+          p_external_url:
+            asText(
+              metadata?.external_url,
+            ),
+
+          p_metadata:
+            metadata,
+
+          p_metadata_hash:
+            null,
+
+          p_revealed:
+            true,
+
+          p_source:
+            "repair-targeted-v1",
+
+          p_traits:
+            traits,
+        },
       );
 
-      stats.artCached++;
-    } catch (error) {
-      stats.artFailed++;
+      metadataStats.repaired++;
 
-      artRetryQueue.push({
-        tokenId,
-
-        image:
-          existing.image_uri,
-
-        metadataUri:
-          existing.metadata_uri,
-
-        tokenUri:
-          existing.token_uri,
-      });
-
-      console.warn(
-        `#${tokenId} ART pending: ` +
-          String(
-            error?.message ||
-              error,
-          ).slice(
-            0,
-            180,
-          ),
+      console.log(
+        `#${tokenId} METADATA repaired`,
       );
-    }
 
-    stats.metadataCached++;
-
-    progress();
-
-    return;
-  }
-
-  /*
-   * Need metadata.
-   */
-  let tokenUri;
-  let metadata;
-  let metadataUri;
-  let image;
-
-  try {
-    tokenUri =
-      await client.readContract({
-        address:
-          COLLECTION,
-
-        abi,
-
-        functionName:
-          "tokenURI",
-
-        args: [
-          BigInt(tokenId),
-        ],
-      });
-
-    ({
-      metadata,
-      metadataUri,
-    } = await fetchMetadata(
-      String(tokenUri),
-      tokenId,
-    ));
-
-    const traits =
-      extractTraits(metadata);
-
-    image =
-      metadata?.image ??
-      metadata?.image_url ??
-      metadata?.imageUrl ??
-      null;
-
-    await rpc(
-      "tobyswap_upsert_lore_metadata",
-
-      {
-        p_collection_address:
-          COLLECTION.toLowerCase(),
-
-        p_chain_id:
-          8453,
-
-        p_token_id:
+      if (image) {
+        metadataArtItems.push({
           tokenId,
-
-        p_token_uri:
-          String(tokenUri),
-
-        p_metadata_uri:
+          image,
           metadataUri,
 
-        p_name:
-          asText(
-            metadata?.name,
-          ),
+          tokenUri:
+            String(
+              tokenUri,
+            ),
+        });
+      }
+    } catch (error) {
+      metadataStats.failed.push(
+        tokenId,
+      );
 
-        p_description:
-          asText(
-            metadata?.description,
-          ),
-
-        p_image_uri:
-          asText(image),
-
-        p_animation_uri:
-          asText(
-            metadata?.animation_url,
-          ),
-
-        p_external_url:
-          asText(
-            metadata?.external_url,
-          ),
-
-        p_metadata:
-          metadata,
-
-        p_metadata_hash:
-          null,
-
-        p_revealed:
-          true,
-
-        p_source:
-          "backfill-v4-valid-ranges",
-
-        p_traits:
-          traits,
-      },
-    );
-
-    stats.metadataCached++;
-  } catch (error) {
-    stats.metadataFailed++;
-
-    console.error(
-      `#${tokenId} METADATA failed: ` +
-        String(
+      console.warn(
+        `#${tokenId} METADATA still missing: ${String(
           error?.message ||
             error,
         ).slice(
           0,
-          260,
-        ),
-    );
-
-    progress();
-
-    await sleep(100);
-
-    return;
-  }
-
-  /*
-   * Metadata is now safely stored.
-   * Artwork is separate.
-   */
-  if (!METADATA_ONLY) {
-    try {
-      await uploadArt(
-        tokenId,
-        image,
-        metadataUri,
-        String(tokenUri),
-      );
-
-      stats.artCached++;
-    } catch (error) {
-      stats.artFailed++;
-
-      artRetryQueue.push({
-        tokenId,
-        image,
-        metadataUri,
-
-        tokenUri:
-          String(tokenUri),
-      });
-
-      console.warn(
-        `#${tokenId} ART pending; metadata saved: ` +
-          String(
-            error?.message ||
-              error,
-          ).slice(
-            0,
-            180,
-          ),
+          220,
+        )}`,
       );
     }
-  }
-
-  progress();
-}
-
-/* =========================================================
-   MAIN WORKERS
-========================================================= */
-
-async function worker() {
-  while (queue.length) {
-    const tokenId =
-      queue.shift();
-
-    if (!tokenId) {
-      return;
-    }
-
-    await processToken(
-      tokenId,
-    );
-  }
-}
-
-await Promise.all(
-  Array.from(
-    {
-      length:
-        CONCURRENCY,
-    },
-
-    () => worker(),
-  ),
+  },
 );
 
 /* =========================================================
-   ART-ONLY REPAIR PASS
+   BUILD ART QUEUE
 ========================================================= */
 
-if (
-  !METADATA_ONLY &&
-  RETRY_FAILED_ART &&
-  artRetryQueue.length
+const artItemsById =
+  new Map();
+
+for (
+  const item
+  of [
+    ...pendingArt,
+    ...metadataArtItems,
+  ]
 ) {
-  const retryItems = [
-    ...artRetryQueue,
-  ];
-
-  const RETRY_WORKERS =
-    Math.min(
-      3,
-      Math.max(
-        1,
-        CONCURRENCY,
-      ),
-    );
-
-  console.log("");
-
-  console.log(
-    `ART repair pass: ${retryItems.length} items · workers=${RETRY_WORKERS}`,
-  );
-
-  let cursor = 0;
-
-  async function retryWorker() {
-    while (
-      cursor <
-      retryItems.length
-    ) {
-      const item =
-        retryItems[
-          cursor++
-        ];
-
-      await sleep(200);
-
-      try {
-        await uploadArt(
-          item.tokenId,
-          item.image,
-          item.metadataUri,
-          item.tokenUri,
-          1,
-        );
-
-        stats.artCached++;
-
-        stats.artFailed =
-          Math.max(
-            0,
-            stats.artFailed -
-              1,
-          );
-
-        console.log(
-          `#${item.tokenId} ART repaired`,
-        );
-      } catch (error) {
-        console.warn(
-          `#${item.tokenId} ART still pending: ` +
-            String(
-              error?.message ||
-                error,
-            ).slice(
-              0,
-              180,
-            ),
-        );
-      }
-    }
-  }
-
-  await Promise.all(
-    Array.from(
-      {
-        length:
-          RETRY_WORKERS,
-      },
-
-      () =>
-        retryWorker(),
-    ),
+  artItemsById.set(
+    item.tokenId,
+    item,
   );
 }
 
+const artItems = [
+  ...artItemsById.values(),
+];
+
+/*
+ * Group by CID so once a gateway works
+ * for a CID, nearby jobs reuse it.
+ */
+artItems.sort(
+  (a, b) => {
+    const cidA =
+      parseIpfs(
+        a.image,
+      )?.cid || "";
+
+    const cidB =
+      parseIpfs(
+        b.image,
+      )?.cid || "";
+
+    return (
+      cidA.localeCompare(
+        cidB,
+      ) ||
+      a.tokenId -
+        b.tokenId
+    );
+  },
+);
+
 /* =========================================================
-   SUMMARY
+   REPAIR ART
+========================================================= */
+
+const artStats = {
+  repaired: 0,
+  failed: [],
+};
+
+await runPool(
+  artItems,
+  ART_WORKERS,
+
+  async (item) => {
+    try {
+      await uploadArt(
+        item.tokenId,
+        item.image,
+        item.metadataUri,
+        item.tokenUri,
+      );
+
+      artStats.repaired++;
+
+      const parsed =
+        parseIpfs(
+          item.image,
+        );
+
+      const learned =
+        parsed
+          ? CID_GATEWAY.get(
+              parsed.cid,
+            )
+          : null;
+
+      console.log(
+        `#${item.tokenId} ART repaired` +
+          `${
+            learned
+              ? ` · ${
+                  new URL(
+                    learned,
+                  ).hostname
+                }`
+              : ""
+          }`,
+      );
+    } catch (error) {
+      artStats.failed.push(
+        item.tokenId,
+      );
+
+      console.warn(
+        `#${item.tokenId} ART still pending: ${String(
+          error?.message ||
+            error,
+        ).slice(
+          0,
+          200,
+        )}`,
+      );
+    }
+  },
+);
+
+/* =========================================================
+   FINAL AUDIT
+========================================================= */
+
+const finalRows =
+  await loadAllLoreRows();
+
+const finalMap =
+  new Map(
+    finalRows
+      .filter((row) =>
+        EXPECTED_SET.has(
+          Number(
+            row.token_id,
+          ),
+        ),
+      )
+      .map((row) => [
+        Number(
+          row.token_id,
+        ),
+
+        row,
+      ]),
+  );
+
+const finalMetadataMissing = [];
+
+const finalArtPending = [];
+
+let complete = 0;
+
+for (
+  const tokenId
+  of EXPECTED_IDS
+) {
+  const row =
+    finalMap.get(
+      tokenId,
+    );
+
+  if (
+    !metadataReady(row)
+  ) {
+    finalMetadataMissing.push(
+      tokenId,
+    );
+  } else if (
+    !artReady(row)
+  ) {
+    finalArtPending.push(
+      tokenId,
+    );
+  } else {
+    complete++;
+  }
+}
+
+/* =========================================================
+   FINAL REPORT
 ========================================================= */
 
 console.log("");
 
 console.log(
-  "──────── BACKFILL COMPLETE ────────",
+  "════════ REPAIR COMPLETE ════════",
 );
 
 console.log(
-  `requested range: ${FROM}-${TO}`,
+  `Complete collection: ${complete}/2869`,
 );
 
 console.log(
-  `minted processed: ${total}`,
+  `Metadata repaired this run: ${metadataStats.repaired}`,
 );
 
 console.log(
-  `unminted excluded: ${excludedUnminted}`,
+  `Artwork repaired this run: ${artStats.repaired}`,
 );
 
 console.log(
-  `metadata handled: ${stats.metadataCached}`,
+  `Metadata still missing: ${finalMetadataMissing.length}`,
 );
 
 console.log(
-  `art cached/repaired: ${stats.artCached}`,
+  `Artwork still pending: ${finalArtPending.length}`,
 );
 
-console.log(
-  `already complete: ${stats.skipped}`,
-);
+if (
+  finalMetadataMissing.length
+) {
+  console.log(
+    `Remaining metadata IDs: ${finalMetadataMissing.join(
+      ",",
+    )}`,
+  );
+}
+
+if (
+  finalArtPending.length
+) {
+  console.log(
+    `Remaining artwork IDs: ${finalArtPending.join(
+      ",",
+    )}`,
+  );
+}
+
+if (
+  CID_GATEWAY.size
+) {
+  console.log("");
+
+  console.log(
+    "Working gateway learned by CID:",
+  );
+
+  for (
+    const [
+      cid,
+      gateway,
+    ]
+    of CID_GATEWAY.entries()
+  ) {
+    console.log(
+      `  ${cid} -> ${gateway}`,
+    );
+  }
+}
 
 console.log(
-  `real metadata failures: ${stats.metadataFailed}`,
-);
-
-console.log(
-  `art still pending: ${stats.artFailed}`,
-);
-
-console.log(
-  "───────────────────────────────────",
+  "═════════════════════════════════",
 );
 
 /*
- * Artwork misses do NOT fail the Action.
- * Metadata failures still do.
+ * Intentionally exit successfully.
+ *
+ * If a few remote IPFS files are still unavailable,
+ * the workflow remains GREEN and reports exactly
+ * which token IDs still need another repair run.
  */
-if (
-  stats.metadataFailed
-) {
-  process.exitCode = 2;
-}
