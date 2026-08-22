@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { erc20Abi, type Address } from "viem";
+import { type Address } from "viem";
 import { base } from "viem/chains";
 import { useParams } from "next/navigation";
-import { useReadContract, useReadContracts } from "wagmi";
+import { useReadContract } from "wagmi";
 import MiniAppGate from "@/components/MiniAppGate";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
@@ -13,18 +13,13 @@ import LandIdentity from "@/components/land/LandIdentity";
 import LandTraits from "@/components/land/LandTraits";
 import LoreDeedArt from "@/components/land/LoreDeedArt";
 import LandVault from "@/components/land/LandVault";
-import LandGarden from "@/components/land/LandGarden";
-import LandRelics from "@/components/land/LandRelics";
-import LandProductionPlaceholder from "@/components/land/LandProductionPlaceholder";
 import LandShareActions from "@/components/land/LandShareActions";
 import LandExchangePreview from "@/components/world/LandExchangePreview";
 import LandCommunityProfile from "@/components/land/LandCommunityProfile";
-import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
+import LandKeeperStory from "@/components/land/LandKeeperStory";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { fetchLoreMetadataResult, type LoreMetadata, type LoreMetadataResult } from "@/lib/lore-metadata";
 import { clearCachedLoreMetadata, readCachedLoreMetadata, type CachedLoreMetadata } from "@/lib/lore-cache";
-import { TABOSHI1_ADDRESS, TABOSHI1_ABI, TABOSHI1_TOKEN_ID } from "@/lib/taboshi1";
-import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
 
 const METADATA_REFRESH_COOLDOWN_MS = 30_000;
 
@@ -98,26 +93,7 @@ export default function LandPage() {
   });
 
   const owner = typeof ownerRead.data === "string" ? ownerRead.data as Address : undefined;
-
-  const ecosystem = useReadContracts({
-    contracts: owner ? [
-      { address: TOBY, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
-      { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
-      { address: TABOSHI, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
-      { address: CBBTC, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
-      { address: TABOSHI1_ADDRESS, abi: TABOSHI1_ABI, functionName: "balanceOf", args: [owner, TABOSHI1_TOKEN_ID], chainId: base.id },
-      { address: TABOSHI_SEEDS_ADDRESS, abi: TABOSHI_SEEDS_ABI, functionName: "balanceOf", args: [owner, TABOSHI_SEED_ID], chainId: base.id },
-    ] as const : [],
-    query: { ...readQuery, enabled: Boolean(owner) },
-  });
-
-  const values = ecosystem.data || [];
-  const toby = typeof values[0]?.result === "bigint" ? values[0].result : 0n;
-  const patience = typeof values[1]?.result === "bigint" ? values[1].result : 0n;
-  const taboshi = typeof values[2]?.result === "bigint" ? values[2].result : 0n;
-  const cbbtc = typeof values[3]?.result === "bigint" ? values[3].result : 0n;
-  const oldLeaf = typeof values[4]?.result === "bigint" ? values[4].result : 0n;
-  const seed = typeof values[5]?.result === "bigint" ? values[5].result : 0n;
+  const transferNonce = typeof travelRead.data === "bigint" ? travelRead.data : 0n;
 
   const loreRevealed = revealedRead.data === true;
   const refreshCooldownRemaining = Math.max(0, refreshCooldownUntil - refreshClock);
@@ -290,7 +266,7 @@ export default function LandPage() {
           </section>
         ) : (
           <>
-            <LandCommunityProfile tokenId={tokenId!} owner={owner} />
+            <LandCommunityProfile tokenId={tokenId!} owner={owner} transferNonce={transferNonce} />
 
             <section className="land-showcase" aria-label={`Lore Land #${tokenId!.toString()}`}>
               <div className="land-hero-deed-wrap land-showcase-art">
@@ -333,21 +309,19 @@ export default function LandPage() {
                 onRefresh={refreshBlocked ? undefined : refreshMetadata}
               />
 
-              <div className="land-showcase-share">
-                <LandShareActions tokenId={tokenId!} />
-              </div>
             </section>
 
-            <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} travels={typeof travelRead.data === "bigint" ? travelRead.data : 0n} genesisSealed={genesisRead.data === true} />
+            <LandKeeperStory tokenId={tokenId!} owner={owner} transferNonce={transferNonce} />
 
             <LandVault tokenId={tokenId!} owner={owner} />
 
-            <div className="land-two-column">
-              <LandGarden seedBalance={seed} />
-              <LandProductionPlaceholder revealed={hasArtwork} />
-            </div>
+            <section className="land-public-actions">
+              <div><span className="land-section-kicker">CARRY THE STORY</span><h2>Share this place</h2><p>Send another visitor here, or carry this land beyond the edge of the map.</p></div>
+              <LandShareActions tokenId={tokenId!} />
+            </section>
 
-            <LandRelics toby={toby} patience={patience} taboshi={taboshi} cbbtc={cbbtc} oldLeaf={oldLeaf} seed={seed} />
+            <LandIdentity tokenId={tokenId!} owner={owner} hasArtwork={hasArtwork} travels={transferNonce} genesisSealed={genesisRead.data === true} />
+
             <LandExchangePreview compact />
 
           </>
