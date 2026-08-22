@@ -15,10 +15,11 @@ type KeeperHistoryEntry = {
   created_at?: string | null;
 };
 
-function shortAddress(value?: string | null) {
-  if (!value) return "Previous Keeper";
-  if (value.length < 12) return value;
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+function keeperTitle(position: number) {
+  if (position === 1) return "THE FIRST KEEPER";
+  if (position === 2) return "THE SECOND KEEPER";
+  if (position === 3) return "THE THIRD KEEPER";
+  return `KEEPER ${position}`;
 }
 
 function formatDate(value?: string | null) {
@@ -64,33 +65,32 @@ export default function LandKeeperHistory({ tokenId }: { tokenId: bigint }) {
       <div className="keeper-history-head">
         <div>
           <span className="land-section-kicker">LAND MEMORY</span>
-          <h2 id="keeper-history-title">Previous Keepers</h2>
-          <p>Keeper-written marks are preserved as the deed changes hands. Canonical traits stay untouched.</p>
+          <h2 id="keeper-history-title">Keepers Before You</h2>
+          <p>Every keeper leaves a trace. Their words remain with the land even after the deed changes hands.</p>
         </div>
-        {!loading ? <span className="keeper-history-count">{history.length} remembered</span> : null}
+        {!loading ? <span className="keeper-history-count"><i aria-hidden="true" /> {history.length} {history.length === 1 ? "memory" : "memories"}</span> : null}
       </div>
 
       {loading ? (
         <div className="keeper-history-loading">Reading the land&apos;s memory…</div>
       ) : (
         <div className="keeper-history-list">
-          {visible.map((entry) => {
-            const keeper = entry.keeper_name || entry.keeper_social || shortAddress(entry.owner_address);
+          {visible.map((entry, index) => {
+            const position = Math.max(1, history.length - index);
+            const keeper = entry.keeper_name || entry.keeper_social || null;
             const leftAt = formatDate(entry.became_previous_at || entry.created_at);
             return (
               <article className="keeper-history-entry" key={String(entry.id)}>
                 <div className="keeper-history-sigil" aria-hidden="true">◌</div>
                 <div className="keeper-history-copy">
                   <div className="keeper-history-meta">
-                    <strong>{keeper}</strong>
-                    {leftAt ? <span>Previous keeper · {leftAt}</span> : <span>Previous keeper</span>}
+                    <strong>{keeperTitle(position)}</strong>
+                    {leftAt ? <time>{leftAt}</time> : null}
                   </div>
+                  {keeper ? <div className="keeper-history-name">{keeper}</div> : null}
                   {entry.community_name ? <h3>{entry.community_name}</h3> : null}
-                  {entry.description ? <blockquote>{entry.description}</blockquote> : <p>No Keeper&apos;s Story was preserved for this generation.</p>}
-                  <div className="keeper-history-links">
-                    {entry.keeper_social ? <span>{entry.keeper_social}</span> : null}
-                    {entry.keeper_link ? <a href={entry.keeper_link} target="_blank" rel="noreferrer">Visit mark ↗</a> : null}
-                  </div>
+                  {entry.description ? <blockquote>“{entry.description}”</blockquote> : <p className="keeper-history-empty">No Keeper&apos;s Story was preserved for this chapter.</p>}
+                  {entry.keeper_link ? <div className="keeper-history-links"><a href={entry.keeper_link} target="_blank" rel="noreferrer">Follow their mark <span aria-hidden="true">↗</span></a></div> : null}
                 </div>
               </article>
             );
