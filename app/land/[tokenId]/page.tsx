@@ -325,6 +325,7 @@ export default function LandPage() {
               </div>
 
               <LandTraits
+                tokenId={tokenId}
                 metadata={metadata}
                 revealed={loreRevealed}
                 loading={!cacheChecked || metadataRefreshing}
