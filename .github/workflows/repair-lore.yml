@@ -1,0 +1,108 @@
+name: Repair Lore Cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      metadata_workers:
+        description: "Metadata repair workers"
+        required: true
+        default: "2"
+
+      art_workers:
+        description: "Artwork repair workers"
+        required: true
+        default: "3"
+
+      image_timeout_ms:
+        description: "Artwork timeout per gateway"
+        required: true
+        default: "18000"
+
+      image_race_width:
+        description: "Gateways raced at once"
+        required: true
+        default: "2"
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    name: Repair missing Lore data
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+
+      # Optional. If you later add a dedicated IPFS gateway URL as a
+      # GitHub secret, the repair script will prefer it automatically.
+      IPFS_PRIMARY_GATEWAY: ${{ secrets.IPFS_PRIMARY_GATEWAY }}
+
+      LORE_ART_BUCKET: tobyswap-lore-art
+
+      IPFS_GATEWAYS: "https://ipfs.io/ipfs/,https://dweb.link/ipfs/,https://w3s.link/ipfs/,https://nftstorage.link/ipfs/,https://gateway.pinata.cloud/ipfs/"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -n "$SUPABASE_URL" || {
+            echo "Missing SUPABASE_URL"
+            exit 1
+          }
+
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "Missing Supabase server key"
+            exit 1
+          fi
+
+          if [ -z "$BASE_RPC_URL" ]; then
+            echo "BASE_RPC_URL not set; Base public fallback will be available."
+          else
+            echo "Dedicated Base RPC configured."
+          fi
+
+          if [ -z "$IPFS_PRIMARY_GATEWAY" ]; then
+            echo "No dedicated IPFS gateway configured; public gateway race will be used."
+          else
+            echo "Dedicated IPFS gateway configured."
+          fi
+
+      - name: Repair missing metadata and artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node scripts/repair-lore-supabase.mjs \
+            --metadata-workers=${{ inputs.metadata_workers }} \
+            --art-workers=${{ inputs.art_workers }} \
+            --metadata-timeout-ms=9000 \
+            --image-timeout-ms=${{ inputs.image_timeout_ms }} \
+            --image-race-width=${{ inputs.image_race_width }}
+
+      - name: Run summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Tobyworld Lore targeted repair" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Metadata workers: ${{ inputs.metadata_workers }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artwork workers: ${{ inputs.art_workers }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artwork timeout: ${{ inputs.image_timeout_ms }} ms" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Gateway race width: ${{ inputs.image_race_width }}" >> "$GITHUB_STEP_SUMMARY"
