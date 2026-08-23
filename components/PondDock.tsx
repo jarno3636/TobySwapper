@@ -16,8 +16,8 @@ function AtlasDockIcon() {
 const items = [
   { id: "world", label: "World", href: "/world", custom: "atlas" as const },
   { id: "pouch", label: "My World", href: "/taboshi1", icon: "/ui/new-lore.webp" },
-  { id: "swap", label: "Pond", href: "/#swap", icon: "/tokens/patience.PNG" },
   { id: "market", label: "Market", href: "/world/exchange", icon: "/ui/taboshi.webp" },
+  { id: "swap", label: "Pond", href: "/#swap", icon: "/tokens/patience.PNG" },
 ] as const;
 
 function DockVisual({ item }: { item: (typeof items)[number] }) {
