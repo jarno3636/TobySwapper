@@ -5979,3 +5979,408 @@ html[data-theme="dark"] .keeper-directory-head .keeper-search-hint {
     font-size: 8px;
   }
 }
+
+/* ==========================================================================
+   TOBYWORLD PURPOSEFUL COLOR SYSTEM · 2026-08-23
+   Color is semantic, not decorative:
+   BLUE  = World / discovery / canonical navigation
+   GREEN = Keepers / tending / positive land actions
+   RED   = Pond / swap / high-attention utility
+   GOLD  = Market / Lore Deed / special canonical moments
+   STONE = Pouch / copy / secondary utility
+   ========================================================================== */
+
+:root {
+  --tw-blue: #2d9fd7;
+  --tw-blue-deep: #207eae;
+  --tw-blue-soft: rgba(45,159,215,.11);
+
+  --tw-green: #3baa84;
+  --tw-green-deep: #2f876a;
+  --tw-green-soft: rgba(59,170,132,.11);
+
+  --tw-red: #d9695d;
+  --tw-red-deep: #ad5048;
+  --tw-red-soft: rgba(217,105,93,.10);
+
+  --tw-gold: #c79a4b;
+  --tw-gold-deep: #9d7535;
+  --tw-gold-soft: rgba(199,154,75,.12);
+
+  --tw-stone: #718687;
+  --tw-stone-deep: #586d6e;
+  --tw-stone-soft: rgba(113,134,135,.11);
+}
+
+/* Shared button polish: a narrow color rail, never a loud solid slab. */
+:is(
+  .community-home-primary,
+  .community-home-action,
+  .community-home-wayfinder-links a,
+  .world-path-card,
+  .mytw-place-actions > a,
+  .mytw-deed-tile-actions > a,
+  .mytw-deed-tile-actions > button,
+  .mytw-land-quicklinks a,
+  .land-back,
+  .land-world-link,
+  .land-public-actions a,
+  .land-public-actions button,
+  .pond-utility-details > summary
+) {
+  position: relative;
+  overflow: hidden;
+}
+
+:is(
+  .community-home-primary,
+  .community-home-action,
+  .community-home-wayfinder-links a,
+  .world-path-card,
+  .mytw-place-actions > a,
+  .mytw-deed-tile-actions > a,
+  .mytw-deed-tile-actions > button,
+  .mytw-land-quicklinks a
+)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--tw-control-accent, var(--tw-stone));
+  opacity: .76;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD / DISCOVERY = BLUE
+   -------------------------------------------------------------------------- */
+.community-home-primary,
+.community-home-wayfinder-links > a:nth-child(1),
+.world-path-card.is-explore,
+.mytw-place-actions > a:first-child,
+.land-world-link,
+.mytw-owned-deeds-head > a,
+.world-topbar > a:first-child {
+  --tw-control-accent: var(--tw-blue);
+}
+
+.community-home-primary,
+.world-path-card.is-explore,
+.mytw-place-actions > a:first-child {
+  border-color: color-mix(in srgb, var(--tw-blue) 34%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, var(--tw-blue-soft), transparent 42%),
+    color-mix(in srgb, var(--app-bg-solid) 94%, var(--tw-blue) 6%) !important;
+}
+
+.community-home-primary b,
+.world-path-card.is-explore > b,
+.mytw-place-actions > a:first-child > b,
+.land-world-link {
+  color: var(--tw-blue-deep) !important;
+}
+
+/* --------------------------------------------------------------------------
+   KEEPERS / TENDING = GREEN
+   -------------------------------------------------------------------------- */
+.community-home-wayfinder-links > a:nth-child(3),
+.world-path-card.is-keepers,
+.mytw-place-actions > a:nth-child(2),
+.mytw-deed-tile-actions > a[href*="keeper-mark"],
+.keeper-search-control {
+  --tw-control-accent: var(--tw-green);
+}
+
+.world-path-card.is-keepers,
+.mytw-place-actions > a:nth-child(2),
+.mytw-deed-tile-actions > a[href*="keeper-mark"] {
+  border-color: color-mix(in srgb, var(--tw-green) 34%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, var(--tw-green-soft), transparent 42%),
+    color-mix(in srgb, var(--app-bg-solid) 94%, var(--tw-green) 6%) !important;
+}
+
+.world-path-card.is-keepers > b,
+.mytw-place-actions > a:nth-child(2) > b {
+  color: var(--tw-green-deep) !important;
+}
+
+/* Keeper search already has a strong interaction outline; align it to the
+   same semantic green rather than introducing another teal. */
+.keeper-search-control {
+  border-color: color-mix(in srgb, var(--tw-green) 62%, transparent) !important;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--tw-green) 9%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 10px 24px rgba(27,82,74,.08) !important;
+}
+.keeper-search-control:focus-within {
+  border-color: var(--tw-green) !important;
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--tw-green) 15%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 13px 28px rgba(27,82,74,.11) !important;
+}
+
+/* --------------------------------------------------------------------------
+   MARKET / LORE DEED / SPECIAL = GOLD
+   -------------------------------------------------------------------------- */
+.community-home-wayfinder-links > a:nth-child(2),
+.world-path-card.is-market,
+.world-path-card.is-land,
+.mytw-deed-tile-actions > a:first-child,
+.mytw-land-engine-launch {
+  --tw-control-accent: var(--tw-gold);
+}
+
+.world-path-card.is-market,
+.world-path-card.is-land,
+.mytw-deed-tile-actions > a:first-child,
+.mytw-land-engine-launch {
+  border-color: color-mix(in srgb, var(--tw-gold) 36%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, var(--tw-gold-soft), transparent 44%),
+    color-mix(in srgb, var(--app-bg-solid) 95%, var(--tw-gold) 5%) !important;
+}
+
+.world-path-card.is-market > b,
+.world-path-card.is-land > b {
+  color: var(--tw-gold-deep) !important;
+}
+
+/* Canonical-deed labels get a restrained antique-gold cue while keeping
+   actual NFT artwork untouched. */
+.land-hero-deed-label strong,
+.seedleaf-asset-card.is-lore .seedleaf-asset-copy > span:first-child,
+.mytw-deed-tile-copy > span {
+  color: color-mix(in srgb, var(--tw-gold) 82%, var(--app-text)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   POND / SWAP / ATTENTION = RED-CORAL
+   -------------------------------------------------------------------------- */
+.world-path-card.is-pond,
+.pond-utility-details > summary,
+.swap-submit-premium:not(:disabled),
+.approve-button:not(:disabled) {
+  --tw-control-accent: var(--tw-red);
+}
+
+.world-path-card.is-pond,
+.pond-utility-details > summary {
+  border-color: color-mix(in srgb, var(--tw-red) 31%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, var(--tw-red-soft), transparent 43%),
+    color-mix(in srgb, var(--app-bg-solid) 95%, var(--tw-red) 5%) !important;
+}
+
+.world-path-card.is-pond > b,
+.pond-utility-details > summary i {
+  color: var(--tw-red-deep) !important;
+}
+
+/* Do not make transaction buttons fire-engine red. A muted coral lower edge
+   gives them identity while preserving the premium metallic treatment. */
+.swap-submit-premium:not(:disabled),
+.approve-button:not(:disabled) {
+  border-color: color-mix(in srgb, var(--tw-red) 38%, var(--app-line)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   POUCH / COPY / SECONDARY = STONE
+   -------------------------------------------------------------------------- */
+.community-home-action,
+.mytw-deed-tile-actions > button,
+.mytw-deed-tile-actions > button:last-child,
+.mytw-secondary-land-action,
+.watch-pouch-form button,
+.land-refresh-mini {
+  --tw-control-accent: var(--tw-stone);
+}
+
+.community-home-action,
+.mytw-deed-tile-actions > button,
+.mytw-secondary-land-action {
+  border-color: color-mix(in srgb, var(--tw-stone) 28%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, var(--tw-stone-soft), transparent 44%),
+    color-mix(in srgb, var(--app-bg-solid) 97%, var(--tw-stone) 3%) !important;
+}
+
+/* Sending something INTO a deed is constructive/tending, so distinguish it
+   from copy/utility without confusing it with canonical navigation. */
+.mytw-deed-tile-actions > button:first-of-type {
+  --tw-control-accent: var(--tw-green);
+  border-color: color-mix(in srgb, var(--tw-green) 31%, var(--app-line)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   WORLD ONBOARDING: seed stays green-gold rather than another generic green.
+   -------------------------------------------------------------------------- */
+.world-path-card.is-seed {
+  --tw-control-accent: #79aa63;
+  border-color: color-mix(in srgb, #79aa63 35%, var(--app-line)) !important;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(121,170,99,.12), transparent 43%),
+    radial-gradient(circle at 100% 100%, rgba(199,154,75,.07), transparent 42%),
+    color-mix(in srgb, var(--app-bg-solid) 95%, #79aa63 5%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   BOTTOM DOCK: quiet color identity, only the active destination blooms.
+   -------------------------------------------------------------------------- */
+.pond-dock-item:nth-child(1) { --dock-accent: var(--tw-blue); }
+.pond-dock-item:nth-child(2) { --dock-accent: var(--tw-stone); }
+.pond-dock-item:nth-child(3) { --dock-accent: var(--tw-gold); }
+.pond-dock-item:nth-child(4) { --dock-accent: var(--tw-red); }
+
+.pond-dock-item .pond-dock-icon,
+.pond-dock-item .dock-art {
+  border-color: color-mix(in srgb, var(--dock-accent) 18%, var(--app-line)) !important;
+}
+
+.pond-dock-item.pond-dock-active {
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--dock-accent) 13%, transparent), transparent 64%),
+    color-mix(in srgb, var(--app-panel-tint) 88%, var(--dock-accent) 12%) !important;
+  color: color-mix(in srgb, var(--dock-accent) 72%, var(--app-text)) !important;
+}
+
+.pond-dock-item.pond-dock-active .pond-dock-icon,
+.pond-dock-item.pond-dock-active .dock-art {
+  border-color: color-mix(in srgb, var(--dock-accent) 46%, var(--app-line)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 7px 18px color-mix(in srgb, var(--dock-accent) 15%, transparent) !important;
+}
+
+/* --------------------------------------------------------------------------
+   DARK MODE
+   Purposeful color becomes richer, not brighter.
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+  --tw-blue: #64bde8;
+  --tw-blue-deep: #8bd3f2;
+  --tw-blue-soft: rgba(73,160,204,.16);
+
+  --tw-green: #64c79c;
+  --tw-green-deep: #8adbb7;
+  --tw-green-soft: rgba(71,173,128,.15);
+
+  --tw-red: #e47d70;
+  --tw-red-deep: #f0a095;
+  --tw-red-soft: rgba(193,83,74,.15);
+
+  --tw-gold: #d4ae66;
+  --tw-gold-deep: #e7c986;
+  --tw-gold-soft: rgba(190,142,60,.15);
+
+  --tw-stone: #8aa1a1;
+  --tw-stone-deep: #aec0bf;
+  --tw-stone-soft: rgba(117,143,143,.13);
+}
+
+html[data-theme="dark"] :is(
+  .community-home-primary,
+  .community-home-action,
+  .world-path-card,
+  .mytw-place-actions > a,
+  .mytw-deed-tile-actions > a,
+  .mytw-deed-tile-actions > button
+) {
+  color: var(--dark-copy, var(--app-text)) !important;
+}
+
+/* Blue / World */
+html[data-theme="dark"] :is(
+  .community-home-primary,
+  .world-path-card.is-explore,
+  .mytw-place-actions > a:first-child
+) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(72,167,211,.17), transparent 43%),
+    linear-gradient(155deg, rgba(17,48,59,.97), rgba(10,32,38,.98)) !important;
+}
+
+/* Green / Keepers */
+html[data-theme="dark"] :is(
+  .world-path-card.is-keepers,
+  .mytw-place-actions > a:nth-child(2),
+  .mytw-deed-tile-actions > a[href*="keeper-mark"]
+) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(70,180,132,.16), transparent 43%),
+    linear-gradient(155deg, rgba(17,51,42,.97), rgba(10,34,31,.98)) !important;
+}
+
+/* Gold / Market + canonical */
+html[data-theme="dark"] :is(
+  .world-path-card.is-market,
+  .world-path-card.is-land,
+  .mytw-deed-tile-actions > a:first-child,
+  .mytw-land-engine-launch
+) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(197,151,65,.17), transparent 44%),
+    linear-gradient(155deg, rgba(51,43,27,.96), rgba(31,31,26,.98)) !important;
+}
+
+/* Coral / Pond */
+html[data-theme="dark"] :is(
+  .world-path-card.is-pond,
+  .pond-utility-details > summary
+) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(203,91,82,.17), transparent 43%),
+    linear-gradient(155deg, rgba(52,34,35,.96), rgba(31,29,30,.98)) !important;
+}
+
+/* Stone / pouch */
+html[data-theme="dark"] :is(
+  .community-home-action,
+  .mytw-deed-tile-actions > button,
+  .mytw-secondary-land-action
+) {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(134,158,158,.10), transparent 44%),
+    linear-gradient(155deg, rgba(33,45,46,.97), rgba(20,34,35,.98)) !important;
+}
+
+html[data-theme="dark"] .keeper-search-control {
+  border-color: color-mix(in srgb, var(--tw-green) 62%, transparent) !important;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--tw-green) 8%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 12px 28px rgba(0,0,0,.22) !important;
+}
+
+html[data-theme="dark"] .keeper-search-control:focus-within {
+  border-color: var(--tw-green) !important;
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--tw-green) 14%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 15px 32px rgba(0,0,0,.25) !important;
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE: retain differentiation without turning the screen into a rainbow.
+   -------------------------------------------------------------------------- */
+@media (max-width: 680px) {
+  :is(
+    .world-path-card,
+    .mytw-place-actions > a,
+    .community-home-wayfinder-links a
+  )::after {
+    top: 20%;
+    bottom: 20%;
+    width: 3px;
+  }
+
+  .pond-dock-item.pond-dock-active {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  }
+}
+
