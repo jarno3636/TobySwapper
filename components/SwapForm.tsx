@@ -413,6 +413,7 @@ export default function SwapForm() {
   const [tokenIn, setTokenIn] = useState<Address | "ETH">("ETH");
   const [tokenOut, setTokenOut] = useState<TokenChoice>(TOBY as Address);
   const [amt, setAmt] = useState<string>("");
+  const [fundingTarget, setFundingTarget] = useState<Address | null>(null);
   const isTaboshiPair = eq(String(tokenIn), TABOSHI) || eq(String(tokenOut), TABOSHI);
   // Keep the direct V3 fallback scoped only to TABOSHI. USDC uses the normal
   // TobySwapper route again so there is no separate "Direct on Base" lane.
@@ -435,7 +436,38 @@ export default function SwapForm() {
     };
   }, [slippageOpen]);
 
-  useEffect(() => { setTokenIn("ETH"); setTokenOut(TOBY as Address); setAmt(""); }, [address, chainId]);
+  // Activation funding shortcuts reuse this exact Pond Utility.
+  // /?buy=TOBY#swap and /?buy=PATIENCE#swap preselect the requested output.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const requested = new URLSearchParams(window.location.search)
+      .get("buy")
+      ?.trim()
+      .toUpperCase();
+
+    const target =
+      requested === "PATIENCE"
+        ? (PATIENCE as Address)
+        : requested === "TOBY"
+          ? (TOBY as Address)
+          : null;
+
+    setFundingTarget(target);
+
+    if (target) {
+      setTokenIn("ETH");
+      setTokenOut(target);
+      setAmt("");
+    }
+  }, []);
+
+  useEffect(() => {
+    setTokenIn("ETH");
+    setTokenOut((fundingTarget ?? TOBY) as Address);
+    setAmt("");
+  }, [address, chainId, fundingTarget]);
+
   useEffect(() => { if (connected) void ensureBase(); }, [connected, ensureBase]);
 
   const inMeta = byAddress(tokenIn);
