@@ -46,7 +46,8 @@ function MarketNoticeIcon({ kind }: { kind: "success" | "error" | "info" }) {
 
 function AssetVisual({ kind }: { kind: MarketplaceAssetKind }) {
   if (kind === "seed") return <span className="market-asset-art is-seed"><Image src="/ui/seed.webp" alt="" fill sizes="62px" className="object-cover" /></span>;
-  return <span className={`market-asset-art ${kind === "old-land" ? "is-old-land" : "is-lore-land"}`}><b>△</b><i /></span>;
+  const src = kind === "old-land" ? "/ui/old-lore.webp" : "/ui/new-lore.webp";
+  return <span className={`market-asset-art ${kind === "old-land" ? "is-old-land" : "is-lore-land"}`}><Image src={src} alt="" fill sizes="62px" className="object-contain p-1" /></span>;
 }
 
 function displayAtomic(amount: string, payment: MarketplacePayment) {

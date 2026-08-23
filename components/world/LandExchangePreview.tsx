@@ -1,10 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 export default function LandExchangePreview({ compact = false }: { compact?: boolean }) {
   return (
     <section className={`land-exchange-preview ${compact ? "is-compact" : ""}`}>
-      <div className="land-exchange-mark" aria-hidden="true"><span>△</span><Image src="/tokens/toby.PNG" alt="" width={58} height={58} /></div>
+      <div className="land-exchange-mark" aria-hidden="true"><TobyworldIcon kind="lore" size={58} /><TobyworldIcon kind="taboshi" size={34} className="market-companion-icon" /></div>
       <div className="land-exchange-copy">
         <span>TOBYWORLD MARKET</span>
         <h2>SEED and land, one market.</h2>

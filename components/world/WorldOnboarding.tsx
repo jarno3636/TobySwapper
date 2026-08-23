@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useAccount, useReadContract } from "wagmi";
 import { base } from "wagmi/chains";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI, TABOSHI_SEED_ID } from "@/lib/taboshi-seeds";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 const quietRead = {
   staleTime: Infinity,
@@ -40,7 +40,7 @@ export default function WorldOnboarding() {
   return (
     <section className={`world-onboarding world-onboarding-refined ${ownsLand ? "has-land" : ""}`}>
       <div className="world-onboarding-intro">
-        <div className="world-onboarding-frog world-onboarding-patience"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="72px" className="object-contain" /></div>
+        <div className="world-onboarding-frog world-onboarding-lore"><TobyworldIcon kind="lore" size={72} /></div>
         <div>
           <span className="land-section-kicker">FIND YOUR PLACE</span>
           <h2>{!isConnected ? "The World is open before you connect." : ownsLand ? `Your ${landCount === 1n ? "land is" : "lands are"} waiting.` : "There is more than one way into Tobyworld."}</h2>
@@ -51,23 +51,23 @@ export default function WorldOnboarding() {
       <div className="world-onboarding-paths world-onboarding-paths-refined">
         {ownsLand ? (
           <>
-            <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><span>△</span><strong>My Tobyworld</strong><small>Visit land · pouch · Keeper Mark</small><b>→</b></Link>
-            <a href="#atlas" className="world-path-card is-explore"><span>◎</span><strong>Explore the Atlas</strong><small>All 2,869 canonical lands</small><b>↓</b></a>
-            <Link prefetch={false} href="/keepers" className="world-path-card is-keepers"><span>◌</span><strong>Meet the Keepers</strong><small>Identity · stories · legacy</small><b>→</b></Link>
+            <Link prefetch={false} href="/taboshi1#land" className="world-path-card is-land"><TobyworldIcon kind="pouch" size={38} /><strong>My Tobyworld</strong><small>Visit land · pouch · Keeper Mark</small><b>→</b></Link>
+            <a href="#atlas" className="world-path-card is-explore"><TobyworldIcon kind="lore" size={38} /><strong>Explore the Atlas</strong><small>All 2,869 canonical lands</small><b>↓</b></a>
+            <Link prefetch={false} href="/keepers" className="world-path-card is-keepers"><TobyworldIcon kind="toby" size={38} /><strong>Meet the Keepers</strong><small>Identity · stories · legacy</small><b>→</b></Link>
           </>
         ) : (
           <>
-            <a href="#atlas" className="world-path-card is-explore"><span>◎</span><strong>Explore the Atlas</strong><small>All 2,869 canonical lands</small><b>↓</b></a>
-            <Link prefetch={false} href="/keepers" className="world-path-card is-keepers"><span>◌</span><strong>Meet the Keepers</strong><small>Community identity & land legacy</small><b>→</b></Link>
-            <Link prefetch={false} href="/world/exchange" className="world-path-card is-market"><span>△</span><strong>Find a Lore Deed</strong><small>Listings & buy requests</small><b>→</b></Link>
+            <a href="#atlas" className="world-path-card is-explore"><TobyworldIcon kind="lore" size={38} /><strong>Explore the Atlas</strong><small>All 2,869 canonical lands</small><b>↓</b></a>
+            <Link prefetch={false} href="/keepers" className="world-path-card is-keepers"><TobyworldIcon kind="toby" size={38} /><strong>Meet the Keepers</strong><small>Community identity & land legacy</small><b>→</b></Link>
+            <Link prefetch={false} href="/world/exchange" className="world-path-card is-market"><TobyworldIcon kind="lore" size={38} /><strong>Find a Lore Deed</strong><small>Listings & buy requests</small><b>→</b></Link>
           </>
         )}
       </div>
 
       {!ownsLand ? (
         <div className="world-onboarding-quiet-links" aria-label="More ways into Tobyworld">
-          <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer"><span className="world-path-seed"><Image src="/ui/seed.webp" alt="" fill sizes="34px" className="object-cover" /></span><b>{seedCount > 0n ? "Visit the Faucet" : "Find SEED"}</b><small>Official Tobyworld path ↗</small></a>
-          <Link prefetch={false} href="/#swap"><span className="world-path-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="34px" className="object-contain" /></span><b>Pond Utility</b><small>Swap when you need it →</small></Link>
+          <a href="https://tobyworld.app/faucet/" target="_blank" rel="noreferrer"><span className="world-path-seed"><TobyworldIcon kind="seed" size={32} /></span><b>{seedCount > 0n ? "Visit the Faucet" : "Find SEED"}</b><small>Official Tobyworld path ↗</small></a>
+          <Link prefetch={false} href="/#swap"><span className="world-path-patience"><TobyworldIcon kind="patience" size={32} /></span><b>Pond Utility</b><small>Swap when you need it →</small></Link>
         </div>
       ) : null}
     </section>

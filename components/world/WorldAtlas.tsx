@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAddress } from "viem";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 type AtlasTrait = { traitType: string; value: string };
 type AtlasLand = {
@@ -175,9 +176,9 @@ export default function WorldAtlas() {
           <p>Every canonical Lore Land is now in the Atlas. Visit a deed, find the lands held by a wallet, or let the pond choose your next destination.</p>
         </div>
         <div className="world-entry-actions">
-          <button type="button" className="world-wander-button" onClick={() => router.push(`/land/${randomLoreId()}`)}><span aria-hidden="true">◌</span><b>Wander</b><small>Visit a random canonical land</small><i>→</i></button>
+          <button type="button" className="world-wander-button" onClick={() => router.push(`/land/${randomLoreId()}`)}><TobyworldIcon kind="sato" size={42} /><b>Wander</b><small>Visit a random canonical land</small><i>→</i></button>
           <div className={`world-deed-jump ${walletJump ? "is-wallet" : numericJump ? "is-deed" : ""}`}>
-            <div className="world-jump-mark" aria-hidden="true">{walletJump ? "◈" : "△"}</div>
+            <div className="world-jump-mark" aria-hidden="true">{walletJump ? <TobyworldIcon kind="pouch" size={40} /> : <TobyworldIcon kind="lore" size={44} />}</div>
             <label><span>OPEN A LORE LAND</span><input value={jumpValue} onChange={(event) => { setJumpValue(event.target.value); setJumpMessage(""); setWalletDeeds([]); }} onKeyDown={(event) => { if (event.key === "Enter") void openJump(); }} autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Deed #30 or 0x wallet" /><small>{walletJump ? "Base wallet detected" : numericJump ? `Ready for Lore Land #${numericJump}` : "Deed number or Base wallet"}</small></label>
             <button type="button" onClick={() => void openJump()} disabled={!canJump || jumpLoading}>{jumpLoading ? "Following…" : walletJump ? "Find lands →" : "Visit →"}</button>
           </div>
@@ -207,11 +208,11 @@ export default function WorldAtlas() {
 
         <div className="world-atlas-toolbar"><label><span>SEARCH THE WORLD</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Land, keeper, trait, #30…" /></label>{traitType && traitValueFilter ? <div className="world-active-filter"><span>{traitType}</span><b>{traitValueFilter}</b><button type="button" onClick={() => { setTraitType(""); setTraitValueFilter(""); }}>×</button></div> : null}</div>
 
-        {!loading && lands.length === 0 ? <div className="world-empty"><span>△</span><h3>No land matched that trail.</h3><p>Clear a sign or try another land name, keeper, trait, or deed number.</p></div> : <div className={`world-land-grid ${loading ? "is-loading" : ""}`}>{lands.map((land) => {
+        {!loading && lands.length === 0 ? <div className="world-empty"><TobyworldIcon kind="lore" size={58} className="tw-placeholder-lore" /><h3>No land matched that trail.</h3><p>Clear a sign or try another land name, keeper, trait, or deed number.</p></div> : <div className={`world-land-grid ${loading ? "is-loading" : ""}`}>{lands.map((land) => {
           const signs = compactSigns(land);
           const landSign = traitValue(land, "Land");
           return <Link prefetch={false} key={land.tokenId} href={`/land/${land.tokenId}`} className="world-land-card world-land-card-canonical">
-            <div className="world-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <div className={`world-land-scene theme-${land.bannerTheme}`} aria-hidden="true"><span className="world-land-moon" /><span className="world-land-hill h1" /><span className="world-land-hill h2" /><span className="world-land-water" /></div>}<span className="world-land-number">#{land.tokenId}</span><span className="world-land-canonical">CANONICAL</span></div>
+            <div className="world-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <div className="world-land-token-placeholder" aria-hidden="true"><TobyworldIcon kind="lore" size={92} className="tw-placeholder-lore" /><small>LORE LAND</small></div>}<span className="world-land-number">#{land.tokenId}</span><span className="world-land-canonical">CANONICAL</span></div>
             <div className="world-land-copy"><span className="world-land-id">{landSign ? `${landSign} · LORE LAND #${land.tokenId}` : `LORE LAND #${land.tokenId}`}</span><h3>{land.communityName || `Lore Land #${land.tokenId}`}</h3>{land.keeperStory ? <p className="has-story">“{land.keeperStory}”</p> : <p>{land.keeperName ? `Kept by ${land.keeperName}.` : "No keeper-written story yet."}</p>}<div className="world-land-signs">{signs.map((sign) => <span key={`${sign.traitType}:${sign.value}`}><small>{sign.traitType}</small>{sign.value}</span>)}</div><footer><small>{land.keeperName ? `KEEPER · ${land.keeperName}` : "KEEPER MARK OPEN"}</small><b>Visit Land →</b></footer></div>
           </Link>;
         })}</div>}

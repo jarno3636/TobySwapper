@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { KeeperDirectoryRecord } from "@/lib/keeper-directory-server";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
-function shortAddress(value: string) {
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
 
 function identity(keeper: KeeperDirectoryRecord) {
-  return keeper.keeperName || keeper.keeperSocial || shortAddress(keeper.ownerAddress);
+  const land = keeper.currentLands[0];
+  return keeper.keeperName || keeper.keeperSocial || (land ? `Keeper of #${land.tokenId}` : "Tobyworld Keeper");
 }
 
 export default function KeeperDirectory({ keepers }: { keepers: KeeperDirectoryRecord[] }) {
@@ -41,7 +40,7 @@ export default function KeeperDirectory({ keepers }: { keepers: KeeperDirectoryR
         </div>
         <label>
           <span>FIND A KEEPER</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, handle, wallet, land…" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, handle, land, sign…" />
         </label>
       </div>
 
@@ -53,13 +52,13 @@ export default function KeeperDirectory({ keepers }: { keepers: KeeperDirectoryR
           return (
             <Link prefetch={false} href={`/keeper/${keeper.ownerAddress}`} className="keeper-directory-card" key={keeper.ownerAddress}>
               <div className="keeper-directory-art">
-                {first?.imageUrl ? <img src={first.imageUrl} alt="" loading="lazy" /> : <span>△</span>}
+                {first?.imageUrl ? <img src={first.imageUrl} alt="" loading="lazy" /> : <TobyworldIcon kind="lore" size={68} className="tw-placeholder-lore" />}
                 <b>{keeper.currentLands.length} {keeper.currentLands.length === 1 ? "LAND" : "LANDS"}</b>
               </div>
               <div className="keeper-directory-copy">
                 <span>KEEPER MARK</span>
                 <h2>{identity(keeper)}</h2>
-                <p>{keeper.keeperSocial && keeper.keeperName ? keeper.keeperSocial : shortAddress(keeper.ownerAddress)}</p>
+                <p>{keeper.keeperSocial && keeper.keeperName ? keeper.keeperSocial : first ? `Keeper of Lore Land #${first.tokenId}` : "Community Keeper Mark"}</p>
                 {first ? <div className="keeper-directory-land"><small>CURRENT PLACE</small><strong>{first.name}</strong><em>#{first.tokenId}</em></div> : null}
                 <footer><small>{keeper.storyCount ? `${keeper.storyCount} keeper ${keeper.storyCount === 1 ? "story" : "stories"}` : "No public story yet"}</small><b>Visit Keeper →</b></footer>
               </div>
