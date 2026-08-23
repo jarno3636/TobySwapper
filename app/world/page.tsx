@@ -10,6 +10,7 @@ import WorldOnboarding from "@/components/world/WorldOnboarding";
 import LandExchangePreview from "@/components/world/LandExchangePreview";
 import KeeperSpotlight from "@/components/world/KeeperSpotlight";
 import WorldPulse from "@/components/world/WorldPulse";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 export default function WorldPage() {
   return (
@@ -22,10 +23,10 @@ export default function WorldPage() {
         </section>
 
         <nav className="world-section-nav" aria-label="World sections">
-          <a href="#pulse"><span>◌</span><b>Pulse</b><small>What changed</small></a>
-          <a href="#keepers"><span>◇</span><b>Keepers</b><small>Who tends it</small></a>
-          <a href="#atlas"><span>◎</span><b>Atlas</b><small>2,869 lands</small></a>
-          <a href="#market"><span>△</span><b>Market</b><small>Find a deed</small></a>
+          <a href="#pulse"><TobyworldIcon kind="sato" size={32} /><b>Pulse</b><small>What changed</small></a>
+          <a href="#keepers"><TobyworldIcon kind="toby" size={32} /><b>Keepers</b><small>Who tends it</small></a>
+          <a href="#atlas"><TobyworldIcon kind="lore" size={32} /><b>Atlas</b><small>2,869 lands</small></a>
+          <a href="#market"><TobyworldIcon kind="taboshi" size={32} /><b>Market</b><small>Find a deed</small></a>
         </nav>
 
         <WorldOnboarding />
