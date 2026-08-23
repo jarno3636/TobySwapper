@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import LinkMaybeMini from "@/components/LinkMaybeMini";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 function AtlasDockIcon() {
   return (
@@ -15,14 +15,14 @@ function AtlasDockIcon() {
 
 const items = [
   { id: "world", label: "World", href: "/world", custom: "atlas" as const },
-  { id: "pouch", label: "My World", href: "/taboshi1", icon: "/ui/new-lore.webp" },
-  { id: "market", label: "Market", href: "/world/exchange", icon: "/ui/taboshi.webp" },
-  { id: "swap", label: "Pond", href: "/#swap", icon: "/tokens/patience.PNG" },
+  { id: "pouch", label: "My World", href: "/taboshi1", icon: "pouch" as const },
+  { id: "market", label: "Market", href: "/world/exchange", icon: "taboshi" as const },
+  { id: "swap", label: "Pond", href: "/#swap", icon: "patience" as const },
 ] as const;
 
 function DockVisual({ item }: { item: (typeof items)[number] }) {
   if ("custom" in item && item.custom === "atlas") return <AtlasDockIcon />;
-  return <span className="pond-dock-icon"><Image src={("icon" in item && item.icon) || "/tokens/patience.PNG"} alt="" fill sizes="42px" className="object-contain p-1" /><i className="dock-glint" /></span>;
+  return <span className="pond-dock-icon"><TobyworldIcon kind={("icon" in item && item.icon) || "lore"} size={38} /><i className="dock-glint" /></span>;
 }
 
 export default function PondDock({ active }: { active?: "swap" | "pouch" | "world" | "market" }) {
