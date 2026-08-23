@@ -575,8 +575,8 @@ export default function TaboshiOnePage() {
             <h1>My Tobyworld</h1>
             <p>Your land comes first. Your pouch supports it. Explore your places, Keeper Mark, public world and onchain assets without repeating the same inventory everywhere.</p>
             <div className="taboshi1-hero-actions">
-              <a href="#pouch" className="metal-button taboshi1-primary">Open my pouch</a>
-              <a href="#next-path" className="metal-button">Find my next path ↓</a>
+              <a href="#land" className="metal-button taboshi1-primary">Open my land</a>
+              <a href="#pouch" className="metal-button">Open my pouch ↓</a>
             </div>
           </div>
           <div className="taboshi1-hero-art mytw-hero-art" aria-hidden="true">
@@ -588,11 +588,11 @@ export default function TaboshiOnePage() {
           </div>
         </section>
 
-        <nav className="mytw-world-nav" aria-label="My Tobyworld sections">
-          <Link prefetch={false} href="/#swap"><span className="mytw-nav-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="32px" className="object-contain" /></span><b>POND</b><small>Swap utility</small></Link>
-          <a href="#pouch"><span><PondGlyph kind="pouch" /></span><b>POUCH</b><small>What you carry</small></a>
+        <nav className="mytw-world-nav mytw-world-nav-refined" aria-label="My Tobyworld sections">
           <a href="#land"><span><PondGlyph kind="land" /></span><b>LAND</b><small>Your place</small></a>
+          <a href="#pouch"><span><PondGlyph kind="pouch" /></span><b>POUCH</b><small>What you carry</small></a>
           <Link prefetch={false} href="/world"><span><PondGlyph kind="world" /></span><b>WORLD</b><small>Visit & explore</small></Link>
+          <Link prefetch={false} href="/#swap"><span className="mytw-nav-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="32px" className="object-contain" /></span><b>POND</b><small>Swap utility</small></Link>
         </nav>
 
         <section className="mytw-profile-card mytw-place-card" aria-label="Your Tobyworld overview">
@@ -700,9 +700,14 @@ export default function TaboshiOnePage() {
           </>
         )}
 
-        <section className="mytw-section-heading mytw-pond-heading"><span className="taboshi1-kicker">POND ACTIVITY</span><h2>What is moving through Tobyworld</h2><p>A wider view of the pond beyond your own pouch and land.</p></section>
-
-        <PondPulse />
+        <details className="mytw-ambient-details">
+          <summary>
+            <span className="mytw-ambient-icon"><Image src="/tokens/patience.PNG" alt="" fill sizes="42px" className="object-contain" /></span>
+            <div><span className="taboshi1-kicker">POND ACTIVITY</span><strong>See what is moving through Tobyworld</strong><small>A wider pond view, kept secondary to your own land and pouch.</small></div>
+            <b>⌄</b>
+          </summary>
+          <div className="mytw-ambient-body"><PondPulse /></div>
+        </details>
 
         <section className="mytw-pouch-transfer-shell" aria-label="Pouch and transfer tools">
           <div className="mytw-pouch-transfer-intro">
@@ -799,7 +804,7 @@ export default function TaboshiOnePage() {
           </div>
         </section>
 
-        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/toby.PNG" alt="Toby" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
+        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
       </div>
       <Footer />
       <PondDock active="pouch" />
