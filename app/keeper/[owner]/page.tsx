@@ -4,10 +4,8 @@ import MiniAppGate from "@/components/MiniAppGate";
 import Footer from "@/components/Footer";
 import PondDock from "@/components/PondDock";
 import { getKeeperDetail } from "@/lib/keeper-directory-server";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
-function shortAddress(value: string) {
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
 
 export const revalidate = 120;
 
@@ -15,7 +13,8 @@ export default async function KeeperPage({ params }: { params: { owner: string }
   const keeper = await getKeeperDetail(params.owner).catch(() => null);
   if (!keeper) notFound();
 
-  const displayName = keeper.keeperName || keeper.keeperSocial || shortAddress(keeper.ownerAddress);
+  const firstLand = keeper.currentLands[0];
+  const displayName = keeper.keeperName || keeper.keeperSocial || (firstLand ? `Keeper of #${firstLand.tokenId}` : "Tobyworld Keeper");
 
   return (
     <MiniAppGate>
@@ -23,11 +22,11 @@ export default async function KeeperPage({ params }: { params: { owner: string }
         <header className="world-topbar"><Link prefetch={false} href="/keepers">← Keepers</Link><span>KEEPER MARK · COMMUNITY-WRITTEN</span></header>
 
         <section className="keeper-detail-hero">
-          <div className="keeper-detail-sigil">◌</div>
+          <div className="keeper-detail-sigil"><TobyworldIcon kind="toby" size={48} /></div>
           <div>
             <span className="land-section-kicker">KEEPER MARK</span>
             <h1>{displayName}</h1>
-            <p>{keeper.keeperSocial && keeper.keeperName ? keeper.keeperSocial : shortAddress(keeper.ownerAddress)}</p>
+            <p>{keeper.keeperSocial && keeper.keeperName ? keeper.keeperSocial : firstLand ? `Keeper of Lore Land #${firstLand.tokenId}` : "Community Keeper Mark"}</p>
           </div>
           {keeper.keeperLink ? <a href={keeper.keeperLink} target="_blank" rel="noreferrer">Keeper link ↗</a> : null}
         </section>
@@ -37,7 +36,7 @@ export default async function KeeperPage({ params }: { params: { owner: string }
           <div className="keeper-land-grid">
             {keeper.currentLands.map((land) => (
               <Link prefetch={false} href={`/land/${land.tokenId}`} className="keeper-land-card" key={land.tokenId}>
-                <div className="keeper-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <span>△</span>}<b>#{land.tokenId}</b></div>
+                <div className="keeper-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <TobyworldIcon kind="lore" size={74} className="tw-placeholder-lore" />}<b>#{land.tokenId}</b></div>
                 <div><span>LORE LAND #{land.tokenId}</span><h3>{land.name}</h3>{land.story ? <p>“{land.story}”</p> : <p>No keeper-written story yet.</p>}<div>{land.signs.map((sign) => <small key={sign}>{sign}</small>)}</div><strong>Visit Land →</strong></div>
               </Link>
             ))}
