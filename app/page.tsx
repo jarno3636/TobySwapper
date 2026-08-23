@@ -35,19 +35,26 @@ export default function Page() {
           <div className="community-home-copy">
             <span className="land-section-kicker">TOBYWORLD · COMMUNITY</span>
             <h1>A world to visit, keep and study.</h1>
-            <p>Explore all 2,869 canonical Lore Lands, write the story of a place you keep, study the signs that appeared, and carry Tobyworld assets through the pond.</p>
-            <div className="community-home-actions">
-              <Link prefetch={false} href="/world" className="community-home-primary"><span>◎</span><div><strong>Enter the World</strong><small>Atlas · Wander · canonical signs</small></div><b>→</b></Link>
+            <p>Explore all 2,869 canonical Lore Lands, follow Keeper-written stories, study the signs that appeared, and carry Tobyworld assets through the pond.</p>
+            <div className="community-home-actions community-home-actions-refined">
+              <Link prefetch={false} href="/world" className="community-home-primary"><span>◎</span><div><strong>Enter the World</strong><small>Atlas · Wander · discovery</small></div><b>→</b></Link>
               <Link prefetch={false} href="/taboshi1" className="community-home-action"><span>△</span><div><strong>My Tobyworld</strong><small>Land · pouch · Keeper Mark</small></div><b>→</b></Link>
-              <Link prefetch={false} href="/keepers" className="community-home-action"><span>◌</span><div><strong>Meet the Keepers</strong><small>Community-written identity & legacy</small></div><b>→</b></Link>
             </div>
+            <nav className="community-home-quicklinks" aria-label="Explore Tobyworld">
+              <Link prefetch={false} href="/world?wander=1">Wander</Link>
+              <Link prefetch={false} href="/keepers">Meet Keepers</Link>
+              <Link prefetch={false} href="/world/exchange">Find a Deed</Link>
+            </nav>
           </div>
         </section>
 
-        <section className="community-home-paths">
-          <Link prefetch={false} href="/world" className="community-path-card"><span>WORLD ATLAS</span><strong>2,869 places are open</strong><p>Visit every canonical Lore Land whether or not its keeper has customized it.</p><b>Explore →</b></Link>
-          <Link prefetch={false} href="/world?wander=1" className="community-path-card"><span>WANDER</span><strong>Follow an unexpected trail</strong><p>Jump into a random canonical land. No points, no streak, just exploration.</p><b>Wander →</b></Link>
-          <Link prefetch={false} href="/world/exchange" className="community-path-card"><span>THE MARKET</span><strong>Find a way into the world</strong><p>Browse Lore Deed listings or leave a buy request without turning the World into a closed gate.</p><b>Find a deed →</b></Link>
+        <section className="community-home-wayfinder" aria-label="Tobyworld paths">
+          <div className="community-home-wayfinder-copy"><span className="land-section-kicker">FIND YOUR WAY</span><h2>Start with the part of Tobyworld you came for.</h2><p>The World is the destination. Your land, the community and pond utilities connect back into it.</p></div>
+          <div className="community-home-wayfinder-links">
+            <Link prefetch={false} href="/world"><span>01</span><div><strong>Explore</strong><small>All canonical lands</small></div><b>→</b></Link>
+            <Link prefetch={false} href="/taboshi1"><span>02</span><div><strong>Keep</strong><small>Your land & pouch</small></div><b>→</b></Link>
+            <Link prefetch={false} href="/keepers"><span>03</span><div><strong>Connect</strong><small>Stories & keepers</small></div><b>→</b></Link>
+          </div>
         </section>
 
         <TobyworldAssets />
@@ -55,7 +62,7 @@ export default function Page() {
         <section id="swap" className="pond-utility-shell scroll-mt-24">
           <div className="pond-utility-intro">
             <span className="pond-utility-icon"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="62px" className="object-contain" /></span>
-            <div><span className="land-section-kicker">POND UTILITY</span><h2>Need to swap?</h2><p>The swap remains here as a tool inside the wider Tobyworld community experience.</p></div>
+            <div><span className="land-section-kicker">POND UTILITY</span><h2>Swap when you need it.</h2><p>A compact utility inside the wider Tobyworld experience—not the reason the rest of the World exists.</p></div>
           </div>
           <details className="pond-utility-details">
             <summary><span>Open swap utility</span><b>TOBY · PATIENCE · TABOSHI</b><i>⌄</i></summary>
