@@ -20,11 +20,11 @@ function identity(keeper: KeeperDirectoryRecord) {
   );
 }
 
-function filterKeepers(
+function localFilter(
   keepers: KeeperDirectoryRecord[],
   query: string,
 ) {
-  const q = query.trim().toLowerCase();
+  const q = query.trim().replace(/^#/, "").toLowerCase();
 
   if (!q) return keepers;
 
@@ -34,6 +34,7 @@ function filterKeepers(
       keeper.keeperSocial,
       ...keeper.currentLands.flatMap((land) => [
         land.name,
+        land.tokenId,
         `#${land.tokenId}`,
         ...land.signs,
       ]),
@@ -51,27 +52,39 @@ export default function KeeperDirectory({
   keepers: KeeperDirectoryRecord[];
 }) {
   const [keepers, setKeepers] = useState(initialKeepers);
+  const [serverResults, setServerResults] = useState<
+    KeeperDirectoryRecord[] | null
+  >(null);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const deferredQuery = useDeferredValue(query);
 
-  const filtered = useMemo(
-    () => filterKeepers(keepers, deferredQuery),
-    [keepers, deferredQuery],
-  );
+  const deferredQuery = useDeferredValue(query.trim());
 
-  // Refresh once on the client so a Keeper Mark saved moments ago appears
-  // even if the visitor reached this page through a previously cached route.
+  /*
+   * Critical change:
+   * The search field now asks the server/Supabase directly.
+   *
+   * If the page happened to open with an empty/stale Keeper directory,
+   * typing "30" or "Proof" can still recover the saved Keeper Mark.
+   */
   useEffect(() => {
     let cancelled = false;
 
-    async function refreshKeepers() {
+    const timer = window.setTimeout(async () => {
       setLoading(true);
       setLoadError("");
 
       try {
-        const response = await fetch("/api/keepers?limit=100", {
+        const params = new URLSearchParams({
+          limit: "100",
+        });
+
+        if (deferredQuery) {
+          params.set("q", deferredQuery);
+        }
+
+        const response = await fetch(`/api/keepers?${params.toString()}`, {
           cache: "no-store",
         });
 
@@ -79,32 +92,48 @@ export default function KeeperDirectory({
 
         if (!response.ok) {
           throw new Error(
-            payload?.error || "Keeper Marks could not be refreshed.",
+            payload?.error || "Keeper Marks could not be loaded.",
           );
         }
 
-        if (!cancelled && Array.isArray(payload?.keepers)) {
-          setKeepers(payload.keepers);
+        if (cancelled) return;
+
+        const results = Array.isArray(payload?.keepers)
+          ? payload.keepers
+          : [];
+
+        if (deferredQuery) {
+          setServerResults(results);
+        } else {
+          setKeepers(results);
+          setServerResults(null);
         }
       } catch (error) {
         if (!cancelled) {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "Keeper Marks could not be refreshed.",
+              : "Keeper Marks could not be loaded.",
           );
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-
-    refreshKeepers();
+    }, deferredQuery ? 260 : 40);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [deferredQuery]);
+
+  const filtered = useMemo(() => {
+    if (deferredQuery && serverResults !== null) {
+      return serverResults;
+    }
+
+    return localFilter(keepers, deferredQuery);
+  }, [keepers, serverResults, deferredQuery]);
 
   return (
     <section className="keeper-directory-panel">
@@ -114,40 +143,43 @@ export default function KeeperDirectory({
           <h1>Meet the Keepers</h1>
           <p>
             Keeper-written identity lives beside the canonical Lore Land,
-            never inside it. Explore the people currently tending places
-            across Tobyworld.
+            never inside it. Search by Keeper name, public handle, or Lore
+            Deed number.
           </p>
         </div>
 
         <label>
-          <span>FIND A KEEPER</span>
+          <span>FIND A KEEPER OR DEED</span>
+
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Name, handle, land, sign…"
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setServerResults(null);
+            }}
+            placeholder="Proof, #30, or 30"
             autoComplete="off"
+            spellCheck={false}
           />
+
+          <small className="keeper-search-hint">
+            Try a Keeper Mark name or canonical deed number.
+          </small>
         </label>
       </div>
 
       <div className="keeper-directory-count" aria-live="polite">
-        {loading && !keepers.length
-          ? "Finding Keeper Marks…"
+        {loading
+          ? "Following the trail…"
           : `${filtered.length.toLocaleString()} keeper ${
               filtered.length === 1 ? "mark" : "marks"
             }`}
       </div>
 
-      {loadError && !keepers.length ? (
-        <div className="keeper-directory-empty">
-          <strong>The Keeper trail is temporarily quiet.</strong>
+      {loadError ? (
+        <div className="keeper-directory-notice" role="status">
+          <strong>Keeper search could not reach the directory.</strong>
           <span>{loadError}</span>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-          >
-            Try again
-          </button>
         </div>
       ) : null}
 
@@ -164,11 +196,7 @@ export default function KeeperDirectory({
             >
               <div className="keeper-directory-art">
                 {first?.imageUrl ? (
-                  <img
-                    src={first.imageUrl}
-                    alt=""
-                    loading="lazy"
-                  />
+                  <img src={first.imageUrl} alt="" loading="lazy" />
                 ) : (
                   <TobyworldIcon
                     kind="lore"
@@ -222,10 +250,11 @@ export default function KeeperDirectory({
 
       {!loading && !loadError && !filtered.length ? (
         <div className="keeper-directory-empty">
-          <strong>No Keeper Mark matched that trail.</strong>
+          <strong>No saved Keeper Mark matched this search.</strong>
+
           <span>
-            Try a Keeper name, public handle, land name, deed number, or
-            canonical sign.
+            If this deed already has a Keeper Mark, try the exact deed number
+            (for example <b>30</b>) or the exact public Keeper name.
           </span>
         </div>
       ) : null}
