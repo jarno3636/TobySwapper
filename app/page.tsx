@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import ShareCallout from "@/components/ShareCallout";
 import PondDock from "@/components/PondDock";
 import TobyworldAssets from "@/components/TobyworldAssets";
+import TobyworldIcon from "@/components/TobyworldIcon";
 
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), { ssr: false });
 
@@ -37,8 +38,8 @@ export default function Page() {
             <h1>A world to visit, keep and study.</h1>
             <p>Explore all 2,869 canonical Lore Lands, follow Keeper-written stories, study the signs that appeared, and carry Tobyworld assets through the pond.</p>
             <div className="community-home-actions community-home-actions-refined">
-              <Link prefetch={false} href="/world" className="community-home-primary"><span>◎</span><div><strong>Enter the World</strong><small>Atlas · Wander · discovery</small></div><b>→</b></Link>
-              <Link prefetch={false} href="/taboshi1" className="community-home-action"><span>△</span><div><strong>My Tobyworld</strong><small>Land · pouch · Keeper Mark</small></div><b>→</b></Link>
+              <Link prefetch={false} href="/world" className="community-home-primary"><TobyworldIcon kind="lore" size={38} className="community-action-icon" /><div><strong>Enter the World</strong><small>Atlas · Wander · discovery</small></div><b>→</b></Link>
+              <Link prefetch={false} href="/taboshi1" className="community-home-action"><TobyworldIcon kind="pouch" size={38} className="community-action-icon" /><div><strong>My Tobyworld</strong><small>Land · pouch · Keeper Mark</small></div><b>→</b></Link>
             </div>
             <nav className="community-home-quicklinks" aria-label="Explore Tobyworld">
               <Link prefetch={false} href="/world?wander=1">Wander</Link>
@@ -61,7 +62,7 @@ export default function Page() {
 
         <section id="swap" className="pond-utility-shell scroll-mt-24">
           <div className="pond-utility-intro">
-            <span className="pond-utility-icon"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="62px" className="object-contain" /></span>
+            <span className="pond-utility-icon"><TobyworldIcon kind="patience" size={58} /></span>
             <div><span className="land-section-kicker">POND UTILITY</span><h2>Swap when you need it.</h2><p>A compact utility inside the wider Tobyworld experience—not the reason the rest of the World exists.</p></div>
           </div>
           <details className="pond-utility-details">
