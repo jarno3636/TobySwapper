@@ -748,7 +748,7 @@ export default function TaboshiOnePage() {
             </button>
             ))}
             <div className={`seedleaf-asset-card legacy-land-asset ${legacyLoreBalance > 0n ? "is-held" : ""}`} aria-label="Old Lore Deed legacy asset">
-            <div className="seedleaf-asset-icon legacy-land-asset-icon"><span>△</span></div>
+            <div className="seedleaf-asset-icon legacy-land-asset-icon"><Image src="/ui/old-lore.webp" alt="Old Lore Land" width={48} height={48} className="legacy-land-token-art" /></div>
             <div className="seedleaf-asset-copy"><span>Previous land collection</span><strong>OLD LORE LAND</strong><b>{isConnected ? legacyLoreBalance.toLocaleString() : "—"}</b><em className="seedleaf-usd-value">HISTORY ASSET</em></div>
             <span className="legacy-asset-mark" aria-hidden="true">{legacyLoreBalance > 0n ? "✓" : "○"}</span>
             </div>
@@ -801,7 +801,7 @@ export default function TaboshiOnePage() {
           </div>
         </section>
 
-        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><TobyworldIcon kind="sato" size={68} /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
+        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><TobyworldIcon kind="pouch" size={52} /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div></section>
       </div>
       <Footer />
       <PondDock active="pouch" />
