@@ -25,6 +25,7 @@ import PondPulse from "@/components/PondPulse";
 import MyLoreDeeds from "@/components/land/MyLoreDeeds";
 import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
 import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
+import TobyworldIcon from "@/components/TobyworldIcon";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useUsdPrices } from "@/lib/prices";
 import { TOBY, PATIENCE, TABOSHI, CBBTC } from "@/lib/addresses";
@@ -137,13 +138,9 @@ function PondGlyph({ kind }: { kind: "swap" | "pouch" | "land" | "world" | "rout
 
 function LoreDeedArt({ revealed }: { revealed?: boolean }) {
   return (
-    <div className={`lore-deed-art ${revealed ? "is-revealed" : "is-veiled"}`} aria-label="Lore Land Deed">
-      <span className="lore-deed-moon" />
-      <span className="lore-deed-island" />
-      <span className="lore-deed-rune">△</span>
-      <span className="lore-deed-stars">✦ · ✦</span>
-      <strong>{revealed ? "LORE" : "VEILED"}</strong>
-      <small>{revealed ? "Deed awakened" : "Reveal coming soon"}</small>
+    <div className={`lore-deed-token-art ${revealed ? "is-revealed" : "is-veiled"}`} aria-label="Lore Land Deed">
+      <TobyworldIcon kind="lore" size={84} />
+      <span>{revealed ? "CANONICAL LORE DEED" : "LORE DEED"}</span>
     </div>
   );
 }
@@ -589,15 +586,15 @@ export default function TaboshiOnePage() {
         </section>
 
         <nav className="mytw-world-nav mytw-world-nav-refined" aria-label="My Tobyworld sections">
-          <a href="#land"><span><PondGlyph kind="land" /></span><b>LAND</b><small>Your place</small></a>
-          <a href="#pouch"><span><PondGlyph kind="pouch" /></span><b>POUCH</b><small>What you carry</small></a>
-          <Link prefetch={false} href="/world"><span><PondGlyph kind="world" /></span><b>WORLD</b><small>Visit & explore</small></Link>
-          <Link prefetch={false} href="/#swap"><span className="mytw-nav-patience"><Image src="/tokens/patience.PNG" alt="" fill sizes="32px" className="object-contain" /></span><b>POND</b><small>Swap utility</small></Link>
+          <a href="#land"><TobyworldIcon kind="lore" size={32} /><b>LAND</b><small>Your place</small></a>
+          <a href="#pouch"><TobyworldIcon kind="pouch" size={32} /><b>POUCH</b><small>What you carry</small></a>
+          <Link prefetch={false} href="/world"><TobyworldIcon kind="sato" size={32} /><b>WORLD</b><small>Visit & explore</small></Link>
+          <Link prefetch={false} href="/#swap"><TobyworldIcon kind="patience" size={32} /><b>POND</b><small>Swap utility</small></Link>
         </nav>
 
         <section className="mytw-profile-card mytw-place-card" aria-label="Your Tobyworld overview">
           <div className="mytw-place-head">
-            <span className="mytw-place-sigil"><Image src="/tokens/patience.PNG" alt="" fill sizes="58px" className="object-contain" /></span>
+            <span className="mytw-place-sigil"><TobyworldIcon kind="lore" size={56} /></span>
             <div>
               <span className="taboshi1-kicker">YOUR TOBYWORLD</span>
               <h2>{isConnected ? "Your place, without the clutter." : "Find your place in Tobyworld"}</h2>
@@ -612,7 +609,7 @@ export default function TaboshiOnePage() {
           <div className="mytw-place-actions">
             <Link prefetch={false} href="/world"><strong>Explore World</strong><small>Atlas · signs · wander</small><b>→</b></Link>
             <Link prefetch={false} href="/keepers"><strong>Meet Keepers</strong><small>Identity · stories · legacy</small><b>→</b></Link>
-            <Link prefetch={false} href="/#swap" className="is-patience"><span><Image src="/tokens/patience.PNG" alt="" fill sizes="34px" className="object-contain" /></span><div><strong>Pond Utility</strong><small>Swap when you need it</small></div><b>→</b></Link>
+            <Link prefetch={false} href="/#swap" className="is-pond-utility"><span><PondGlyph kind="swap" /></span><div><strong>Pond Utility</strong><small>Swap when you need it</small></div><b>→</b></Link>
           </div>
         </section>
 
@@ -702,7 +699,7 @@ export default function TaboshiOnePage() {
 
         <details className="mytw-ambient-details">
           <summary>
-            <span className="mytw-ambient-icon"><Image src="/tokens/patience.PNG" alt="" fill sizes="42px" className="object-contain" /></span>
+            <span className="mytw-ambient-icon"><TobyworldIcon kind="sato" size={40} /></span>
             <div><span className="taboshi1-kicker">POND ACTIVITY</span><strong>See what is moving through Tobyworld</strong><small>A wider pond view, kept secondary to your own land and pouch.</small></div>
             <b>⌄</b>
           </summary>
@@ -804,7 +801,7 @@ export default function TaboshiOnePage() {
           </div>
         </section>
 
-        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><Image src="/tokens/patience.PNG" alt="PATIENCE" fill sizes="70px" className="object-contain" /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
+        <section className="taboshi1-lore-strip seeds-leaves-lore-strip lore-final-whisper"><div className="taboshi1-lore-frog"><TobyworldIcon kind="sato" size={68} /></div><div><span className="taboshi1-kicker">FROM THE WATERLINE</span><strong>Your pouch is only the beginning.</strong><p>Carry what is real. Discover what is revealed. Build around what the pond actually shows.</p></div><span className="taboshi1-lore-leaf"><Image src="/tokens/taboshi.PNG" alt="" fill sizes="64px" className="object-contain" /></span></section>
       </div>
       <Footer />
       <PondDock active="pouch" />
