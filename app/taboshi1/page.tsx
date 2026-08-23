@@ -623,7 +623,6 @@ export default function TaboshiOnePage() {
           <div className="mytw-place-actions">
             <Link prefetch={false} href="/world"><strong>Explore World</strong><small>Atlas · signs · wander</small><b>→</b></Link>
             <Link prefetch={false} href="/keepers"><strong>Meet Keepers</strong><small>Identity · stories · legacy</small><b>→</b></Link>
-            <Link prefetch={false} href="/#swap" className="is-pond-utility"><span><PondGlyph kind="swap" /></span><div><strong>Pond Utility</strong><small>Swap when you need it</small></div><b>→</b></Link>
           </div>
         </section>
 
