@@ -87,6 +87,13 @@ function signsForLand(land?: LoreAtlasRecord | null) {
   return values;
 }
 
+/**
+ * Keep this deliberately boring.
+ *
+ * The Keeper directory is community/profile data, not a huge onchain index.
+ * Avoid PostgREST order modifiers here so a formatting/version difference
+ * cannot turn a real Keeper Mark into "0 keeper marks".
+ */
 async function readAllProfiles() {
   const rows: ActiveProfileRow[] = [];
 
@@ -94,13 +101,15 @@ async function readAllProfiles() {
     const query = new URLSearchParams({
       select:
         "token_id,owner_address,keeper_name,keeper_social,keeper_link,description,community_name,updated_at",
-      order: "updated_at.desc.nullslast",
     });
 
     const page = await supabaseRest<ActiveProfileRow[]>(
       `tobyswap_land_profiles?${query.toString()}`,
       {
-        headers: { Range: `${offset}-${offset + PAGE_SIZE - 1}` },
+        headers: {
+          Range: `${offset}-${offset + PAGE_SIZE - 1}`,
+          "Range-Unit": "items",
+        },
       },
     );
 
@@ -112,15 +121,62 @@ async function readAllProfiles() {
   return rows;
 }
 
-async function buildKeeperDirectory(): Promise<KeeperDirectoryRecord[]> {
+function matchesQuery(row: ActiveProfileRow, query: string) {
+  const q = clean(query).replace(/^#/, "").toLowerCase();
+
+  if (!q) return true;
+
+  const tokenId = clean(row.token_id).toLowerCase();
+
+  if (/^\d+$/.test(q) && tokenId === q) return true;
+
+  return [
+    row.keeper_name,
+    row.keeper_social,
+    row.community_name,
+    row.description,
+    tokenId ? `#${tokenId}` : "",
+    tokenId,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(q);
+}
+
+async function buildKeeperDirectory(
+  searchQuery = "",
+): Promise<KeeperDirectoryRecord[]> {
   if (!hasSupabaseServerEnv()) return [];
 
-  // The Keeper directory must never disappear just because the larger
-  // canonical Atlas cache has a temporary problem. Profiles are authoritative
-  // for Keeper Marks; Atlas data is enrichment only.
   const rows = await readAllProfiles();
+  const contributed = rows.filter(hasKeeperContribution);
+  const q = clean(searchQuery);
 
+  let selectedRows = contributed;
+
+  if (q) {
+    const directlyMatched = contributed.filter((row) => matchesQuery(row, q));
+
+    // If one land/profile matches a Keeper's name or deed number, return all
+    // current lands for that same Keeper instead of a chopped-up result.
+    const matchedOwners = new Set(
+      directlyMatched
+        .map((row) => clean(row.owner_address).toLowerCase())
+        .filter(Boolean),
+    );
+
+    selectedRows = matchedOwners.size
+      ? contributed.filter((row) =>
+          matchedOwners.has(clean(row.owner_address).toLowerCase()),
+        )
+      : directlyMatched;
+  }
+
+  // Canonical Atlas information is decoration/enrichment only.
+  // A Keeper Mark must remain searchable even if Atlas enrichment hiccups.
   let atlas: Awaited<ReturnType<typeof getLoreAtlasIndex>> | null = null;
+
   try {
     atlas = await getLoreAtlasIndex();
   } catch (error) {
@@ -129,10 +185,18 @@ async function buildKeeperDirectory(): Promise<KeeperDirectoryRecord[]> {
 
   const grouped = new Map<string, KeeperDirectoryRecord>();
 
-  for (const row of rows) {
+  for (const row of selectedRows) {
     const ownerAddress = clean(row.owner_address).toLowerCase();
 
-    if (!ownerAddress || !hasKeeperContribution(row)) continue;
+    // A saved Keeper Mark should have owner_address because the profile write
+    // is wallet-verified. If an old malformed row does not, don't fabricate
+    // a public wallet identity.
+    if (!ownerAddress) {
+      console.warn(
+        `[keepers] Profile for deed #${clean(row.token_id)} has Keeper data but no owner_address`,
+      );
+      continue;
+    }
 
     let keeper = grouped.get(ownerAddress);
 
@@ -164,7 +228,7 @@ async function buildKeeperDirectory(): Promise<KeeperDirectoryRecord[]> {
 
     if (clean(row.description)) keeper.storyCount += 1;
 
-    const tokenId = String(row.token_id);
+    const tokenId = clean(row.token_id);
     const land = atlas?.byId?.[tokenId];
 
     keeper.currentLands.push({
@@ -196,19 +260,28 @@ async function buildKeeperDirectory(): Promise<KeeperDirectoryRecord[]> {
 }
 
 /**
- * Fresh directory for the public Keepers page and search endpoint.
- * Keeper Marks are human-written and should appear immediately after save.
+ * Authoritative, uncached read for the Keepers page and search box.
  */
 export async function getKeeperDirectoryFresh() {
   return buildKeeperDirectory();
 }
 
 /**
- * Short cache for lightweight previews elsewhere in the app.
+ * Authoritative direct search. Deed #30 and "Proof" are resolved from
+ * tobyswap_land_profiles itself, not from whatever directory happened to
+ * be loaded into the browser earlier.
+ */
+export async function searchKeeperDirectoryFresh(query: string) {
+  return buildKeeperDirectory(query);
+}
+
+/**
+ * Tiny cache only for preview shelves where immediate editing freshness is
+ * less important.
  */
 export const getKeeperDirectory = unstable_cache(
   buildKeeperDirectory,
-  ["tobyswap-keeper-directory-v3"],
+  ["tobyswap-keeper-directory-v4"],
   { revalidate: 60 },
 );
 
@@ -219,8 +292,6 @@ export async function getKeeperDetail(
 
   if (!owner || !hasSupabaseServerEnv()) return null;
 
-  // Use fresh Keeper data on a Keeper's own public page so a newly edited
-  // Keeper Mark is visible immediately.
   const directory = await getKeeperDirectoryFresh();
   const current = directory.find((keeper) => keeper.ownerAddress === owner);
 
@@ -229,17 +300,28 @@ export async function getKeeperDetail(
   let history: HistoryRow[] = [];
 
   try {
+    // Fetch history broadly and compare addresses case-insensitively in JS.
+    // Older rows may contain checksum casing even though newer rows are lowercased.
     const query = new URLSearchParams({
-      owner_address: `eq.${owner}`,
       select:
         "token_id,owner_address,keeper_name,keeper_social,keeper_link,description,community_name,became_previous_at",
-      order: "became_previous_at.desc",
-      limit: "40",
+      limit: "200",
     });
 
-    history = await supabaseRest<HistoryRow[]>(
+    const allHistory = await supabaseRest<HistoryRow[]>(
       `tobyswap_land_keeper_history?${query.toString()}`,
     );
+
+    history = allHistory
+      .filter(
+        (row) => clean(row.owner_address).toLowerCase() === owner,
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.became_previous_at || 0).getTime() -
+          new Date(a.became_previous_at || 0).getTime(),
+      )
+      .slice(0, 40);
   } catch {
     history = [];
   }
@@ -247,8 +329,8 @@ export async function getKeeperDetail(
   return {
     ...current,
     previousLands: history.map((row) => ({
-      tokenId: String(row.token_id),
-      name: clean(row.community_name) || `Lore Land #${String(row.token_id)}`,
+      tokenId: clean(row.token_id),
+      name: clean(row.community_name) || `Lore Land #${clean(row.token_id)}`,
       story: clean(row.description) || null,
       becamePreviousAt: row.became_previous_at || null,
     })),
