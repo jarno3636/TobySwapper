@@ -5597,3 +5597,165 @@ html[data-theme="dark"] .land-exchange-mark > .market-companion-icon {
     height: 28px !important;
   }
 }
+
+/* ========================================================================== 
+   CONTROL + MOBILE FINISH PASS — 2026-08-22
+   Quiet dark-mode buttons, clearer disabled states, calmer dock chrome.
+   ========================================================================== */
+
+/* The global dock highlight was reading as a bright chrome bar on mobile. */
+.pond-dock-shine { display: none !important; }
+html[data-theme="dark"] .pond-dock {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 18px 42px rgba(0,0,0,.28) !important;
+}
+html[data-theme="dark"] .pond-dock-item {
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .pond-dock-active {
+  background:
+    linear-gradient(180deg, rgba(40,72,70,.82), rgba(21,48,49,.88)) !important;
+  border-color: rgba(153,218,205,.15) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 7px 18px rgba(0,0,0,.16) !important;
+}
+
+/* Quick amount controls: remove the white capsule/highlight inherited from
+   the old light-mode metal treatment. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button {
+  min-height: 42px !important;
+  border: 1px solid rgba(159,224,212,.11) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(180deg, rgba(29,59,60,.96), rgba(17,42,44,.98)) !important;
+  color: #b8cfcb !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 5px 12px rgba(0,0,0,.11) !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button::before {
+  display: none !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button:last-child {
+  color: #bfe2d4 !important;
+  border-color: rgba(90,194,155,.18) !important;
+  background:
+    linear-gradient(180deg, rgba(33,72,62,.96), rgba(20,51,46,.98)) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(120,211,183,.22) !important;
+  background:
+    linear-gradient(180deg, rgba(36,70,70,.98), rgba(20,49,50,.98)) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button:disabled {
+  opacity: .5 !important;
+  color: #718986 !important;
+  background: rgba(16,38,40,.74) !important;
+  border-color: rgba(143,196,187,.07) !important;
+  box-shadow: none !important;
+}
+
+/* Primary transfer CTA: the disconnected state should look deliberately
+   inactive, not like dark text accidentally landed on a green button. */
+html[data-theme="dark"] .taboshi1-page .taboshi1-send-button:disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  color: #78908c !important;
+  background:
+    linear-gradient(180deg, rgba(31,64,59,.72), rgba(20,47,45,.78)) !important;
+  border-color: rgba(132,190,178,.09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 7px 16px rgba(0,0,0,.10) !important;
+}
+html[data-theme="dark"] .taboshi1-page .taboshi1-send-button:disabled b {
+  color: #78908c !important;
+}
+
+/* Old Lore gets its real token artwork instead of the generic triangle. */
+.taboshi1-page .legacy-land-asset-icon {
+  padding: 0 !important;
+  background: #0d2023 !important;
+}
+.taboshi1-page .legacy-land-token-art {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* The closing pouch note should read as an editorial sign-off, not a cramped
+   three-column token banner. */
+.taboshi1-page .lore-final-whisper {
+  grid-template-columns: 56px minmax(0,1fr) !important;
+  gap: 14px !important;
+  align-items: center !important;
+  padding: 17px 19px !important;
+}
+.taboshi1-page .lore-final-whisper .taboshi1-lore-frog {
+  width: 56px !important;
+  height: 56px !important;
+  display: grid;
+  place-items: center;
+}
+.taboshi1-page .lore-final-whisper .taboshi1-lore-frog > .tw-system-icon {
+  width: 52px !important;
+  height: 52px !important;
+}
+.taboshi1-page .lore-final-whisper strong {
+  margin-top: 3px !important;
+  font-size: clamp(14px, 2.6vw, 18px) !important;
+  line-height: 1.15 !important;
+}
+.taboshi1-page .lore-final-whisper p {
+  max-width: 520px;
+  margin-top: 5px !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+}
+
+/* Remove the hard blocky note appearance below the asset selector. */
+html[data-theme="dark"] .taboshi1-page .seedleaf-assets-note {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-left: 1px !important;
+  padding-right: 1px !important;
+  color: #8fa7a3 !important;
+}
+
+@media (max-width: 640px) {
+  html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects {
+    gap: 6px !important;
+  }
+  html[data-theme="dark"] .taboshi1-page .seedleaf-quick-selects button {
+    min-height: 40px !important;
+    border-radius: 12px !important;
+    font-size: 9px !important;
+  }
+  .taboshi1-page .lore-final-whisper {
+    grid-template-columns: 48px minmax(0,1fr) !important;
+    gap: 12px !important;
+    padding: 14px 15px !important;
+  }
+  .taboshi1-page .lore-final-whisper .taboshi1-lore-frog {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .taboshi1-page .lore-final-whisper .taboshi1-lore-frog > .tw-system-icon {
+    width: 46px !important;
+    height: 46px !important;
+  }
+  .taboshi1-page .lore-final-whisper p {
+    font-size: 9px !important;
+  }
+}
