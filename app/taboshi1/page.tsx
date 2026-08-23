@@ -610,7 +610,7 @@ export default function TaboshiOnePage() {
           <div className="mytw-place-head">
             <span className="mytw-place-sigil"><TobyworldIcon kind="lore" size={56} /></span>
             <div>
-              <span className="taboshi1-kicker">YOUR TOBYWORLD</span>
+              <span className="taboshi1-kicker mytw-awakening-kicker">YOUR TOBYWORLD <Link prefetch={false} href="/awakening" className="mytw-secret-leaf" aria-label="Lore Land awakening"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14.8 2.8C9 3.2 4.4 6.1 3.6 11.1c-.3 2 1.2 3.6 3.1 3.1 4.9-1.2 7.6-5.8 8.1-11.4Z"/><path d="M4.8 13.2c2.6-3.3 5.1-5.4 8.1-7.3"/></svg></Link></span>
               <h2>{isConnected ? "Your place, without the clutter." : "Find your place in Tobyworld"}</h2>
               <p>{discoveryLine}</p>
             </div>
