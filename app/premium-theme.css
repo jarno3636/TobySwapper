@@ -5597,4 +5597,47 @@ html[data-theme="dark"] .land-exchange-mark > .market-companion-icon {
     height: 28px !important;
   }
 }
-\n\n/* ==========================================================================\n   LORE DEED SELECTOR ART FIX · 2026-08-22\n   Keep the large LoreDeedArt treatment for hero surfaces, but use the actual\n   artwork as a clean square medallion inside compact pouch/selector cards.\n   ========================================================================== */\n.seedleaf-asset-icon .lore-deed-token-art-compact {\n  position: absolute;\n  inset: 0;\n  width: 100%;\n  height: 100%;\n  min-width: 0;\n  min-height: 0;\n  padding: 0;\n  overflow: hidden;\n  border-radius: inherit;\n  background: #dff4f6;\n}\n\n.seedleaf-asset-icon .lore-deed-token-art-compact .lore-deed-token-image,\n.seedleaf-asset-icon .legacy-lore-token-image {\n  object-fit: cover !important;\n  object-position: center !important;\n  transform: none !important;\n  filter: none !important;\n}\n\n.seedleaf-asset-card.is-lore .seedleaf-asset-icon {\n  padding: 0 !important;\n  overflow: hidden !important;\n  background: #dff4f6 !important;\n}\n\n.legacy-land-asset-icon {\n  position: relative;\n  padding: 0 !important;\n  overflow: hidden !important;\n}\n\nhtml[data-theme="dark"] .seedleaf-asset-card.is-lore .seedleaf-asset-icon,\nhtml[data-theme="dark"] .seedleaf-asset-icon .lore-deed-token-art-compact {\n  background: #10272a !important;\n}\n
+
+
+/* ==========================================================================
+   LORE DEED SELECTOR ART FIX · 2026-08-22
+   Keep the large LoreDeedArt treatment for hero surfaces, but use the actual
+   artwork as a clean square medallion inside compact pouch/selector cards.
+   ========================================================================== */
+.seedleaf-asset-icon .lore-deed-token-art-compact {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #dff4f6;
+}
+
+.seedleaf-asset-icon .lore-deed-token-art-compact .lore-deed-token-image,
+.seedleaf-asset-icon .legacy-lore-token-image {
+  object-fit: cover !important;
+  object-position: center !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.seedleaf-asset-card.is-lore .seedleaf-asset-icon {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #dff4f6 !important;
+}
+
+.legacy-land-asset-icon {
+  position: relative;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-theme="dark"] .seedleaf-asset-card.is-lore .seedleaf-asset-icon,
+html[data-theme="dark"] .seedleaf-asset-icon .lore-deed-token-art-compact {
+  background: #10272a !important;
+}
