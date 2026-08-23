@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
-import { getKeeperDirectory } from "@/lib/keeper-directory-server";
+import { getKeeperDirectoryFresh } from "@/lib/keeper-directory-server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
     const q = (params.get("q") || "").trim().toLowerCase();
-    const limit = Math.max(1, Math.min(100, Number(params.get("limit") || 36)));
-    const keepers = await getKeeperDirectory();
+    const limit = Math.max(
+      1,
+      Math.min(100, Number(params.get("limit") || 60)),
+    );
+
+    const keepers = await getKeeperDirectoryFresh();
+
     const filtered = q
       ? keepers.filter((keeper) =>
           [
             keeper.keeperName,
             keeper.keeperSocial,
-            keeper.ownerAddress,
-            ...keeper.currentLands.flatMap((land) => [land.name, `#${land.tokenId}`, ...land.signs]),
+            ...keeper.currentLands.flatMap((land) => [
+              land.name,
+              `#${land.tokenId}`,
+              ...land.signs,
+            ]),
           ]
             .filter(Boolean)
             .join(" ")
@@ -25,10 +34,28 @@ export async function GET(request: Request) {
       : keepers;
 
     return NextResponse.json(
-      { keepers: filtered.slice(0, limit), total: filtered.length },
-      { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } },
+      {
+        keepers: filtered.slice(0, limit),
+        total: filtered.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      },
     );
-  } catch {
-    return NextResponse.json({ keepers: [], total: 0 }, { status: 200 });
+  } catch (error) {
+    console.error("[api/keepers] Keeper directory failed:", error);
+
+    // Do not silently pretend there are zero Keeper Marks when the request
+    // itself failed. The client can keep its last good result and retry.
+    return NextResponse.json(
+      {
+        keepers: [],
+        total: 0,
+        error: "Keeper Marks could not be loaded right now.",
+      },
+      { status: 503 },
+    );
   }
 }
