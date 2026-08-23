@@ -5641,3 +5641,341 @@ html[data-theme="dark"] .seedleaf-asset-card.is-lore .seedleaf-asset-icon,
 html[data-theme="dark"] .seedleaf-asset-icon .lore-deed-token-art-compact {
   background: #10272a !important;
 }
+
+/* ==========================================================================
+   MY TOBYWORLD + KEEPER SEARCH UX POLISH · 2026-08-23
+   - Removes the oversized Pond Utility route from the overview card.
+   - Gives the remaining World/Keepers choices more room and stronger type.
+   - Makes Keeper search unmistakably interactive.
+   ========================================================================== */
+
+/* My Tobyworld overview: two primary destinations, not three competing CTAs. */
+.taboshi1-page .mytw-place-card {
+  padding: 24px !important;
+}
+
+.taboshi1-page .mytw-place-head {
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.taboshi1-page .mytw-place-sigil {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+}
+
+.taboshi1-page .mytw-place-head h2 {
+  margin: 5px 0 6px;
+  font-size: clamp(27px, 4vw, 36px);
+  line-height: 1.04;
+  letter-spacing: -.045em;
+}
+
+.taboshi1-page .mytw-place-head p {
+  max-width: 680px;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.taboshi1-page .mytw-place-metrics {
+  gap: 10px;
+  margin-top: 19px;
+}
+
+.taboshi1-page .mytw-place-metrics > span {
+  min-height: 78px;
+  padding: 14px 15px;
+  border-radius: 19px;
+}
+
+.taboshi1-page .mytw-place-metrics small {
+  font-size: 6.5px;
+  letter-spacing: .13em;
+}
+
+.taboshi1-page .mytw-place-metrics b {
+  margin-top: 7px;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.taboshi1-page .mytw-place-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 13px;
+}
+
+.taboshi1-page .mytw-place-actions > a {
+  position: relative;
+  min-height: 92px;
+  padding: 16px 17px;
+  border-radius: 20px;
+  align-content: center;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background .16s ease;
+}
+
+.taboshi1-page .mytw-place-actions > a:hover {
+  transform: translateY(-1px);
+}
+
+.taboshi1-page .mytw-place-actions > a > strong {
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.taboshi1-page .mytw-place-actions > a > small {
+  margin-top: 4px;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.taboshi1-page .mytw-place-actions > a > b {
+  font-size: 18px;
+}
+
+/* Keeper search: visually read as an input/control at first glance. */
+.keeper-directory-head .keeper-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.keeper-directory-head .keeper-search-label {
+  color: #587f77;
+  font-size: 7px;
+  font-weight: 1000;
+  letter-spacing: .16em;
+}
+
+.keeper-search-control {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 58px;
+  padding: 0 11px 0 15px;
+  overflow: hidden;
+  border: 2px solid rgba(41, 150, 132, .42);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 5% 0%, rgba(61, 184, 162, .10), transparent 42%),
+    #ffffff;
+  box-shadow:
+    0 0 0 4px rgba(61, 184, 162, .07),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 10px 24px rgba(27, 82, 74, .08);
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease,
+    transform .16s ease;
+}
+
+.keeper-search-control:focus-within {
+  border-color: rgba(32, 157, 134, .78);
+  box-shadow:
+    0 0 0 5px rgba(48, 180, 155, .13),
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 13px 28px rgba(27, 82, 74, .11);
+  transform: translateY(-1px);
+}
+
+.keeper-search-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: #4d8c80;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
+.keeper-directory-head .keeper-search-control input {
+  width: 100%;
+  height: 54px;
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #173f42;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.keeper-directory-head .keeper-search-control input::placeholder {
+  color: #78908b;
+  opacity: 1;
+  font-weight: 650;
+}
+
+.keeper-search-badge {
+  padding: 8px 9px;
+  border: 1px solid rgba(47, 137, 121, .13);
+  border-radius: 999px;
+  background: rgba(222, 243, 236, .92);
+  color: #3b786b;
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: .12em;
+}
+
+.keeper-directory-head .keeper-search-hint {
+  padding-left: 2px;
+  color: #708b85;
+  font-size: 7.5px;
+  line-height: 1.4;
+}
+
+/* Better readability in dark mode for the exact surfaces shown in screenshots. */
+html[data-theme="dark"] .taboshi1-page .mytw-place-head h2,
+html[data-theme="dark"] .taboshi1-page .mytw-place-actions > a > strong,
+html[data-theme="dark"] .taboshi1-page .mytw-place-metrics b {
+  color: #f0fbf8 !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-place-head p,
+html[data-theme="dark"] .taboshi1-page .mytw-place-actions > a > small {
+  color: #adc3c0 !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-place-metrics small {
+  color: #91aaa6 !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-place-actions > a {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(78, 194, 173, .08), transparent 40%),
+    linear-gradient(155deg, rgba(20, 48, 50, .96), rgba(12, 34, 36, .98)) !important;
+  border-color: rgba(158, 225, 213, .15) !important;
+}
+
+html[data-theme="dark"] .taboshi1-page .mytw-place-actions > a:hover {
+  border-color: rgba(106, 216, 196, .30) !important;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(78, 194, 173, .13), transparent 42%),
+    linear-gradient(155deg, rgba(24, 55, 57, .98), rgba(14, 38, 40, .99)) !important;
+}
+
+html[data-theme="dark"] .keeper-directory-head .keeper-search-label {
+  color: #9cc0ba !important;
+}
+
+html[data-theme="dark"] .keeper-search-control {
+  border-color: rgba(94, 218, 194, .54);
+  background:
+    radial-gradient(circle at 5% 0%, rgba(69, 207, 181, .12), transparent 42%),
+    linear-gradient(155deg, #153537, #0e292b) !important;
+  box-shadow:
+    0 0 0 4px rgba(73, 205, 180, .07),
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 12px 28px rgba(0,0,0,.22);
+}
+
+html[data-theme="dark"] .keeper-search-control:focus-within {
+  border-color: rgba(102, 232, 206, .88);
+  box-shadow:
+    0 0 0 5px rgba(79, 216, 190, .14),
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 15px 32px rgba(0,0,0,.25);
+}
+
+html[data-theme="dark"] .keeper-search-icon {
+  stroke: #7ee0cd;
+}
+
+html[data-theme="dark"] .keeper-directory-head .keeper-search-control input {
+  color: #f0fbf8 !important;
+}
+
+html[data-theme="dark"] .keeper-directory-head .keeper-search-control input::placeholder {
+  color: #8aa6a1 !important;
+}
+
+html[data-theme="dark"] .keeper-search-badge {
+  border-color: rgba(104, 223, 202, .14);
+  background: rgba(49, 112, 102, .38);
+  color: #9ae2d4;
+}
+
+html[data-theme="dark"] .keeper-directory-head .keeper-search-hint {
+  color: #8ba8a3 !important;
+}
+
+@media (max-width: 680px) {
+  .taboshi1-page .mytw-place-card {
+    padding: 20px !important;
+  }
+
+  .taboshi1-page .mytw-place-head {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .taboshi1-page .mytw-place-sigil {
+    width: 62px;
+    height: 62px;
+  }
+
+  .taboshi1-page .mytw-place-head h2 {
+    font-size: 29px;
+  }
+
+  .taboshi1-page .mytw-place-head p {
+    font-size: 10.5px;
+  }
+
+  .taboshi1-page .mytw-place-metrics > span {
+    min-height: 74px;
+    padding: 11px;
+  }
+
+  .taboshi1-page .mytw-place-metrics small {
+    font-size: 5.8px;
+  }
+
+  .taboshi1-page .mytw-place-metrics b {
+    font-size: 17px;
+  }
+
+  .taboshi1-page .mytw-place-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .taboshi1-page .mytw-place-actions > a {
+    min-height: 82px;
+    padding: 15px 16px;
+  }
+
+  .taboshi1-page .mytw-place-actions > a > strong {
+    font-size: 12px;
+  }
+
+  .taboshi1-page .mytw-place-actions > a > small {
+    font-size: 7.5px;
+  }
+
+  .keeper-search-control {
+    min-height: 62px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    padding-right: 15px;
+  }
+
+  .keeper-directory-head .keeper-search-control input {
+    height: 58px;
+    font-size: 16px; /* prevents iOS auto-zoom and improves legibility */
+  }
+
+  .keeper-search-badge {
+    display: none;
+  }
+
+  .keeper-directory-head .keeper-search-hint {
+    font-size: 8px;
+  }
+}
