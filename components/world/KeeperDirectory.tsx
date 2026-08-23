@@ -148,22 +148,38 @@ export default function KeeperDirectory({
           </p>
         </div>
 
-        <label>
-          <span>FIND A KEEPER OR DEED</span>
+        <label className="keeper-search-field">
+          <span className="keeper-search-label">FIND A KEEPER OR DEED</span>
 
-          <input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setServerResults(null);
-            }}
-            placeholder="Proof, #30, or 30"
-            autoComplete="off"
-            spellCheck={false}
-          />
+          <div className="keeper-search-control">
+            <svg
+              className="keeper-search-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+
+            <input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setServerResults(null);
+              }}
+              placeholder="Search Proof, #30, or 30"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Search Keeper Marks by name or deed number"
+            />
+
+            <span className="keeper-search-badge" aria-hidden="true">
+              SEARCH
+            </span>
+          </div>
 
           <small className="keeper-search-hint">
-            Try a Keeper Mark name or canonical deed number.
+            Keeper name, public handle, or canonical Lore Deed number.
           </small>
         </label>
       </div>
