@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getKeeperDirectoryFresh } from "@/lib/keeper-directory-server";
+import {
+  getKeeperDirectoryFresh,
+  searchKeeperDirectoryFresh,
+} from "@/lib/keeper-directory-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,36 +10,21 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
-    const q = (params.get("q") || "").trim().toLowerCase();
+    const q = (params.get("q") || "").trim();
     const limit = Math.max(
       1,
       Math.min(100, Number(params.get("limit") || 60)),
     );
 
-    const keepers = await getKeeperDirectoryFresh();
-
-    const filtered = q
-      ? keepers.filter((keeper) =>
-          [
-            keeper.keeperName,
-            keeper.keeperSocial,
-            ...keeper.currentLands.flatMap((land) => [
-              land.name,
-              `#${land.tokenId}`,
-              ...land.signs,
-            ]),
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(q),
-        )
-      : keepers;
+    const keepers = q
+      ? await searchKeeperDirectoryFresh(q)
+      : await getKeeperDirectoryFresh();
 
     return NextResponse.json(
       {
-        keepers: filtered.slice(0, limit),
-        total: filtered.length,
+        keepers: keepers.slice(0, limit),
+        total: keepers.length,
+        query: q || null,
       },
       {
         headers: {
@@ -47,8 +35,6 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[api/keepers] Keeper directory failed:", error);
 
-    // Do not silently pretend there are zero Keeper Marks when the request
-    // itself failed. The client can keep its last good result and retry.
     return NextResponse.json(
       {
         keepers: [],
