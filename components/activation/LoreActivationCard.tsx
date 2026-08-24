@@ -11,8 +11,8 @@ import { activationBaseScanTx } from "@/lib/activation-contracts";
 
 import styles from "./LoreActivationCard.module.css";
 
-function fmt(value: bigint, digits = 4) {
-  const number = Number(formatUnits(value, 18));
+function fmt(value: bigint, decimals: number, digits = 4) {
+  const number = Number(formatUnits(value, decimals));
   if (!Number.isFinite(number)) return "—";
 
   return number.toLocaleString(undefined, {
@@ -85,6 +85,9 @@ export default function LoreActivationCard(props: {
   lockDuration: bigint;
   tobyBalance: bigint;
   patienceBalance: bigint;
+  tobyDecimals: number;
+  patienceDecimals: number;
+  protocolReady: boolean;
   stage: ActivationStage;
   message: string;
   hashes: `0x${string}`[];
@@ -108,7 +111,8 @@ export default function LoreActivationCard(props: {
   const termsReady =
     props.xAmount > 0n &&
     props.yCost > 0n &&
-    props.lockDuration > 0n;
+    props.lockDuration > 0n &&
+    props.protocolReady;
 
   const busy = ![
     "idle",
@@ -190,13 +194,13 @@ export default function LoreActivationCard(props: {
               <img src="/tokens/toby.PNG" alt="" />
               <span>
                 <small>TOBY COMMITMENT</small>
-                <strong>{termsReady ? fmt(props.xAmount, 0) : "—"}</strong>
+                <strong>{termsReady ? fmt(props.xAmount, props.tobyDecimals, 0) : "—"}</strong>
                 <em>
                   {!termsReady
                     ? "Reading current requirement"
                     : enoughToby
                       ? "Wallet ready"
-                      : `You carry ${fmt(props.tobyBalance, 0)}`}
+                      : `You carry ${fmt(props.tobyBalance, props.tobyDecimals, 0)}`}
                 </em>
               </span>
             </div>
@@ -205,13 +209,13 @@ export default function LoreActivationCard(props: {
               <img src="/tokens/patience.PNG" alt="" />
               <span>
                 <small>PATIENCE OFFERING</small>
-                <strong>{termsReady ? fmt(props.yCost) : "—"}</strong>
+                <strong>{termsReady ? fmt(props.yCost, props.patienceDecimals) : "—"}</strong>
                 <em>
                   {!termsReady
                     ? "Reading current requirement"
                     : enoughPatience
                       ? "Wallet ready"
-                      : `You carry ${fmt(props.patienceBalance)}`}
+                      : `You carry ${fmt(props.patienceBalance, props.patienceDecimals)}`}
                 </em>
               </span>
             </div>
@@ -261,7 +265,7 @@ export default function LoreActivationCard(props: {
 
                 <div className={styles.walletCopy}>
                   <small>TOBY IN WALLET</small>
-                  <strong>{fmt(props.tobyBalance, 0)}</strong>
+                  <strong>{fmt(props.tobyBalance, props.tobyDecimals, 0)}</strong>
                   <em
                     className={
                       enoughToby && termsReady ? styles.ready : styles.short
@@ -271,7 +275,7 @@ export default function LoreActivationCard(props: {
                       ? "Waiting for live terms"
                       : enoughToby
                         ? "Ready for commitment"
-                        : `Need ${fmt(tobyShortfall, 0)} more`}
+                        : `Need ${fmt(tobyShortfall, props.tobyDecimals, 0)} more`}
                   </em>
                 </div>
 
@@ -301,7 +305,7 @@ export default function LoreActivationCard(props: {
 
                 <div className={styles.walletCopy}>
                   <small>PATIENCE IN WALLET</small>
-                  <strong>{fmt(props.patienceBalance)}</strong>
+                  <strong>{fmt(props.patienceBalance, props.patienceDecimals)}</strong>
                   <em
                     className={
                       enoughPatience && termsReady
@@ -313,7 +317,7 @@ export default function LoreActivationCard(props: {
                       ? "Waiting for live terms"
                       : enoughPatience
                         ? "Ready for offering"
-                        : `Need ${fmt(patienceShortfall)} more`}
+                        : `Need ${fmt(patienceShortfall, props.patienceDecimals)} more`}
                   </em>
                 </div>
 
@@ -372,7 +376,7 @@ export default function LoreActivationCard(props: {
             </div>
             <div>
               <small>TOBY COMMITTED</small>
-              <strong>{props.lock ? fmt(props.lock.xAmount, 0) : "Reading…"}</strong>
+              <strong>{props.lock ? fmt(props.lock.xAmount, props.tobyDecimals, 0) : "Reading…"}</strong>
             </div>
             <div>
               <small>ACTIVATED</small>
