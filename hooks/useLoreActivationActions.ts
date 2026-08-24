@@ -13,7 +13,7 @@ import {
   ACTIVATION_VAULT,
   CANONICAL_LORE_NFT,
 } from "@/lib/activation-contracts";
-import { activationManagerAbi, canonicalActivationNftAbi } from "@/lib/activation-abis";
+import { activationManagerAbi, activationVaultAbi, canonicalActivationNftAbi, patienceActivationAbi } from "@/lib/activation-abis";
 
 export type ActivationStage =
   | "idle" | "checking" | "approve-patience" | "approve-toby" | "awakening" | "confirming" | "awakened" | "withdrawing" | "withdrawn" | "error";
@@ -38,7 +38,7 @@ export function friendlyActivationError(error: unknown) {
   }
   if (!name) {
     const text = String((error as any)?.shortMessage || (error as any)?.message || error || "");
-    name = ["ActivationNotStarted", "DeadlineExpired", "NotNFTOwner", "ProtocolCustodyCannotActivate", "AlreadyActive", "UnexpectedXRequirement", "YSlippageExceeded", "ShortXReceipt", "StillLocked"].find((x) => text.includes(x)) || "";
+    name = ["ActivationNotStarted", "DeadlineExpired", "NotNFTOwner", "ProtocolCustodyCannotActivate", "AlreadyActive", "UnexpectedXRequirement", "YSlippageExceeded", "ShortXReceipt", "StillLocked", "OperationIsPaused"].find((x) => text.includes(x)) || "";
   }
   const messages: Record<string, string> = {
     ActivationNotStarted: "Land awakening has not started yet.",
@@ -50,6 +50,7 @@ export function friendlyActivationError(error: unknown) {
     YSlippageExceeded: "The PATIENCE requirement changed before execution. Current terms have been refreshed.",
     ShortXReceipt: "The TOBY transfer received less than the manager requires, so activation did not complete.",
     StillLocked: "The minimum TOBY lock has not matured yet.",
+    OperationIsPaused: "Land awakening is currently paused onchain.",
   };
   return { name, message: messages[name] || String((error as any)?.shortMessage || "The onchain action did not complete.") };
 }
@@ -84,11 +85,13 @@ export function useLoreActivationActions(owner?: Address, onRefresh?: () => Prom
         { address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName: "isActive", args: [tokenId] },
         { address: CANONICAL_LORE_NFT, abi: canonicalActivationNftAbi, functionName: "ownerOf", args: [tokenId] },
         { address: ACTIVATION_TOBY, abi: erc20Abi, functionName: "balanceOf", args: [owner] },
-        { address: ACTIVATION_PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [owner] },
+        { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "balanceOf", args: [owner] },
         { address: ACTIVATION_TOBY, abi: erc20Abi, functionName: "allowance", args: [owner, ACTIVATION_MANAGER] },
-        { address: ACTIVATION_PATIENCE, abi: erc20Abi, functionName: "allowance", args: [owner, ACTIVATION_VAULT] },
+        { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "allowance", args: [owner, ACTIVATION_VAULT] },
+        { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "tokenY" },
       ] as any });
-      const [started, xAmount, yCost, paused, active, nftOwner, xBalance, yBalance, xAllowance, yAllowance] = checks as unknown as [boolean,bigint,bigint,boolean,boolean,Address,bigint,bigint,bigint,bigint];
+      const [started, xAmount, yCost, paused, active, nftOwner, xBalance, yBalance, xAllowance, yAllowance, vaultTokenY] = checks as unknown as [boolean,bigint,bigint,boolean,boolean,Address,bigint,bigint,bigint,bigint,Address];
+      if (!isAddressEqual(vaultTokenY, ACTIVATION_PATIENCE)) throw new Error("Activation vault token mismatch. Activation has been blocked for safety.");
       if (!started) throw new Error("ActivationNotStarted");
       if (paused) throw new Error("Land awakening is currently paused.");
       if (active) throw new Error("AlreadyActive");
@@ -98,7 +101,7 @@ export function useLoreActivationActions(owner?: Address, onRefresh?: () => Prom
 
       if (yAllowance < yCost) {
         setStage("approve-patience");
-        const h = await writeContractAsync({ address: ACTIVATION_PATIENCE, abi: erc20Abi, functionName: "approve", args: [ACTIVATION_VAULT, yCost], chainId: base.id });
+        const h = await writeContractAsync({ address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "approve", args: [ACTIVATION_VAULT, yCost], chainId: base.id });
         await wait(h);
       }
       if (xAllowance < xAmount) {

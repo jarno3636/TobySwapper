@@ -2,31 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Address, Hex } from "viem";
-import { erc20Abi } from "viem";
+import { erc20Abi, isAddressEqual } from "viem";
 import { base } from "viem/chains";
-import {
-  useReadContract,
-  useReadContracts,
-} from "wagmi";
+import { usePublicClient, useReadContract, useReadContracts } from "wagmi";
+import { ACTIVATION_MANAGER, ACTIVATION_PATIENCE, ACTIVATION_TOBY, ACTIVATION_VAULT, CANONICAL_LORE_NFT } from "@/lib/activation-contracts";
+import { activationManagerAbi, activationVaultAbi, canonicalActivationNftAbi, patienceActivationAbi } from "@/lib/activation-abis";
 
-import {
-  ACTIVATION_MANAGER,
-  ACTIVATION_PATIENCE,
-  ACTIVATION_TOBY,
-  ACTIVATION_VAULT,
-  CANONICAL_LORE_NFT,
-} from "@/lib/activation-contracts";
-
-import {
-  activationManagerAbi,
-  canonicalActivationNftAbi,
-} from "@/lib/activation-abis";
-
-export type OwnedActivationDeed = {
-  tokenId: string;
-  communityName?: string | null;
-};
-
+export type OwnedActivationDeed = { tokenId: string; communityName?: string | null };
 export type ActivationLock = {
   lockId: bigint;
   tokenId: bigint;
@@ -38,772 +20,155 @@ export type ActivationLock = {
   withdrawn: boolean;
 };
 
-function result<T>(
-  entry: any,
-  fallback: T,
-): T {
-  return entry?.status === "success"
-    ? (entry.result as T)
-    : fallback;
+function result<T>(entry: any, fallback: T): T {
+  return entry?.status === "success" ? (entry.result as T) : fallback;
 }
 
-function normalizeLock(
-  lockId: bigint,
-  value: any,
-): ActivationLock | undefined {
-  if (!value) return undefined;
-
-  /*
-   * Viem returns named tuple components as an object
-   * for this ABI. The array fallback makes this resilient
-   * if the transport/client happens to expose a tuple array.
-   */
-  if (Array.isArray(value)) {
-    return {
-      lockId,
-      tokenId: BigInt(value[0]),
-      locker: value[1] as Address,
-      xAmount: BigInt(value[2]),
-      startTime: BigInt(value[3]),
-      unlockTime: BigInt(value[4]),
-      ownershipNonceAtActivation:
-        BigInt(value[5]),
-      withdrawn: Boolean(value[6]),
-    };
-  }
-
-  return {
-    lockId,
-    tokenId: BigInt(value.tokenId),
-    locker: value.locker as Address,
-    xAmount: BigInt(value.xAmount),
-    startTime: BigInt(value.startTime),
-    unlockTime: BigInt(value.unlockTime),
-    ownershipNonceAtActivation:
-      BigInt(
-        value.ownershipNonceAtActivation,
-      ),
-    withdrawn: Boolean(value.withdrawn),
-  };
-}
-
-export function useLoreActivationReads(
-  owner?: Address,
-) {
-  const [deeds, setDeeds] =
-    useState<OwnedActivationDeed[]>([]);
-
-  const [deedsLoading, setDeedsLoading] =
-    useState(false);
-
-  const [refreshTick, setRefreshTick] =
-    useState(0);
-
-  /* -------------------------------------------------------
-     Owned canonical deeds
-
-     Reuses the existing owned-deed endpoint.
-     We do NOT scan every token ID.
-  ------------------------------------------------------- */
+export function useLoreActivationReads(owner?: Address) {
+  const client = usePublicClient({ chainId: base.id });
+  const [deeds, setDeeds] = useState<OwnedActivationDeed[]>([]);
+  const [deedsLoading, setDeedsLoading] = useState(false);
+  const [lockMap, setLockMap] = useState<Record<string, ActivationLock | undefined>>({});
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
-    if (!owner) {
-      setDeeds([]);
-      return;
-    }
-
+    if (!owner) { setDeeds([]); return; }
     let cancelled = false;
-
     setDeedsLoading(true);
-
-    fetch(
-      `/api/land/owned?owner=${encodeURIComponent(
-        owner,
-      )}&activation=${refreshTick}`,
-      {
-        cache: "no-store",
-      },
-    )
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(
-            "owned deeds unavailable",
-          );
-        }
-
-        return response.json();
-      })
-      .then((json) => {
-        if (cancelled) return;
-
-        setDeeds(
-          Array.isArray(json?.deeds)
-            ? json.deeds
-            : [],
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDeeds([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDeedsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    fetch(`/api/land/owned?owner=${encodeURIComponent(owner)}&activation=${refreshTick}`, { cache: "no-store" })
+      .then(async (r) => r.ok ? r.json() : Promise.reject(new Error("owned deeds unavailable")))
+      .then((json) => { if (!cancelled) setDeeds(Array.isArray(json?.deeds) ? json.deeds : []); })
+      .catch(() => { if (!cancelled) setDeeds([]); })
+      .finally(() => { if (!cancelled) setDeedsLoading(false); });
+    return () => { cancelled = true; };
   }, [owner, refreshTick]);
 
-  /* -------------------------------------------------------
-     Global ActivationManager state
-
-     One multicall.
-  ------------------------------------------------------- */
-
-  const globalContracts =
-    useMemo(
-      () =>
-        [
-          "activationStarted",
-          "activationXAmount",
-          "activationYCost",
-          "minActivationX",
-          "maxActivationX",
-          "minActivationY",
-          "maxActivationY",
-          "LOCK_DURATION",
-          "totalActivations",
-          "totalLockedX",
-          "heldX",
-          "solvent",
-          "pausableOperations",
-        ].map(
-          (functionName) =>
-            ({
-              address:
-                ACTIVATION_MANAGER,
-              abi: activationManagerAbi,
-              functionName,
-              chainId: base.id,
-            }) as any,
-        ),
-      [],
-    );
-
-  const globalRead =
-    useReadContracts({
-      contracts:
-        globalContracts,
-
-      query: {
-        staleTime: 8_000,
-        refetchOnWindowFocus: true,
-        refetchOnReconnect: true,
-      },
-    });
-
-  /*
-   * pausableOperations()[0] is the official
-   * ACTIVATION operation ID.
-   *
-   * Never hard-code this bytes32.
-   */
-  const operations =
-    result<readonly Hex[]>(
-      globalRead.data?.[12],
-      [],
-    );
-
-  const activationOperationId =
-    operations?.[0];
-
-  const pauseRead =
-    useReadContract({
-      address:
-        ACTIVATION_MANAGER,
-
-      abi:
-        activationManagerAbi,
-
-      functionName:
-        "operationPaused",
-
-      args:
-        activationOperationId
-          ? [activationOperationId]
-          : undefined,
-
-      chainId:
-        base.id,
-
-      query: {
-        enabled:
-          Boolean(
-            activationOperationId,
-          ),
-
-        staleTime: 5_000,
-
-        refetchOnWindowFocus:
-          true,
-
-        refetchOnReconnect:
-          true,
-      },
-    });
-
-  /* -------------------------------------------------------
-     Per-deed canonical state
-
-     Four reads/deed in one multicall:
-     - isActive
-     - activeLockId
-     - ownerOf
-     - transferNonce
-  ------------------------------------------------------- */
-
-  const perDeedContracts =
-    useMemo(
-      () =>
-        deeds.flatMap(
-          (deed) => {
-            const tokenId =
-              BigInt(
-                deed.tokenId,
-              );
-
-            return [
-              {
-                address:
-                  ACTIVATION_MANAGER,
-
-                abi:
-                  activationManagerAbi,
-
-                functionName:
-                  "isActive",
-
-                args:
-                  [tokenId],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  ACTIVATION_MANAGER,
-
-                abi:
-                  activationManagerAbi,
-
-                functionName:
-                  "activeLockId",
-
-                args:
-                  [tokenId],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  CANONICAL_LORE_NFT,
-
-                abi:
-                  canonicalActivationNftAbi,
-
-                functionName:
-                  "ownerOf",
-
-                args:
-                  [tokenId],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  CANONICAL_LORE_NFT,
-
-                abi:
-                  canonicalActivationNftAbi,
-
-                functionName:
-                  "transferNonce",
-
-                args:
-                  [tokenId],
-
-                chainId:
-                  base.id,
-              },
-            ];
-          },
-        ),
-      [deeds],
-    );
-
-  const deedRead =
-    useReadContracts({
-      contracts:
-        perDeedContracts as any,
-
-      query: {
-        enabled:
-          perDeedContracts.length >
-          0,
-
-        staleTime: 7_000,
-
-        refetchOnWindowFocus:
-          true,
-
-        refetchOnReconnect:
-          true,
-      },
-    });
-
-  /*
-   * First construct authoritative activation state
-   * WITHOUT lock details.
-   */
-  const baseDeedStates =
-    useMemo(
-      () =>
-        deeds.map(
-          (deed, index) => {
-            const offset =
-              index * 4;
-
-            return {
-              ...deed,
-
-              isActive:
-                result<boolean>(
-                  deedRead.data?.[
-                    offset
-                  ],
-                  false,
-                ),
-
-              lockId:
-                result<bigint>(
-                  deedRead.data?.[
-                    offset + 1
-                  ],
-                  0n,
-                ),
-
-              owner:
-                result<
-                  | Address
-                  | undefined
-                >(
-                  deedRead.data?.[
-                    offset + 2
-                  ],
-                  undefined,
-                ),
-
-              transferNonce:
-                result<bigint>(
-                  deedRead.data?.[
-                    offset + 3
-                  ],
-                  0n,
-                ),
-            };
-          },
-        ),
-
-      [
-        deeds,
-        deedRead.data,
-      ],
-    );
-
-  /* -------------------------------------------------------
-     Exact getLock reads
-
-     Only active deeds with a valid current lock ID
-     are queried.
-
-     No raw call.
-     No guessing.
-     No timestamp heuristics.
-  ------------------------------------------------------- */
-
-  const activeDeeds =
-    useMemo(
-      () =>
-        baseDeedStates.filter(
-          (deed) =>
-            deed.isActive &&
-            deed.lockId > 0n,
-        ),
-
-      [baseDeedStates],
-    );
-
-  const lockContracts =
-    useMemo(
-      () =>
-        activeDeeds.map(
-          (deed) => ({
-            address:
-              ACTIVATION_MANAGER,
-
-            abi:
-              activationManagerAbi,
-
-            functionName:
-              "getLock",
-
-            args:
-              [deed.lockId],
-
-            chainId:
-              base.id,
-          }),
-        ),
-
-      [activeDeeds],
-    );
-
-  const lockRead =
-    useReadContracts({
-      contracts:
-        lockContracts as any,
-
-      query: {
-        enabled:
-          lockContracts.length >
-          0,
-
-        staleTime: 7_000,
-
-        refetchOnWindowFocus:
-          true,
-
-        refetchOnReconnect:
-          true,
-      },
-    });
-
-  const lockMap =
-    useMemo(() => {
-      const map =
-        new Map<
-          string,
-          ActivationLock
-        >();
-
-      activeDeeds.forEach(
-        (deed, index) => {
-          const entry =
-            lockRead.data?.[
-              index
-            ];
-
-          if (
-            entry?.status !==
-            "success"
-          ) {
-            return;
-          }
-
-          const lock =
-            normalizeLock(
-              deed.lockId,
-              entry.result,
-            );
-
-          if (lock) {
-            map.set(
-              deed.tokenId,
-              lock,
-            );
-          }
-        },
-      );
-
-      return map;
-    }, [
-      activeDeeds,
-      lockRead.data,
-    ]);
-
-  const deedStates =
-    useMemo(
-      () =>
-        baseDeedStates.map(
-          (deed) => ({
-            ...deed,
-
-            lock:
-              lockMap.get(
-                deed.tokenId,
-              ),
-          }),
-        ),
-
-      [
-        baseDeedStates,
-        lockMap,
-      ],
-    );
-
-  /* -------------------------------------------------------
-     Connected wallet state
-
-     Correct approval spenders:
-     TOBY     -> ActivationManager
-     PATIENCE -> ActivationVault
-  ------------------------------------------------------- */
-
-  const walletContracts =
-    useMemo(
-      () =>
-        owner
-          ? [
-              {
-                address:
-                  ACTIVATION_TOBY,
-
-                abi:
-                  erc20Abi,
-
-                functionName:
-                  "balanceOf",
-
-                args:
-                  [owner],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  ACTIVATION_PATIENCE,
-
-                abi:
-                  erc20Abi,
-
-                functionName:
-                  "balanceOf",
-
-                args:
-                  [owner],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  ACTIVATION_TOBY,
-
-                abi:
-                  erc20Abi,
-
-                functionName:
-                  "allowance",
-
-                args: [
-                  owner,
-                  ACTIVATION_MANAGER,
-                ],
-
-                chainId:
-                  base.id,
-              },
-              {
-                address:
-                  ACTIVATION_PATIENCE,
-
-                abi:
-                  erc20Abi,
-
-                functionName:
-                  "allowance",
-
-                args: [
-                  owner,
-                  ACTIVATION_VAULT,
-                ],
-
-                chainId:
-                  base.id,
-              },
-            ]
-          : [],
-
-      [owner],
-    );
-
-  const walletRead =
-    useReadContracts({
-      contracts:
-        walletContracts as any,
-
-      query: {
-        enabled:
-          Boolean(owner),
-
-        staleTime: 5_000,
-
-        refetchOnWindowFocus:
-          true,
-
-        refetchOnReconnect:
-          true,
-      },
-    });
-
-  /* -------------------------------------------------------
-     Explicit refresh after transactions
-  ------------------------------------------------------- */
-
-  const refetch =
-    async () => {
-      setRefreshTick(
-        (value) =>
-          value + 1,
-      );
-
-      await Promise.allSettled(
-        [
-          globalRead.refetch(),
-          pauseRead.refetch(),
-          deedRead.refetch(),
-          lockRead.refetch(),
-          walletRead.refetch(),
-        ],
-      );
+  const globalContracts = useMemo(() => [
+    "activationStarted", "activationXAmount", "activationYCost", "minActivationX", "maxActivationX",
+    "minActivationY", "maxActivationY", "totalActivations", "totalLockedX", "heldX", "solvent",
+    "pausableOperations", "LOCK_DURATION", "tokenXDecimals",
+  ].map((functionName) => ({ address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName, chainId: base.id } as any)), []);
+
+  const globalRead = useReadContracts({ contracts: globalContracts, query: { staleTime: 8_000, refetchOnWindowFocus: true, refetchOnReconnect: true } });
+  const ops = result<readonly Hex[]>(globalRead.data?.[11], []);
+  const activationOperationId = ops?.[0];
+
+  const pauseRead = useReadContract({
+    address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName: "operationPaused",
+    args: activationOperationId ? [activationOperationId] : undefined, chainId: base.id,
+    query: { enabled: Boolean(activationOperationId), staleTime: 5_000 },
+  });
+
+  const protocolRead = useReadContracts({
+    contracts: [
+      { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "tokenY", chainId: base.id },
+      { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "balance", chainId: base.id },
+      { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "totalGrossQuoted", chainId: base.id },
+      { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "totalActuallyReceived", chainId: base.id },
+      { address: ACTIVATION_VAULT, abi: activationVaultAbi, functionName: "totalActivationsCollected", chainId: base.id },
+      { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "decimals", chainId: base.id },
+      { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "txFee", chainId: base.id },
+      { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "burnFee", chainId: base.id },
+    ] as any,
+    query: { staleTime: 30_000, refetchOnWindowFocus: true, refetchOnReconnect: true },
+  });
+
+  const perDeedContracts = useMemo(() => deeds.flatMap((deed) => {
+    const id = BigInt(deed.tokenId);
+    return [
+      { address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName: "isActive", args: [id], chainId: base.id },
+      { address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName: "activeLockId", args: [id], chainId: base.id },
+      { address: CANONICAL_LORE_NFT, abi: canonicalActivationNftAbi, functionName: "ownerOf", args: [id], chainId: base.id },
+      { address: CANONICAL_LORE_NFT, abi: canonicalActivationNftAbi, functionName: "transferNonce", args: [id], chainId: base.id },
+    ];
+  }), [deeds]);
+
+  const deedRead = useReadContracts({ contracts: perDeedContracts as any, query: { enabled: perDeedContracts.length > 0, staleTime: 7_000, refetchOnWindowFocus: true, refetchOnReconnect: true } });
+
+  const walletContracts = useMemo(() => owner ? [
+    { address: ACTIVATION_TOBY, abi: erc20Abi, functionName: "balanceOf", args: [owner], chainId: base.id },
+    { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "balanceOf", args: [owner], chainId: base.id },
+    { address: ACTIVATION_TOBY, abi: erc20Abi, functionName: "allowance", args: [owner, ACTIVATION_MANAGER], chainId: base.id },
+    { address: ACTIVATION_PATIENCE, abi: patienceActivationAbi, functionName: "allowance", args: [owner, ACTIVATION_VAULT], chainId: base.id },
+  ] : [], [owner]);
+
+  const walletRead = useReadContracts({ contracts: walletContracts as any, query: { enabled: Boolean(owner), staleTime: 5_000, refetchOnWindowFocus: true, refetchOnReconnect: true } });
+
+  const activationXAmount = result<bigint>(globalRead.data?.[1], 0n);
+  const deedStates = useMemo(() => deeds.map((deed, i) => {
+    const at = i * 4;
+    return {
+      ...deed,
+      isActive: result<boolean>(deedRead.data?.[at], false),
+      lockId: result<bigint>(deedRead.data?.[at + 1], 0n),
+      owner: result<Address | undefined>(deedRead.data?.[at + 2], undefined),
+      transferNonce: result<bigint>(deedRead.data?.[at + 3], 0n),
+      lock: lockMap[deed.tokenId],
     };
+  }), [deeds, deedRead.data, lockMap]);
+
+  const activeLockKey = deedStates.filter((d) => d.isActive && d.lockId > 0n).map((d) => `${d.tokenId}:${d.lockId}`).join("|");
+  useEffect(() => {
+    if (!client) return;
+    const active = deedStates.filter((deed) => deed.isActive && deed.lockId > 0n);
+    if (!active.length) { setLockMap({}); return; }
+    let cancelled = false;
+    client.multicall({
+      allowFailure: true,
+      contracts: active.map((deed) => ({ address: ACTIVATION_MANAGER, abi: activationManagerAbi, functionName: "getLock", args: [deed.lockId] })) as any,
+    }).then((rows) => {
+      if (cancelled) return;
+      const next: Record<string, ActivationLock | undefined> = {};
+      active.forEach((deed, index) => {
+        const row: any = rows[index];
+        if (row?.status !== "success" || !row.result) { next[deed.tokenId] = undefined; return; }
+        const lock: any = row.result;
+        next[deed.tokenId] = {
+          lockId: deed.lockId,
+          tokenId: BigInt(lock.tokenId), locker: lock.locker as Address, xAmount: BigInt(lock.xAmount),
+          startTime: BigInt(lock.startTime), unlockTime: BigInt(lock.unlockTime),
+          ownershipNonceAtActivation: BigInt(lock.ownershipNonceAtActivation), withdrawn: Boolean(lock.withdrawn),
+        };
+      });
+      setLockMap(next);
+    }).catch(() => { if (!cancelled) setLockMap({}); });
+    return () => { cancelled = true; };
+    // activeLockKey intentionally collapses the dependency to onchain lock identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, activeLockKey]);
+
+  const vaultTokenY = result<Address | undefined>(protocolRead.data?.[0], undefined);
+  const vaultTokenYMatches = Boolean(vaultTokenY && isAddressEqual(vaultTokenY, ACTIVATION_PATIENCE));
+  const rawPatienceDecimals = result<bigint>(protocolRead.data?.[5], 18n);
+  const patienceDecimals = rawPatienceDecimals >= 0n && rawPatienceDecimals <= 255n ? Number(rawPatienceDecimals) : 18;
+  const tobyDecimals = Number(result<number>(globalRead.data?.[13], 18));
+
+  const refetch = async () => {
+    setRefreshTick((x) => x + 1);
+    await Promise.allSettled([globalRead.refetch(), pauseRead.refetch(), protocolRead.refetch(), deedRead.refetch(), walletRead.refetch()]);
+  };
 
   return {
-    deeds:
-      deedStates,
-
-    deedsLoading,
-
-    activationStarted:
-      result<boolean>(
-        globalRead.data?.[0],
-        false,
-      ),
-
-    activationXAmount:
-      result<bigint>(
-        globalRead.data?.[1],
-        0n,
-      ),
-
-    activationYCost:
-      result<bigint>(
-        globalRead.data?.[2],
-        0n,
-      ),
-
-    minActivationX:
-      result<bigint>(
-        globalRead.data?.[3],
-        0n,
-      ),
-
-    maxActivationX:
-      result<bigint>(
-        globalRead.data?.[4],
-        0n,
-      ),
-
-    minActivationY:
-      result<bigint>(
-        globalRead.data?.[5],
-        0n,
-      ),
-
-    maxActivationY:
-      result<bigint>(
-        globalRead.data?.[6],
-        0n,
-      ),
-
-    lockDuration:
-      result<bigint>(
-        globalRead.data?.[7],
-        0n,
-      ),
-
-    totalActivations:
-      result<bigint>(
-        globalRead.data?.[8],
-        0n,
-      ),
-
-    totalLockedX:
-      result<bigint>(
-        globalRead.data?.[9],
-        0n,
-      ),
-
-    heldX:
-      result<bigint>(
-        globalRead.data?.[10],
-        0n,
-      ),
-
-    solvent:
-      result<boolean>(
-        globalRead.data?.[11],
-        false,
-      ),
-
-    activationOperationId,
-
-    activationPaused:
-      activationOperationId
-        ? Boolean(
-            pauseRead.data,
-          )
-        : false,
-
-    tobyBalance:
-      result<bigint>(
-        walletRead.data?.[0],
-        0n,
-      ),
-
-    patienceBalance:
-      result<bigint>(
-        walletRead.data?.[1],
-        0n,
-      ),
-
-    tobyAllowance:
-      result<bigint>(
-        walletRead.data?.[2],
-        0n,
-      ),
-
-    patienceAllowance:
-      result<bigint>(
-        walletRead.data?.[3],
-        0n,
-      ),
-
-    isLoading:
-      globalRead.isLoading ||
-      pauseRead.isLoading ||
-      deedRead.isLoading ||
-      lockRead.isLoading ||
-      walletRead.isLoading ||
-      deedsLoading,
-
+    deeds: deedStates, deedsLoading,
+    activationStarted: result<boolean>(globalRead.data?.[0], false),
+    activationXAmount,
+    activationYCost: result<bigint>(globalRead.data?.[2], 0n),
+    minActivationX: result<bigint>(globalRead.data?.[3], 0n), maxActivationX: result<bigint>(globalRead.data?.[4], 0n),
+    minActivationY: result<bigint>(globalRead.data?.[5], 0n), maxActivationY: result<bigint>(globalRead.data?.[6], 0n),
+    totalActivations: result<bigint>(globalRead.data?.[7], 0n), totalLockedX: result<bigint>(globalRead.data?.[8], 0n),
+    heldX: result<bigint>(globalRead.data?.[9], 0n), solvent: result<boolean>(globalRead.data?.[10], false),
+    activationOperationId, activationPaused: Boolean(pauseRead.data),
+    lockDuration: result<bigint>(globalRead.data?.[12], 0n), tobyDecimals, patienceDecimals,
+    vaultTokenY, vaultTokenYMatches,
+    vaultBalance: result<bigint>(protocolRead.data?.[1], 0n),
+    vaultTotalGrossQuoted: result<bigint>(protocolRead.data?.[2], 0n),
+    vaultTotalActuallyReceived: result<bigint>(protocolRead.data?.[3], 0n),
+    vaultTotalActivationsCollected: result<bigint>(protocolRead.data?.[4], 0n),
+    patienceTxFee: result<bigint>(protocolRead.data?.[6], 0n), patienceBurnFee: result<bigint>(protocolRead.data?.[7], 0n),
+    tobyBalance: result<bigint>(walletRead.data?.[0], 0n), patienceBalance: result<bigint>(walletRead.data?.[1], 0n),
+    tobyAllowance: result<bigint>(walletRead.data?.[2], 0n), patienceAllowance: result<bigint>(walletRead.data?.[3], 0n),
+    protocolReady: vaultTokenYMatches,
+    isLoading: globalRead.isLoading || pauseRead.isLoading || protocolRead.isLoading || deedRead.isLoading || walletRead.isLoading || deedsLoading,
     refetch,
   };
 }
