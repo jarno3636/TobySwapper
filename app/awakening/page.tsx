@@ -49,6 +49,8 @@ export default function AwakeningPage() {
           activationXAmount={reads.activationXAmount}
           activationYCost={reads.activationYCost}
           lockDuration={reads.lockDuration}
+          tobyDecimals={reads.tobyDecimals}
+          patienceDecimals={reads.patienceDecimals}
           solvent={reads.solvent}
         />
 
@@ -98,6 +100,9 @@ export default function AwakeningPage() {
                 lockDuration={reads.lockDuration}
                 tobyBalance={reads.tobyBalance}
                 patienceBalance={reads.patienceBalance}
+                tobyDecimals={reads.tobyDecimals}
+                patienceDecimals={reads.patienceDecimals}
+                protocolReady={reads.protocolReady}
                 stage={actions.stage}
                 message={actions.message}
                 hashes={actions.hashes}
