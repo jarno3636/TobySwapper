@@ -1,0 +1,233 @@
+.shell {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--app-line);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(73, 159, 203, 0.06), transparent 36%),
+    radial-gradient(circle at 96% 100%, rgba(190, 142, 60, 0.06), transparent 34%),
+    var(--app-panel-tint);
+  box-shadow: 0 16px 44px rgba(29, 69, 65, 0.06);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.heading h2 {
+  margin: 5px 0 5px;
+  color: var(--app-text);
+  font-size: clamp(22px, 4vw, 31px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.heading p {
+  max-width: 590px;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.fieldNote {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  color: var(--app-muted);
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: 0.13em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 88px;
+  padding: 13px 14px;
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 19px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  text-decoration: none;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(76, 150, 137, 0.28);
+}
+
+.featured {
+  grid-column: 1 / -1;
+  min-height: 106px;
+  border-color: color-mix(in srgb, var(--tw-gold, #c79a4b) 34%, var(--app-line));
+  background:
+    radial-gradient(circle at 5% 0%, rgba(45, 159, 215, 0.11), transparent 38%),
+    radial-gradient(circle at 100% 100%, rgba(199, 154, 75, 0.10), transparent 38%),
+    var(--app-panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: var(--app-panel-tint);
+  color: var(--tw-stone-deep, #586d6e);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.featured .mark {
+  width: 48px;
+  height: 48px;
+  border-color: color-mix(in srgb, var(--tw-blue, #2d9fd7) 30%, var(--app-line));
+  background:
+    radial-gradient(circle at 35% 20%, rgba(45, 159, 215, 0.13), transparent 62%),
+    var(--app-panel-tint);
+  color: var(--tw-blue-deep, #207eae);
+  font-size: 20px;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.copy small {
+  display: block;
+  color: var(--app-muted);
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+}
+
+.copy strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.featured .copy strong {
+  font-size: 18px;
+}
+
+.copy p {
+  margin: 4px 0 0;
+  color: var(--app-muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.featured .copy p {
+  font-size: 9px;
+}
+
+.arrow {
+  color: var(--app-muted);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.featured .arrow {
+  color: var(--tw-gold-deep, #9d7535);
+  font-size: 19px;
+}
+
+.note {
+  margin: 11px 2px 0;
+  color: var(--app-muted);
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+html[data-theme="dark"] .shell {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(70, 160, 204, 0.08), transparent 36%),
+    radial-gradient(circle at 96% 100%, rgba(190, 142, 60, 0.07), transparent 34%),
+    rgba(12, 35, 37, 0.72);
+  border-color: rgba(144, 195, 187, 0.11);
+}
+
+html[data-theme="dark"] .card {
+  background: rgba(13, 39, 41, 0.88);
+  border-color: rgba(144, 195, 187, 0.11);
+}
+
+html[data-theme="dark"] .featured {
+  background:
+    radial-gradient(circle at 5% 0%, rgba(58, 154, 199, 0.15), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(190, 142, 60, 0.12), transparent 40%),
+    rgba(13, 39, 41, 0.92);
+  border-color: rgba(212, 174, 102, 0.26);
+}
+
+html[data-theme="dark"] .mark {
+  background: rgba(18, 48, 50, 0.94);
+  border-color: rgba(144, 195, 187, 0.12);
+}
+
+html[data-theme="dark"] .copy strong,
+html[data-theme="dark"] .heading h2 {
+  color: #f1fbf8;
+}
+
+html[data-theme="dark"] .copy p,
+html[data-theme="dark"] .heading p,
+html[data-theme="dark"] .note {
+  color: #9eb7b2;
+}
+
+@media (max-width: 680px) {
+  .shell {
+    padding: 17px;
+    border-radius: 22px;
+  }
+
+  .heading {
+    margin-bottom: 11px;
+  }
+
+  .fieldNote {
+    display: none;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .featured {
+    grid-column: auto;
+    min-height: 100px;
+  }
+
+  .card {
+    min-height: 82px;
+  }
+
+  .copy p {
+    font-size: 8.5px;
+  }
+}
