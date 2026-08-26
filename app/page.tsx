@@ -12,6 +12,7 @@ import PondDock from "@/components/PondDock";
 import TobyworldAssets from "@/components/TobyworldAssets";
 import TobyworldIcon from "@/components/TobyworldIcon";
 import CommunitySites from "@/components/CommunitySites";
+import PondRadio from "@/components/PondRadio";
 
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), { ssr: false });
 
@@ -77,6 +78,8 @@ export default function Page() {
             </div>
           </details>
         </section>
+
+        <PondRadio />
       </div>
       <Footer />
       <PondDock active="world" />
