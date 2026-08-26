@@ -11,6 +11,7 @@ import ShareCallout from "@/components/ShareCallout";
 import PondDock from "@/components/PondDock";
 import TobyworldAssets from "@/components/TobyworldAssets";
 import TobyworldIcon from "@/components/TobyworldIcon";
+import CommunitySites from "@/components/CommunitySites";
 
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), { ssr: false });
 
@@ -59,6 +60,8 @@ export default function Page() {
         </section>
 
         <TobyworldAssets />
+
+        <CommunitySites />
 
         <section id="swap" className="pond-utility-shell scroll-mt-24">
           <div className="pond-utility-intro">
