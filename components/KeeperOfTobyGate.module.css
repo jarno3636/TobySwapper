@@ -1,0 +1,58 @@
+.wrap {
+  display: flex;
+  justify-content: center;
+  margin: 9px 0 3px;
+}
+
+.gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--app-muted) 82%, transparent);
+  text-decoration: none;
+  opacity: 0.62;
+  transition: opacity 160ms ease, transform 160ms ease, color 160ms ease;
+}
+
+.gate:hover,
+.gate:focus-visible {
+  opacity: 1;
+  color: var(--app-text);
+}
+
+.gate:active {
+  transform: scale(0.985);
+}
+
+.gate span {
+  font-size: 9px;
+  opacity: 0.72;
+}
+
+.gate strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+}
+
+.gate i {
+  font-size: 8px;
+  font-style: normal;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.gate:hover i,
+.gate:focus-visible i {
+  opacity: 0.8;
+  transform: translateX(0);
+}
+
+html[data-theme="dark"] .gate {
+  color: rgba(181, 207, 200, 0.62);
+}
