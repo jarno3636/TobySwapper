@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { base } from "viem/chains";
 import { useReadContract } from "wagmi";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
+import { readCachedLoreMetadata } from "@/lib/lore-cache";
 import {
   fetchLoreMetadataResult,
   loreImageCandidates,
@@ -38,6 +39,8 @@ export default function LoreDeedArt({
   const [imageIndex, setImageIndex] = useState(0);
   const [proxyTried, setProxyTried] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [cacheChecked, setCacheChecked] = useState(!revealed || authoritative);
+  const [cacheHit, setCacheHit] = useState(false);
 
   const id = typeof tokenId === "bigint" ? tokenId : BigInt(tokenId);
 
@@ -61,14 +64,39 @@ export default function LoreDeedArt({
     return () => observer.disconnect();
   }, [eager, visible]);
 
+  // Revealed metadata is already indexed in Supabase for all canonical deeds.
+  // Use that tiny JSON response first so gallery cards do not need an RPC +
+  // metadata gateway round trip before they can begin loading the IPFS image.
+  useEffect(() => {
+    if (!visible || !revealed || authoritative) {
+      setCacheChecked(true);
+      setCacheHit(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCacheChecked(false);
+    setCacheHit(false);
+    readCachedLoreMetadata(id).then((cached) => {
+      if (cancelled) return;
+      if (cached?.metadata) {
+        setResult(cached);
+        setCacheHit(true);
+      }
+      setCacheChecked(true);
+    });
+
+    return () => { cancelled = true; };
+  }, [id, visible, revealed, authoritative]);
+
   const uriRead = useReadContract({
     address: LORE_COLLECTION_ADDRESS,
     abi: LORE_DEEDS_ABI,
     functionName: "tokenURI",
-    args: visible && !authoritative ? [id] : undefined,
+    args: visible && !authoritative && cacheChecked && !cacheHit ? [id] : undefined,
     chainId: base.id,
     query: {
-      enabled: visible && !authoritative,
+      enabled: visible && !authoritative && cacheChecked && !cacheHit,
       staleTime: revealed ? 15_000 : 5 * 60_000,
       gcTime: 60 * 60_000,
       refetchInterval: false,
@@ -78,8 +106,8 @@ export default function LoreDeedArt({
   });
 
   useEffect(() => {
-    if (visible && revealed && !authoritative) void uriRead.refetch();
-  }, [visible, revealed, id, authoritative]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (visible && revealed && !authoritative && cacheChecked && !cacheHit) void uriRead.refetch();
+  }, [visible, revealed, id, authoritative, cacheChecked, cacheHit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setImageIndex(0);
@@ -97,13 +125,13 @@ export default function LoreDeedArt({
       return;
     }
 
-    if (!visible || typeof uriRead.data !== "string") return;
+    if (cacheHit || !visible || typeof uriRead.data !== "string") return;
     let cancelled = false;
     fetchLoreMetadataResult(uriRead.data, revealed).then((value) => {
       if (!cancelled) setResult(value);
     });
     return () => { cancelled = true; };
-  }, [uriRead.data, visible, revealed, authoritative, metadataOverride, directImageOverride]);
+  }, [uriRead.data, visible, revealed, authoritative, metadataOverride, directImageOverride, cacheHit]);
 
   const images = useMemo(
     () => {
@@ -116,12 +144,10 @@ export default function LoreDeedArt({
   );
   const directImage = images[imageIndex] || null;
 
-  // Image source priority matters on mobile. A backfilled Supabase Storage URL
-  // is already a stable CDN asset and should never be replaced by the Vercel
-  // resolver. Next try the image candidates normalized from canonical metadata.
-  // Only after every direct candidate fails do we use /api/lore/image as the
-  // final compatibility fallback. This keeps both the Land page and My
-  // Tobyworld thumbnails fast while retaining the server safety net.
+  // Image source priority matters on mobile. Metadata now comes from the
+  // Supabase index first, while artwork stays on canonical IPFS. Rotate the
+  // browser through every gateway candidate before touching the Vercel resolver.
+  // /api/lore/image is only the final compatibility fallback.
   const proxyImage =
     visible && result && !proxyTried
       ? `/api/lore/image?tokenId=${id.toString()}${revealed ? "&fresh=1&v=canonical-reveal-3" : ""}`
@@ -130,7 +156,9 @@ export default function LoreDeedArt({
   const image = directImage || (exhaustedDirectCandidates ? proxyImage : null);
   const usingProxy = Boolean(proxyImage && image === proxyImage);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
-  const loading = visible && (authoritative ? !metadataOverride && !directImageOverride : (uriRead.isLoading || (typeof uriRead.data === "string" && !result)));
+  const loading = visible && (authoritative
+    ? !metadataOverride && !directImageOverride
+    : (!cacheChecked || (!cacheHit && (uriRead.isLoading || (typeof uriRead.data === "string" && !result)))));
 
   return (
     <div ref={ref} className={`canonical-deed-art ${image ? "has-image" : "is-metadata-fallback"} ${className}`}>
