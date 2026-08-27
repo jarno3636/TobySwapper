@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
+import { fetchWithTimeout, ipfsCandidates } from "@/lib/ipfs-gateways";
 
 import {
   LORE_COLLECTION_ADDRESS,
@@ -37,36 +38,7 @@ const client = createPublicClient({
 });
 
 function candidates(value: string) {
-  const v = value.trim();
-
-  if (!v) return [] as string[];
-
-  if (
-    v.startsWith("https://") ||
-    v.startsWith("http://") ||
-    v.startsWith("data:")
-  ) {
-    return [v];
-  }
-
-  if (v.startsWith("ar://")) {
-    return [`https://arweave.net/${v.slice(5)}`];
-  }
-
-  const path =
-    v.startsWith("ipfs://ipfs/")
-      ? v.slice(12)
-      : v.startsWith("ipfs://")
-        ? v.slice(7)
-        : null;
-
-  if (!path) return [v];
-
-  return [
-    `https://dweb.link/ipfs/${path}`,
-    `https://ipfs.io/ipfs/${path}`,
-    `https://gateway.pinata.cloud/ipfs/${path}`,
-  ];
+  return ipfsCandidates(value);
 }
 
 function decodeInlineJson(uri: string) {
@@ -153,13 +125,13 @@ async function resolveMetadata(
           ? `${uri}${uri.includes("?") ? "&" : "?"}tobyswap_reveal=${Date.now()}`
           : uri;
 
-      const response = await fetch(requestUri, {
+      const response = await fetchWithTimeout(requestUri, {
         headers: {
           accept: "application/json,*/*;q=0.5",
           "cache-control": "no-cache",
         },
         cache: "no-store",
-      });
+      }, 4_500);
 
       if (!response.ok) continue;
 
@@ -455,14 +427,14 @@ export async function GET(
          * the Vercel function.
          */
         const response =
-          await fetch(uri, {
+          await fetchWithTimeout(uri, {
             method: "HEAD",
             headers: {
               accept:
                 "image/*,*/*;q=0.5",
             },
             cache: "no-store",
-          });
+          }, 2_500);
 
         if (!response.ok) {
           continue;
