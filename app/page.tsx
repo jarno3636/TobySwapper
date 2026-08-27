@@ -13,6 +13,7 @@ import TobyworldAssets from "@/components/TobyworldAssets";
 import TobyworldIcon from "@/components/TobyworldIcon";
 import CommunitySites from "@/components/CommunitySites";
 import PondRadio from "@/components/PondRadio";
+import KeeperOfTobyGate from "@/components/KeeperOfTobyGate";
 
 const TokensBurned = dynamic(() => import("@/components/TokensBurned"), { ssr: false });
 
@@ -78,6 +79,8 @@ export default function Page() {
             </div>
           </details>
         </section>
+
+        <KeeperOfTobyGate />
 
         <PondRadio />
       </div>
