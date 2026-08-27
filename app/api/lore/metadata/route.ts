@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, fallback, http } from "viem";
 import { base } from "viem/chains";
+import { fetchWithTimeout, ipfsCandidates } from "@/lib/ipfs-gateways";
 import { LORE_COLLECTION_ADDRESS, LORE_DEEDS_ABI } from "@/lib/lore-deeds";
 import { metadataHasLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
 import { persistLoreMetadata } from "@/lib/lore-cache-server";
@@ -29,24 +30,7 @@ const client = createPublicClient({
 });
 
 function uriCandidates(value: string) {
-  const uri = value.trim();
-  if (!uri) return [] as string[];
-  if (uri.startsWith("data:") || uri.startsWith("https://") || uri.startsWith("http://")) return [uri];
-  if (uri.startsWith("ar://")) return [`https://arweave.net/${uri.slice(5)}`];
-
-  const path = uri.startsWith("ipfs://ipfs/")
-    ? uri.slice(12)
-    : uri.startsWith("ipfs://")
-      ? uri.slice(7)
-      : null;
-
-  if (!path) return [uri];
-
-  return [
-    `https://dweb.link/ipfs/${path}`,
-    `https://ipfs.io/ipfs/${path}`,
-    `https://gateway.pinata.cloud/ipfs/${path}`,
-  ];
+  return ipfsCandidates(value);
 }
 
 function decodeInlineJson(uri: string) {
@@ -179,10 +163,10 @@ export async function GET(request: NextRequest) {
 
     for (const candidate of uriCandidates(tokenUri)) {
       try {
-        const response = await fetch(cacheBust(candidate, revealed || forceFresh), {
+        const response = await fetchWithTimeout(cacheBust(candidate, revealed || forceFresh), {
           headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5", "cache-control": "no-cache" },
           cache: "no-store",
-        });
+        }, 4_500);
 
         if (!response.ok) {
           lastError = `Metadata source returned ${response.status}.`;
