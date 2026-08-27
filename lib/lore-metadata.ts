@@ -1,6 +1,7 @@
 "use client";
 
 import { loreUriCandidates, resolveLoreUri } from "@/lib/lore-deeds";
+import { fetchWithTimeout } from "@/lib/ipfs-gateways";
 import { extractLoreTraits, metadataHasLoreTraits, normalizeLoreMetadata } from "@/lib/lore-metadata-shared";
 
 export type LoreMetadata = {
@@ -123,13 +124,19 @@ export function looksLikePreRevealMetadata(metadata?: LoreMetadata | null) {
 }
 
 export function loreImageCandidates(metadata?: LoreMetadata | null, directImage?: string | null) {
-  const raw =
-    directImage ||
+  const metadataImage =
     metadata?.image ||
     metadata?.image_url ||
     metadata?.imageUrl ||
     null;
-  return loreUriCandidates(raw);
+
+  // Additive rather than exclusive: a stale cached/direct URL must never hide
+  // the canonical IPFS image stored in metadata. This lets <img onError> rotate
+  // seamlessly from any direct source into the gateway pool.
+  return [...new Set([
+    ...loreUriCandidates(directImage),
+    ...loreUriCandidates(metadataImage),
+  ])];
 }
 
 export async function fetchLoreMetadataResult(
@@ -197,10 +204,10 @@ export async function fetchLoreMetadataResult(
 
     for (const uri of candidates) {
       try {
-        const response = await fetch(uri, {
+        const response = await fetchWithTimeout(uri, {
           cache: force ? "no-store" : "force-cache",
           headers: { accept: "application/json,image/*;q=0.9,*/*;q=0.5" },
-        });
+        }, 4_000);
 
         if (!response.ok) {
           lastError = `Metadata gateway returned ${response.status}.`;

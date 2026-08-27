@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { ipfsCandidates } from "@/lib/ipfs-gateways";
 
 /**
  * Current Canonical Tobyworld Lore Land Deeds collection.
@@ -151,29 +152,7 @@ export const LEGACY_LORE_DEED_ADDRESS = OLD_LORE_COLLECTION_ADDRESS;
 export const LEGACY_LORE_DEED_ABI = OLD_LORE_DEEDS_ABI;
 
 export function loreUriCandidates(value?: string | null) {
-  if (!value) return [] as string[];
-  const v = value.trim();
-  if (!v) return [] as string[];
-
-  if (v.startsWith("data:")) return [v];
-  if (v.startsWith("ar://")) return [`https://arweave.net/${v.slice(5)}`];
-
-  const ipfsPath =
-    v.startsWith("ipfs://ipfs/")
-      ? v.slice(12)
-      : v.startsWith("ipfs://")
-        ? v.slice(7)
-        : null;
-
-  if (ipfsPath) {
-    return [
-      `https://dweb.link/ipfs/${ipfsPath}`,
-      `https://ipfs.io/ipfs/${ipfsPath}`,
-      `https://inbrowser.link/ipfs/${ipfsPath}`,
-    ];
-  }
-
-  return [v];
+  return ipfsCandidates(value);
 }
 
 export function resolveLoreUri(value?: string | null) {
