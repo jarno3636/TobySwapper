@@ -1,0 +1,708 @@
+.page {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 16px 16px 140px;
+}
+
+.topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 2px 15px;
+  color: var(--app-muted);
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.topline a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.92fr);
+  gap: 24px;
+  align-items: center;
+  min-height: 530px;
+  padding: clamp(24px, 5vw, 52px);
+  overflow: hidden;
+  border: 1px solid var(--app-line);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 15% 12%, rgba(204, 158, 73, 0.12), transparent 34%),
+    radial-gradient(circle at 88% 85%, rgba(63, 157, 132, 0.12), transparent 35%),
+    linear-gradient(150deg, var(--app-panel), var(--app-panel-tint));
+  box-shadow: 0 22px 70px rgba(24, 65, 61, 0.09);
+}
+
+.heroHalo {
+  position: absolute;
+  left: -90px;
+  bottom: -170px;
+  width: 390px;
+  height: 390px;
+  border: 1px solid rgba(194, 151, 72, 0.12);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 52px rgba(194, 151, 72, 0.035),
+    0 0 0 104px rgba(194, 151, 72, 0.025);
+  pointer-events: none;
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 1;
+}
+
+.greek {
+  display: block;
+  margin-bottom: 13px;
+  color: var(--tw-gold-deep, #957033);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+}
+
+.heroCopy h1 {
+  max-width: 620px;
+  margin: 0;
+  color: var(--app-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(45px, 8vw, 84px);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+}
+
+.heroCopy > p {
+  max-width: 540px;
+  margin: 20px 0 0;
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.heroFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.heroFacts span {
+  padding: 12px 13px;
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--app-panel) 94%, transparent);
+}
+
+.heroFacts small,
+.provenanceGrid small,
+.keeperIdentity small,
+.yourKeeper span,
+.claimIntro > span,
+.directoryHead > div > span,
+.closing > span {
+  display: block;
+  color: var(--app-muted);
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: 0.15em;
+}
+
+.heroFacts strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--app-text);
+  font-size: 14px;
+}
+
+.artFrame {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  aspect-ratio: 1 / 1;
+  justify-self: end;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--tw-gold, #c79a4b) 42%, var(--app-line));
+  border-radius: 31px;
+  background:
+    linear-gradient(145deg, rgba(208, 169, 94, 0.14), rgba(60, 152, 127, 0.08)),
+    var(--app-panel);
+  box-shadow:
+    0 23px 60px rgba(28, 65, 60, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.48);
+}
+
+.artFrame img,
+.artPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+}
+
+.artFrame img {
+  display: block;
+  object-fit: cover;
+}
+
+.artPlaceholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 26px;
+  border: 1px solid var(--app-line);
+  background:
+    radial-gradient(circle at 50% 37%, rgba(63, 157, 132, 0.11), transparent 26%),
+    var(--app-panel-tint);
+  text-align: center;
+}
+
+.artPlaceholder span {
+  color: var(--tw-gold-deep, #957033);
+  font-size: 70px;
+  font-weight: 300;
+}
+
+.artPlaceholder strong {
+  color: var(--app-text);
+  font-size: 14px;
+  letter-spacing: 0.22em;
+}
+
+.artPlaceholder small {
+  max-width: 250px;
+  color: var(--app-muted);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.artSeal {
+  position: absolute;
+  right: -10px;
+  bottom: 20px;
+  display: grid;
+  min-width: 104px;
+  padding: 9px 12px;
+  border: 1px solid rgba(204, 160, 79, 0.35);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-panel) 94%, var(--tw-gold, #c79a4b) 6%);
+  box-shadow: 0 10px 28px rgba(35, 64, 57, 0.14);
+}
+
+.artSeal span {
+  color: var(--tw-gold-deep, #957033);
+  font-size: 5.5px;
+  font-weight: 1000;
+  letter-spacing: 0.15em;
+}
+
+.artSeal strong {
+  margin-top: 3px;
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.poem {
+  margin: 18px 0;
+  padding: clamp(30px, 6vw, 64px);
+  border: 1px solid var(--app-line);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(200, 156, 78, 0.07), transparent 36%),
+    var(--app-panel);
+  text-align: center;
+}
+
+.poem p {
+  margin: 0 auto 25px;
+  color: var(--app-muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(17px, 3.3vw, 25px);
+  line-height: 1.65;
+}
+
+.poem strong {
+  display: block;
+  color: var(--app-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 5vw, 42px);
+  font-weight: 500;
+}
+
+.provenance,
+.claim,
+.directory {
+  margin-top: 18px;
+  padding: clamp(20px, 4vw, 34px);
+  border: 1px solid var(--app-line);
+  border-radius: 28px;
+  background: var(--app-panel);
+}
+
+.provenance > div:first-child > span,
+.claimIntro > span,
+.directoryHead > div > span {
+  color: var(--tw-gold-deep, #957033);
+  font-size: 7px;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+}
+
+.provenance h2,
+.claimIntro h2,
+.directoryHead h2 {
+  margin: 6px 0 0;
+  color: var(--app-text);
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.provenanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.provenanceGrid article {
+  padding: 13px;
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  background: var(--app-panel-tint);
+}
+
+.provenanceGrid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--app-text);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.claim {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(300px, 1.22fr);
+  gap: 20px;
+  background:
+    radial-gradient(circle at 0% 100%, rgba(57, 157, 129, 0.08), transparent 33%),
+    var(--app-panel);
+}
+
+.claimIntro p {
+  max-width: 460px;
+  margin: 10px 0 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.claimBody {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--app-line);
+  border-radius: 20px;
+  background: var(--app-panel-tint);
+}
+
+.claimState {
+  display: grid;
+  gap: 5px;
+  padding: 12px 2px 2px;
+}
+
+.claimState strong {
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.claimState span {
+  color: var(--app-muted);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.claimState button {
+  justify-self: start;
+  min-height: 36px;
+  margin-top: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  font-size: 7px;
+  font-weight: 950;
+}
+
+.profileEditor {
+  display: grid;
+  gap: 10px;
+}
+
+.yourKeeper {
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--tw-gold, #c79a4b) 32%, var(--app-line));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--app-panel) 96%, var(--tw-gold, #c79a4b) 4%);
+}
+
+.yourKeeper strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--app-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.profileEditor label > span {
+  display: block;
+  margin: 0 0 5px 2px;
+  color: var(--app-muted);
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: 0.13em;
+}
+
+.profileEditor label > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid var(--app-line);
+  border-radius: 15px;
+  background: var(--app-panel);
+}
+
+.profileEditor label b {
+  color: var(--app-muted);
+  font-size: 12px;
+}
+
+.profileEditor input {
+  min-width: 0;
+  height: 46px;
+  padding: 0 7px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.profileEditor input::placeholder {
+  color: color-mix(in srgb, var(--app-muted) 64%, transparent);
+}
+
+.save {
+  min-height: 48px;
+  border: 1px solid color-mix(in srgb, var(--tw-green, #3baa84) 36%, var(--app-line));
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(60, 164, 126, 0.12), rgba(54, 143, 183, 0.08)),
+    var(--app-panel);
+  color: var(--app-text);
+  font-size: 8px;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+}
+
+.save:disabled {
+  opacity: 0.48;
+}
+
+.success,
+.error {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.success {
+  color: var(--tw-green-deep, #2f876a);
+}
+
+.error {
+  color: var(--tw-red-deep, #ad5048);
+}
+
+.directoryHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.directoryHead p {
+  max-width: 650px;
+  margin: 8px 0 0;
+  color: var(--app-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.count {
+  flex: 0 0 auto;
+  color: var(--tw-gold-deep, #957033);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.keeperGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.keeperCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 94px;
+  padding: 13px;
+  border: 1px solid var(--app-line);
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(201, 158, 77, 0.05), transparent 42%),
+    var(--app-panel-tint);
+}
+
+.edition {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 80px;
+  height: 68px;
+  border: 1px solid color-mix(in srgb, var(--tw-gold, #c79a4b) 28%, var(--app-line));
+  border-radius: 16px;
+  background: var(--app-panel);
+}
+
+.edition span {
+  color: var(--app-muted);
+  font-size: 5.5px;
+  font-weight: 1000;
+  letter-spacing: 0.13em;
+}
+
+.edition strong {
+  margin-top: 3px;
+  color: var(--tw-gold-deep, #957033);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.keeperIdentity {
+  min-width: 0;
+}
+
+.keeperIdentity > strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--app-text);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.socials,
+.unnamedSocial {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 6px;
+  color: var(--app-muted);
+  font-size: 8px;
+}
+
+.socials a {
+  color: var(--tw-green-deep, #2f876a);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.locked {
+  color: var(--tw-gold-deep, #957033);
+  font-size: 17px;
+  opacity: 0.72;
+}
+
+.emptyDirectory {
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  min-height: 190px;
+  margin-top: 18px;
+  padding: 28px;
+  border: 1px dashed var(--app-line);
+  border-radius: 20px;
+  text-align: center;
+}
+
+.emptyDirectory > span {
+  color: var(--tw-gold-deep, #957033);
+  font-size: 34px;
+}
+
+.emptyDirectory strong {
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.emptyDirectory p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.closing {
+  margin-top: 18px;
+  padding: 38px 20px;
+  border-top: 1px solid var(--app-line);
+  text-align: center;
+}
+
+.closing p {
+  margin: 7px 0 0;
+  color: var(--app-text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(17px, 3vw, 25px);
+}
+
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .poem,
+html[data-theme="dark"] .provenance,
+html[data-theme="dark"] .claim,
+html[data-theme="dark"] .directory {
+  border-color: rgba(142, 194, 185, 0.11);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(194, 151, 72, 0.06), transparent 32%),
+    rgba(11, 36, 38, 0.92);
+}
+
+html[data-theme="dark"] .hero {
+  background:
+    radial-gradient(circle at 15% 12%, rgba(204, 158, 73, 0.09), transparent 34%),
+    radial-gradient(circle at 88% 85%, rgba(63, 157, 132, 0.09), transparent 35%),
+    linear-gradient(150deg, rgba(10, 34, 36, 0.97), rgba(12, 42, 43, 0.96));
+}
+
+html[data-theme="dark"] .heroCopy h1,
+html[data-theme="dark"] .poem strong,
+html[data-theme="dark"] .provenance h2,
+html[data-theme="dark"] .claimIntro h2,
+html[data-theme="dark"] .directoryHead h2,
+html[data-theme="dark"] .keeperIdentity > strong,
+html[data-theme="dark"] .closing p,
+html[data-theme="dark"] .yourKeeper strong {
+  color: #f2faf7;
+}
+
+html[data-theme="dark"] .heroCopy > p,
+html[data-theme="dark"] .poem p,
+html[data-theme="dark"] .claimIntro p,
+html[data-theme="dark"] .directoryHead p,
+html[data-theme="dark"] .unnamedSocial {
+  color: #9eb7b1;
+}
+
+html[data-theme="dark"] .heroFacts span,
+html[data-theme="dark"] .provenanceGrid article,
+html[data-theme="dark"] .claimBody,
+html[data-theme="dark"] .profileEditor label > div,
+html[data-theme="dark"] .keeperCard,
+html[data-theme="dark"] .edition,
+html[data-theme="dark"] .yourKeeper {
+  background: rgba(12, 40, 42, 0.88);
+  border-color: rgba(142, 194, 185, 0.11);
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 12px 12px 120px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 24px 20px 28px;
+    border-radius: 27px;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(48px, 15vw, 72px);
+  }
+
+  .artFrame {
+    width: min(100%, 390px);
+    justify-self: center;
+  }
+
+  .provenanceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .claim {
+    grid-template-columns: 1fr;
+  }
+
+  .keeperGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .topline span {
+    display: none;
+  }
+
+  .heroFacts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .heroFacts span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .poem {
+    padding: 34px 18px;
+  }
+
+  .directory,
+  .claim,
+  .provenance {
+    padding: 18px;
+    border-radius: 23px;
+  }
+
+  .directoryHead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .keeperCard {
+    grid-template-columns: 68px minmax(0, 1fr) auto;
+  }
+
+  .edition {
+    width: 68px;
+    height: 64px;
+  }
+}
