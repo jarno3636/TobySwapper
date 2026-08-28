@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { PouchLandTransfer } from "@/components/land/PouchLandTransfer";
-import LoreDeedArt from "@/components/land/LoreDeedArt";
 import { useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
@@ -48,7 +47,7 @@ function writeCached(owner: Address, data: OwnedResponse) {
 }
 
 
-function CachedDeedArt({ deed, revealed, eager }: { deed: OwnedDeed; revealed: boolean; eager: boolean }) {
+function DeedSummary({ deed, revealed }: { deed: OwnedDeed; revealed: boolean }) {
   const [cached, setCached] = useState<CachedLoreMetadata | null>(null);
 
   useEffect(() => {
@@ -58,16 +57,23 @@ function CachedDeedArt({ deed, revealed, eager }: { deed: OwnedDeed; revealed: b
     return () => { cancelled = true; };
   }, [deed.tokenId, revealed]);
 
+  const attributes = Array.isArray(cached?.metadata?.attributes) ? cached.metadata.attributes : [];
+  const landType = attributes.find((item: any) => String(item?.trait_type || item?.traitType || "").toLowerCase() === "land")?.value;
+  const signs = attributes
+    .filter((item: any) => item?.value && String(item?.trait_type || item?.traitType || "").toLowerCase() !== "land")
+    .slice(0, 2)
+    .map((item: any) => String(item.value));
+
   return (
-    <LoreDeedArt
-      tokenId={deed.tokenId}
-      label={deed.communityName || cached?.metadata?.name || undefined}
-      eager={eager}
-      revealed={revealed}
-      authoritative={Boolean(cached?.metadata)}
-      metadataOverride={cached?.metadata || null}
-      directImageOverride={cached?.directImage || null}
-    />
+    <div className="mytw-deed-summary">
+      <span className="mytw-deed-summary-mark" aria-hidden="true">△</span>
+      <div>
+        <small>{landType ? String(landType) : revealed ? "CANONICAL LAND" : "VEILED LAND"}</small>
+        <strong>Deed #{deed.tokenId}</strong>
+        <span>{signs.length ? signs.join(" · ") : deed.communityName || "Lore Land"}</span>
+      </div>
+      <b>OPEN →</b>
+    </div>
   );
 }
 
@@ -200,16 +206,11 @@ export default function MyLoreDeeds({ owner, expectedCount, revealed, readOnly =
       {sorted.length > 0 ? (
         <>
           <div className="mytw-deed-gallery">
-            {visibleDeeds.map((deed, index) => (
-              <article key={deed.tokenId} className={`mytw-deed-tile theme-${deed.bannerTheme || "moss"}`}>
-                <Link prefetch={false} href={`/land/${deed.tokenId}`} className="mytw-deed-art-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
-                  <CachedDeedArt deed={deed} revealed={revealed} eager={index < 2} />
+            {visibleDeeds.map((deed) => (
+              <article key={deed.tokenId} className={`mytw-deed-tile mytw-deed-tile-noart theme-${deed.bannerTheme || "moss"}`}>
+                <Link prefetch={false} href={`/land/${deed.tokenId}`} className="mytw-deed-summary-link" aria-label={`Visit Lore Land #${deed.tokenId}`}>
+                  <DeedSummary deed={deed} revealed={revealed} />
                 </Link>
-                <div className="mytw-deed-tile-copy">
-                  <small>{deed.communityName || "LORE LAND"}</small>
-                  <strong>Deed #{deed.tokenId}</strong>
-                  <span>{revealed ? "Canonical land" : "Veiled land"}</span>
-                </div>
                 <div className="mytw-deed-tile-actions">
                   <Link prefetch={false} href={`/land/${deed.tokenId}`}>Visit</Link>
                   {!readOnly ? <Link prefetch={false} href={`/land/${deed.tokenId}#keeper-mark`}>Keeper Mark</Link> : null}
