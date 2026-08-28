@@ -36,7 +36,7 @@ export default async function KeeperPage({ params }: { params: { owner: string }
           <div className="keeper-land-grid">
             {keeper.currentLands.map((land) => (
               <Link prefetch={false} href={`/land/${land.tokenId}`} className="keeper-land-card" key={land.tokenId}>
-                <div className="keeper-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <TobyworldIcon kind="lore" size={74} className="tw-placeholder-lore" />}<b>#{land.tokenId}</b></div>
+                <div className="keeper-land-art"><TobyworldIcon kind="lore" size={48} className="tw-placeholder-lore" /><b>#{land.tokenId}</b></div>
                 <div><span>LORE LAND #{land.tokenId}</span><h3>{land.name}</h3>{land.story ? <p>“{land.story}”</p> : <p>No keeper-written story yet.</p>}<div>{land.signs.map((sign) => <small key={sign}>{sign}</small>)}</div><strong>Visit Land →</strong></div>
               </Link>
             ))}
