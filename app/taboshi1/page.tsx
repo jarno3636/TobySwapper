@@ -140,13 +140,7 @@ function LoreDeedArt({ revealed, compact = false }: { revealed?: boolean; compac
   if (compact) {
     return (
       <div className="lore-deed-token-art-compact" aria-label="Lore Land Deed">
-        <Image
-          src="/ui/new-lore.webp"
-          alt="Lore Land Deed"
-          fill
-          sizes="84px"
-          className="lore-deed-token-image"
-        />
+        <TobyworldIcon kind="lore" size={46} />
       </div>
     );
   }
