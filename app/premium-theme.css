@@ -6566,3 +6566,191 @@ html[data-theme="dark"] .canonical-deed-image-loader small{color:#789b95}
   .canonical-deed-image-loader:after,
   .canonical-deed-loader-mark{animation:none!important}
 }
+
+/* ==========================================================================
+   2026-08-28 · Lore detail loader v2 — DOM-safe IPFS preload
+   ========================================================================== */
+.canonical-deed-art.has-image,
+.canonical-deed-art.is-metadata-fallback{
+  overflow:hidden;
+}
+.canonical-deed-image-loader{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:14px;
+  overflow:hidden;
+  padding:28px;
+  background:
+    radial-gradient(circle at 50% 43%,rgba(80,188,158,.12),transparent 24%),
+    linear-gradient(155deg,#edf7f4 0%,#e3f0ec 52%,#d9eae5 100%);
+  color:#315f5b;
+  text-align:center;
+  isolation:isolate;
+}
+.canonical-deed-image-loader:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-2;
+  opacity:.55;
+  background-image:
+    linear-gradient(rgba(62,131,113,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(62,131,113,.035) 1px,transparent 1px);
+  background-size:34px 34px;
+  -webkit-mask-image:radial-gradient(circle at center,#000 0%,transparent 72%);
+  mask-image:radial-gradient(circle at center,#000 0%,transparent 72%);
+}
+.canonical-deed-image-loader:after{
+  content:"";
+  position:absolute;
+  inset:-45%;
+  z-index:-1;
+  background:linear-gradient(108deg,transparent 42%,rgba(255,255,255,.42) 49%,transparent 56%);
+  transform:translateX(-48%);
+  animation:loreLoaderSweep 2.3s ease-in-out infinite;
+}
+.canonical-deed-loader-sigil{
+  position:relative;
+  width:112px;
+  height:112px;
+  display:grid;
+  place-items:center;
+}
+.canonical-deed-loader-ring{
+  position:absolute;
+  border:1px solid rgba(48,126,107,.18);
+  border-radius:50%;
+  box-shadow:0 0 30px rgba(72,163,139,.04);
+}
+.canonical-deed-loader-ring.ring-one{
+  inset:3px;
+  animation:loreLoaderRing 2.8s ease-in-out infinite;
+}
+.canonical-deed-loader-ring.ring-two{
+  inset:17px;
+  border-color:rgba(48,126,107,.25);
+  animation:loreLoaderRing 2.8s .22s ease-in-out infinite;
+}
+.canonical-deed-loader-ring.ring-three{
+  inset:31px;
+  border-color:rgba(48,126,107,.34);
+  animation:loreLoaderRing 2.8s .44s ease-in-out infinite;
+}
+.canonical-deed-loader-core{
+  position:relative;
+  z-index:2;
+  display:grid;
+  width:42px;
+  height:42px;
+  place-items:center;
+  border:1px solid rgba(45,120,102,.22);
+  border-radius:15px;
+  background:rgba(255,255,255,.66);
+  box-shadow:0 12px 30px rgba(43,105,91,.10),inset 0 1px rgba(255,255,255,.82);
+  color:#337565;
+  font-size:23px;
+  font-weight:900;
+  animation:loreLoaderCore 2.4s ease-in-out infinite;
+}
+.canonical-deed-loader-copy{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+}
+.canonical-deed-loader-copy strong{
+  color:#315f5b;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:-.015em;
+}
+.canonical-deed-loader-copy small{
+  color:#72908a;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+.canonical-deed-loader-pills{
+  display:flex;
+  gap:6px;
+  margin-top:3px;
+}
+.canonical-deed-loader-pills span{
+  display:block;
+  width:28px;
+  height:5px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(65,136,118,.11);
+  animation:loreLoaderPill 1.55s ease-in-out infinite;
+}
+.canonical-deed-loader-pills span:nth-child(2){width:42px;animation-delay:.14s}
+.canonical-deed-loader-pills span:nth-child(3){width:22px;animation-delay:.28s}
+
+html[data-theme="dark"] .canonical-deed-image-loader{
+  background:
+    radial-gradient(circle at 50% 43%,rgba(74,183,151,.14),transparent 25%),
+    linear-gradient(155deg,#0e292a 0%,#0a2022 52%,#08191b 100%)!important;
+  color:#d9eeea!important;
+}
+html[data-theme="dark"] .canonical-deed-image-loader:before{
+  background-image:
+    linear-gradient(rgba(120,207,183,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,207,183,.035) 1px,transparent 1px);
+}
+html[data-theme="dark"] .canonical-deed-image-loader:after{
+  background:linear-gradient(108deg,transparent 42%,rgba(118,224,193,.055) 49%,transparent 56%);
+}
+html[data-theme="dark"] .canonical-deed-loader-ring{border-color:rgba(113,213,184,.14)}
+html[data-theme="dark"] .canonical-deed-loader-ring.ring-two{border-color:rgba(113,213,184,.20)}
+html[data-theme="dark"] .canonical-deed-loader-ring.ring-three{border-color:rgba(113,213,184,.28)}
+html[data-theme="dark"] .canonical-deed-loader-core{
+  border-color:rgba(129,219,193,.16);
+  background:rgba(57,137,115,.14);
+  box-shadow:0 14px 34px rgba(0,0,0,.20),inset 0 1px rgba(255,255,255,.04);
+  color:#8fd6c2;
+}
+html[data-theme="dark"] .canonical-deed-loader-copy strong{color:#dcefea}
+html[data-theme="dark"] .canonical-deed-loader-copy small{color:#789d95}
+html[data-theme="dark"] .canonical-deed-loader-pills span{background:rgba(112,207,180,.10)}
+
+/* The actual artwork is mounted only after the preloader succeeds. */
+.canonical-deed-art img.is-ready{
+  z-index:3;
+  opacity:1!important;
+  animation:loreArtReveal .34s ease-out both;
+}
+
+@keyframes loreLoaderRing{
+  0%,100%{transform:scale(.92);opacity:.34}
+  50%{transform:scale(1.04);opacity:1}
+}
+@keyframes loreLoaderCore{
+  0%,100%{transform:translateY(0) scale(.98)}
+  50%{transform:translateY(-2px) scale(1.035)}
+}
+@keyframes loreLoaderPill{
+  0%,100%{opacity:.28;transform:scaleX(.78)}
+  50%{opacity:.85;transform:scaleX(1)}
+}
+@keyframes loreLoaderSweep{
+  0%{transform:translateX(-48%)}
+  62%,100%{transform:translateX(48%)}
+}
+@keyframes loreArtReveal{
+  from{opacity:0;transform:scale(1.008)}
+  to{opacity:1;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .canonical-deed-image-loader:after,
+  .canonical-deed-loader-ring,
+  .canonical-deed-loader-core,
+  .canonical-deed-loader-pills span,
+  .canonical-deed-art img.is-ready{animation:none!important}
+}
