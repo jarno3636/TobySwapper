@@ -39,6 +39,7 @@ export default function LoreDeedArt({
   const [imageIndex, setImageIndex] = useState(0);
   const [proxyTried, setProxyTried] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadedImageSrc, setLoadedImageSrc] = useState<string | null>(null);
   const [cacheChecked, setCacheChecked] = useState(!revealed || authoritative);
   const [cacheHit, setCacheHit] = useState(false);
 
@@ -113,6 +114,7 @@ export default function LoreDeedArt({
     setImageIndex(0);
     setProxyTried(false);
     setImageLoaded(false);
+    setLoadedImageSrc(null);
 
     if (authoritative) {
       setResult({
@@ -155,6 +157,45 @@ export default function LoreDeedArt({
   const exhaustedDirectCandidates = imageIndex >= images.length;
   const image = directImage || (exhaustedDirectCandidates ? proxyImage : null);
   const usingProxy = Boolean(proxyImage && image === proxyImage);
+
+  // Preload the candidate before it ever enters the DOM. Browsers can render
+  // their native broken-image glyph (and alt text) while an <img> is failing,
+  // even when CSS is trying to hide it. Keeping the real <img> out of the DOM
+  // until a gateway has successfully loaded guarantees a clean Lore loader.
+  useEffect(() => {
+    if (!image) {
+      setLoadedImageSrc(null);
+      setImageLoaded(false);
+      return;
+    }
+
+    let cancelled = false;
+    const preload = new Image();
+    setLoadedImageSrc(null);
+    setImageLoaded(false);
+
+    preload.onload = () => {
+      if (cancelled) return;
+      setLoadedImageSrc(image);
+      setImageLoaded(true);
+    };
+
+    preload.onerror = () => {
+      if (cancelled) return;
+      setLoadedImageSrc(null);
+      setImageLoaded(false);
+      if (usingProxy) setProxyTried(true);
+      else setImageIndex((index) => index + 1);
+    };
+
+    preload.src = image;
+
+    return () => {
+      cancelled = true;
+      preload.onload = null;
+      preload.onerror = null;
+    };
+  }, [image, usingProxy]);
   const metadataName = result?.metadata?.name || label || `Lore Land #${id}`;
   const loading = visible && (authoritative
     ? !metadataOverride && !directImageOverride
@@ -162,28 +203,35 @@ export default function LoreDeedArt({
 
   return (
     <div ref={ref} className={`canonical-deed-art ${image ? "has-image" : "is-metadata-fallback"} ${className}`}>
-      {image ? (
+      {loadedImageSrc ? (
         <img
-          src={image}
+          className="is-ready"
+          src={loadedImageSrc}
           alt={metadataName}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          onLoad={() => setImageLoaded(true)}
-          onError={() => {
-            setImageLoaded(false);
-            if (usingProxy) setProxyTried(true);
-            else setImageIndex((index) => index + 1);
-          }}
         />
+      ) : image || loading ? (
+        <div className="canonical-deed-image-loader" aria-label={`Loading Lore Land Deed #${id.toString()} artwork`} role="status">
+          <div className="canonical-deed-loader-sigil" aria-hidden="true">
+            <span className="canonical-deed-loader-ring ring-one" />
+            <span className="canonical-deed-loader-ring ring-two" />
+            <span className="canonical-deed-loader-ring ring-three" />
+            <span className="canonical-deed-loader-core">◇</span>
+          </div>
+          <div className="canonical-deed-loader-copy">
+            <strong>Calling Deed #{id.toString()}</strong>
+            <small>{result ? "Finding the fastest IPFS path" : "Reading canonical metadata"}</small>
+          </div>
+          <div className="canonical-deed-loader-pills" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+        </div>
       ) : (
         <div className="canonical-deed-metadata-fallback">
           <span className="canonical-deed-mark">△</span>
-          <strong>{loading ? "Loading canonical deed…" : "Canonical deed"}</strong>
-          <small>
-            {loading
-              ? "Reading token metadata"
-              : result?.error || "Artwork is not exposed by the current metadata."}
-          </small>
+          <strong>Canonical deed</strong>
+          <small>{result?.error || "Artwork is not exposed by the current metadata."}</small>
         </div>
       )}
       <span className="canonical-deed-art-id">#{id.toString()}</span>
