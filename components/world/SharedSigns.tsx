@@ -35,7 +35,7 @@ export default function SharedSigns({ tokenId }: { tokenId: bigint }) {
       <div className="shared-signs-head"><div><span className="land-section-kicker">SHARED SIGNS</span><h2 id="shared-signs-title">Other lands that echo this one</h2><p>Related by exact canonical traits — not by invented geography.</p></div><Link prefetch={false} href="/world">Open Atlas ↗</Link></div>
       <div className="shared-signs-grid">
         {lands.map((land) => <Link prefetch={false} href={`/land/${land.tokenId}`} key={land.tokenId} className="shared-sign-card">
-          <div className="shared-sign-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <TobyworldIcon kind="lore" size={62} className="tw-placeholder-lore" />}<b>#{land.tokenId}</b></div>
+          <div className="shared-sign-art"><TobyworldIcon kind="lore" size={46} className="tw-placeholder-lore" /><b>#{land.tokenId}</b></div>
           <div><span>{land.sharedCount >= 3 ? "STRONG ECHO" : "SHARED SIGNS"} · {land.sharedCount} {land.sharedCount === 1 ? "SIGN" : "SIGNS"}</span><h3>{land.communityName || `Lore Land #${land.tokenId}`}</h3><p>{land.shared.map((trait) => trait.value).join(" · ")}</p><small>{land.keeperName ? `Keeper · ${land.keeperName}` : "Visit this land"} →</small></div>
         </Link>)}
       </div>

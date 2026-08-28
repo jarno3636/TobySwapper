@@ -211,9 +211,12 @@ export default function WorldAtlas() {
         {!loading && lands.length === 0 ? <div className="world-empty"><TobyworldIcon kind="lore" size={58} className="tw-placeholder-lore" /><h3>No land matched that trail.</h3><p>Clear a sign or try another land name, keeper, trait, or deed number.</p></div> : <div className={`world-land-grid ${loading ? "is-loading" : ""}`}>{lands.map((land) => {
           const signs = compactSigns(land);
           const landSign = traitValue(land, "Land");
-          return <Link prefetch={false} key={land.tokenId} href={`/land/${land.tokenId}`} className="world-land-card world-land-card-canonical">
-            <div className="world-land-art">{land.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <div className="world-land-token-placeholder" aria-hidden="true"><TobyworldIcon kind="lore" size={92} className="tw-placeholder-lore" /><small>LORE LAND</small></div>}<span className="world-land-number">#{land.tokenId}</span><span className="world-land-canonical">CANONICAL</span></div>
-            <div className="world-land-copy"><span className="world-land-id">{landSign ? `${landSign} · LORE LAND #${land.tokenId}` : `LORE LAND #${land.tokenId}`}</span><h3>{land.communityName || `Lore Land #${land.tokenId}`}</h3>{land.keeperStory ? <p className="has-story">“{land.keeperStory}”</p> : <p>{land.keeperName ? `Kept by ${land.keeperName}.` : "No keeper-written story yet."}</p>}<div className="world-land-signs">{signs.map((sign) => <span key={`${sign.traitType}:${sign.value}`}><small>{sign.traitType}</small>{sign.value}</span>)}</div><footer><small>{land.keeperName ? `KEEPER · ${land.keeperName}` : "KEEPER MARK OPEN"}</small><b>Visit Land →</b></footer></div>
+          return <Link prefetch={false} key={land.tokenId} href={`/land/${land.tokenId}`} className="world-land-pill">
+            <span className="world-land-pill-mark" aria-hidden="true">△</span>
+            <div className="world-land-pill-main"><small>DEED #{land.tokenId}</small><strong>{landSign || "Canonical Land"}</strong></div>
+            <div className="world-land-pill-signs">{signs.filter((sign) => sign.traitType.toLowerCase() !== "land").slice(0, 2).map((sign) => <span key={`${sign.traitType}:${sign.value}`}>{sign.value}</span>)}</div>
+            <div className="world-land-pill-keeper"><small>{land.keeperName ? "KEEPER" : "STATUS"}</small><b>{land.keeperName || "Open mark"}</b></div>
+            <i>→</i>
           </Link>;
         })}</div>}
 

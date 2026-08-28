@@ -40,7 +40,7 @@ export default function KeeperSpotlight() {
         {keepers.map((keeper) => {
           const land = keeper.currentLands[0];
           return <Link prefetch={false} href={`/keeper/${keeper.ownerAddress}`} className="keeper-spotlight-card" key={keeper.ownerAddress}>
-            <div className="keeper-spotlight-art">{land?.imageUrl ? <img src={land.imageUrl} alt="" loading="lazy" /> : <TobyworldIcon kind="lore" size={62} className="tw-placeholder-lore" />}</div>
+            <div className="keeper-spotlight-art"><TobyworldIcon kind="toby" size={42} /></div>
             <div><span>KEEPER MARK</span><strong>{keeper.keeperName || keeper.keeperSocial || (land ? `Keeper of #${land.tokenId}` : "A Tobyworld Keeper")}</strong><small>{keeper.currentLands.length} current {keeper.currentLands.length === 1 ? "land" : "lands"} · {keeper.storyCount} {keeper.storyCount === 1 ? "story" : "stories"}</small></div>
             <b>→</b>
           </Link>;

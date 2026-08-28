@@ -211,15 +211,7 @@ export default function KeeperDirectory({
               key={keeper.ownerAddress}
             >
               <div className="keeper-directory-art">
-                {first?.imageUrl ? (
-                  <img src={first.imageUrl} alt="" loading="lazy" />
-                ) : (
-                  <TobyworldIcon
-                    kind="lore"
-                    size={68}
-                    className="tw-placeholder-lore"
-                  />
-                )}
+                <TobyworldIcon kind="toby" size={54} />
 
                 <b>
                   {keeper.currentLands.length}{" "}
