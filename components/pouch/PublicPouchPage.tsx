@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
-import LoreDeedArt from "@/components/land/LoreDeedArt";
 import WalletAssetViewer from "@/components/pouch/WalletAssetViewer";
 import PublicPouchCreator from "@/components/pouch/PublicPouchCreator";
 import {
@@ -79,7 +78,7 @@ export default function PublicPouchPage({ slug }: { slug: string }) {
 
         {profile.featuredDeed ? (
           <Link prefetch={false} href={`/land/${profile.featuredDeed}`} className="public-pouch-featured-deed">
-            <LoreDeedArt tokenId={profile.featuredDeed} eager />
+            <span className="public-pouch-deed-mark" aria-hidden="true">△</span>
             <span>HOME LAND</span>
             <strong>Lore Land #{profile.featuredDeed}</strong>
           </Link>
