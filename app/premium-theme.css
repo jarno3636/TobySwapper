@@ -6414,3 +6414,155 @@ html[data-theme="dark"] .awakening-hero,html[data-theme="dark"] .awakening-stats
 .public-pouch-featured-deed .public-pouch-deed-mark{margin-bottom:8px}
 html[data-theme="dark"] .mytw-deed-summary{border-color:rgba(111,219,189,.15);background:linear-gradient(135deg,rgba(7,47,48,.94),rgba(5,33,36,.86))}html[data-theme="dark"] .mytw-deed-summary strong{color:#e8f7f2}html[data-theme="dark"] .mytw-deed-summary>div>span{color:#9dbab2}
 @media(max-width:680px){.mytw-deed-gallery{grid-template-columns:1fr!important}.world-land-pill{grid-template-columns:38px minmax(0,1fr) auto;padding:9px 11px}.world-land-pill-signs,.world-land-pill-keeper{display:none}.world-land-pill-main strong{font-size:.86rem}}
+
+/* ==========================================================================\n   2026-08-28 · Lore detail loading + Keeper Spotlight cleanup\n   ========================================================================== */
+
+/* Keeper Marks are identity cards, not NFT/image cards. Keep this section
+   intentionally text-first so a missing avatar can never render as a blank tile. */
+.keeper-spotlight-card{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  min-height:78px;
+  padding:14px 16px!important;
+}
+.keeper-spotlight-art{display:none!important}
+.keeper-spotlight-copy{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  justify-content:center;
+}
+.keeper-spotlight-label{
+  display:flex!important;
+  align-items:center;
+  gap:6px;
+  color:#77948c!important;
+  font-size:6px!important;
+  font-weight:1000!important;
+  letter-spacing:.12em!important;
+}
+.keeper-spotlight-label i{
+  display:grid;
+  width:17px;
+  height:17px;
+  place-items:center;
+  border:1px solid rgba(63,132,113,.18);
+  border-radius:999px;
+  background:rgba(77,154,132,.08);
+  color:#4a8d7b;
+  font-size:7px;
+  font-style:normal;
+}
+.keeper-spotlight-copy strong{
+  margin-top:5px;
+  overflow:hidden;
+  color:#315b59;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.keeper-spotlight-copy small{
+  margin-top:4px;
+  color:#7a908b;
+  font-size:7px;
+}
+.keeper-spotlight-card>b{
+  display:grid;
+  width:30px;
+  height:30px;
+  place-items:center;
+  border-radius:999px;
+  background:rgba(62,135,115,.08);
+  color:#4a8778;
+  font-size:18px;
+}
+html[data-theme="dark"] .keeper-spotlight-copy strong{color:var(--app-text)!important}
+html[data-theme="dark"] .keeper-spotlight-label,
+html[data-theme="dark"] .keeper-spotlight-copy small{color:var(--app-text-soft)!important}
+html[data-theme="dark"] .keeper-spotlight-label i,
+html[data-theme="dark"] .keeper-spotlight-card>b{
+  border-color:rgba(153,215,197,.12);
+  background:rgba(83,172,146,.10);
+  color:#78c3ad;
+}
+
+/* Never expose a browser broken-image glyph while an IPFS gateway is loading
+   or while LoreDeedArt rotates through fallbacks. The loader lives beneath the
+   image and disappears only after a successful decode/load. */
+.canonical-deed-art.has-image{position:relative}
+.canonical-deed-art.has-image img{
+  z-index:1;
+  transition:opacity .28s ease;
+}
+.canonical-deed-art.has-image img.is-loading{
+  opacity:0!important;
+}
+.canonical-deed-art.has-image img.is-ready{
+  opacity:1!important;
+}
+.canonical-deed-image-loader{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:7px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 38%,rgba(87,177,153,.15),transparent 28%),
+    linear-gradient(145deg,#edf7f4,#dcece7);
+  color:#2f6460;
+  text-align:center;
+}
+.canonical-deed-image-loader:after{
+  content:"";
+  position:absolute;
+  inset:-35%;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.50) 49%,transparent 60%);
+  transform:translateX(-55%);
+  animation:loreDeedSkeletonSweep 1.55s ease-in-out infinite;
+}
+.canonical-deed-loader-mark{
+  position:relative;
+  z-index:1;
+  display:grid;
+  width:58px;
+  height:58px;
+  place-items:center;
+  border:1px solid rgba(47,114,103,.16);
+  border-radius:20px;
+  background:rgba(255,255,255,.48);
+  box-shadow:inset 0 1px rgba(255,255,255,.8),0 10px 26px rgba(35,94,87,.08);
+  font-size:24px;
+  animation:loreDeedMarkPulse 1.8s ease-in-out infinite;
+}
+.canonical-deed-image-loader strong,
+.canonical-deed-image-loader small{position:relative;z-index:1}
+.canonical-deed-image-loader strong{font-size:13px;letter-spacing:-.01em}
+.canonical-deed-image-loader small{color:#6d8f89;font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+html[data-theme="dark"] .canonical-deed-image-loader{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(70,167,145,.16),transparent 29%),
+    linear-gradient(150deg,#102729,#091a1c)!important;
+  color:#dcefeb!important;
+}
+html[data-theme="dark"] .canonical-deed-loader-mark{
+  border-color:rgba(156,220,202,.13);
+  background:rgba(43,105,92,.18);
+  color:#8fd2bf;
+  box-shadow:inset 0 1px rgba(255,255,255,.04),0 14px 30px rgba(0,0,0,.18);
+}
+html[data-theme="dark"] .canonical-deed-image-loader small{color:#789b95}
+@keyframes loreDeedSkeletonSweep{
+  0%{transform:translateX(-55%)}
+  65%,100%{transform:translateX(55%)}
+}
+@keyframes loreDeedMarkPulse{
+  0%,100%{transform:scale(1);opacity:.78}
+  50%{transform:scale(1.045);opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+  .canonical-deed-image-loader:after,
+  .canonical-deed-loader-mark{animation:none!important}
+}
