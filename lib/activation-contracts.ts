@@ -5,7 +5,7 @@ export const BASE_CHAIN_ID = 8453 as const;
 export const CANONICAL_LORE_NFT =
   "0x0495601Af6f86efb14C9D478eA46b2Aa09cB164A" as Address;
 export const ACTIVATION_MANAGER =
-  "0xDAf88BF803765882a674Bc9B2bCE20D47A7250F2" as Address;
+  "0xdaf88bf803765882a674bc9b2bce20d47a7250f2" as Address;
 export const ACTIVATION_VAULT =
   "0xD49c3F0dd67378Be76a1142Dfb9a5107F99a34DD" as Address;
 export const ACTIVATION_TOBY =
