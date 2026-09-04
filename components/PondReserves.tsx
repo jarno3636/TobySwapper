@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { erc20Abi, type Address } from "viem";
 import { base } from "viem/chains";
 import { useBalance, useReadContract, useReadContracts } from "wagmi";
 import { CBBTC, PATIENCE, TABOSHI, TOBY } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, OLD_LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
 import { useUsdPrices } from "@/lib/prices";
-import { buildFarcasterComposeUrl, composeCast, openInMini, SITE_URL } from "@/lib/miniapps";
+import { buildFarcasterComposeUrl, SITE_URL } from "@/lib/miniapps";
 import {
   LORE_ACTIVATION_MANAGER, LORE_ACTIVATION_VAULT, LORE_RESERVE_CUSTODY,
   LORE_REWARD_DISTRIBUTOR, LORE_REWARD_DISTRIBUTOR_ABI, PATIENCE_FEE_TREASURY,
@@ -35,7 +35,6 @@ function ReserveCard(props: { tone: string; icon: string; title: string; amount:
 }
 
 export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?: bigint; seedCbBtcUsd?: number }) {
-  const [sharing, setSharing] = useState<"cast" | "x" | null>(null);
   const contracts = useMemo(() => [
     { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [PATIENCE_FEE_TREASURY], chainId: base.id },
     { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [LORE_ACTIVATION_VAULT], chainId: base.id },
@@ -101,23 +100,9 @@ export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?:
     return `The Pond is deeper than it looks 🌊\n\n${reserveLine}\n🔺 ${feeLine}\n₿ ${btcLine}\nΞ ${ethLine}\n🐸 ${tobyLine}\n\nTobyworld is building an onchain economy. Watch the Pond grow.`;
   }, [feePatience, feeRouterEth, lockedToby, props.seedCbBtc, reservesUsd]);
 
-  async function castPromo() {
-    setSharing("cast");
-    const page = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`;
-    try {
-      if (await composeCast({ text: promoText, embeds: [page] })) return;
-      const url = buildFarcasterComposeUrl({ text: promoText, embeds: [page] });
-      if (!(await openInMini(url))) window.location.assign(url);
-    } finally { setSharing(null); }
-  }
-
-  async function postPromoOnX() {
-    setSharing("x");
-    const page = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`;
-    const url = `https://x.com/intent/post?text=${encodeURIComponent(promoText)}&url=${encodeURIComponent(page)}`;
-    try { if (!(await openInMini(url))) window.location.assign(url); }
-    finally { setSharing(null); }
-  }
+  const sharePage = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`;
+  const farcasterUrl = buildFarcasterComposeUrl({ text: promoText, embeds: [sharePage] });
+  const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(promoText)}&url=${encodeURIComponent(sharePage)}`;
 
   return <section id="pond-reserves" className="pond-reserves" aria-labelledby="pond-reserves-title">
     <div className="pond-reserves-glow" aria-hidden="true" />
@@ -137,6 +122,6 @@ export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?:
     </div></section>
     <details className="pond-reserve-governance"><summary><span>TOBYWORLD GOVERNANCE SAFE</span><strong>{safeAssets.length ? "Protocol assets detected" : "No counted protocol assets"}</strong><i>⌄</i></summary><div><p>Displayed separately and never added to reserve revenue automatically.</p>{safeAssets.length > 0 && <div className="pond-reserve-safe-assets">{safeAssets.map((asset) => <b key={asset.symbol}>{units(asset.raw, asset.decimals)} {asset.symbol} · {usd(fiat(asset.raw, asset.decimals, asset.price))}</b>)}</div>}<a href={reserveBaseScan(TOBYWORLD_GOVERNANCE_SAFE)} target="_blank" rel="noreferrer">View safe · {short(TOBYWORLD_GOVERNANCE_SAFE)} ↗</a></div></details>
     <details className="pond-reserve-systems"><summary><span>System infrastructure</span><b>Excluded from reserve totals</b><i>⌄</i></summary><div>{SYSTEM_ROLES.map((role) => <a href={reserveBaseScan(role.address)} target="_blank" rel="noreferrer" key={role.address}><span><strong>{role.title}</strong><small>{role.note}</small></span><b>{short(role.address)} ↗</b></a>)}</div></details>
-    <footer className="pond-reserve-share"><div><span>SPREAD THE WORD</span><strong>The Pond is deeper than it looks.</strong></div><div className="pond-reserve-share-actions"><button type="button" className="is-cast" onClick={castPromo} disabled={sharing !== null}>{sharing === "cast" ? "Opening…" : "Cast on Farcaster"}</button><button type="button" className="is-x" onClick={postPromoOnX} disabled={sharing !== null}>{sharing === "x" ? "Opening…" : "Post on X"}</button></div></footer>
+    <footer className="pond-reserve-share"><div><span>SPREAD THE WORD</span><strong>The Pond is deeper than it looks.</strong></div><div className="pond-reserve-share-actions"><a className="is-cast" href={farcasterUrl} target="_blank" rel="noopener noreferrer">Cast on Farcaster</a><a className="is-x" href={xUrl} target="_blank" rel="noopener noreferrer">Post on X</a></div></footer>
   </section>;
 }
