@@ -6,7 +6,6 @@ import { erc20Abi, type Address } from "viem";
 import { base } from "viem/chains";
 import { useBalance, useReadContract } from "wagmi";
 import { TABOSHI } from "@/lib/addresses";
-import { composeCast, buildFarcasterComposeUrl, openInMini, SITE_URL } from "@/lib/miniapps";
 import { useUsdPriceSingle } from "@/lib/prices";
 import { OPEN_FAUCET_ADDRESS, OPEN_FAUCET_ABI, deriveFaucetHistory } from "@/lib/open-faucet";
 import { TABOSHI_SEEDS_ADDRESS, TABOSHI_SEEDS_ABI } from "@/lib/taboshi-seeds";
@@ -54,8 +53,6 @@ function money(value?: number) {
 function shortAddress(value?: string) { return value ? `${value.slice(0, 6)}…${value.slice(-4)}` : "…"; }
 
 export default function PondPulse() {
-  const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [refreshCooling, setRefreshCooling] = useState(false);
   const refreshTimer = useRef<number | null>(null);
   const refreshLockUntil = useRef(0);
@@ -120,18 +117,6 @@ export default function PondPulse() {
       : (Number(taboshiBurned) / Number(taboshiRawSupply)) * 100;
   const depthUsd = currentPrice === undefined || !cbBtcUsd ? undefined : (Number(currentPrice) / 1e8) * cbBtcUsd;
 
-  const castText = useMemo(() => {
-    const leaves = history.leavesRetired === undefined ? "old leaves are returning" : `${whole(history.leavesRetired)} TABOSHI 1 burned`;
-    const burned =
-      taboshiRemaining === undefined || taboshiBurned === undefined
-        ? "Taboshi supply is counting"
-        : `${token18(taboshiRemaining)} TABOSHI remain · ${token18(taboshiBurned)} burned`;
-    const btc = treasuryCbBtc === undefined ? "the pond treasury is counting" : `${satsToBtc(treasuryCbBtc)} cbBTC held in the pond treasury${totalTreasuryUsd === undefined ? "" : ` · ${money(totalTreasuryUsd)}`}`;
-    const seeds = seedSupply === undefined ? "new seeds waking" : `${whole(seedSupply)} SEED purchased`;
-    const draws = totalDraws === undefined ? "faucet draws are counting" : `${whole(totalDraws)} Seed purchases`;
-    return `Pond Pulse 🌱\n\n${seeds} · ${draws}\n${leaves}\n${btc}\n${LORE_DEEDS_PURCHASED.toLocaleString()} Lore Deeds purchased\n${burned}\n\nLive on Base.`;
-  }, [history.leavesRetired, seedSupply, taboshiBurned, taboshiRemaining, totalDraws, totalTreasuryUsd, treasuryCbBtc]);
-
   async function refresh() {
     const now = Date.now();
     if (refreshCooling || now < refreshLockUntil.current) return;
@@ -144,23 +129,6 @@ export default function PondPulse() {
       refreshTimer.current = window.setTimeout(() => setRefreshCooling(false), 20_000);
     }
   }
-  async function cast() {
-    setSharing(true);
-    try {
-      const page = `${SITE_URL.replace(/\/$/, "")}#pond-pulse`;
-      if (await composeCast({ text: castText, embeds: [page] })) return;
-      const url = buildFarcasterComposeUrl({ text: castText, embeds: [page] });
-      if (!(await openInMini(url))) window.open(url, "_blank", "noopener,noreferrer");
-    } finally { setSharing(false); }
-  }
-  async function copy() {
-    try { await navigator.clipboard.writeText(castText); setCopied(true); window.setTimeout(() => setCopied(false), 1400); } catch {}
-  }
-  function shareOnX() {
-    const page = `${SITE_URL.replace(/\/$/, "")}#pond-pulse`;
-    window.open(`https://x.com/intent/post?text=${encodeURIComponent(castText)}&url=${encodeURIComponent(page)}`, "_blank", "noopener,noreferrer");
-  }
-
   return (
     <section id="pond-pulse" className="pond-pulse scroll-mt-24" aria-label="Live Tobyworld ecosystem statistics">
       <div className="pond-pulse-shine" aria-hidden="true" />
@@ -223,7 +191,6 @@ export default function PondPulse() {
 
       <div className="pond-pulse-footer">
         <div className="pond-pulse-whisper"><span>◌</span><p><b>TABOSHI circulating</b> equals fixed total supply minus the live balance at <b>0x…dEaD</b>. <b>Treasury holdings</b>, Faucet draws and SEED minted are read live from Base. USD values use current market prices and will move.</p></div>
-        <div className="pond-pulse-actions"><button type="button" className="metal-button pond-pulse-cast" onClick={cast} disabled={sharing}>{sharing ? "Opening…" : "Cast pulse"}</button><button type="button" className="metal-button pond-pulse-x" onClick={shareOnX}>Post on X</button><button type="button" className="metal-button pond-pulse-copy" onClick={copy}>{copied ? "Copied ✓" : "Copy"}</button></div>
       </div>
     </section>
   );
