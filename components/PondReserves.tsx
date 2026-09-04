@@ -7,7 +7,7 @@ import { useBalance, useReadContract, useReadContracts } from "wagmi";
 import { CBBTC, PATIENCE, TABOSHI, TOBY } from "@/lib/addresses";
 import { LORE_COLLECTION_ADDRESS, OLD_LORE_COLLECTION_ADDRESS } from "@/lib/lore-deeds";
 import { useUsdPrices } from "@/lib/prices";
-import { composeCast, SITE_URL } from "@/lib/miniapps";
+import { buildFarcasterComposeUrl, composeCast, openInMini, SITE_URL } from "@/lib/miniapps";
 import {
   LORE_ACTIVATION_MANAGER, LORE_ACTIVATION_VAULT, LORE_RESERVE_CUSTODY,
   LORE_REWARD_DISTRIBUTOR, LORE_REWARD_DISTRIBUTOR_ABI, PATIENCE_FEE_TREASURY,
@@ -35,7 +35,7 @@ function ReserveCard(props: { tone: string; icon: string; title: string; amount:
 }
 
 export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?: bigint; seedCbBtcUsd?: number }) {
-  const [sharing, setSharing] = useState<"sharing" | "copied" | null>(null);
+  const [sharing, setSharing] = useState<"cast" | "x" | null>(null);
   const contracts = useMemo(() => [
     { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [PATIENCE_FEE_TREASURY], chainId: base.id },
     { address: PATIENCE, abi: erc20Abi, functionName: "balanceOf", args: [LORE_ACTIVATION_VAULT], chainId: base.id },
@@ -92,11 +92,32 @@ export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?:
   const pondLoreTotal = pondLore === undefined || pondOldLore === undefined ? undefined : pondLore + pondOldLore;
   const safeAssets = [{ symbol: "$PATIENCE", raw: safePatience, decimals: 18, price: patiencePrice }, { symbol: "$TOBY", raw: safeToby, decimals: 18, price: tobyPrice }, { symbol: "$TABOSHI", raw: safeTaboshi, decimals: 18, price: taboshiPrice }, { symbol: "$cbBTC", raw: safeCbBtc, decimals: 8, price: cbBtcPrice }].filter((asset) => asset.raw !== undefined && asset.raw > 0n);
 
-  const shareText = useMemo(() => {
-    const fee = feePatience === undefined ? "$PATIENCE fee reserves are counting" : `${units(feePatience, 18, 0)} $PATIENCE in the fee treasury`, activation = activationPatience === undefined ? "Lore activation reserves are counting" : `${units(activationPatience)} $PATIENCE held from ${activationCount?.toLocaleString() ?? "…"} Lore activations`, pond = pondPatience === undefined ? "Pond liquidity is counting" : `${units(pondPatience)} $PATIENCE in Pond liquidity`, ethReserve = feeRouterEth === undefined ? "protocol $ETH is counting" : `${units(feeRouterEth, 18, 4)} $ETH in FeeRouterV1`, committed = lockedToby === undefined ? "committed $TOBY is counting" : `${compact(lockedToby)} $TOBY committed`, btc = props.seedCbBtc === undefined ? "the SEED reserve is counting" : `${units(props.seedCbBtc, 8, 8)} $cbBTC in the SEED reserve`, rewards = rewardAssets.length ? `${rewardAssets.length} member reward asset${rewardAssets.length === 1 ? "" : "s"} registered: ${rewardAssets.map((asset) => cashSymbol(asset.symbol)).join(", ")}` : "Member rewards staged for governance activation";
-    return `The Pond Reserves · live on Base 🌊\n\n🔺 ${fee}\nΞ ${ethReserve}\n🌎 ${activation}\n🌊 ${pond}\n🐸 ${committed}\n₿ ${btc}\n✨ ${rewards}\n\nReserves, liquidity, rewards and committed value—counted separately.`;
-  }, [activationCount, activationPatience, feePatience, feeRouterEth, lockedToby, pondPatience, props.seedCbBtc, rewardAssets]);
-  async function share() { setSharing("sharing"); const page = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`; try { if (await composeCast({ text: shareText, embeds: [page] })) return; if (navigator.share) await navigator.share({ title: "The Pond Reserves", text: shareText, url: page }); else { await navigator.clipboard.writeText(`${shareText}\n\n${page}`); setSharing("copied"); window.setTimeout(() => setSharing(null), 1400); } } catch { setSharing(null); } finally { setSharing((current) => current === "copied" ? current : null); } }
+  const promoText = useMemo(() => {
+    const reserveLine = reservesUsd === undefined ? "Live Tobyworld reserves are growing" : `${usd(reservesUsd)} in tracked reserves`;
+    const feeLine = feePatience === undefined ? "$PATIENCE fees are accumulating" : `${units(feePatience, 18, 0)} $PATIENCE collected`;
+    const btcLine = props.seedCbBtc === undefined ? "$cbBTC is backing $SEED" : `${units(props.seedCbBtc, 8, 8)} $cbBTC backing $SEED`;
+    const ethLine = feeRouterEth === undefined ? "$ETH protocol fees are accumulating" : `${units(feeRouterEth, 18, 4)} $ETH in protocol fees`;
+    const tobyLine = lockedToby === undefined ? "$TOBY is being committed to Lore" : `${compact(lockedToby)} $TOBY committed to Lore`;
+    return `The Pond is deeper than it looks 🌊\n\n${reserveLine}\n🔺 ${feeLine}\n₿ ${btcLine}\nΞ ${ethLine}\n🐸 ${tobyLine}\n\nTobyworld is building an onchain economy. Watch the Pond grow.`;
+  }, [feePatience, feeRouterEth, lockedToby, props.seedCbBtc, reservesUsd]);
+
+  async function castPromo() {
+    setSharing("cast");
+    const page = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`;
+    try {
+      if (await composeCast({ text: promoText, embeds: [page] })) return;
+      const url = buildFarcasterComposeUrl({ text: promoText, embeds: [page] });
+      if (!(await openInMini(url))) window.location.assign(url);
+    } finally { setSharing(null); }
+  }
+
+  async function postPromoOnX() {
+    setSharing("x");
+    const page = `${SITE_URL.replace(/\/$/, "")}#pond-reserves`;
+    const url = `https://x.com/intent/post?text=${encodeURIComponent(promoText)}&url=${encodeURIComponent(page)}`;
+    try { if (!(await openInMini(url))) window.location.assign(url); }
+    finally { setSharing(null); }
+  }
 
   return <section id="pond-reserves" className="pond-reserves" aria-labelledby="pond-reserves-title">
     <div className="pond-reserves-glow" aria-hidden="true" />
@@ -116,6 +137,6 @@ export default function PondReserves(props: { seedTreasury: Address; seedCbBtc?:
     </div></section>
     <details className="pond-reserve-governance"><summary><span>TOBYWORLD GOVERNANCE SAFE</span><strong>{safeAssets.length ? "Protocol assets detected" : "No counted protocol assets"}</strong><i>⌄</i></summary><div><p>Displayed separately and never added to reserve revenue automatically.</p>{safeAssets.length > 0 && <div className="pond-reserve-safe-assets">{safeAssets.map((asset) => <b key={asset.symbol}>{units(asset.raw, asset.decimals)} {asset.symbol} · {usd(fiat(asset.raw, asset.decimals, asset.price))}</b>)}</div>}<a href={reserveBaseScan(TOBYWORLD_GOVERNANCE_SAFE)} target="_blank" rel="noreferrer">View safe · {short(TOBYWORLD_GOVERNANCE_SAFE)} ↗</a></div></details>
     <details className="pond-reserve-systems"><summary><span>System infrastructure</span><b>Excluded from reserve totals</b><i>⌄</i></summary><div>{SYSTEM_ROLES.map((role) => <a href={reserveBaseScan(role.address)} target="_blank" rel="noreferrer" key={role.address}><span><strong>{role.title}</strong><small>{role.note}</small></span><b>{short(role.address)} ↗</b></a>)}</div></details>
-    <footer className="pond-reserve-share"><div><span>SHARE THE SNAPSHOT</span><strong>One clean story. Live onchain numbers.</strong></div><button type="button" onClick={share} disabled={sharing === "sharing"}>{sharing === "sharing" ? "Opening…" : sharing === "copied" ? "Copied ✓" : "Share snapshot"}</button></footer>
+    <footer className="pond-reserve-share"><div><span>SPREAD THE WORD</span><strong>The Pond is deeper than it looks.</strong></div><div className="pond-reserve-share-actions"><button type="button" className="is-cast" onClick={castPromo} disabled={sharing !== null}>{sharing === "cast" ? "Opening…" : "Cast on Farcaster"}</button><button type="button" className="is-x" onClick={postPromoOnX} disabled={sharing !== null}>{sharing === "x" ? "Opening…" : "Post on X"}</button></div></footer>
   </section>;
 }
